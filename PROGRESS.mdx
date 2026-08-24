@@ -1,0 +1,63 @@
+# Two Point Campus Database — Live Progress
+
+Live progress page for the TwoPoint pack. Maintained by the orchestrator
+only. Watch this file evolve; phases and IDs mirror the session task
+registry. Documentation format follows [DR-2026-08-22-docs-mdx].
+
+## Mission
+
+Build the Two Point Campus database website — entity database, owned
+interactive map, campus/course planner builder, guides, news, calculators,
+full localization — at the bar set by `_foundation/design-standard.md`
+(enka feel · wikily language · new-world.guide structure), judged by harsh
+side-by-side visual critics. Forward-designed as the first entry of a
+**Two Point game picker**: each future Two Point game gets its own theme
+and soul; the house style family is shared.
+
+Game: **Two Point Campus** (Steam 1649080, client buildid `20226581`,
+installed `A:\SteamLibrary\steamapps\common\Two Point Campus`, Unity
+IL2CPP, ~4.4 GiB, base + 2 DLC depots). Host: NE8K (this machine holds the
+data; extraction runs in place).
+
+## Binding gates
+
+- Data completeness **before frontend** (AGENTS.md rule 8) — extraction,
+  relinking, derived geometry, logic reconstruction all finish first.
+- Owned map differentiator: dedicated `/map` + map module on every
+  location-bearing page; third-party embeds banned.
+- All locales the client ships ([FRAMEWORK §2.4](../FRAMEWORK.md)) —
+  verified against the client, not marketing.
+- Orchestrator never codes; every piece goes through
+  Scout→Documentator→Reviewer→Arbiter → CodeWriter+TestWriter →
+  CodeReviewer+TestReviewer → Arbiter → fix loops, fresh agents each round;
+  visual critics judge the running site, not summaries.
+
+## Phase board
+
+| Phase | Scope | Status |
+|---|---|---|
+| A | Bootstrap: reads, environment, registry | **done** |
+| B | PrepareTask pass 1: scout → explorers → spec → review → arbiter | **in progress** |
+| C | Extraction pipeline: harvest · decompile · locales · icons · logic · relink · map geometry · PROOF | queued |
+| D | Site build: tokens · shell+picker · pages · search · map · builder · i18n · SEO/AEO · UGC | gated behind C |
+| E | Visual critic loop vs references + e2e smoother waves | gated behind D |
+| F | FRAMEWORK §8 launch gates + site-ready verification | last |
+
+## Agent roster
+
+| Agent | Role piece | State |
+|---|---|---|
+| scout-001 | Install inventory, tooling survey, locales, competitors | **running** |
+
+## Question queue
+
+*(empty — nothing owner-blocked; domain/trademark choice stays the known
+standing owner item)*
+
+## Log
+
+- 2026-08-24: Pack bootstrapped. Foundation canon read in full (AGENTS,
+  decision register, design/site-sections/seo/localization/extraction/
+  domain/extraction-host standards, FRAMEWORK §1–2/§7–8, visuals README).
+  Game located + manifest read. Headless `claude` launcher verified
+  (`HEADLESS-OK`). Task registry established. scout-001 launched.
