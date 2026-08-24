@@ -192,6 +192,43 @@ def classify_composition(base_rows: dict[str, str], english_rows: dict[str, str]
     return {"compositionPolicy": policy, "evidence": evidence}
 
 
+def _table_keys(rows) -> list:
+    """Key universe of one decoded table: {key: text} dicts contribute their
+    keys; [{id,text}] row lists their ids."""
+    if isinstance(rows, dict):
+        return list(rows.keys())
+    keys = []
+    for row in rows or []:
+        if isinstance(row, dict):
+            kid = row.get("id", row.get("key"))
+            if isinstance(kid, (str, int)) and not isinstance(kid, bool):
+                keys.append(kid)
+    return keys
+
+
+def build_locale_matrix(tables: dict) -> dict[str, dict]:
+    """Key universe for locale-matrix.json: per key, the locales whose tables
+    contain it PLUS the base-overlay mark. Labels outside EMITTED_LOCALES are
+    the base overlay — they mark keys but never grant a locale."""
+    matrix_keys: dict[str, dict] = {}
+    for locale in tc.EMITTED_LOCALES:
+        for key in _table_keys(tables.get(locale)):
+            entry = matrix_keys.setdefault(key,
+                                           {"locales": [], "baseOverlay": False})
+            if locale not in entry["locales"]:
+                entry["locales"].append(locale)
+    for label, rows in tables.items():
+        if label in tc.EMITTED_LOCALES:
+            continue
+        for key in _table_keys(rows):
+            entry = matrix_keys.setdefault(key,
+                                           {"locales": [], "baseOverlay": False})
+            entry["baseOverlay"] = True
+    for entry in matrix_keys.values():
+        entry["locales"].sort()
+    return matrix_keys
+
+
 def run(game_root: Path, extracted_root: Path) -> int:
     paths = tc.game_paths(game_root)
     roster = tc.load_roster(extracted_root)
@@ -254,17 +291,7 @@ def run(game_root: Path, extracted_root: Path) -> int:
     report = classify_composition(base_overlay or {}, english)
     log_util.write_json(locales_dir / "base-overlay-report.json", report)
 
-    matrix_keys: dict[str, dict] = {}
-    for locale in tc.EMITTED_LOCALES:
-        for key in (tables.get(locale) or {}):
-            entry = matrix_keys.setdefault(key, {"locales": [], "baseOverlay": False})
-            if locale not in entry["locales"]:
-                entry["locales"].append(locale)
-    for key in (base_overlay or {}):
-        entry = matrix_keys.setdefault(key, {"locales": [], "baseOverlay": False})
-        entry["baseOverlay"] = True
-    for entry in matrix_keys.values():
-        entry["locales"].sort()
+    matrix_keys = build_locale_matrix(tables)
     log_util.write_json(locales_dir / "locale-matrix.json", {
         "meta": {
             "buildId": _build_id(extracted_root),
