@@ -17,3 +17,6 @@ tools/__pycache__/
 extracted/**
 !extracted/**/
 !extracted/**/*.md
+
+# fixture trees also get built at pack root by probe runs
+.fixture-trees/
