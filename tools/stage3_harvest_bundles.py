@@ -18,6 +18,7 @@ import argparse
 import json
 import re
 import shutil
+from collections import Counter
 import sys
 from pathlib import Path
 
@@ -200,7 +201,7 @@ def run(game_root: Path, extracted_root: Path,
     problems: list[str] = []
 
     out_paths = [r["outRelPath"] for r in manifest_rows]
-    duplicates = {p for p in out_paths if out_paths.count(p) > 1}
+    duplicates = {p for p, n in Counter(out_paths).items() if n > 1}
     if duplicates:
         problems.append(f"duplicate outRelPath values: {sorted(duplicates)[:5]}")
 
