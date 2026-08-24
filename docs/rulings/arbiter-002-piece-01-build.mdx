@@ -1,0 +1,435 @@
+# Arbiter ruling arbiter-002 — piece-1 build review consolidation
+
+**Arbiter:** arbiter-002 (pipeline step 4; independent; spawned no
+subagents; ruled only — fixed nothing). **Date:** 2026-08-24.
+**Inputs read in full:** `AGENTS.md` (repo root),
+[`../reviews/codereviewer-001-piece-01.mdx`](../reviews/codereviewer-001-piece-01.mdx),
+[`../reviews/testreviewer-001-piece-01.mdx`](../reviews/testreviewer-001-piece-01.mdx),
+[`../specs/piece-01-extraction-pipeline.mdx`](../specs/piece-01-extraction-pipeline.mdx)
+incl. Revision 2 (sentinel seen). Implementation/test files consulted
+per disputed claim, cited below. Third source adjudicated: **TestWriter's
+three reported impl findings** (commit `1e1479d` message): stage-5
+KeyError 'nameLoc'; dead english-over-base branch; `--list` missing
+version column.
+
+## Verdict: FIX-LIST-ISSUED
+
+The build enters fix loops — neither the implementation nor the suite is
+rejected. Both reviewers' verdicts (FIX-REQUIRED each) are SUSTAINED.
+Of the 16 distinct proposed defects across the three sources: **14
+CONFIRMED** (several reclassified), **1 REFUTED** (dead
+english-over-base), **1 DISMISSED-to-hygiene** (stale probe tree). The
+two blocking implementation defects (locale-flag separator, stage-5
+KeyError) were independently re-verified by this arbiter against source,
+not taken on review authority.
+
+---
+
+## Mandatory adjudications
+
+### a. english-over-base reachability — REFUTED as "dead"; branch IS reachable; order NO implementation change
+
+Traced the full ladder at `tools/stage4_localisation.py:175-182`
+(`classify_composition`, arm at :180):
+
+```
+mixed             ← (base_only > 0 and en_only > 0) or differing > 0
+base-over-english ← elif base_only > 0
+english-over-base ← elif en_only > 0          ← REACHABLE
+english-only      ← else
+```
+
+`english-over-base` fires iff `en_only > 0 ∧ base_only == 0 ∧
+differing == 0`. Concrete reachable input: `base = {"a": "A"}`,
+`english = {"a": "A", "c": "C"}` → shared={a} identical, differing=0,
+base_only=0, en_only=1 → falls through arms 1–2 into :180. All four enum
+values are reachable; CodeReviewer's refutation stands; TestWriter's
+"dead english-over-base branch" finding is **REFUTED**.
+
+**Which test assertion is wrong:** `tests/test_stage4.py:89` —
+`policy({"a": "A"}, {"a": "A", "c": "C"}) == "english-only"`. That exact
+input classifies as `english-over-base` under the impl ladder. The spec
+(§3 stage 4 + §7) deliberately does NOT pre-pin label semantics
+("selected by this stage's deterministic classifier … not pre-pinned"),
+so a test may not fail the implementation over them. The likely origin
+of the "dead branch" claim: the suite ran this input, got an unexpected
+label, and inferred the branch was unreachable rather than that the pin
+was unauthorized. Fix is test-side (T2 below); the implementation ladder
+is correct and deterministic — **do not touch it**.
+
+### b. stage-5 KeyError 'nameLoc' — CONFIRMED, BLOCKING (neither reviewer examined it)
+
+Verified directly against `tools/stage5_emit_stubs.py`:
+
+- :237-239 — `locales_per_field` comprehension filters
+  `for f, key in joins.items() if key in matrix_keys`, i.e. HARD joins
+  only (convention keys are never in `matrix_keys` by construction of
+  the :222-232 if/elif);
+- :242 — `named_fields = [f for f in joins if NAMED_FIELD_RE.search(f)]`
+  ranges over ALL of `joins` (hard + convention);
+- :243 — `named_pool = {f: locales_per_field[f] for f in named_fields}`
+  → **KeyError** whenever any named field (`name|title|display`,
+  regex :77) is convention-joined.
+
+Trigger: any entity whose named-field join is convention-shaped — the
+suite's `item_beta`/`nameLoc` fixture targets exactly this and is
+correct and load-bearing. Not fixture-specific fragility: on the real
+corpus any entity with only a convention-shaped loc field crashes stage
+5 to exit 1, cascading ~8 suite failures (TestReviewer's cascade table).
+Fix pinned as F2 below (fix `named_fields`' domain, not the lookup).
+
+### c. D10 spec amendment — decision: adopt NOW, one line riding this fix round (SPEC lane S1)
+
+The literal identity in §3 stage-3 acceptance ("Σ objectsByClass ==
+… export-manifest + media-catalogue + error rows") is unsatisfiable on
+any real bundle — GameObject/Transform/manager classes are neither
+exported, nor carved out, nor errored, so the census-only residual is
+always > 0. The implementation already reconciles the residual-inclusive
+form (`tools/stage3_harvest_bundles.py:207-214`, incl. `residual` at
+:209-211 and the `censusOnlyResidual` accounting). Ruling: amend the
+spec NOW rather than defer. Reasons: (1) the contract currently
+contradicts the shipped, sane implementation — any literal re-check of
+§3 against real outputs fails forever; (2) the coming fix round touches
+exactly this acceptance (F11 extracts the helper the tests bind to), so
+the spec must state what those tests assert; (3) the edit is one line,
+zero behavioral change. Deferred amendments are how checklist-vs-
+contract contradictions like O1 (§8 "script.json slice") happen — fixed
+in the same pass here (S2).
+
+### d. Fixture misplacement (globalgamemanagers at install root) — CONFIRMED real; assigned to TEST lane as non-blocking hygiene (T7)
+
+Verified on disk: `.fixture-trees/probe/steamapps/common/Two Point
+Campus/globalgamemanagers` sits at the install root while
+`TPC_Data/` lacks it; the code expects `TPC_Data/globalgamemanagers`
+(`tools/tpc_common.py:207`), so any stage-0 smoke run against that tree
+refuses exit 3 before exercising anything. BUT: the suite's own builder
+is correct — `tests/_fixturelib.py:216-220` writes globalgamemanagers
+inside `TPC_Data` ("Unity layout", its own comment) — and no test
+consumes `.fixture-trees/probe` (grep: only `tests/test_runner.py:100`
+mentions `.fixture-trees`, as a hash-tree exclusion). It is stale
+scratch from a probe session, not a deliverable defect. Dismissed as a
+defect against either lane; ordered removed as hygiene (T7) so it cannot
+poison a future manual smoke run.
+
+---
+
+## Defect-by-defect adjudication
+
+Provenance: **CR-D#** = codereviewer-001 · **TR-D#** = testreviewer-001 ·
+**TW-n** = TestWriter commit `1e1479d` findings. Overlaps merged into
+one item; the fix-list ID is given.
+
+| Source | Proposed defect | Ruling | Fix ID |
+|---|---|---|---|
+| CR-D1 | locale-flag `_` separator kills stage 4 | **CONFIRMED**, BLOCKING | F1 |
+| TW-1 / TR-D6 | stage-5 KeyError 'nameLoc' | **CONFIRMED**, BLOCKING (arbiter-verified, §b above) | F2 |
+| CR-D2 | Il2CppDumper candidates resolve outside repo | **CONFIRMED**, MAJOR | F3 |
+| CR-D3 | O(n²) duplicate outRelPath scan | **CONFIRMED**, MEDIUM | F4 |
+| CR-D4 | stage-5 per-entity rglob re-walk | **CONFIRMED**, MEDIUM | F5 |
+| CR-D5 | absence-ledger scope vacuously empty | **CONFIRMED**, LOW-MEDIUM | F6 |
+| CR-D6 | `m_buildTarget` misspelled subset key | **CONFIRMED**, LOW | F7 |
+| CR-D7 + TR-D5 + TW-3 | `--list` missing version column (three sources, ONE defect) | **CONFIRMED**, LOW | F8 |
+| CR-D8 | stub `source.bundle` omits `.bundle` | **CONFIRMED**, LOW | F9 |
+| CR-D9 | false evidence string for seeded-kind-no-id dumps | **CONFIRMED, RECLASSIFIED INFO→LOW** (ledgered absence must be truthful — doctrine facts-never-gloss; fix is trivial) | F10 |
+| TR-D2 | stage-3 reconciliation/completeness loud-skips | **CONFIRMED**, coverage gap — seam extraction in CODE lane | F11 |
+| TR-D4 | stage-4 matrix builder loud-skip | **CONFIRMED**, coverage gap — seam extraction in CODE lane | F12 |
+| CR-D10 | §3 census identity unsatisfiable | **CONFIRMED**; spec adopts residual-inclusive form NOW | S1 |
+| TR-D0 | undefined `conftest_tree_game` | **CONFIRMED** hard TEST-BUG (verified: single occurrence, `tests/test_runner.py:262`; `tree_game` exists in conftest and is already imported at :250/:35 patterns) | T1 |
+| TR-D1 | composition-policy over-pinned labels | **CONFIRMED** TEST-DEFECT (§a above) | T2 |
+| TR-D3 | stage-2 out-of-roster skip despite existing seam | **CONFIRMED** — vocabulary one-liner | T3 |
+| — (arbiter, from CR-D1 fix text) | no test drives `locale_for_bundle` end-to-end (table tested directly, broken lookup beside it untested) | **CONFIRMED** coverage gap | T4 |
+| TR-D8 | `except TypeError: pass` masking risk | **CONFIRMED**, minor | T5 |
+| TR-D7 | carve-out grep never applied e2e | **CONFIRMED**, minor | T6 |
+| TW-2 | dead english-over-base branch | **REFUTED** (§a above; ladder proof at `stage4_localisation.py:175-182`) | — |
+| CR out-of-lane + §d | misplaced globalgamemanagers in probe tree | **CONFIRMED real, DISMISSED as deliverable defect** → hygiene | T7 |
+
+CodeReviewer's checklist-item-5 vestigial spots (`ilmetadata.const_by_field`,
+`_constant_value` linear rescan, `unitypy_util.decode_monobehaviour`
+unreachable `else`, `build_structural._primary_hierarchy` annotation,
+vacuous stage-0 assert, unused `_catalog` at
+`stage5_emit_stubs.py:282`): confirmed behavior-neutral — **NO ACTION
+this round** (fixes only, no new design). Exception: the `_catalog` load
+at :282 may be dropped opportunistically while F5 rewires the same
+function. TestReviewer observations O2/O3/O4: no action required;
+O4's banner rewording may ride T-fixes opportunistically.
+
+---
+
+# CONSOLIDATED FIX LIST (binding for fixer agents — fixes only, no new design)
+
+Order within each lane is severity order. Lane assignment follows file
+ownership: CODE = `tools/` + `run_all.py` + spec-serving seams; TEST =
+`tests/`; SPEC = `docs/specs/`.
+
+## CODE lane
+
+### F1 — BLOCKING: normalize the locale-suffix separator before table lookup
+- **Where:** `tools/tpc_common.py:311` (lookup), table :68-83, prefix
+  :84; consumers `stage4_localisation.py:213-220,229-232`.
+- **What:** `suffix = stem[len(LOCALE_BUNDLE_STEM_PREFIX):].lower()`
+  retains the `_`, so `"english"` never matches key `"english"`; all 13
+  named bundles become `unknown:_<lang>`, stage 4 loses its `en` pivot
+  and exits 1 — stage 4 has never been able to pass on the real client.
+  Stage 0's count-only check (`14 truthy flags`) cannot see it.
+- **Pinned fix:** `suffix = stem[len(LOCALE_BUNDLE_STEM_PREFIX):]
+  .lower().lstrip("_")`. Preserve the verbatim `unknown:<suffix>`
+  surfacing for genuinely unknown suffixes (:313-316).
+- **Plus stage-0 self-check (part of this fix):** extend stage 0's
+  acceptance so flag corruption can never pass count-only again — when
+  the roster contains the 13 named localisation bundles, their resolved
+  flags MUST equal exactly `EMITTED_LOCALES` (`tpc_common.py:64-67`);
+  violation = acceptance problem (exit 1) naming the offending rows.
+  Same failure class as the existing row-count acceptance, so the
+  exit-code contract is untouched.
+
+### F2 — BLOCKING: stage-5 convention-named-field KeyError ('nameLoc')
+- **Where:** `tools/stage5_emit_stubs.py:242-244` (crash at :243);
+  filter at :237-239; docstring contract :175-185.
+- **What:** see adjudication §b. Any convention-shaped named join
+  crashes stage 5.
+- **Pinned fix:** restrict `named_fields` to the hard-joined domain —
+  `named_fields = [f for f in locales_per_field if
+  NAMED_FIELD_RE.search(f)]` — keeping the :244 fallback and everything
+  downstream unchanged. This honors the module's own fail-closed rule
+  ("only HARD-joined keys grant locale coverage"; convention joins
+  record `joinMethod` but claim no locales): convention-only entities
+  then emit availability rows with empty `availableLocales`/
+  `namedLocales`/`fieldPresence`, `joinInferred:true`, populated
+  `joinMethod` — satisfying the spec's acceptance (keys present, row
+  count == distinct joined entities). Do NOT paper over with
+  `.get()` defaults; that would silently change `namedLocales`
+  semantics.
+
+### F3 — MAJOR: repo-relative Il2CppDumper candidates must resolve inside the repo
+- **Where:** `tools/tpc_common.py:108-113`;
+  resolution `tools/stage1_decompile.py:38-43` (`repo_root / cand`);
+  seeded via `tools/stage0_verify_client.py:196-198`.
+- **What (arbiter-verified on disk):** the `../` entries resolve to
+  `C:\_reps\zero-parades\…` — ABSENT. Inside the repo these EXIST:
+  `game-databases/zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe`
+  and
+  `game-databases/disco-elysium/tools/Il2CppDumper/Il2CppDumper.exe`;
+  `disco-elysium/zero-parades/work/_tooling/…` is absent everywhere
+  (harmless as a fallback — spec spells it "else", the list comment at
+  :104-107 says "harmless if absent"). Resolution today survives only
+  via the `D:\` fallback, defeating the spec's stated order and
+  fresh-clone reproducibility.
+- **Pinned fix:** drop the `../` prefixes →
+  `"zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe"`,
+  `"disco-elysium/zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe"`,
+  `"disco-elysium/tools/Il2CppDumper/Il2CppDumper.exe"`, then the
+  `D:\` absolute. Because an already-seeded EXTRACTION-LOG wins over
+  the constant (`stage1_decompile.py:35-37`), ALSO make
+  `resolve_tool` append the embedded `tc.IL2CPP_DUMPER_CANDIDATES`
+  after the log-derived list (order-preserving dedup) so a stale seeded
+  block can never shadow the corrected entries. Fixing the constant
+  alone fixes fresh logs only; fixing the seeded log alone fixes
+  nothing (CodeReviewer's own note) — do both halves as pinned.
+
+### F4 — MEDIUM: replace the quadratic duplicate-outRelPath scan
+- **Where:** `tools/stage3_harvest_bundles.py:202-205`.
+- **Pinned fix:** `collections.Counter(out_paths)` (or seen-set) for
+  the duplicates set; identical problem message and exit-1 routing.
+  At real scale (tens of thousands of exports × 176 bundles) the
+  current `out_paths.count(p)` is hours of wasted comparison inside
+  every run's acceptance.
+
+### F5 — MEDIUM: index monobehaviour dumps once; join from memory
+- **Where:** `tools/stage5_emit_stubs.py:199-218` (per-entity
+  `rglob(f"*_{pathId}.json")` at :202-203, read at :206, second read
+  of the same winner at :216).
+- **Pinned fix:** during the main `load_monobehaviour_dumps` pass
+  (:298-299) build one `pathId → [(bundle, payload)]` index (payloads
+  are already in hand there); pass the index into
+  `build_locale_availability` instead of `monobehaviours_dir` and join
+  from memory (id-match guard preserved). Eliminates O(entities×files)
+  scanning and the double read. Optional rider: drop the unused
+  `_catalog` load at :282 while in the function.
+
+### F6 — LOW-MEDIUM: absence-ledger scan scope must record pre-filter reality
+- **Where:** `tools/stage5_emit_stubs.py:305-314` (scope filled only
+  after BOTH the kind and id gates pass, :313-314) vs :337-345
+  (absence rows read it only when `rows` is empty — so the lists are
+  always `[]`). Spec §3 stage 5 requires the absence row "naming scan
+  scope".
+- **Pinned fix:** update `scan_scope[kind]` immediately after
+  `assign_kind` returns a non-None kind, BEFORE the `eid is None`
+  check (move :313-314 above :305's id half). Coordinate with F10 —
+  same lines. A family whose candidates all matched the kind but
+  yielded no identifier then reports the bundles/classes actually
+  scanned, as the spec demands.
+
+### F7 — LOW: settings snapshot key spelling
+- **Where:** `tools/stage2_harvest_catalog.py:194-196`.
+- **Pinned fix:** `"m_buildTarget"` → `"m_BuildTarget"` (client
+  spelling, verified by CodeReviewer against the staged snapshot), or
+  case-fold the lookup. Machine-readable half stops carrying permanent
+  `null`.
+
+### F8 — LOW: `--list` gains the pinned version column
+- **Where:** `run_all.py:170-179` (header :171, cells :176-179),
+  resolver :186-188.
+- **What:** §5.1 pins "tool/version/status columns"; UnityPy's pin is
+  folded into the tool cell, Il2CppDumper carries none. Three sources
+  converge here (CR-D7, TR-D5, TW-3) — one defect, one fix.
+- **Pinned fix:** four columns `stage/script/tool/version/status`;
+  version = UnityPy resolved via `resolve_unitypy_pin`; Il2CppDumper
+  shows the last-measured banner version from EXTRACTION-LOG
+  stage-defaults/run sections when stamped, `-` otherwise.
+
+### F9 — LOW: emit `source.bundle` with the `.bundle` extension
+- **Where:** `tools/stage5_emit_stubs.py:137-141` (loader strips to
+  bare stem); consumed at :309-310 (unmapped `bundles[]`) and :322
+  (stub `source.bundle`); spec §3 stage-5 example pins
+  `"bundle":"items-general_assets_all.bundle"`.
+- **Pinned fix:** in the loader, reconstruct the roster-style basename:
+  `bundle = stem[:m.start()] + ".bundle"`. Both consumers inherit it;
+  joins against roster basenames then match the example
+  character-for-character.
+
+### F10 — LOW: truthful evidence strings in `_unmapped-families.jsonl`
+- **Where:** `tools/stage5_emit_stubs.py:305-312` (evidence set at
+  :308 for BOTH `kind is None` and `eid is None` routes).
+- **Pinned fix:** split the entry creation by cause — `"no seeded kind
+  covers this class"` vs `"seeded kind matched but no identifier field
+  found"`. Ledgered absence is doctrine-bound to be factual; the
+  current string is false for the second route.
+
+### F11 — MEDIUM (coverage-unblocking seam): extract stage-3 reconciliation helpers verbatim
+- **Where:** inline logic at `tools/stage3_harvest_bundles.py:207-214`
+  (reconciliation) and :216-221 (carve-out completeness).
+- **Pinned fix:** extract as pure module-level functions
+  `reconcile_counts(censuses, manifest_rows, catalogue_rows)` and
+  `check_carveout_completeness(censuses, catalogue_rows)` — names
+  ALREADY in the suite's vocabularies (`tests/_impl.py:151-155`), and
+  `tests/test_stage3.py:105-178` is written against exactly these
+  signatures and binds on landing. Move the logic verbatim; `run()`
+  calls the helpers; behavior and messages byte-identical. Match the
+  return shape the existing tests assert (open them before writing).
+
+### F12 — MEDIUM (coverage-unblocking seam): extract stage-4 matrix builder verbatim
+- **Where:** inline key-universe computation at
+  `tools/stage4_localisation.py:257-267`.
+- **Pinned fix:** extract as `build_locale_matrix(tables)` (name in
+  `MATRIX_BUILDER_NAMES`, `tests/_impl.py:159-160`; the test's
+  single-arg TypeError fallback at `tests/test_stage4.py:49-52`
+  accepts this shape). Return the keys map (with base-overlay marks);
+  `run()` keeps meta assembly + `write_json`; emitted
+  `locale-matrix.json` byte-identical. Closes the hostless hole where
+  nothing proves base keys reach the matrix (TR-D4's risk note).
+
+## TEST lane
+
+### T1 — HIGH: fix the latent NameError in the flagship convergence test
+- **Where:** `tests/test_runner.py:262` — `*conftest_tree_game(...)` is
+  undefined anywhere (verified: single occurrence).
+- **Pinned fix:** import `tree_game` from conftest (same symbol
+  `run_pack` already uses at :35) and pass
+  `[str(tree_game(fx_stage5_full))]`. Latent today only because the
+  clean-reference leg dies earlier at the stage-5 crash; F2 unblocks it
+  and this bug would then kill R10 with NameError.
+
+### T2 — MEDIUM: de-over-pin compositionPolicy labels
+- **Where:** `tests/test_stage4.py:89-91` (three label-equality pins).
+- **Pinned fix:** option (a) of TestReviewer — drop the three equality
+  assertions; keep and strengthen what §8 actually obliges: enum
+  membership (:84-85), repeat-call determinism (add an explicit
+  second-call equality assertion), distinguishable inputs yielding
+  distinct labels, and the all-four-reachable sweep (:93 ff.). Do NOT
+  pin label semantics in the spec this round — §7 reserves it
+  ("not pre-pinned") pending real-client observation. ROUTE TO
+  QUESTION-QUEUE: define the four labels observably once real
+  base/english tables are decoded (consumers are told "read the field,
+  never prose"; that only works once the labels mean something
+  written down).
+
+### T3 — SMALL: bind the existing out-of-roster seam
+- **Where:** `tests/_impl.py:146-147` (`COVERAGE_NAMES`) +
+  `tests/test_stage2.py:87-113`.
+- **Pinned fix:** add `"map_catalog_keys"` to `COVERAGE_NAMES`; the
+  test then drives the real seam (`tools/stage2_harvest_catalog.py:86`
+  returns `(rows, unresolved)`) and asserts the planted bad reference
+  lands in `unresolved` (hard gate at :174-181 is separately covered by
+  runner exit-code tests). Until bound, the universe-math passes must
+  not be cited as impl-side coverage.
+
+### T4 — SMALL: drive `locale_for_bundle` end-to-end (regression wall for F1)
+- **Where:** new leg beside `test_locale_suffix_table_13_exact_mappings`
+  in `tests/test_stage0.py` (that test exercises the TABLE dict
+  directly — the broken lookup beside it had zero coverage, which is
+  why F1 stayed invisible).
+- **Pinned fix:** assert `locale_for_bundle` on the 13 real bundle
+  basenames (`localisation_assets_localisation_<suffix>.bundle`, spellings
+  per scout-report verifyA) resolves to exactly the 13 BCP-47 codes,
+  the unnamed stem → `"base"`, and a non-localisation name → None.
+
+### T5 — MINOR: close the signature-mismatch masking hole
+- **Where:** `tests/test_stage2.py:145-146`.
+- **Pinned fix:** in the `except TypeError:` handler call
+  `note_missing_symbol("coverage function present but signature differs")
+  before passing, so the session-end banner accounting stays complete
+  for present-but-mismatched hooks (absent hooks are already recorded).
+
+### T6 — MINOR: apply the carve-out grep end-to-end in the client-gated leg
+- **Where:**
+  `tests/test_client_gated.py::test_stage3_census_reconciliation_math_on_real_outputs`.
+- **Pinned fix:** one added assertion running the suite-owned scanner
+  over the real extraction root (`scan_tree_for_media_extensions`)
+  expecting zero hits outside `media-catalogue.*` — closes §5.6's
+  whole-piece acceptance mechanically (currently tested standalone
+  only).
+
+### T7 — HYGIENE (non-blocking): remove the stale probe tree
+- **Where:** `.fixture-trees/probe/` (misplaced
+  `globalgamemanagers` at install root; see adjudication §d).
+- **Pinned fix:** delete the tree (scratch, unconsumed by the suite;
+  the real builder is proven correct at `tests/_fixturelib.py:216-220`).
+  Do not "fix" its layout — removing prevents any future manual smoke
+  run from mistaking it for a valid prepared tree.
+
+## SPEC lane
+
+### S1 — Adopt the residual-inclusive census reconciliation identity NOW
+- **Where:** `docs/specs/piece-01-extraction-pipeline.mdx` §3 stage-3
+  acceptance, the "numbers reconcile" sentence.
+- **Edit (one line):** Σ `objectsByClass` over per-bundle censuses ==
+  export-manifest rows + media-catalogue rows + error rows +
+  **census-only residual (classes neither exported nor carved out)**.
+- **Rationale:** see adjudication §c — the literal form is
+  unsatisfiable on any real bundle; the implementation
+  (`stage3_harvest_bundles.py:207-214`) and the tests bound by F11
+  assert the residual-inclusive form. Mark as Revision 3
+  (arbiter-002), noting it clarifies rather than changes the contract.
+
+### S2 — Align §8's stage-1 bullet with Revision 2
+- **Where:** same spec, §8 stage-1 bullet: "class-hierarchy parser on a
+  fixture `script.json` slice".
+- **Edit (one word-level):** "`script.json` slice" → "`dump.cs` slice".
+  Revision-2 §3 pins hierarchy sources to DummyDll PRIMARY /
+  dump.cs FALLBACK and pins `script.json` as enumerating NO types
+  (TR observation O1) — the suite implements the coherent reading; the
+  checklist should match its own contract.
+
+---
+
+## Execution notes for the fixers
+
+1. Fix order that minimizes churn: F1+F2+F3 first (all blocking), then
+   F4/F5/F6 (perf + ledger correctness), then seams F11/F12, then lows
+   F7-F10, then the TEST lane (T1 lands any time; T2-T6 after their
+   impl counterparts so bindings hold), SPEC edits S1/S2 ride the same
+   round. F6+F10 share lines — implement together.
+2. Determinism discipline is unaffected: every fix above is
+   output-shape-preserving except where the spec example demands the
+   change (F8 column, F9 extension, F10 string) — rerun byte-identity
+   comparisons must use post-fix outputs on both legs.
+3. Success signal for the round: stage 0 emits the 13 exact BCP-47
+   flags on a real-client roster; stage 4 exits 0 against the real
+   client; stage 5 survives convention-only entities; the suite goes
+   green minus legitimate SKIP-ENV/heavy legs, with the four
+   loud-skip obligations (stage-2 hard-fail, stage-3
+   reconciliation+completeness, stage-4 matrix) now executing.
+4. Per repo rules: commit and push per completed unit; scope git
+   commands to TwoPoint paths.
+
+END OF arbiter-002-piece-01-build
