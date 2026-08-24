@@ -1,0 +1,364 @@
+# Arbiter 001 — ruling on reviewer-002's bounce of piece-01-extraction-pipeline
+
+**Arbiter:** arbiter-001 (PrepareTask step 5; rules, does not fix;
+spawned no subagents; wrote only this file). **Date:** 2026-08-24.
+**Subject:** `docs/specs/piece-01-extraction-pipeline.mdx` as bounced by
+[`docs/reviews/reviewer-002-piece-01.mdx`](../reviews/reviewer-002-piece-01.mdx)
+(findings R1–R11 per its "Required changes" list).
+
+**Read in full for this ruling:** the spec (to its sentinel); the review
+(to its sentinel); `TwoPoint/spec.md`, `data-acquisition.md`,
+`toolchain.md`, `docs/scout-report-001.mdx`,
+`docs/verifications/verifyB-scout-001.mdx`; repo `AGENTS.md`,
+`_foundation/extraction-doctrine.md`,
+`_foundation/localization-architecture.md`,
+`_foundation/decision-register.md` (in full, incl. [DR-2026-08-18-media-scope]
+and [DR-2026-08-17-relink]).
+
+---
+
+## Verdict summary
+
+| Finding | Ruling |
+|---|---|
+| R1 textures vs media-scope | **REAL** — blocking; lane ruled: catalogue-only |
+| R2 base bundle destroyed | **REAL-BUT-DIFFERENT-FIX** — persist rows; pin the policy as an emitted enum, not the outcome |
+| R3 availability dual-owner | **REAL** — stage 5 sole owner, + §5.4 presence + join procedure |
+| R4 output-path collisions | **REAL** — bundle identity in filenames + uniqueness acceptance |
+| R5 contentAxis fork | **REAL** — pin one emitted enum |
+| R6 catalog↔roster match | **REAL** — pin normalization + universes |
+| R7 hierarchy-equality source | **REAL** — restate vs a named enumerable source |
+| R8 small stalls batch | **REAL** — incl. the `inferred:false` contradiction |
+| R9 ops pins batch | **REAL** — minus the PNG item my R1 lane moots |
+| R10 test gaps | **REAL** — convergence test, exit-2 emission, catalog fixture; prepared-tree folds into R7 |
+| R11 mechanicals | **REAL** |
+
+**OVERALL: BOUNCE-TO-DOCUMENTATOR** — accepted-change list at the end,
+numbered and paste-ready. The skeleton (stage cut, exit codes, ledgers,
+determinism discipline, every verifyB carry) is approved as-is.
+
+---
+
+## Per-finding rulings
+
+### R1 — texture export vs [DR-2026-08-18-media-scope] → REAL (blocking)
+
+Read precisely, the DR's third bullet classifies textures alongside 3D
+models/animations, raw client copies, and oversized JSONL as
+*catalogue-first*: the byte-and-count catalogue comes first "so further
+offloads are owner choices, not agent judgment calls," and the DR's
+closing clause relaxes Principle zero's packer test **only for
+audiovisual media** — the catalogue-first holding rule for heavier
+classes stands untouched. Stage 3 as written blanket-exports every
+`Texture2D`/`Sprite` from all 176 bundles — including
+`character-shared-textures` (170 MiB) and `environment-landscape`
+(204 MiB) — directly under `extracted/`. That inverts the DR's order
+(retention first, catalogue as a side ledger of what was kept) and is
+exactly the agent judgment call the owner reserved; the reviewer's core
+claim is sound, and stage 3 cannot be implemented as written.
+
+On the posed question: the DR does **not** textually ban a narrow
+icon/UI-class export — but no clause grants that exemption either, and
+drawing the "icons yes, landscapes no" line is precisely an agent
+judgment call about texture retention. Requirements change only through
+decision-register entries, so authorizing an inline icon pass now is an
+owner/register act, not a documentator one. Piece 1 does not need icons
+(frontend is gated behind data completeness, and an owner pick on the
+catalogue can precede any icon pass), so the minimal conforming lane is
+**catalogue-only**: stage 3 routes ALL `Texture2D`/`Sprite` to
+`media-catalogue.jsonl` with the same row machinery as models and
+animations (class, bundle, name, pathId, counts + bytes, contentAxis);
+zero decoded image bytes anywhere under `extracted/` in piece 1; the
+PNG branch and `harvest/textures/manifest.jsonl` are deleted; the §5.6
+carve-out guard gains image extensions so the lane is mechanically
+guarded.
+
+No `data-acquisition.md` amendment is owed **first** — the pack doc
+already states the correct rule ("listed in the same catalogue with
+counts+bytes before any bulk retention decision"); it is the spec that
+deviates from both texts. Two consequences the reviewer missed: under
+this lane the R9 PNG-byte-identity item goes moot in piece 1, and the
+AssetStudioModCLI cross-check (R11's last clause) dissolves with it —
+both survive only as conditional notes for a future owner-approved
+export pass.
+
+### R2 — the unnamed base bundle → REAL-BUT-DIFFERENT-FIX (blocking)
+
+Half the finding is plainly real: the base overlay bundle is opened,
+reduced to evidence counts inside `base-overlay-report.json`, and its
+actual string rows are discarded. No raw layer exists for that container
+— curated views must derive *over* a raw layer (Principle zero), and the
+packer test fails for it. Fix: persist the decoded rows verbatim
+(suggested `extracted/locales/base-overlay.jsonl`, named to avoid the
+"14th locale" misread verifyB §3 already flagged).
+
+The other half — "pin the composition policy" — **cannot honestly be
+answered from client evidence today**. Three canon documents
+(`spec.md` `locales.base-overlay`, scout §8, and this spec's own §7)
+deliberately route the base-overlay semantics to a stage-4 OUTPUT;
+whether base is a fallback string table, a shared key registry, or a
+mix is unknowable until the bundles open. Pinning `english-over-base`
+now would fabricate a fact. The honest spec move is the **emitter
+contract**: pin the policy as a `compositionPolicy` field drawn from a
+closed enum (`english-only | english-over-base | base-over-english |
+mixed`), selected by the stage's deterministic classifier from observed
+evidence and carried in the report next to the mechanical evidence
+counts; consumers read the field, never the prose. Sub-answer:
+`locale-matrix.json` including base keys is *already stated* in the spec
+("presence across 13 locales + base") — that slice of R2 asks for what
+the spec already says; one clarifying sentence at most.
+
+### R3 — two owners, two schemas, one path → REAL (blocking)
+
+All three sub-defects verified. (a) With stage 4 writing key-granular
+rows and stage 5 overwriting the same path entity-granular, any
+`--only localisation` rerun after a full pass regresses the canonical
+contract to key shape — a stage-isolation/idempotence hole against the
+spec's own §5.5. (b) localization-architecture §5.4 binds "one row per
+entity: `availableLocales`, `namedLocales`, **and per-locale field
+presence** … regenerate on every extraction rerun" — field presence is
+absent from both current row shapes, so the canonical file as specified
+fails the binding standard it cites. (c) The entity→localization-key
+join is named but never specified.
+
+The reviewer's cut is right and is adopted: **stage 5 is the sole owner**
+of `relinks/locale_availability.jsonl` (entity-granular, §5.4-complete,
+regenerated on every stage-5 run — which satisfies §5.4's rerun clause);
+stage 4 writes only `locales/locale-matrix.json`, whose per-key presence
+rows strictly supersede the key-granular availability file, so nothing
+is lost. On the join: the *mechanism* is as undecidable today as the
+base-overlay semantics (field names are unknown until stage 3 opens the
+bundles), so pin the **procedure**, not field names — string-valued
+fields on an entity's dump whose values exactly match locale-matrix keys
+join as hard (`inferred:false`); convention-shaped matches join as
+`inferred:true` + method string, per doctrine. Acceptance gains: the
+availability row shape carries per-locale field presence, and stage-4
+isolation no longer touches the canonical path.
+
+### R4 — output-path collisions → REAL (blocking)
+
+`path_id`s are unique per SerializedFile/bundle, and the family rule
+deliberately aggregates bundles (hash-prefixed siblings collapse into
+one family by suffix; optimised/scene variants share family stems), so
+`harvest/monobehaviours/<family>/<class>/<pathId>.json` carries no
+uniqueness guarantee by construction — and the failure mode is the worst
+kind: silent overwrite, with only export-manifest rows to hint at it.
+"Certain" is an overstatement (collision requires overlapping path_ids
+across same-family bundles — likely, but not provable from names alone);
+the verdict is unchanged, because uniqueness-by-construction is free.
+Fix: embed bundle identity in every harvest filename
+(`<bundle>_<pathId>.json`, or a per-bundle directory tier) across
+monobehaviours, textassets, and any future byte-export shape, and add
+export-manifest `outRelPath` uniqueness as an explicit stage-3
+acceptance assertion.
+
+### R5 — contentAxis vocabulary fork → REAL
+
+Three spellings coexist: roster `dirClass` `dlc-space`/`dlc-ghost` (the
+machine artifact every later stage joins on), `spec.md` axes
+`[base, dlc1-space, dlc2-ghost]` (site-plane vocabulary), and stage-3
+prose "kept as `contentAxis`" with values never stated. Pin ONE emitted
+enum for all piece-1 artifacts — `base | dlc-space | dlc-ghost`, matching
+the roster — plus one line noting that `spec.md`'s `dlc1-space`/
+`dlc2-ghost` map onto it at the site layer. Site-facing renaming is a
+later piece's concern; piece 1's only duty is to stop emitting a third
+vocabulary.
+
+### R6 — catalog↔roster match rule → REAL
+
+The hard-fail guard itself is good and stays. As written it can trip
+spuriously on first contact with the real 1.21 catalog because the match
+key is undefined (bare basename vs provider-prefixed strings vs
+hash-form aliases). Pin: normalize both sides to case-folded basenames
+after stripping directory/provider-prefix segments; a reference that
+still matches no roster relpath hard-fails. Define the coverage
+universes: `distinctBundlesReferenced` counts distinct roster-matched
+relpaths; `bundlesUnreferenced` = roster rows absent from that set — the
+176-row roster universe, with `catalog.bundle` itself outside both
+counts (it is not a roster row).
+
+### R7 — "type count in script.json" → REAL
+
+Not executable as written: Il2CppDumper's `script.json` is a
+method/string-address artifact feeding the Ghidra/IDA scripts, not a
+type enumeration. Restate the equality against a named, mechanically
+enumerable source — DummyDll type enumeration (primary) or top-level
+type declarations in `dump.cs` (fallback) — and name the chosen source
+plus its counting method in the acceptance line. The reviewer's paired
+demand (define §5.2's "prepared tree") is accepted and executes here:
+one paragraph naming the fixture-builder command and the per-stage
+upstream-output set, so the TestWriter builds one harness instead of six
+private setups.
+
+### R8 — small stalls batch → REAL
+
+Each pin traces to a binding text or a validator's need:
+
+- **kind/filename mismatch:** row template shows `"kind":"item"`
+  (singular) while files are `items.jsonl` … (plural). Pin the exact
+  value↔filename mapping — the stage-5 schema validator cannot be
+  written without it.
+- **`inferred:false` contradiction:** the template pins
+  `"inferred":false` globally, while `data-acquisition.md`'s provenance
+  rule mandates `inferred:true` + method for anything derived — and
+  heuristic family/kind classification *is* derived. Define: identifiers
+  and raw field values copied from dumps are hard-read (`false`);
+  kind assignment and any convention-derived association carry `true` +
+  method. Genuine catch against a binding pack doc.
+- **Sampled byte-match:** pin N (e.g., all rows ≤1,000, else a
+  deterministic sorted sample of 500) or declare all-rows.
+- **`_unmapped-families.jsonl`: accepted** (see improvements below) —
+  census families/classes with no seeded kind get a ledger row,
+  extending the spec's own "ledgered absence, never silence" machinery
+  to the discovered-but-unmapped side, which Principle zero forbids
+  leaving silent.
+- **`GAME=` vs `TPC_GAME_DIR`:** one sentence reconciling them.
+
+### R9 — ops pins batch → REAL (one item mooted)
+
+- `.pipeline-meta.json` into the byte-identity exclusions beside
+  `.stage-stamps/` and the log — otherwise acceptance §5.5 self-violates
+  on any timestamped last-run context. Genuine catch.
+- `TPC_EXTRACTED_ROOT` override — `toolchain.md`'s host-realities
+  section itself prefers D:/A: over C: for tens-of-GB writes; the spec
+  currently pins multi-GB harvest under the pack dir.
+- `.gitkeep` for `logic/` + `maps/` (or reword §5.3): empty-dir
+  contracts do not survive a fresh clone, so acceptance §5.3 fails on
+  them as written.
+- UnityPy version pinned in the stage-defaults block (the log is the
+  defaults source per doctrine; toolchain's 1.25.2–1.25.3 are precedent
+  records, not a pin).
+- PNG byte-identity same-env scoping: **mooted in piece 1 by R1's
+  catalogue-only lane** (no PNGs exist to compare); retain the same-env
+  caveat as a one-line conditional for any future owner-approved export
+  pass so the flaky-by-construction criterion never returns.
+
+### R10 — test obligations → REAL
+
+- **Interrupted-run convergence test + temp-file/atomic-rename write
+  discipline stated in §4: accepted.** Idempotence is this spec's
+  headline claim, and every current test exercises completed runs only;
+  a partial-write pipeline passes the entire §8 and corrupts on the
+  first real kill. The doctrine's reproducibility bar and the spec's own
+  double-run-hash criterion make convergence the honest test of the
+  claim, and it is cheap on fixtures.
+- **Exit-2 emission fixture: accepted.** Exit-2-completed-with-ledger is
+  the piece's central honesty mechanism; the runner suite tests the
+  mapping, nothing tests a stage *producing* 2 (a truncated-bundle
+  fixture suffices).
+- **Synthetic ContentCatalogData fixture for the match rule: accepted** —
+  rides on R6; the out-of-roster detector is tested, the matcher it
+  guards is not.
+- Prepared-tree definition: accepted, executed under R7.
+
+### R11 — mechanicals → REAL
+
+`../../verifications/` → `../verifications/` (line 6 currently resolves
+to `TwoPoint/verifications/` — wrong); `localFlag` → `localeFlag`
+(stage 0's own field name); the merge-policy prose acceptance becomes a
+closed enum (executed inside R2's emitter contract); one line recording
+the AssetStudioModCLI cross-check as dormant for piece 1 under the R1
+lane (it revives only with an owner-approved export pass), so the
+toolchain matrix row does not dangle.
+
+---
+
+## Improvements vs churn in the reviewer's own proposals
+
+**Accepted as real improvements:** the stage-4 canonical-path cut
+(subsumed into R3 — it removes the spec's only redundant-and-hazardous
+machinery) and `_unmapped-families.jsonl` (folded into R8 — near-zero
+cost, doctrine-traced: silence over discovered-but-unmapped families is
+the exact failure `_absences.jsonl` exists to prevent, on the other side
+of the seeded-kinds boundary).
+
+**Ruled CHURN, cut from the accepted list:** the "promote the 14-locale
+equality and 176-total to the loud-warning tier" note (the reviewer's own
+parenthetical concedes they already are — a no-op wording ask); the
+README `./run_all` vs `python run_all.py` nit (the doctrine's "(or a
+make target)" allowance already covers the deliverable shape); the
+stage-0 tautology remark (advisory only; the reviewer requested no
+change). None blocks or binds anything; carrying them would pad the
+fixer brief.
+
+**Over-engineering sweep:** nothing in the reviewer's list gold-plates
+piece 1 — the largest asks (convergence test, ops pins, unmapped ledger)
+each defend an existing claim or a binding text, and none grows stage
+scope; stages 0–5 stand as cut. The reviewer overshoots in exactly two
+places, both corrected above rather than rejected: R2's demand to pin
+the composition *outcome* now (dishonest today) and R1's icon-cap lane
+(rests on an exemption no current text grants).
+
+---
+
+## OVERALL: BOUNCE-TO-DOCUMENTATOR
+
+Approved: architecture, stage boundary, exit-code contract, ledgers,
+determinism discipline, verifyB carries, cross-doc fact base. Blocking
+on paper before build: R1–R4 (owner ruling, raw-layer loss, schema fork,
+silent-loss paths) plus the contract executability items below. No
+re-scouting; estimated well under a day of documentation work.
+
+**Accepted changes (paste-ready fixer brief):**
+
+1. **R1:** Stage 3 routes ALL `Texture2D`/`Sprite` to
+   `media-catalogue.jsonl` (models/animations row machinery: class,
+   bundle, name, pathId, counts+bytes, contentAxis); zero decoded image
+   bytes under `extracted/` in piece 1; delete the PNG branch and
+   `harvest/textures/manifest.jsonl`; extend the §5.6 guard with image
+   extensions; add one line: icon/sprite byte export is an owner pick
+   taken on MEDIA-CATALOGUE per [DR-2026-08-18-media-scope], scheduled
+   after piece 1. No `data-acquisition.md` amendment (the pack doc
+   already states the rule; the spec conforms to it).
+2. **R2:** Persist the unnamed base bundle's decoded rows verbatim as
+   `extracted/locales/base-overlay.jsonl`; replace the report's prose
+   merge-policy statement with an emitted `compositionPolicy` ∈
+   `english-only | english-over-base | base-over-english | mixed`,
+   selected by the stage's deterministic classifier, evidence counts
+   retained; one clarifying sentence that `locale-matrix.json` covers 13
+   locales + base.
+3. **R3:** Stage 5 is the SOLE owner of `relinks/locale_availability.jsonl`
+   (entity-granular, regenerated on every stage-5 run); stage 4 writes
+   only `locales/locale-matrix.json`; the availability row shape gains
+   per-locale field presence (localization-architecture §5.4); the
+   entity→loc-key join is pinned as a deterministic procedure (exact
+   key-value matches = hard; convention matches = `inferred:true` +
+   method).
+4. **R4:** Embed bundle identity in every harvest output filename
+   (`<bundle>_<pathId>.json` or per-bundle directory tier) across
+   monobehaviours/textassets/any byte-export shape; export-manifest
+   `outRelPath` uniqueness becomes a stage-3 acceptance assertion.
+5. **R5:** Pin the emitted content-axis enum `base | dlc-space |
+   dlc-ghost` across stage 0/3 artifacts; one line mapping `spec.md`'s
+   `dlc1-space`/`dlc2-ghost` onto it at the site layer.
+6. **R6:** Pin the stage-2 match key (case-folded basename after
+   stripping directory/provider-prefix segments; unmatched reference =
+   hard-fail) and the coverage universes (`distinctBundlesReferenced` =
+   distinct roster-matched relpaths; `bundlesUnreferenced` = roster rows
+   outside that set; `catalog.bundle` in neither).
+7. **R7:** Restate the stage-1 hierarchy equality against a named
+   enumerable type source (DummyDll enumeration primary, `dump.cs`
+   declarations fallback) with its counting method; define §5.2's
+   prepared tree (fixture-builder command + per-stage upstream-output
+   set).
+8. **R8:** Pin the `kind` value↔filename mapping; `provisional`/
+   `inferred` semantics (hard-read copy = `false`; heuristic
+   classification and convention joins = `true` + method); the
+   identifier byte-match sample N; `GAME=` ≡ `TPC_GAME_DIR`; add
+   `extracted/stubs/_unmapped-families.jsonl` (census families/classes
+   with no seeded kind) to stage 5's outputs and acceptance.
+9. **R9:** Add `TPC_EXTRACTED_ROOT` override; `.gitkeep` for `logic/` +
+   `maps/` (or reword §5.3); `.pipeline-meta.json` in the byte-identity
+   exclusions; UnityPy version pinned in the stage-defaults block; keep
+   the PNG same-env byte-identity caveat as a conditional note only
+   (mooted in piece 1 by item 1).
+10. **R10:** Add the interrupted-run convergence test and state the
+    temp-file + atomic-rename write discipline in §4; add an exit-2
+    emission fixture (unreadable/truncated bundle) and a synthetic
+    ContentCatalogData fixture exercising item 6's match rule.
+11. **R11:** Fix the `../../verifications/` href → `../verifications/`;
+    `localFlag` → `localeFlag`; merge-policy acceptance becomes the item-2
+    enum; one line marking the AssetStudioModCLI cross-check dormant for
+    piece 1 (revives only with an owner-approved export pass).
+
+END OF arbiter-001-piece-01
