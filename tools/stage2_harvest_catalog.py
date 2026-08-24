@@ -3,10 +3,15 @@
 
 Decodes the Addressables catalog bundle into the full key → bundle/address
 index (the backbone of every later join). The OUTPUT contract is fixed
-(spec §3 stage 2) regardless of how the AA-1.21 binary payload decodes:
-UnityPy opens the bundle, the ContentCatalogData MonoBehaviour payload is
-decoded through a dump.cs-synthesized typetree, and tools/aa_catalog.py
-parses the validated binary blob layouts.
+(spec §3 stage 2) regardless of decode route.
+
+PRIMARY route (spec §3 stage 2, Revision 4 — measured client reality):
+the bundle's payload is a single TextAsset named `"catalog"` holding ~11.7 MB
+of JSON with `m_LocatorId` "AddressablesMainContentCatalog" plus base64
+blobs `m_KeyDataString` / `m_BucketDataString` / `m_EntryDataString`; the
+JSON is parsed directly and tools/aa_catalog.py decodes the three blobs.
+The MonoBehaviour/typetree route is the SECONDARY/absent path, probed only
+when the TextAsset is missing or malformed — never the primary.
 """
 from __future__ import annotations
 
@@ -28,6 +33,7 @@ AA_CLASS_SPELLINGS = (
     "UnityEngine.AddressableAssets.ContentCatalogData",
     "ContentCatalogData",
 )
+CATALOG_TEXTASSET_NAMES = ("catalog",)
 
 
 def classify_key(key) -> str:
@@ -40,8 +46,61 @@ def classify_key(key) -> str:
     return "address"
 
 
-def _find_catalog_object(env, synth):
-    """Locate + decode the ContentCatalogData payload inside catalog.bundle."""
+def _decode_catalog_textasset(env) -> tuple[dict | None, str]:
+    """PRIMARY decode route (Revision 4): find the TextAsset named
+    "catalog" (or any TextAsset whose JSON carries m_LocatorId
+    "AddressablesMainContentCatalog"), parse its JSON, and decode the three
+    base64 blobs via aa_catalog. Returns (decoded_model | None, note); None
+    means absent-or-malformed and the caller probes the SECONDARY route —
+    a malformed candidate never yields silent garbage decode."""
+    reasons: list[str] = []
+    for f in uu.iter_environment_files(env):
+        for obj in uu.iter_objects_sorted(f):
+            if getattr(obj.type, "name", "") != "TextAsset":
+                continue
+            name = ""
+            try:
+                asset = obj.read()
+                name = getattr(asset, "m_Name", "") or ""
+                raw = getattr(asset, "m_Script", "")
+            except Exception as exc:  # noqa: BLE001 — unreadable object is not the catalog
+                reasons.append(f"path_id {getattr(obj, 'path_id', '?')} "
+                               f"unreadable: {type(exc).__name__}: {exc}")
+                continue
+            if isinstance(raw, str):
+                raw = raw.encode("utf-8", "surrogatepass")
+            if not isinstance(raw, (bytes, bytearray)):
+                reasons.append(f"TextAsset {name!r}: payload neither str nor bytes")
+                continue
+            try:
+                payload = json.loads(bytes(raw))
+            except ValueError as exc:
+                reasons.append(f"TextAsset {name!r}: not valid JSON ({exc})")
+                continue
+            locator = payload.get("m_LocatorId") \
+                if isinstance(payload, dict) else None
+            if name.lower() not in CATALOG_TEXTASSET_NAMES \
+                    and locator != "AddressablesMainContentCatalog":
+                continue  # unrelated TextAsset — neither candidate nor defect
+            if not isinstance(payload, dict):
+                reasons.append(f"TextAsset {name!r}: top-level JSON is not an object")
+                continue
+            try:
+                decoded = aa_catalog.decode_catalog_payload(payload)
+            except aa_catalog.CatalogDecodeError as exc:
+                reasons.append(f"TextAsset {name!r}: blob decode failed ({exc})")
+                continue
+            return decoded, (f"textasset-json primary (TextAsset {name!r}, "
+                             f"{len(raw)} B, m_LocatorId={locator!r})")
+    return None, ("no decodable catalog TextAsset: "
+                  + ("; ".join(reasons) if reasons else "none present"))
+
+
+def _find_catalog_monobehaviour(env, synth):
+    """SECONDARY/absent route (demoted by Revision 4): probe for a
+    ContentCatalogData MonoBehaviour payload through the dump.cs-synthesized
+    typetree. Reached only when the primary TextAsset route is missing or
+    malformed."""
     for f in uu.iter_environment_files(env):
         objs = uu.iter_objects_sorted(f)
         for obj in objs:
@@ -68,9 +127,11 @@ def _find_catalog_object(env, synth):
                 if "m_KeyDataString" in data or "m_InternalIds" in data:
                     return data
     raise tc.StageError(
-        "catalog.bundle opened but no decodable ContentCatalogData found — "
-        "the typetree synthesis needs stage-1 dump.cs "
-        "(decompiled/il2cppdumper/dump.cs); run decompile first", exit_code=1)
+        "catalog.bundle decoded via NEITHER route: the primary TextAsset "
+        '"catalog" is absent or malformed AND no decodable '
+        "ContentCatalogData MonoBehaviour exists — the secondary typetree "
+        "route needs stage-1 dump.cs (decompiled/il2cppdumper/dump.cs)",
+        exit_code=1)
 
 
 def _bundle_reference(entry_row: dict) -> str | None:
@@ -161,8 +222,16 @@ def run(game_root: Path, extracted_root: Path) -> int:
     synth = uu.TypetreeSynthesizer(index) if index is not None else None
 
     env = UnityPy.load(str(paths["catalog_bundle"]))
-    payload = _find_catalog_object(env, synth)
-    decoded = aa_catalog.decode_catalog_payload(payload)
+    decoded, primary_note = _decode_catalog_textasset(env)
+    if decoded is not None:
+        decode_route = "textasset-json(primary)"
+    else:
+        print(f"[harvest-catalog] primary TextAsset route unavailable "
+              f"({primary_note}) — probing secondary MonoBehaviour/typetree "
+              "route", file=sys.stderr)
+        decoded = aa_catalog.decode_catalog_payload(
+            _find_catalog_monobehaviour(env, synth))
+        decode_route = "monobehaviour-typetree(secondary)"
 
     # roster universe normalized once
     norm_to_relpath: dict[str, str] = {}
@@ -225,13 +294,14 @@ def run(game_root: Path, extracted_root: Path) -> int:
     lines = [
         "- exitCode: 0",
         f"- unitypySource: {unitypy_source}",
+        f"- decodeRoute: {decode_route} ({primary_note})",
         f"- keysTotal: {len(keys_out)}; distinctBundlesReferenced: "
         f"{len(referenced)} of {len(roster)} roster rows; "
         f"bundlesUnreferenced: {len(unreferenced)}",
     ]
     lines += [f"- UNRESOLVED-REFERENCE: {u}" for u in sorted(unresolved)]
     log_util.append_run_section(extracted_root, "harvest-catalog", lines)
-    print(f"[harvest-catalog] keys={len(keys_out)} "
+    print(f"[harvest-catalog] keys={len(keys_out)} route={decode_route} "
           f"bundles_referenced={len(referenced)}/{len(roster)} "
           f"unreferenced={len(unreferenced)}")
     return 0

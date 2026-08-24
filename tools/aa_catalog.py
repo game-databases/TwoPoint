@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Addressables 1.21 binary ContentCatalogData decoders.
 
-The MonoBehaviour payload (m_KeyDataString / m_BucketDataString /
-m_EntryDataString base64 blobs + m_InternalIds / m_ProviderIds /
-m_resourceTypes) is decoded by stage 2 via unitypy_util's synthesized
-typetree; THIS module parses the blobs themselves.
+Stage 2 hands THIS module the raw catalog payload dict — m_KeyDataString /
+m_BucketDataString / m_EntryDataString base64 blobs plus m_InternalIds /
+m_ProviderIds / m_resourceTypes — from either route (spec §3 stage 2,
+Revision 4): PRIMARY = the TextAsset "catalog" JSON parsed directly;
+SECONDARY = a ContentCatalogData MonoBehaviour decoded through the
+dump.cs-synthesized typetree. This module parses the blobs themselves.
 
 Blob layouts are NOT guessed: they were reverse-engineered and validated
 2026-08-20 against two shipped catalogs — Disco Elysium (Unity 2020.3 /
@@ -99,7 +101,10 @@ def decode_catalog_payload(payload: dict) -> dict:
     """
     for required in ("m_InternalIds", "m_ProviderIds"):
         if required not in payload:
-            raise CatalogDecodeError(f"catalog payload missing '{required}'")
+            present = sorted(k for k in payload if isinstance(k, str))
+            raise CatalogDecodeError(
+                f"catalog payload missing '{required}' (present keys: "
+                f"{present[:12]})")
     internal_ids = [s.replace("\\", "/") if isinstance(s, str) else str(s)
                     for s in payload["m_InternalIds"]]
     provider_ids = [str(s) for s in payload["m_ProviderIds"]]

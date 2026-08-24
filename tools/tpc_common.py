@@ -364,10 +364,26 @@ def split_family(bundle_name: str, dir_class: str) -> tuple[str, str, bool]:
 def normalize_ref(ref: str) -> str:
     """MATCH KEY normalization (spec §3 stage 2 acceptance): catalog bundle
     references AND roster relpaths both normalize to case-folded basenames
-    after stripping directory/provider-prefix segments."""
+    after stripping directory/provider-prefix segments.
+
+    Braced spellings resolve deterministically by what follows the closing
+    brace: `…}.bundle` / `…}.json` / `…}?…` means the braces wrap the NAME
+    (the Addressables hash-form `{hash}.bundle`) — content kept; anything
+    else after `}` means the braces wrap a provider/scheme PREFIX
+    (`{RSC}name…`) — the braced segment is stripped."""
     s = str(ref).replace("\\", "/")
     s = s.rsplit("/", 1)[-1]          # directory segments
-    s = s.strip("{}")                 # provider-prefix braces if any survive
+    while s.startswith("{"):
+        close = s.find("}")
+        if close < 0:                 # malformed — drop braces wholesale
+            s = s.replace("{", "").replace("}", "")
+            break
+        head, tail = s[1:close], s[close + 1:]
+        if not tail or tail[0] in ".?":
+            s = head                  # braces wrapped the name itself
+            break
+        s = tail                      # braces wrapped a scheme prefix
+    s = s.replace("{", "").replace("}", "")
     if "?" in s:
         s = s.split("?", 1)[0]
     s = s.casefold()
