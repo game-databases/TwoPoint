@@ -1,0 +1,257 @@
+# CodeReview codereviewer-001 — piece-1 extraction pipeline implementation
+
+**Reviewer:** codereviewer-001 (pipeline step 3, independent)
+**Date:** 2026-08-24
+**Subject:** `run_all.py`, `Makefile`, `tools/stage0_verify_client.py`,
+`stage1_decompile.py`, `build_structural.py`, `ilmetadata.py`,
+`stage2_harvest_catalog.py`, `aa_catalog.py`, `stage3_harvest_bundles.py`,
+`unitypy_util.py`, `stage4_localisation.py`, `stage5_emit_stubs.py`,
+`tpc_common.py`, `log_util.py`
+**Contract:** [`../specs/piece-01-extraction-pipeline.mdx`](../specs/piece-01-extraction-pipeline.mdx)
+read in full incl. Revision 2 (sentinel seen), plus repo-root
+`AGENTS.md`, `_foundation/extraction-doctrine.md`,
+`_foundation/extraction-host.md`, `_foundation/decision-register.md`,
+`toolchain.md` (all read in full). Tests NOT reviewed (TestReviewer's
+lane); `extracted/` outputs not judged beyond code-path needs.
+
+## Verdict: FIX-REQUIRED
+
+Two blocking defects (D1 breaks stage 4 against the verified real client;
+D2 silently defeats the staged-tool resolution order), plus two scale
+defects that will make stages 3/5 impractically slow on the real corpus,
+and a tail of low-severity conformance nits. Everything else checked —
+entrypoint surface, output layout, carve-out, sole-ownership, write
+discipline, determinism — passes.
+
+---
+
+## Mechanical checklist results
+
+1. **Entrypoint surface** — PASS except D7.
+   `--list` enumerates exactly the six ids in order (`run_all.py --list`
+   executed live; order matches §5.1);
+   `--only <id>` / `--skip a,b` / `--force` / positional game dir /
+   `TPC_GAME_DIR` / `TPC_PACK_DIR` / `TPC_EXTRACTED_ROOT` all wired
+   (`run_all.py:196-261`, `tpc_common.py:141-159`); `GAME=`≡
+   `TPC_GAME_DIR` in `Makefile:31,35`; stage stamps keyed by
+   script-hash+config+upstream identity with up-to-date requiring
+   recorded exit 0 (`log_util.py:222-227`) — exit-2 runs correctly
+   re-run; EXTRACTION-LOG default block seeded/read
+   (`log_util.py:130-181`), UnityPy pin `1.25.3` present both in code
+   fallback and seeded block; exit codes mapped exactly (0 success · 1
+   failure · 2 ledger-and-continue · 3 refusal; live-verified exit 3 on
+   missing input and on missing upstream, drift lines warn-only).
+2. **Stage scripts** — PASS. One per stage under the exact §3 names,
+   each individually runnable with `--extracted-root`; idempotent
+   (stages 3/5 rmtree their plane before rebuild; stage 0 double-run
+   hash-verified byte-identical on a synthetic tree this session);
+   sorted enumeration everywhere; JSON sorted-keys via `dump_json`/
+   `write_jsonl`; UTF-8 + LF writes; temp-file + `os.replace` atomic
+   rename for every declared output (`log_util.py:45-90`); wall-clock
+   confined to EXTRACTION-LOG run sections, stamps, `.pipeline-meta.json`.
+3. **Output layout** — PASS. Every §4 path is emitted by the owning
+   stage: identity.json + bundle-roster.jsonl + skeleton placeholders +
+   logic//maps/ `.gitkeep`s + protocol/README.md (stage 0, verified on
+   synthetic run); decompiled/{il2cppdumper,structural} (stage 1);
+   addressables trio (stage 2); harvest census/textassets/
+   monobehaviours/export-manifest with `<bundle-stem>_<pathId>`
+   filenames (stage 3); locales 13×jsonl + base-overlay.jsonl +
+   base-overlay-report.json + locale-matrix.json with the four-value
+   compositionPolicy enum (stage 4); stubs ×9 kinds + `_absences.jsonl`
+   + `_unmapped-families.jsonl` + relinks/locale_availability.jsonl
+   (stage 5, kind↔file map exact).
+4. **Hard rules** — PASS except where noted. Media carve-out enforced
+   by export WHITELIST (`EXPORT_CLASSES = {TextAsset, MonoBehaviour}`,
+   `stage3_harvest_bundles.py:31`) — carved classes get catalogue rows
+   of the exact pinned shape and `continue` before any write; no PNG
+   branch exists; no binary encoder exists; unknown classes fall to
+   census-only residual, never bytes. `outRelPath` uniqueness enforced
+   (but see D3). Match-key normalization shared by refs and roster
+   (`tpc_common.normalize_ref`), out-of-roster hard-fail before any
+   write (`stage2_harvest_catalog.py:174-182`). Join procedure
+   exact→hard / convention→inferred+method implemented as pinned
+   (`stage5_emit_stubs.py:171-262`). Sample-N rule ≤1000→all else
+   sorted deterministic 500 (`sample_for_check`). Zero legality/
+   licensing vocabulary anywhere in the implementation (grepped).
+5. **Real-code quality** — good overall. No invented game data (all
+   pins traceable to scout/toolchain measurements); failures are loud
+   (exit 3 refusals name the missing path; decode failures raise, never
+   skip; unreadable bundles → exit 2 with `unreadable.jsonl`); the one
+   machine-specific absolute path is the spec-pinned `D:\` fallback.
+   Dead/vestigial spots: `ilmetadata.const_by_field` unused,
+   `_constant_value` linear rescan (perf-only);
+   `unitypy_util.decode_monobehaviour`'s `else: last_error = None` arm
+   unreachable; `build_structural._primary_hierarchy` annotated
+   2-tuple, returns 3; stage 0's roster-count `assert` is vacuous
+   (rows built from the same enumeration); stage 5 loads catalog.json
+   into `_catalog` and never uses it. None of these change behavior.
+
+---
+
+## Defects
+
+### D1 — BLOCKING: locale-flag lookup misses the `_` separator → stage 4 can never succeed on the real client
+- **Where:** `tools/tpc_common.py:304-318` (`locale_for_bundle`),
+  table `tools/tpc_common.py:68-83`.
+- **What:** for `localisation_assets_localisation_english.bundle` the
+  computed suffix is `"_english"` (prefix strip keeps the underscore),
+  but `LOCALE_SUFFIX_TABLE` keys are `"english"`, `"french"`, … without
+  it. Every named locale falls into the unknown-suffix branch and gets
+  `localeFlag = "unknown:_english"` etc.
+- **Proof:** synthetic stage-0 run this session on the probe fixture
+  tree produced `1×"base"` + `13×"unknown:_<lang>"`. The real names are
+  confirmed by scout-report-001.mdx:259-274 (verifyA CONFIRMED
+  VERIFIED-FROM-CLIENT: `…_english.bundle`, `…_brazilianportuguese.bundle`, …).
+- **Why blocking:** (a) stage 0 silently emits corrupt flags — the
+  row-count check still sees 14 truthy flags, so no DRIFT fires;
+  (b) stage 4 then classifies all 13 named bundles as unmapped
+  (`stage4_localisation.py:217-220`), finds no `en` pivot and exits 1
+  ("no `en` pivot table decoded"). Stage 4 has never been able to pass
+  against the real client.
+- **Fix:** normalize before lookup, e.g.
+  `suffix = stem[len(LOCALE_BUNDLE_STEM_PREFIX):].lower().lstrip("_")`
+  (or key the table with leading underscores). Add the 13 exact flag
+  values to stage-0's acceptance so this class of corruption cannot
+  pass count-only checks again.
+
+### D2 — MAJOR: repo-relative Il2CppDumper candidates resolve outside the repo
+- **Where:** `tools/tpc_common.py:108-113`
+  (`IL2CPP_DUMPER_CANDIDATES`), resolution
+  `tools/stage1_decompile.py:38-43`; the same bad list is seeded into
+  EXTRACTION-LOG defaults (`tools/stage0_verify_client.py:196-197`).
+- **What:** candidates carry a `../` prefix and resolve against
+  `repo_root = pack_dir.parent` (= `game-databases`), producing
+  `C:\_reps\zero-parades\…` / `C:\_reps\disco-elysium\…` — verified
+  non-existent. The real staged copies sit INSIDE the repo:
+  `game-databases/zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe`
+  and `game-databases/disco-elysium/tools/Il2CppDumper/Il2CppDumper.exe`
+  (both verified existing). Resolution survives only via the fourth,
+  absolute `D:\unpacked_game_data\albion-online\_tooling\...` fallback.
+- **Why it matters:** on NE8K stage 1 works but silently prefers
+  nothing from the repo and contradicts the spec's stated order
+  ("disco-elysium/zero-parades/... first, else D:\"); on any host or
+  checkout without the `D:\` copy, stage 1 refuses (exit 3) while two
+  usable staged copies sit inside the repository — defeating the
+  fresh-clone reproducibility contract ([DR-2026-08-18-pipeline]).
+- **Fix:** drop the `../` prefixes so entries are repo-root-relative:
+  `"zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe"`,
+  `"disco-elysium/zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe"`,
+  `"disco-elysium/tools/Il2CppDumper/Il2CppDumper.exe"`, then the `D:\`
+  fallback. (Fixing the seeded log alone would not fix the code path.)
+
+### D3 — MEDIUM: O(n²) duplicate-outRelPath scan will dominate stage 3 at real scale
+- **Where:** `tools/stage3_harvest_bundles.py:202-205`.
+- **What:** `duplicates = {p for p in out_paths if out_paths.count(p) > 1}`
+  is quadratic; with realistic tens-of-thousands of exported files over
+  176 bundles this is billions of comparisons inside the acceptance
+  check — potentially hours added to every run.
+- **Fix:** `collections.Counter(out_paths)` (or a seen-set) and keep
+  the same problem message/exit-1 behavior.
+
+### D4 — MEDIUM: stage 5 re-walks the whole monobehaviour tree once per entity for availability joins
+- **Where:** `tools/stage5_emit_stubs.py:199-218`
+  (`monobehaviours_dir.rglob(f"*_{src['pathId']}.json")` inside the
+  per-entity loop, plus repeated full JSON reads of each candidate).
+- **What:** O(entities × files) filesystem scanning. At client scale
+  (10⁴–10⁵ MonoBehaviour dumps across families) stage 5 becomes
+  practically unrunnable, even though the main loop already held every
+  payload in memory moments earlier.
+- **Fix:** index dumps once — either keep the
+  `(family, cls, bundle, pathId) → fields` map from
+  `load_monobehaviour_dumps` during the main pass, or build one
+  `pathId → [paths]` dict up front; join from memory.
+
+### D5 — LOW-MEDIUM: absence-ledger scope fields are vacuously empty
+- **Where:** `tools/stage5_emit_stubs.py:305-314` (scope populated only
+  when a row is also appended) vs `:337-345` (absence rows read it).
+- **What:** `scan_scope[kind]` is filled in the same iteration that
+  appends to `rows_by_kind[kind]`, so a family with no rows ALWAYS
+  reports `scannedBundles: [] / scannedClasses: []`. Spec acceptance
+  requires the absence row "naming scan scope"; as implemented the two
+  scope lists can never carry information.
+- **Fix:** record candidate scope before the id filter — e.g. add the
+  bundle/class whenever `assign_kind` returned the kind (even if the id
+  extraction failed), or record the family-hinted universe scanned.
+
+### D6 — LOW: settings snapshot parses a misspelled key
+- **Where:** `tools/stage2_harvest_catalog.py:194-196`.
+- **What:** subset key `"m_buildTarget"` — the client file spells it
+  `m_BuildTarget` (verified against the staged settings snapshot), so
+  the machine-readable half of `settings.snapshot.json` carries
+  `m_buildTarget: null` forever. Verbatim half unaffected.
+- **Fix:** correct the spelling (or case-fold the lookup).
+
+### D7 — LOW: `--list` lacks the version column the spec pins
+- **Where:** `tools/../run_all.py:170-183`.
+- **What:** §5.1 pins "tool/version/status columns"; the table prints
+  tool+status only. UnityPy's version is folded into the tool cell
+  (`UnityPy ~=1.25.3`) but Il2CppDumper's cell carries no version at
+  all (it is only measurable at stage runtime from the tool banner).
+- **Fix:** add an explicit version column — UnityPy pin resolved from
+  the stage-defaults block, dumper showing last-measured banner version
+  from EXTRACTION-LOG when stamped, `-` otherwise.
+
+### D8 — LOW: stub `source.bundle` omits `.bundle` vs the pinned row-shape example
+- **Where:** `tools/stage5_emit_stubs.py:137-143` (stem parsed from the
+  filename) vs spec §3 stage-5 example
+  `"bundle":"items-general_assets_all.bundle"`.
+- **What:** values are unambiguous (roster basename minus extension),
+  but the row shape is declared pinned and consumers may join it
+  against roster `relpath`/bundle basenames that include the extension.
+- **Fix:** emit the basename with `.bundle` (or the roster relpath) so
+  the join key matches the example character-for-character; state the
+  choice in one place.
+
+### D9 — INFO: inaccurate evidence string for seeded-kind-but-no-id dumps
+- **Where:** `tools/stage5_emit_stubs.py:305-312`.
+- **What:** objects whose class DID match a seeded kind but yielded no
+  extractable id are routed into `_unmapped-families.jsonl` with
+  evidence "no seeded kind covers this class" — false for that branch.
+  Ledgered absence must be truthful (doctrine: facts, never gloss).
+- **Fix:** distinguish the two cases ("no seeded kind covers this
+  class" vs "seeded kind matched but no identifier field found").
+
+### D10 — INFO: §3's literal census reconciliation identity is unsatisfiable; implementation substitutes explicit residual accounting
+- **Where:** `tools/stage3_harvest_bundles.py:207-214` vs spec §3
+  stage-3 acceptance ("Σ objectsByClass == manifest + media-catalogue +
+  error rows").
+- **What:** the equation as written cannot hold on any real bundle
+  (GameObject/Transform/manager classes are neither exported nor
+  catalogued nor errored). The implementation reconciles
+  `census == exports + catalogue + errors + residual(census-only
+  classes)` and reports `censusOnlyResidual` — the only sane reading.
+  Recorded here so the TestWriter's reconciliation assertions and any
+  future spec revision adopt the residual-inclusive form deliberately,
+  not accidentally.
+
+## Refuted / misdirected findings on record
+
+- "dead english-over-base branch" (reported by the test suite commit):
+  in the current ladder (`stage4_localisation.py:175-182`) the
+  `english-over-base` arm IS reachable (`en_only > 0 ∧ base_only == 0 ∧
+  differing == 0`). All four enum branches are reachable. Do not "fix"
+  this.
+
+## Out-of-lane observation (for the TestReviewer)
+
+`.fixture-trees/probe/steamapps/common/Two Point Campus/globalgamemanagers`
+sits at the install root; the verifyA-confirmed layout
+(scout-report-001.mdx:77) and the code both place it in `TPC_Data/`.
+Any stage-0 smoke run against that tree fails with exit 3 before
+exercising anything. Fixture issue, not implementation.
+
+## Verified-good summary (evidence)
+
+Synthetic execution this session (probe fixture tree, temp extraction
+root): stage 0 exits 0, identity.json field-complete and correct
+(metadata v27, unity 2020.3.47f1, buildId=TargetBuildID=20226581,
+addressables 1.21.10 + settingsHash), 64-row roster with correct
+sceneFlag classification (incl. the seasonal non-`.unity` nuance),
+DRIFT lines warn-only, second forced run hash-identical on
+identity.json + bundle-roster.jsonl, skeleton placeholders + `.gitkeep`s
++ protocol/README.md + seeded EXTRACTION-LOG with stage-defaults block
+all materialized; upstream-missing `--only harvest-catalog` exits 3 with
+a prepared-tree instruction; `--list` order and exit-code legend
+correct.
+
+END OF codereviewer-001-piece-01
