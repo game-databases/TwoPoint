@@ -37,8 +37,8 @@ data; extraction runs in place).
 | Phase | Scope | Status |
 |---|---|---|
 | A | Bootstrap: reads, environment, registry | **done** |
-| B | PrepareTask pass 1: scout → explorers → spec → review → arbiter | **in progress** |
-| C | Extraction pipeline: harvest · decompile · locales · icons · logic · relink · map geometry · PROOF | queued |
+| B | PrepareTask pass 1: scout → documentator → review → arbiter → revision → re-review | **done** — spec SPEC-READY (`9575203`) |
+| C | Extraction pipeline: harvest · decompile · locales · icons · logic · relink · map geometry · PROOF | **in progress** — build pair seated |
 | D | Site build: tokens · shell+picker · pages · search · map · builder · i18n · SEO/AEO · UGC | gated behind C |
 | E | Visual critic loop vs references + e2e smoother waves | gated behind D |
 | F | FRAMEWORK §8 launch gates + site-ready verification | last |
@@ -49,13 +49,25 @@ data; extraction runs in place).
 |---|---|---|
 | scout-001 / scout-002 | Install inventory + tooling/locales/map/competitors (§1–9, END sentinel) | **done** — verified PASS (facts) + READY-FOR-DOCUMENTATOR (coverage) |
 | verifyA-001 · verifyB-001 | Independent verification of the scout report | **done** — 21/21 facts CONFIRMED; carries folded into Documentator brief |
-| documentator-001 | Six pack convention docs + piece-1 extraction spec | **running** |
+| documentator-001 | Six pack convention docs + piece-1 extraction spec (Revision 2) | **done** |
+| reviewer-001 → reviewer-002 → reviewer-003 | Spec review rounds (bounce R1–R11 → FIX-REQUIRED ×2 one-liners) | **done** — release sanctioned after spot-check |
+| arbiter-001 | 11-item accepted-change ruling on the spec | **done** — all applied by Revision 2 |
+| fixer-003 | Two one-line residuals on Revision 2 | **done** — orchestrator spot-checked both lines (`9575203`) |
+| codewriter-001 · testwriter-001 | Piece-1 build pair: pipeline impl ∥ test suite, blind to each other | **running** |
 
 Owner questions: [QUESTION-QUEUE.md](QUESTION-QUEUE.md) — one standing
 item (domain+tier), nothing work-blocking.
 
 ## Log
 
+- 2026-08-24: **Phase B closed, Phase C opened.** Review chain completed:
+  reviewer-002 bounced the spec (R1–R11), arbiter-001 ruled 11 accepted
+  changes, documentator applied them as Revision 2, reviewer-003 verified
+  9/11 applied-correctly + two one-line residuals (line-6 href,
+  stage-1 `script.json` clause), fixer-003 applied both, orchestrator
+  spot-checked both lines per reviewer-003's recommendation — spec is
+  **SPEC-READY**. CodeWriter + TestWriter seated simultaneously from the
+  same contract, blind to each other (pipeline step 2).
 - 2026-08-24 · **Owner directive**: the site builds on **shadcn/ui
   components heavily tuned to the Two Point style and soul** — refined
   by the owner mid-session: not just reskinned for tokens but
