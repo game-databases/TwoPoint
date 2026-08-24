@@ -9,8 +9,9 @@ import pytest
 from _impl import (MATRIX_BUILDER_NAMES, POLICY_CLASSIFIER_NAMES, get_sym,
                    load_tool, skip_if_none)
 from _validators import (BASE_OVERLAY_NAME, COMPOSITION_POLICIES, LOCALE_TABLE,
-                         assert_jsonl_roundtrip, locale_file_set_matches,
-                         locate_matrix_keys, validate_base_overlay_report)
+                         UNITY_VERSION, assert_jsonl_roundtrip,
+                         locale_file_set_matches, locate_matrix_keys,
+                         validate_base_overlay_report)
 
 sys.path.insert(0, str(Path(__file__).parent))
 import _fixturelib as fx  # noqa: E402
@@ -164,3 +165,65 @@ def test_stage4_isolation_leaves_relinks_untouched(fx_stage4, tmp_path):
             (locales / "base-overlay-report.json").read_text(encoding="utf-8"))
         errs = validate_base_overlay_report(report)
         assert not errs, f"base-overlay-report contract violations: {errs}"
+
+
+# --- Revision 4: locale bundles share the stage-3 fallback-version seeding -----------
+
+SEED_SCRIPTS_S4 = ("stage4_localisation.py", "unitypy_util.py", "tpc_common.py")
+
+
+def _seed_helper_s4():
+    from _impl import FALLBACK_SEED_NAMES, note_missing_symbol
+    for script in SEED_SCRIPTS_S4:
+        mod = load_tool(script)
+        if mod is None:
+            continue
+        fn = get_sym(mod, *FALLBACK_SEED_NAMES)
+        if fn is not None:
+            return fn
+    note_missing_symbol(
+        f"fallback-version seeder via stage 4 (tried {FALLBACK_SEED_NAMES} "
+        f"across {', '.join(SEED_SCRIPTS_S4)})")
+    pytest.skip("impl-missing: shared fallback-version seeding helper not "
+                "resolvable from stage 4 yet (CodeWriter pending)")
+
+
+def _invoke_seed_s4(fn, bundle, extracted_root):
+    from _impl import try_call_shapes
+    return try_call_shapes(
+        fn,
+        ((bundle,), {}),
+        ((bundle, extracted_root), {}),
+        ((str(bundle)), {}),
+        ((bundle.read_bytes(),), {}),
+        ((), {"path": bundle, "extracted_root": extracted_root}),
+        ((), {"bundle_path": bundle, "fallback_version": UNITY_VERSION}),
+    )
+
+
+def test_locale_bundles_share_fallback_version_seeding(tmp_path):
+    """Revision 4 §8 stage 4: locale bundles are content bundles (their UnityFS
+    headers read `0.0.0` too) and exercise the SAME identity-sourced seeding
+    helper as stage 3; the usage count lands in this stage's run section."""
+    fn = _seed_helper_s4()
+    bundles = fx.write_seed_probe_bundles(tmp_path / "locale-bundles")
+    out = _invoke_seed_s4(fn, bundles["zero"], tmp_path)
+    cfg = getattr(__import__("UnityPy"), "config", None)
+    assert getattr(cfg, "FALLBACK_UNITY_VERSION", None) == UNITY_VERSION, (
+        f"a locale bundle with a `0.0.0` header must seed the fallback from "
+        f"identity.json's unityVersion ({UNITY_VERSION!r})")
+
+    def used(o):
+        if isinstance(o, bool):
+            return o
+        if isinstance(o, tuple) and o:
+            return bool(o[0])
+        if isinstance(o, dict):
+            return next((bool(o[k]) for k in
+                         ("used", "fallbackUsed", "fallbackVersionUsed", "seeded")
+                         if k in o), None)
+        return None
+
+    flag = used(out)
+    assert flag is not False, (
+        f"the seeded locale-bundle open must count as fallback usage; got {out!r}")

@@ -279,3 +279,110 @@ def test_unreadable_bundle_drives_ledger_and_exit2(fx_stage3, tmp_path):
         row = json.loads(ln)
         assert any(k in row for k in ("reason", "error", "message")), \
             f"unreadable row lacks a reason: {row}"
+
+
+# --- Revision 4: identity-sourced FALLBACK_UNITY_VERSION seeding ----------------------
+# Content bundles' UnityFS headers read literally `0.0.0` on this client; before
+# opening any bundle stages 3+4 seed UnityPy's fallback from identity.json's
+# unityVersion, flip that census's fallbackVersionUsed, and move the run-section
+# usage total. The substrates here are shared with the stage-4 tests (spec §8:
+# "shared helper with stage 4").
+
+SEED_SCRIPTS = ("unitypy_util.py", "stage3_harvest_bundles.py", "tpc_common.py")
+
+sys.path.insert(0, str(Path(__file__).parent))
+import _fixturelib as fx  # noqa: E402
+
+
+def _seed_helper():
+    from _impl import FALLBACK_SEED_NAMES, note_missing_symbol
+    for script in SEED_SCRIPTS:
+        mod = load_tool(script)
+        if mod is None:
+            continue
+        fn = get_sym(mod, *FALLBACK_SEED_NAMES)
+        if fn is not None:
+            return mod, fn
+    note_missing_symbol(
+        "fallback-version seeder (tried "
+        f"{FALLBACK_SEED_NAMES} across {', '.join(SEED_SCRIPTS)})")
+    pytest.skip("impl-missing: fallback-version seeding helper not resolvable "
+                "yet (CodeWriter pending)")
+
+
+def _UNITY_VERSION():
+    from _validators import UNITY_VERSION
+    return UNITY_VERSION
+
+
+def _invoke_seed(fn, bundle: Path, extracted_root: Path):
+    """Call-shape ladder — the helper may take (path), (path, extracted_root),
+    (header bytes) or keyword spellings; first matching shape wins."""
+    from _impl import try_call_shapes
+    return try_call_shapes(
+        fn,
+        ((bundle,), {}),
+        ((bundle, extracted_root), {}),
+        ((str(bundle)), {}),
+        ((bundle.read_bytes(),), {}),
+        ((), {"path": bundle, "extracted_root": extracted_root}),
+        ((), {"bundle_path": bundle, "fallback_version": _UNITY_VERSION()}),
+    )
+
+
+def _used_flag(out):
+    """Interpret a seeder's 'did this open use the fallback' signal."""
+    if out is None:
+        return None
+    if isinstance(out, bool):
+        return out
+    if isinstance(out, (int, float)):
+        return bool(out)
+    if isinstance(out, tuple) and out:
+        return bool(out[0])
+    if isinstance(out, dict):
+        for k in ("used", "fallbackUsed", "fallbackVersionUsed", "seeded"):
+            if k in out:
+                return bool(out[k])
+    return None
+
+
+def test_fallback_seed_triggers_on_zero_header_bundle(tmp_path):
+    mod, fn = _seed_helper()
+    bundles = fx.write_seed_probe_bundles(tmp_path / "bundles")
+    cfg = getattr(__import__("UnityPy"), "config", None)
+    before = getattr(cfg, "FALLBACK_UNITY_VERSION", None)
+    out = _invoke_seed(fn, bundles["zero"], tmp_path)
+    after = getattr(cfg, "FALLBACK_UNITY_VERSION", None) if cfg else None
+    assert after == _UNITY_VERSION(), (
+        f"after a `0.0.0` header the FALLBACK_UNITY_VERSION knob must be seeded "
+        f"from identity.json's unityVersion ({_UNITY_VERSION()!r}); got {after!r} "
+        f"(was {before!r})")
+    assert _used_flag(out) is not False, (
+        f"a `0.0.0`-header bundle must be flagged as using the fallback "
+        f"(census mark contract); seeder returned {out!r}")
+    _ = mod  # module kept for future symbol-level assertions
+
+
+def test_fallback_seed_triggers_on_unparseable_header(tmp_path):
+    _mod, fn = _seed_helper()
+    bundles = fx.write_seed_probe_bundles(tmp_path / "bundles")
+    out = _invoke_seed(fn, bundles["garbage"], tmp_path)
+    cfg = getattr(__import__("UnityPy"), "config", None)
+    assert getattr(cfg, "FALLBACK_UNITY_VERSION", None) == _UNITY_VERSION(), \
+        "an unparseable header must trigger the identity-sourced seed too"
+    assert _used_flag(out) is not False, (
+        f"an unparseable-header bundle counts as fallback-seeded; got {out!r}")
+
+
+def test_fallback_seed_skips_true_version_header(tmp_path):
+    """catalog.bundle alone reports the true engine version — a well-formed
+    header needs no fallback (usage total must not count it)."""
+    _mod, fn = _seed_helper()
+    bundles = fx.write_seed_probe_bundles(tmp_path / "bundles")
+    out = _invoke_seed(fn, bundles["true-version"], tmp_path)
+    used = _used_flag(out)
+    if used is not None:
+        assert used is False, (
+            f"a bundle whose header already reads {_UNITY_VERSION()} must NOT "
+            f"count toward the fallback usage total; got {out!r}")
