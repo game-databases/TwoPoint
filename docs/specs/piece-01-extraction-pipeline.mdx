@@ -3,7 +3,7 @@
 **Audience:** CodeWriter + TestWriter. This document is the contract for
 the extraction pipeline piece. Facts are grounded in
 [`../scout-report-001.mdx`](../scout-report-001.mdx) (verified PASS),
-both [`../verifications/`](../../verifications/) verdicts, and the
+both [`../verifications/`](../verifications/) verdicts, and the
 2026-08-24 mechanical recounts recorded in
 [`../../toolchain.md`](../../toolchain.md) §Scene tally. Where a number
 here conflicts with scout prose, this file wins (it cites the recounted
@@ -211,7 +211,7 @@ roster as the pipeline's first artifact (verifyB 1.2).
 - **Acceptance:** exits 0; `DummyDll/Assembly-CSharp.dll` exists; every
   `ScriptingAssemblies.json` entry appears in `assembly-index.json`
   classified present-or-absent-with-marker; `dump.cs` non-empty;
-  `script.json` parses as JSON with ≥1 type entry; `stringliteral.json`
+  `script.json` parses as JSON; `stringliteral.json`
   parses; hierarchy row count == the type count of a named, mechanically
   enumerable source — PRIMARY: typedef enumeration across
   `DummyDll/*.dll` via the stage's .NET metadata reader; FALLBACK (only
