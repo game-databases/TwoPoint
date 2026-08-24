@@ -1,0 +1,350 @@
+# TestReview 001 — piece-01 test suite
+
+**Reviewer:** TestReviewer-001 (pipeline step 3; judges, does not fix;
+spawned no subagents). **Date:** 2026-08-24.
+**Subject:** everything under `TwoPoint/tests/` (per-stage fixture tests,
+`build_fixture_tree.py`, runner tests, client-gated integration tests).
+**Contract:** `docs/specs/piece-01-extraction-pipeline.mdx` read IN FULL to
+its sentinel, including the binding Revision 2 section and §8.
+**Inputs read in full:** repo `AGENTS.md`,
+`_foundation/decision-register.md`, `_foundation/extraction-doctrine.md`,
+`_foundation/extraction-host.md`; pack `README.md`, `spec.md`,
+`data-acquisition.md`; every file under `tests/`; the implementation
+surface (`run_all.py`, `tools/*.py`) was consulted only as needed to
+classify failures per the mission's IMPL-MISSING vs TEST-BUG rule.
+
+---
+
+## Verdict
+
+**FIX-REQUIRED** — the suite is structurally sound and most of §8 is
+genuinely covered: 84 tests collected, **59 passed / 17 skipped / 8
+failed** on this host (NE8K, client present). The black-box harness is
+correctly isolated (every hostless run gets a private
+`TPC_EXTRACTED_ROOT`; nothing touches the repo's own `extracted/`), all
+contract pins in `_validators.py` match the spec character-for-character,
+and the impl-missing accounting is loud exactly as required. But:
+
+- one hard TEST-BUG (undefined name that will crash the R10 convergence
+  test the moment stage 5 stops crashing);
+- one over-pin defect (the compositionPolicy test asserts label semantics
+  the spec explicitly leaves "not pre-pinned", so it fails a compliant
+  implementation);
+- three §8 obligations are currently covered only by loud skips because
+  the landed implementation exposes no importable seam for them;
+- two real implementation defects were correctly surfaced by the suite and
+  are relayed here for the CodeWriter lane (stage-5 availability KeyError;
+  `--list` missing the version column).
+
+Numbered defect list at the end. Nothing below masks a failure: every
+skip names its reason and lands in the session-end banner (verified).
+
+---
+
+## 1. Coverage matrix — §8 obligation → test → status
+
+Legend: **PASS** green this session · **FAIL→IMPL** suite correct, caught
+an implementation defect · **FAIL→TEST** failure caused by the test itself
+· **SKIP-GAP** `impl-missing` skip = obligation uncovered until aligned ·
+**SKIP-ENV** environment skip (loud) · **CASCADE** skipped/failing only
+because an upstream stage crashed.
+
+### Stage 0
+
+| §8 obligation | Test | Status |
+|---|---|---|
+| manifest-acf parser on fixture text | `test_stage0.py::test_manifest_acf_parser_on_fixture_text` (drives `tpc_common.parse_acf`) | PASS |
+| metadata-header reader, synthetic buffers, sanity/version split @0/4 | `test_metadata_header_reader_offsets_0_and_4` (two version words prove the offset split) | PASS |
+| roster builder + sort determinism against temp tree | `test_stage0_run_success_and_artifact_contract` (sorted-relpath assert + rows==enumerated `*.bundle` count) + `test_double_run_byte_identical` (hash_tree w/ spec §5.5 exemptions) | PASS |
+| scene-flag classifier, strict `.unity` vs seasonal non-`.unity` | `test_scene_flag_classifier_strict_vs_seasonal` (5 parametrized cases incl. `scenes-seasonalcontent_scenes_all.bundle` → `seasonal-scenes`) | PASS |
+| locale suffix → BCP-47, 13 exact mappings | `test_locale_suffix_table_13_exact_mappings` (character-exact vs pinned table; rejects extra/missing/wrong; overlay row must resolve `base`, never a 14th locale) | PASS |
+| DRIFT-warning path | `test_drift_warning_path_small_tree` (warns, exits 0, names the axis) + `test_no_drift_when_counts_match_full_scale` (no false DRIFT at 158/10/8) | PASS |
+| (§3) metadata ≥38 gate → exit 3 + Cpp2IL message | `test_metadata_version_gate_v38_exit3` | PASS |
+| (§3) env refusal exit 3; TPC_Data auto-detect | `test_missing_game_dir_exit3`, `test_auto_detect_accepts_tpc_data_dir_arg` | PASS |
+
+### Stage 1
+
+| §8 obligation | Test | Status |
+|---|---|---|
+| assembly-index builder, present + stripped cases | `test_assembly_index_builder_present_and_stripped` (every ScriptingAssemblies entry classified; stripped set exact) | PASS |
+| class-hierarchy parser on fixture slice | `test_class_hierarchy_parser_fallback_dumpcs_slice` (dump.cs-format slice; pinned row shape; no invented types). Note: §8 says "script.json slice" but Revision-2 §3 pins hierarchy sources to DummyDll/dump.cs and pins that script.json enumerates NO types — see observation O1 | PASS |
+| script.json-enumerates-no-types | `test_script_json_enumerates_no_types` (dedicated zero-row assertion) | PASS |
+| hierarchy both-sources rule (+ source stamped) | `test_hierarchy_source_selection_prefers_parseable_dummydll` (unparseable fake DLL bytes route to dump.cs fallback AND stamp `hierarchySource`); primary-source equality over real DLLs is client-gated heavy | PASS |
+
+### Stage 2
+
+| §8 obligation | Test | Status |
+|---|---|---|
+| catalog.json schema validator | `test_schema_validator_accepts_fixture_catalog` + `test_schema_validator_rejects_unsorted_and_missing_meta` (accept + reject legs) | PASS |
+| match-key normalization (case-fold basenames, prefix strip), synthetic ContentCatalogData spellings | `test_match_key_normalization_casefold_basename_prefix_strip` over `CATALOG_KEYS_SPEC`'s deliberately varied spellings (case-fold, dir/provider prefixes, hash form) + same-keyspace collision proof | PASS |
+| out-of-roster reference detector must hard-fail | `test_out_of_roster_reference_hard_fails` | **SKIP-GAP** (D3) |
+| coverage-universes math incl. `catalog.bundle` in neither count | `test_coverage_universes_math_synthetic_contentcatalogdata` + `test_fixture_coverage_artifact_matches_universe_math` | PASS\* — both legs currently bind fixture math, not the implementation (hook absent, loudly recorded); qualified in D3 |
+| (client-gated heavy) every reference resolves into roster | `test_client_gated.py::test_stage2_catalog_references_resolve_into_roster` | SKIP-ENV (heavy opt-in) |
+
+### Stage 3
+
+| §8 obligation | Test | Status |
+|---|---|---|
+| census aggregation/reconciliation math on fabricated files | `test_census_reconciliation_consistent_set` + `test_census_reconciliation_detects_gap[manifest|catalogue]` | **SKIP-GAP** (D2) |
+| media-catalogue completeness checker (incl. Texture2D/Sprite) | `test_media_catalogue_completeness_checker` | **SKIP-GAP** (D2); row machinery itself is pinned by `test_media_catalogue_row_schema_includes_texture_and_sprite_classes` (PASS, rejects `dlc1-space` spelling) |
+| carve-out extension guard incl. image extensions | `test_media_extension_guard_extension_sets` (15 extensions, case-insensitivity, verbatim §5.6 set) + `test_carveout_guard_scan_tree` (planted `.ogg` file + `.png` mention caught; catalogue exempt; clean tree silent) + `test_clean_tree_zero_hits` | PASS (scanner is suite-owned; end-to-end application gap noted in D7) |
+| family splitter (dlc- prefixes, hash-prefixed, `_optimised.unity`) | `test_family_splitter` (7 cases covering all three shapes + axis enum + hashNamed) | PASS |
+| export-manifest outRelPath uniqueness assertion | `test_outrelpath_uniqueness_assertion` + construction-rule test + bundle-identity filename proof | PASS |
+| **exit-2 emission fixture** (unreadable synthetic bundle → ledger + real exit 2) | `test_unreadable_bundle_drives_ledger_and_exit2` (black-box: rc==2, `unreadable.jsonl` non-empty, rows carry reason) | PASS |
+
+### Stage 4
+
+| §8 obligation | Test | Status |
+|---|---|---|
+| JSONL round-trip | `test_jsonl_roundtrip_unicode_and_newline_discipline` (CR-byte ban, trailing newline, data loss) | PASS |
+| matrix builder on fixture tables, base keys included | `test_matrix_builder_includes_base_keys` | **SKIP-GAP** (D4) |
+| base-overlay compositionPolicy classifier — all four branches reachable | `test_composition_policy_classifier_all_four_branches` | **FAIL→TEST** (D1): reachability leg is satisfiable (verified directly against the impl ladder: all four values occur across the sweep grid), but the test additionally pins three shapes to specific labels — semantics the spec explicitly does not pre-pin |
+| BCP-47 file-set equality helper | `test_bcp47_file_set_equality_helper` (exact 13-set, missing named precisely, 14th invented file rejected, base-overlay never counts) | PASS |
+| stage-4 isolation leaves `relinks/` untouched | `test_stage4_isolation_leaves_relinks_untouched` (black-box sole-owner rule; holds even when the stage cannot complete hostless; full acceptance asserted if rc==0) | PASS |
+
+### Stage 5
+
+| §8 obligation | Test | Status |
+|---|---|---|
+| stub-row schema validator | `test_impl_stub_row_validator_agrees_with_contract` (impl validator accepts contract-perfect row, rejects missing kind/source/provisional) + `validate_stub_row` contract side | PASS |
+| kind↔filename map validator | `test_impl_kind_map_matches_pinned_table` (impl `KIND_FILES` == pinned 9-entry map) + filename whitelist + kind↔file bijection in `test_kind_filename_map_and_schema` | PASS (bijection leg CASCADE-skipped behind the stage-5 crash) |
+| absence-ledger AND `_unmapped-families` logic | `test_nonempty_xor_absence_ledger` (staff → exactly one `_absences` row naming scope, XOR enforced; WidgetConfig → `_unmapped-families` row) | CASCADE skip (design verified by reading; will bind once D6 lands) |
+| entity-level availability regeneration incl. fieldPresence + join procedure | `test_join_procedure_direct_hard_convention_prose` (drives the pinned procedure directly) + `test_availability_join_semantics` (7 hard joins, convention branch `item_beta_title`/`node_research_labl`, prose-only `item_gamma` excluded, locales ⊆ BCP-47) + `test_availability_regenerated_every_run` (delete/truncate → regenerated byte-identical) | **FAIL→IMPL** (D6): minimal repro confirmed — `build_locale_availability` crashes `KeyError: 'nameLoc'` whenever an entity's only named-field join is convention-shaped. The fixture targeting exactly that shape is correct and load-bearing |
+| identifier-verbatim spot-check (≤1000 → all, else sorted-500) | `test_identifier_sample_policy_matches_pinned_shape` (impl sampler: full ≤1000; 500 of 1200; deterministic; sorted subset) + `test_identifier_preservation_sample_policy` (byte-match over 1,320 source ids incl. the >1000 family) | PASS / CASCADE |
+
+### Runner
+
+| §8 obligation | Test | Status |
+|---|---|---|
+| `--list`: six ids in order, tool/version/status columns | `test_list_enumerates_six_ids_in_order` | **FAIL→IMPL** (D5): order+presence pass; output has tool/status columns but NO version column (verified raw output) |
+| `make list` equivalent | `test_make_list_equivalent` | SKIP-ENV (`make` not on PATH here; loud) — see O3 |
+| `--only` isolation | `test_only_isolation_leaves_other_stage_outputs_untouched` (hash diff before/after; writes outside declared outputs fail) | CASCADE fail (asserts rc==0 first; stage 5 crashed) — design sound |
+| stamp invalidation on stage-script hash change | `test_stamp_invalidation_on_script_hash_change` (up-to-date → no new execution evidence via log OR mtime; mutated hash → re-executes) | PASS |
+| exit codes 0/1/2/3 | four dedicated tests: success, corrupt-upstream→1 (corrupt locale-matrix.json), unreadable-bundles→2, missing-game→3 | PASS ×4 |
+| **interrupted-run convergence** (R10) | `test_interrupted_run_converges_to_clean_result` (kill mid-write ×3 attempts, partial-finals parseability, rerun converges hash-equal, no stray temps; loud skip when window missed) | **FAIL→TEST** (D0: undefined `conftest_tree_game`) + CASCADE (clean-reference run hits the stage-5 crash first) |
+| prepared-tree builder covers all six upstream sets | `test_fixture_builder.py::test_cli_builds_every_stage_upstream_set` (parametrized over all six ids, per-stage key files asserted) | PASS |
+
+### Client-gated block (auto-skip semantics verified in code)
+
+| §8 obligation | Test | Status |
+|---|---|---|
+| stage 0 e2e: identity fields + 176 roster rows + 14 locale rows + scene-count pins + no DRIFT on live install | `test_stage0_identity_fields_roster_and_locales` | PASS (ran against the real install on this host) |
+| idempotence: stage 0 double-run hash-equal | `test_stage0_double_run_hash_equal` | PASS (live) |
+| stage 1 dummy + assembly index; stage 2 refs→roster; stage 4 13-file set + base-overlay; stage 5 count==distinct entities + fieldPresence; (optional slow) full double-run | heavy-marked tests, gated on game presence AND `TPC_IT_HEAVY=1`; stage-3 real-output reconciliation + catalogue completeness + outRelPath uniqueness also live here (`test_stage3_census_reconciliation_math_on_real_outputs`) | SKIP-ENV ×5 (correct: bare `pytest tests/` stays cheap) |
+
+**Obligations with NO executing assertions today:** stage-3 reconciliation
+math; stage-3 media-completeness checker; stage-2 out-of-roster hard-fail;
+stage-4 matrix builder. All four skip loudly (banner lists each tried
+name) — none is silently masked — but "skipped" still means "unproven".
+That is what defects D2–D4 are for.
+
+---
+
+## 2. Integrity bans — checked
+
+- **Silent-pass masking: NONE FOUND.** Every absent-symbol path goes
+  through `pytest.skip("impl-missing: …")` naming every candidate tried;
+  `_impl.note_missing_*` feeds `pytest_sessionfinish`, which prints the
+  `=== IMPL-MISSING SUMMARY ===` banner (verified in a live run: 0
+  modules / 5 symbols listed with their candidate vocabularies).
+  Cascade skips say "schema legs vacuous" in the reason. The two
+  qualified spots are handled in D3/D8 below.
+- **Real game bytes in fixtures: NONE.** All fixture content is
+  sha256-chain synthetic (`det_bytes`) or hand-written text/JSON;
+  `test_no_real_game_bytes_in_fixtures` enforces the tiny-size bound;
+  `.fixture-trees/` is gitignored; client-gated tests read the real
+  install read-only into private temp roots. Compliant with §8's "never
+  real game bytes".
+- **Order/wall-clock dependence: NONE material.** Session-scoped trees
+  are shared but every black-box run copies to a private extraction root
+  (`seeded_extracted_root`); byte-identity comparisons exclude
+  EXTRACTION-LOG/.stage-stamps/.pipeline-meta.json exactly per §4;
+  `time.sleep` appears only as mtime-granularity slack in the stamp test,
+  never as an ordering assumption; the timing-sensitive interruption
+  harness retries and loudly skips when the kill misses the write window.
+
+## 3. Run evidence
+
+`python -m pytest tests/ -q` from the pack root (system Python 3.14.7 +
+pytest 9.1.1; the pack `.venv` carries UnityPy but not pytest):
+
+```
+8 failed, 59 passed, 17 skipped in ~41s
+```
+
+Failure classification (CodeWriter HAS landed — commit 2430982 — so
+"legitimate until CodeWriter lands" does not apply):
+
+| Failure | Classification |
+|---|---|
+| `test_list_enumerates_six_ids_in_order` | **IMPL GAP** — `--list` lacks the required `version` column (D5) |
+| `test_only_isolation…`, `test_stage5_runs_hostless`, `test_join_procedure_direct…`, `test_availability_regenerated_every_run`, `test_double_run_byte_identical_declared_outputs`, clean-reference leg of `test_interrupted_run_converges…` | **IMPL BUG** cascade — all reduce to the stage-5 availability KeyError (D6) |
+| `test_interrupted_run_converges_to_clean_result` (also) | **TEST-BUG** — undefined `conftest_tree_game` will NameError once D6 is fixed (D0) |
+| `test_composition_policy_classifier_all_four_branches` | **TEST-DEFECT** — pins unpinned semantics (D1) |
+
+Skips: 5 heavy client-gated (by design), 1 `make`-not-on-PATH (env),
+6 impl-symbol gaps (D2–D4), 5 stage-5 cascades (repair themselves when
+D6 lands).
+
+## 4. Fixture-builder verification (mission item 4)
+
+Invoked `python tests/build_fixture_tree.py --stage <id> --out <tmp>` for
+FIVE distinct ids — `verify-client`, `harvest-catalog`,
+`harvest-bundles`, `localisation`, `emit-stub-datasets` (the sixth,
+`decompile`, is exercised green by the parametrized CLI test) — and
+inspected the trees:
+
+- `verify-client`: 77 files — install-root layout (TPC.exe beside
+  GameAssembly.dll), appmanifest at the steamapps root within the ≤4-hop
+  discovery radius, globalgamemanagers with ASCII version, 40-B
+  metadata header (sanity@0, v27@4), 46 aa bundles + 18 DLC bundles +
+  14 localisation bundles + settings.json/catalog.bundle/
+  AddressablesLink. No `extracted/` — correct for stage 0.
+- `harvest-bundles`: cumulative upstream exactly per §5.2 — roster +
+  `addressables/{catalog,settings.snapshot,catalog-coverage}`.
+- `emit-stub-datasets`: adds structural artifacts, per-bundle censuses,
+  export-manifest, media-catalogue.jsonl (5 carved-class rows incl.
+  Texture2D/AudioClip/Mesh), monobehaviour dumps in the pinned
+  `<family>/<class>/<bundle-stem>_<pathId>.json` shape (sampled
+  item_alpha: `_scriptClass`/`class`/`typetreeDecoded`/`fields`), and
+  locale-matrix.json (12 keys / 13 locales / 2 base-only keys /
+  room_main_title in all 13).
+- Cross-checked against the spec's per-stage upstream sets: matches for
+  stages 0/2/3/5; the `localisation` tree is a harmless SUPERSET of §5.2's
+  stage-4 set (adds harvest/** the stage doesn't consume) — noted as O2,
+  not a defect.
+
+---
+
+## 5. Defect list (numbered; fix order matters)
+
+**D0 — TEST-BUG (hard crash, blocks the R10 obligation once D6 lands).**
+`tests/test_runner.py:262` — `*conftest_tree_game(fx_stage5_full)`:
+`conftest_tree_game` is defined nowhere (grep over `tests/` and pack root:
+single occurrence, this call). Today the test dies earlier at the
+clean-reference run (stage-5 KeyError), so the bug is latent; the moment
+stage 5 works, the flagship interrupted-run convergence test dies with
+NameError instead of running. Fix: `from conftest import tree_game` and
+pass `[str(tree_game(fx_stage5_full))]`.
+
+**D1 — TEST-DEFECT (over-pin; permanent red against a compliant impl).**
+`tests/test_stage4.py:89-91` — the three "unambiguous shapes → pinned
+labels" assertions. Spec §3 stage 4 defines compositionPolicy only as the
+four-value enum "selected by this stage's deterministic classifier from
+observed evidence", and §7 routes the semantics question back as "**not
+pre-pinned**". The impl ladder (tools/stage4_localisation.py:161-182) is
+deterministic, evidence-backed, and reaches all four values (I drove the
+16-shape sweep grid directly: `english-only`, `english-over-base`,
+`base-over-english`, `mixed` all occur), but it labels the test's first
+shape `english-over-base` where the test demands `english-only` — both
+readings are defensible, neither is spec-mandated. A test may not fail an
+implementation over semantics the spec deliberately leaves open. Fix
+(either): (a) relax the three equality pins to what §8 actually obliges —
+return ∈ enum, repeat-call determinism, distinguishable inputs can yield
+different labels, all-four-reachable sweep kept — or (b) take a one-line
+arbiter/documentator amendment defining the four labels observably, then
+restore the pins against it. Route (b)'s question to QUESTION-QUEUE
+regardless: consumers are told to "read the field, never prose", which
+only works once the labels mean something written down.
+
+**D2 — COVERAGE GAP (loud-skip; two §8 stage-3 obligations unproven).**
+`tests/test_stage3.py:105-135` (reconciliation) and `:140-178`
+(completeness checker) skip because `RECONCILE_NAMES`/`MEDIA_COMPLETE_NAMES`
+resolve nothing — the landed impl computes both inline inside
+`tools/stage3_harvest_bundles.py:211-221` with no importable seam, and no
+hostless black-box alternative exists (fixture bundles are deliberately
+non-UnityFS, so stage 3 always exits 2 before reconciling anything real).
+Fixer: either extract pure helpers in the impl
+(`reconcile_counts(censuses, manifest_rows, catalogue_rows)` /
+`check_carveout_completeness(censuses, catalogue_rows)`) — both tests are
+already written against exactly those signatures and will bind — or fold
+the fabricated-numbers assertions into the client-gated heavy leg, which
+already re-proves them on real outputs.
+
+**D3 — COVERAGE GAP (loud-skip; seam EXISTS, vocabulary misses it).**
+`tests/test_stage2.py:87-113` (out-of-roster hard-fail) skips on
+`COVERAGE_NAMES = (compute_coverage, build_coverage, coverage_universes,
+catalog_coverage)`, but the impl already ships the pure seam
+`map_catalog_keys(decoded, norm_to_relpath)` at
+tools/stage2_harvest_catalog.py:86 returning the unresolved-reference set,
+plus the run()-level hard gate at :174-179. One-line fixer: add
+`map_catalog_keys` to the adapter vocabulary and assert the bad ref lands
+in `unresolved`. Related qualification: while the hook was absent,
+`test_coverage_universes_math_synthetic_contentcatalogdata` passed on
+fixture-self-consistency only — legitimate as fixture validation, but it
+must not be cited as impl-side universes coverage until the hook binds.
+
+**D4 — COVERAGE GAP (loud-skip; §8 stage-4 matrix builder unproven).**
+`tests/test_stage4.py:42-64` skips: the matrix is built inline in
+tools/stage4_localisation.py:257-274 (functionally present — including
+base keys — but not importable), and stage 4 cannot run hostless against
+synthetic locale bundles (UnityPy decode), so there is no black-box route
+either. Risk beyond the checklist: nothing hostless currently proves the
+REAL pipeline emits locale-matrix.json with base keys included — stage 5
+consumes it and would exit 3 on a real run if the emission regressed.
+Fixer: extract `build_locale_matrix(tables_with_base)` in the impl (the
+written test binds immediately) or add a seam-level test.
+
+**D5 — IMPL GAP surfaced by the suite (relay to CodeWriter lane).**
+`--list` prints stage/script/tool/status but no `version` column; spec
+§5.1 requires "tool/version/status columns". Test is correct. Fix in
+implementation (e.g. resolve each stage's tool version the way
+EXTRACTION-LOG pins them — stdlib / Il2CppDumper banner / UnityPy
+import-version — even if lazily resolved for `list`).
+
+**D6 — IMPL BUG surfaced by the suite (relay to CodeWriter lane; unblocks
+8 tests at once).**
+tools/stage5_emit_stubs.py:237-243 — `locales_per_field` keeps only
+HARD-joined fields (comprehension filters `if key in matrix_keys`),
+but `named_fields` at :242 ranges over ALL joins (hard + convention);
+when an entity's only named-field join is convention-shaped
+(fixture entity `item_beta`, field `nameLoc="item_beta_title"`),
+`named_pool = {f: locales_per_field[f] ...}` raises
+`KeyError: 'nameLoc'` and stage 5 exits 1. Minimal repro confirmed
+against the landed code. Any real corpus with convention-shaped loc
+fields hits this, so this is not fixture-specific fragility. Suite-side
+nothing to fix; the fixtures aiming exactly at the convention branch are
+correct and should stay.
+
+**D7 — Minor coverage note.** The §5.6 carve-out grep is never applied
+end-to-end to a completed extraction root anywhere: the scanner is tested
+standalone (good) and the heavy stage-3 leg checks reconciliation,
+completeness and uniqueness but not
+`scan_tree_for_media_extensions(ext_root)`. One-line addition to
+`test_client_gated.py::test_stage3_census_reconciliation_math_on_real_outputs`
+closes the whole-piece acceptance mechanically.
+
+**D8 — Minor masking risk.** tests/test_stage2.py:145-146 —
+`except TypeError: pass` silently drops the impl-hook assertions when the
+hook exists with a different signature (absent hooks ARE recorded; a
+present-but-different-signature hook is not). Change the handler to call
+`note_missing_symbol(...)` before passing, so the banner accounting stays
+complete.
+
+## 6. Observations (no action required to approve)
+
+- **O1** — §8's stage-1 bullet reads "class-hierarchy parser on a fixture
+  *script.json* slice", which contradicts Revision-2 §3 (hierarchy
+  sources = DummyDll typedefs PRIMARY / dump.cs FALLBACK; "script.json …
+  enumerates no types"). The suite implements the coherent §3 reading
+  (dump.cs slice parse + a dedicated zero-types test). Worth a one-word
+  §8 touch-up ("dump.cs slice") by documentator so the checklist matches
+  its own contract.
+- **O2** — the `localisation` prepared tree is a superset of §5.2's
+  stage-4 upstream set (carries harvest/** the stage ignores). Harmless;
+  noting so nobody later cites it as the minimal set.
+- **O3** — `test_make_list_equivalent` env-skips where `make` is absent;
+  a static fallback (assert the Makefile exposes list/extract/stage/help
+  targets) would keep §5.1's make-equivalence claim proven on such hosts.
+- **O4** — the session-end banner still attributes unresolved symbols to
+  "the CodeWriter deliverable"; now that CodeWriter has landed, rewording
+  to "awaiting fixer alignment" would stop the banner from reading as a
+  pending-delivery notice.
+
+**Bottom line:** the suite earns its keep — it found two genuine
+implementation defects and its contracts, isolation, determinism and
+loudness discipline all hold. Fix D0–D4 (all small, suite/adapter-side
+plus two seam extractions), relay D5/D6 to the CodeWriter lane, and this
+section of the pipeline is properly guarded.
+
+END OF testreviewer-001-piece-01
