@@ -1,0 +1,162 @@
+# Scout report 001 — Two Point Campus pack
+
+**Agent:** scout-001 (PrepareTask step 1) · **Date:** 2026-08-24 ·
+**Host:** NE8K (this machine is the data host; all paths local).
+**Scope:** intelligence-gathering only. Nothing was extracted,
+decompiled, installed, or downloaded. Reads outside the pack were
+read-only.
+
+Inputs read in full before work: repo-root `AGENTS.md`,
+`_foundation/decision-register.md`, `_foundation/design-standard.md`,
+`_foundation/site-sections.md`, `_foundation/extraction-doctrine.md`,
+`_foundation/extraction-host.md`, `database-visuals-examples/README.md`,
+`FRAMEWORK.md` §1/§2/§7 (heading-mapped per AGENTS reading discipline),
+`promptForDB.md`, `TwoPoint/PROGRESS.mdx`.
+
+---
+
+## 1. Classification + area map
+
+**Task type:** greenfield data pipeline + site build. The pack directory
+holds no code, no spec, no extracted data — only `PROGRESS.mdx`, agent
+config, and this report. Every layer of FRAMEWORK's three-layer model is
+new for this game: source adapters, codecs, relink builders, design
+tokens, site. There is no prior Two Point pack to inherit from; sibling
+packs contribute *patterns and binaries*, not code to copy blindly.
+
+**Affected areas** — every place this project will touch:
+
+| Area | Path / location | State |
+|---|---|---|
+| Pack scaffolding | `C:\_reps\game-databases\TwoPoint\` | empty except `PROGRESS.mdx`; needs README/spec/data-acquisition/competitor-research/toolchain/tools-plan per AGENTS rule 4 |
+| Extraction outputs | `TwoPoint\extracted\` (+ `EXTRACTION-LOG.md`, `VALIDATION-REPORT.md`, `RELATIONS.md`, `PROOF.md`) | does not exist |
+| Pipeline entrypoint | `TwoPoint\run_all.*` / Makefile ([DR-2026-08-18-pipeline]) | does not exist |
+| Game client (input, read-only) | `A:\SteamLibrary\steamapps\common\Two Point Campus` | present, healthy, inventoried in §2 |
+| Steam manifest | `A:\SteamLibrary\steamapps\appmanifest_1649080.acf` | read-only provenance source |
+| Tooling | `tools/` on this host + any IL2CPP tooling found on drives (§3) | survey below |
+| Site product | `TwoPoint\site\` (Next.js default profile, FRAMEWORK §2.20) | does not exist |
+| Design tokens | `TwoPoint\design\` from game UI screenshots (§2.11) | does not exist |
+| Contracts | `TwoPoint\contracts\` | does not exist |
+| Docs | `TwoPoint\docs\` (this file lives here) | created by this scout |
+
+No shared dir (`engine/`, `_foundation/`, other packs) is modified by this
+scout; nothing outside `TwoPoint\docs\` was written.
+
+---
+
+## 2. Game install inventory
+
+All figures measured locally 2026-08-24 (`du -sh --apparent-size` unless
+stated). No extraction was performed; contents are inferred from names,
+sizes, and container headers only.
+
+### Identity
+
+| Fact | Value |
+|---|---|
+| Steam appid | 1649080 |
+| Install dir | `A:\SteamLibrary\steamapps\common\Two Point Campus` |
+| SizeOnDisk (manifest) | 4,694,205,668 B ≈ 4.37 GiB |
+| Steam buildid | 20226581 (`TargetBuildID` matches — install is at target) |
+| LastUpdated | 1766136803 → 2025-12-19 (client is current; no pending download) |
+| Developer/publisher string | `TPC_Data/app.info`: "Two Point Studios" / "Two Point Campus" |
+| In-game version string | `version.txt`: `10.3.169253+2024-12-06.1241` |
+| Engine | Unity **2020.3.47f1** — read from the `globalgamemanagers` header (ASCII version at offset ~0x30); matches the 2020 LTS player that ships `GameAssembly.dll` |
+
+### Top-level layout
+
+```
+Two Point Campus/
+├── TPC.exe                    659,392 B     (Unity player stub)
+├── UnityPlayer.dll             28,522,920 B
+├── GameAssembly.dll           311,226,368 B ← IL2PP native code image
+├── baselib.dll                   501,272 B
+├── UnityCrashHandler64.exe     1,232,408 B
+├── version.txt                        27 B
+├── TPC_Data/                  ~3.53 GiB     (all game content)
+│   ├── globalgamemanagers            392 KiB   (Unity settings; version here)
+│   ├── globalgamemanagers.assets   4.3 MiB + .resS 2.8 MiB
+│   ├── level0                          8 KiB  (boot scene)
+│   ├── resources.assets             1.9 MiB + .resS 376 KiB
+│   ├── sharedassets0.assets          28 KiB
+│   ├── boot.config / app.info / extra-types.txt / RuntimeInitializeOnLoads.json / ScriptingAssemblies.json
+│   ├── Plugins/x86_64/              6.2 MiB  steam_api64.dll · lib_burst_generated.dll · BacktraceCrashpadWindows.dll + crashpad_handler · AnselPlugin64/AnselSDK64
+│   ├── Resources/                   5.6 MiB  unity_builtin_extra etc.
+│   ├── il2cpp_data/                15 MiB
+│   │   └── Metadata/global-metadata.dat  ~14 MiB  ← IL2CPP CONFIRMED
+│   └── StreamingAssets/            3.5 GiB  ← the real corpus (below)
+└── DLCs/                        556 MiB     (two DLC packs, installed as loose bundles)
+    ├── ghost/  (~9 bundles: art, audio, configs, environment-debug, loadingscreen, ui, ui-spriteatlas, scene_dlc2_ghosts_optimised.unity)
+    └── space/ (~11 bundles: same families + THREE scene bundles: dlc1_launchpadlevel, dlc1_moonbaselevel, dlc1_spaceportcitylevel)
+```
+
+**IL2CPP confirmation:** `GameAssembly.dll` (297 MiB) +
+`TPC_Data/il2cpp_data/Metadata/global-metadata.dat` (~14 MiB). This is a
+standard Unity 2020.3 IL2CPP Windows-Mono layout: metadata + native binary
+→ Il2CppDumper/Cpp2IL-class toolchain applies directly (§3).
+
+### StreamingAssets = Addressables store
+
+```
+StreamingAssets/
+├── aa/settings.json                      (Addressables runtime config)
+├── aa/catalog.bundle                     1.7 MiB  ← Addressables catalog: the full addressable index
+└── aa/StandaloneWindows64/               158 bundles, 3.5 GiB total
+```
+
+161 files total under `aa/` (158 bundles + catalog.bundle + settings.json
++ AddressablesLink). Largest bundles:
+
+| Bundle | MiB |
+|---|---|
+| video-intro-hi | 256 |
+| audio-music | 252 |
+| audio-sfx | 221 |
+| environment-landscape | 204 |
+| character-shared-textures | 170 |
+| unlockables | 146 |
+| rooms | 137 |
+| animations-character-courses | 132 |
+| environment | 108 |
+| character-shared | 103 |
+| audio-radio (en/de/zh-Hans) | 100 / 96 / 88 |
+| items-general | 85 |
+
+Bundle naming is **human-readable domain-partitioned**, not hashed:
+`{family}-{subfamily}_{kind}_{scope}.bundle` (e.g.
+`items-courses-magic_assets_all.bundle`) plus a few hash-prefixed ones
+(`041ed57f…_monoscripts.bundle`). The names alone partition the whole
+entity model (see §5). DLC bundles live OUTSIDE StreamingAssets in
+`DLCs/{space,ghost}/` with parallel naming.
+
+### Language evidence visible from names (details in §4)
+
+- 14 `localisation_assets_localisation*.bundle` files (one base + 13 named languages).
+- Voice/audio split by language: `audio-radio_assets_{english,german,mandarin}`,
+  `audio-tannoy_assets_{english,german,mandarin}` — spoken content in exactly 3 languages.
+- Steam user config: `"language": "english"`.
+
+### Depot map (from `appmanifest_1649080.acf`)
+
+| Depot | DLC appid | Size | Manifest |
+|---|---|---|---|
+| 1649081 (base) | — | 4,112,128,282 B | 289369811377342695 |
+| 1907451 | 1907450 | 212,055,024 B | 3622833373893779274 |
+| 1884561 | 1884560 | 370,022,362 B | 6004916305044431883 |
+
+Shared depot 228989 (Steamworks redistributable, standard). Note the two
+DLC depots do not sum to the 556 MiB `DLCs/` dir on disk — disk shows
+post-install expansion; both figures are recorded facts, not an error.
+
+### What this means for planning
+
+- The corpus is small (3.5 GiB, 176 bundles incl. DLC) — full harvest is
+  cheap compared to every prior pack on this host.
+- Content is NOT encrypted or custom-packed beyond Unity AssetBundles +
+  LZ4/LZMA block compression: no depot-level encryption observed.
+- The Addressables catalog bundle (1.7 MiB) is a machine-readable index of
+  every addressable key → bundle/address mapping: it is the natural first
+  extraction artifact and the backbone of the relink layer.
+- `configs_assets_all`, `configs-app/common/metagame/levels-prefabs`
+  bundles are where the logic layer will live; `localisation_*` are the
+  locale overlays (§4).

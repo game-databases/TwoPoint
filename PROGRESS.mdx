@@ -47,12 +47,11 @@ data; extraction runs in place).
 
 | Agent | Role piece | State |
 |---|---|---|
-| scout-001 | Install inventory, tooling survey, locales, competitors | **running** |
+| scout-001 | Install inventory (§1–2 done) | **died mid-run**; sections 1–2 landed |
+| scout-002 | Continuation: §3–9 + END sentinel | **running** |
 
-## Question queue
-
-*(empty — nothing owner-blocked; domain/trademark choice stays the known
-standing owner item)*
+Owner questions: [QUESTION-QUEUE.md](QUESTION-QUEUE.md) — one standing
+item (domain+tier), nothing work-blocking.
 
 ## Log
 
@@ -61,3 +60,10 @@ standing owner item)*
   domain/extraction-host standards, FRAMEWORK §1–2/§7–8, visuals README).
   Game located + manifest read. Headless `claude` launcher verified
   (`HEADLESS-OK`). Task registry established. scout-001 launched.
+- 2026-08-24: scout-001 died after landing §1–2 (classification +
+  install inventory: Unity 2020.3.47f1 IL2CPP confirmed via
+  `GameAssembly.dll` 297 MiB + `global-metadata.dat` ~14 MiB;
+  Addressables store = 158 bundles + catalog, human-readable
+  domain-partitioned names; corpus only ~3.5 GiB — cheap full harvest).
+  scout-002 launched on `--model ox-alpha` (verified working) with
+  checkpoint discipline to finish §3–9.
