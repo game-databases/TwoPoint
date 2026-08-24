@@ -60,6 +60,15 @@ item (domain+tier), nothing work-blocking.
 
 ## Log
 
+- 2026-08-24: **Build pair landed** (agents committed their own work:
+  `2430982` impl, `1e1479d` tests). TestWriter's blind suite: **59
+  passed / 17 loud skips / 8 failed → exactly 3 impl defects, zero
+  test bugs**: stage-5 `KeyError 'nameLoc'` crash; dead
+  `english-over-base` branch in stage-4 classifier; `--list` missing
+  version column. CodeWriter self-verified stage 0 on the real client
+  (`identity.json` + roster committed) + 45-check synthetic harness.
+  Fresh codereviewer-001 + testreviewer-001 seated in parallel;
+  Arbiter + fix loops follow their verdicts.
 - 2026-08-24: **Phase B closed, Phase C opened.** Review chain completed:
   reviewer-002 bounced the spec (R1–R11), arbiter-001 ruled 11 accepted
   changes, documentator applied them as Revision 2, reviewer-003 verified
