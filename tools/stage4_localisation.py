@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import log_util
 import tpc_common as tc
 import unitypy_util as uu
+from unitypy_util import seed_fallback_unity_version  # noqa: F401  (R4 shared stage-3+4 seeding seam, re-exported)
 
 
 def _walk_string_pairs(node, out: dict, depth=0):

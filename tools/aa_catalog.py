@@ -19,6 +19,7 @@ count, entry-blob byte length == 4 + 28·n, key-blob fully consumed.
 from __future__ import annotations
 
 import base64
+import binascii
 import io
 import struct
 
@@ -27,27 +28,39 @@ class CatalogDecodeError(Exception):
     pass
 
 
+def _take(r: io.BytesIO, n: int, what: str) -> bytes:
+    """Read exactly n bytes or raise the typed decode error — a truncated
+    blob is a malformed catalog, never a raw struct.error/IndexError past
+    the handler that routes it to the secondary path (spec Revision 4)."""
+    b = r.read(n)
+    if len(b) != n:
+        raise CatalogDecodeError(
+            f"{what}: blob truncated ({len(b)} of {n} bytes at offset "
+            f"{r.tell() - len(b)})")
+    return b
+
+
 def parse_keys(blob: bytes) -> list[dict]:
     """Key slots: [{key, kind, a}]; type-4 entries occupy TWO slots."""
     r = io.BytesIO(blob)
-    (count,) = struct.unpack("<i", r.read(4))
+    (count,) = struct.unpack("<i", _take(r, 4, "m_KeyDataString slot count"))
     entries: list[tuple[str, object, int | None]] = []
     while r.tell() < len(blob):
-        t = r.read(1)[0]
+        t = _take(r, 1, "m_KeyDataString type tag")[0]
         if t == 0:
-            (ln,) = struct.unpack("<i", r.read(4))
-            entries.append(("str", r.read(ln).decode("utf-8", "replace"), None))
+            (ln,) = struct.unpack("<i", _take(r, 4, "string key length"))
+            entries.append(("str", _take(r, ln, "string key").decode("utf-8", "replace"), None))
         elif t == 1:
-            (ln,) = struct.unpack("<i", r.read(4))
-            entries.append(("u16", r.read(ln).decode("utf-16-le", "replace"), None))
+            (ln,) = struct.unpack("<i", _take(r, 4, "u16 key length"))
+            entries.append(("u16", _take(r, ln, "u16 key").decode("utf-16-le", "replace"), None))
         elif t == 4:
-            (a,) = struct.unpack("<i", r.read(4))
+            (a,) = struct.unpack("<i", _take(r, 4, "type-4 auxiliary id"))
             z = r.read(1)
             if not z:
                 entries.append(("t4_truncated", "", a))
                 break
-            (ln,) = struct.unpack("<i", r.read(4))
-            entries.append(("t4", r.read(ln).decode("utf-8", "replace"), a))
+            (ln,) = struct.unpack("<i", _take(r, 4, "type-4 key length"))
+            entries.append(("t4", _take(r, ln, "type-4 key").decode("utf-8", "replace"), a))
         else:
             raise CatalogDecodeError(
                 f"unknown key type {t} at offset {r.tell() - 1} of m_KeyDataString")
@@ -67,11 +80,16 @@ def parse_keys(blob: bytes) -> list[dict]:
 
 def parse_buckets(blob: bytes) -> list[tuple[int, list[int]]]:
     r = io.BytesIO(blob)
-    (count,) = struct.unpack("<i", r.read(4))
+    (count,) = struct.unpack("<i", _take(r, 4, "m_BucketDataString bucket count"))
+    if count < 0:
+        raise CatalogDecodeError(f"negative bucket count {count}")
     buckets = []
     for _ in range(count):
-        off, n = struct.unpack("<2i", r.read(8))
-        ents = list(struct.unpack(f"<{n}i", r.read(4 * n))) if n else []
+        off, n = struct.unpack("<2i", _take(r, 8, "bucket header"))
+        if n < 0:
+            raise CatalogDecodeError(f"negative bucket entry count {n}")
+        ents = list(struct.unpack(
+            f"<{n}i", _take(r, 4 * n, "bucket entry indexes"))) if n else []
         buckets.append((off, ents))
     if r.tell() != len(blob):
         raise CatalogDecodeError(
@@ -83,12 +101,15 @@ def parse_entries(blob: bytes) -> list[tuple[int, int, int, int, int, int, int]]
     """Per entry: internalIdIdx, providerIdx, dependencyKeyIdx, hashCode,
     dataOffset, primaryKeyIdx, resourceTypeIdx."""
     r = io.BytesIO(blob)
-    (count,) = struct.unpack("<i", r.read(4))
+    (count,) = struct.unpack("<i", _take(r, 4, "m_EntryDataString entry count"))
+    if count < 0:
+        raise CatalogDecodeError(f"negative entry count {count}")
     if r.tell() + 28 * count != len(blob):
         raise CatalogDecodeError(
             f"entry blob length mismatch: {len(blob)} bytes vs "
             f"{count} declared entries")
-    return [struct.unpack("<7i", r.read(28)) for _ in range(count)]
+    return [struct.unpack("<7i", _take(r, 28, "entry record"))
+            for _ in range(count)]
 
 
 def decode_catalog_payload(payload: dict) -> dict:
@@ -118,7 +139,11 @@ def decode_catalog_payload(payload: dict) -> dict:
         if isinstance(raw, (bytes, bytearray)):
             return bytes(raw)
         if isinstance(raw, str):
-            return base64.b64decode(raw)
+            try:
+                return base64.b64decode(raw)
+            except (binascii.Error, ValueError) as exc:
+                raise CatalogDecodeError(
+                    f"catalog payload field '{name}': invalid base64 ({exc})")
         raise CatalogDecodeError(f"catalog payload field '{name}' missing")
 
     slots = parse_keys(b64("m_KeyDataString"))
