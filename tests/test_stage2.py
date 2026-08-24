@@ -44,10 +44,6 @@ def test_schema_validator_rejects_unsorted_and_missing_meta(tmp_path):
 
 # --- match-key normalization + coverage universes on a synthetic fixture -----------
 
-def _normalized_roster_basenames():
-    return {Path(r["relpath"]).name for r in roster_rows()}
-
-
 def test_match_key_normalization_casefold_basename_prefix_strip():
     mod = skip_if_none(load_any("stage2_harvest_catalog.py", "tpc_common.py"),
                        "tools/stage2_harvest_catalog.py | tools/tpc_common.py")
@@ -84,33 +80,47 @@ def test_match_key_normalization_casefold_basename_prefix_strip():
             assert str(fn(ref)).lower() == str(fn(same)).lower(),                 f"{ref!r} and its roster relpath {same!r} do not normalize to one key"
 
 
-def test_out_of_roster_reference_hard_fails():
+def test_out_of_roster_reference_lands_in_unresolved():
+    """Drives the REAL mapping seam (`tools/stage2_harvest_catalog.py::
+    map_catalog_keys` → `(rows, unresolved)`): a planted reference outside
+    the roster must land in `unresolved`. The run()-level hard gate that
+    turns a non-empty `unresolved` into exit 1 is covered by the runner
+    exit-code tests; this binds the seam that feeds it."""
     mod = skip_if_none(load_any("stage2_harvest_catalog.py", "tpc_common.py"),
                        "tools/stage2_harvest_catalog.py | tools/tpc_common.py")
     fn = get_sym(mod, *COVERAGE_NAMES)
     if fn is None:
         pytest.skip("impl-missing: no coverage/reference-check function on "
                     f"tools/stage2_harvest_catalog.py (tried {COVERAGE_NAMES})")
-    roster = sorted(_normalized_roster_basenames())
-    refs_ok = [r for _k, r in fx.CATALOG_KEYS_SPEC]
-    ref_bad = ["totally-unknown_bundle.bundle"]
-    raised_or_false = False
-    detail = ""
-    try:
-        out = fn(refs_ok + ref_bad, roster)
-        ok = out.get("ok") if isinstance(out, dict) else out
-        if ok is False:
-            raised_or_false = True
-        elif isinstance(out, dict) and out.get("unknown"):
-            raised_or_false = True
-        else:
-            detail = f"returned {out!r}"
-    except (AssertionError, ValueError, RuntimeError) as exc:
-        raised_or_false = True
-        detail = f"raised {type(exc).__name__}: {exc}"
-    assert raised_or_false, (
-        "an out-of-roster reference did NOT hard-fail "
-        f"(spec pins hard-fail so the guard cannot trip spuriously); {detail}")
+    normalize = get_sym(mod, *MATCH_KEY_NAMES)
+    if normalize is None:
+        pytest.skip("impl-missing: no match-key normalizer to build the "
+                    "roster key space")
+    norm_to_relpath = {normalize(r["relpath"]): r["relpath"]
+                       for r in roster_rows()}
+    spec = fx.CATALOG_KEYS_SPEC
+    refs_ok = [r for _k, r in spec]
+    ref_bad = "totally-unknown_bundle.bundle"
+    decoded = {"keys": [
+        {"key": key,
+         "entries": [{"provider": "BundledAssetProvider",
+                      "dependencyKey": ref}]}
+        for key, ref in zip([k for k, _r in spec] + ["Planted.Unknown"],
+                            refs_ok + [ref_bad])]}
+    rows, unresolved = fn(decoded, norm_to_relpath)
+    bad_key = normalize(ref_bad)
+    assert bad_key in unresolved, (
+        f"out-of-roster reference {ref_bad!r} (key {bad_key!r}) did not land "
+        f"in unresolved (got {sorted(unresolved)}) — the seam cannot feed "
+        "the stage's hard gate")
+    assert unresolved == {bad_key}, (
+        f"unresolved must hold ONLY the planted bad reference, got {sorted(unresolved)}")
+    assert len(rows) == len(refs_ok) + 1, (
+        f"expected one output row per catalog slot, got {len(rows)}")
+    resolved = {r["bundle"] for r in rows if r["bundle"]}
+    assert all(normalize(ref) in {normalize(b) for b in resolved}
+               for ref in refs_ok), (
+        "in-roster references must resolve to their roster relpath rows")
 
 
 def test_coverage_universes_math_synthetic_contentcatalogdata():
@@ -143,7 +153,8 @@ def test_coverage_universes_math_synthetic_contentcatalogdata():
                         {Path(p).name.lower() for p in bu} == {u.lower() for u in unreferenced}, (
                         f"bundlesUnreferenced mismatch vs universe math: {sorted(bu)[:5]}…")
         except TypeError:
-            pass  # signature differs; the pure-math assertions below still bind
+            note_missing_symbol("coverage function present but signature differs")
+            # signature differs; the pure-math assertions below still bind
     else:
         note_missing_symbol(
             f"coverage function (tried {COVERAGE_NAMES}) — universe math asserted from fixture data only")

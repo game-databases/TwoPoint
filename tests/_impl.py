@@ -143,8 +143,8 @@ SAMPLE_NAMES = ("sample_for_check", "sample_ids", "identifier_sample")
 
 MATCH_KEY_NAMES = ("normalize_ref", "normalize_match_key", "normalize_reference",
                    "match_key", "normalize_key", "normalize_bundle_reference")
-COVERAGE_NAMES = ("compute_coverage", "build_coverage", "coverage_universes",
-                  "catalog_coverage")
+COVERAGE_NAMES = ("map_catalog_keys", "compute_coverage", "build_coverage",
+                  "coverage_universes", "catalog_coverage")
 
 FAMILY_NAMES = ("split_family", "family_of_bundle", "parse_family",
                 "split_family_name", "bundle_family")
