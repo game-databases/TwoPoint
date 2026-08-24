@@ -11,6 +11,21 @@ figures).
 
 ---
 
+## Revision 3 (arbiter-002) — clarifying, not changing the contract
+
+Applies the SPEC lane (S1+S2) of
+[`docs/rulings/arbiter-002-piece-01-build.mdx`](../rulings/arbiter-002-piece-01-build.mdx)
+(2026-08-24): §3 stage-3 acceptance states the census-reconciliation
+identity in its residual-inclusive form — Σ `objectsByClass` ==
+export-manifest rows + media-catalogue rows + error rows +
+census-only residual (classes neither exported nor carved out) — which
+is what the shipped implementation already reconciles; and §8's stage-1
+fixture bullet reads `dump.cs` slice (Revision 2 §3 pins hierarchy
+sources to DummyDll PRIMARY / dump.cs FALLBACK; `script.json`
+enumerates no types). No stage, output, sentinel, or exit code changes.
+
+---
+
 ## Revision 2 (arbiter-001) — applied in full
 
 Executes every numbered accepted change in
@@ -320,9 +335,11 @@ CATALOGUE-ONLY in piece 1 (arbiter-001 R1 lane).
   any bundle UnityPy cannot open → row in
   `harvest/census/unreadable.jsonl` with reason and **stage exits 2**
   (incomplete-with-ledger; empty unreadable set → exit 0);
-  `Σ objectsByClass` over per-bundle censuses == total object count in
-  `export-manifest.jsonl` + `media-catalogue.jsonl` + error rows
-  (numbers reconcile); media-catalogue rows cover every census object
+  `Σ objectsByClass` over per-bundle censuses == export-manifest rows +
+  `media-catalogue.jsonl` rows + error rows + census-only residual
+  (classes neither exported nor carved out; numbers reconcile —
+  residual-inclusive form per Revision 3); media-catalogue rows cover
+  every census object
   of carved-out classes — audio/video/mesh/animation/shader/font AND
   `Texture2D`/`Sprite` (count equality, mechanically checked); every
   `outRelPath` in `export-manifest.jsonl` is unique (assertion —
@@ -612,7 +629,7 @@ dir)** — fixtures are tiny synthetic files, never real game bytes:
   suffix → BCP-47 table (13 exact mappings); DRIFT-warning path.
 - stage 1: `assembly-index.json` builder against a fixture
   ScriptingAssemblies.json + fake DummyDll dir (present + stripped
-  cases); `class-hierarchy` parser on a fixture `script.json` slice.
+  cases); `class-hierarchy` parser on a fixture `dump.cs` slice.
 - stage 2: catalog.json schema validator; out-of-roster reference
   detector (must hard-fail); synthetic ContentCatalogData fixture
   exercising the match normalization (case-folded basenames,
