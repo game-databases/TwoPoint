@@ -83,13 +83,24 @@ def _primary_hierarchy(dummy_dll_dir: Path) -> tuple[list[dict], list[str]]:
 _DUMP_TOP_DECL_RE = re.compile(
     r"^(class|struct|interface|enum)\s+([\w.`]+)(?:<[^>]*>)?\s*"
     r"(?::\s*(.+?))?\s*(?://|$)")
+# Il2CppDumper writes one of these before each assembly image's types:
+# `// Image 47: TPS.Game.dll - 2` (Revision 4: hierarchy over ALL present
+# game-code images, so the fallback parser must carry the distinction)
+_DUMP_IMAGE_RE = re.compile(r"^//\s*Image\s+\d+:\s*(.+?)\s*-\s*\d+\s*$")
 
 
 def _fallback_hierarchy(dump_cs: Path) -> list[dict]:
     rows = []
     namespace = ""
+    image = None
     for line in dump_cs.read_text(encoding="utf-8", errors="replace").splitlines():
         stripped = line.strip()
+        img_m = _DUMP_IMAGE_RE.match(stripped)
+        if img_m:
+            image = img_m.group(1).strip()
+            if image.lower().endswith(".dll"):
+                image = image[:-len(".dll")]
+            continue
         ns_m = re.match(r"^// Namespace: (.+)$", stripped)
         if ns_m:
             namespace = ns_m.group(1)
@@ -105,7 +116,7 @@ def _fallback_hierarchy(dump_cs: Path) -> list[dict]:
             base = parts[0] if kind != "interface" else None
             interfaces = sorted(p for p in parts[1:])
         rows.append({
-            "assembly": "Assembly-CSharp(dump.cs)",
+            "assembly": image or "unknown-image(dump.cs)",
             "namespace": namespace,
             "name": name,
             "baseType": base,
@@ -113,7 +124,7 @@ def _fallback_hierarchy(dump_cs: Path) -> list[dict]:
             "methodCount": None,
             "fieldCount": None,
         })
-    rows.sort(key=lambda r: (r["namespace"], r["name"]))
+    rows.sort(key=lambda r: (r["assembly"], r["namespace"], r["name"]))
     return rows
 
 
