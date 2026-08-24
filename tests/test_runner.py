@@ -247,7 +247,7 @@ def test_interrupted_run_converges_to_clean_result(fx_stage5_full, tmp_path_fact
         assert r.returncode == 0, r.stdout + r.stderr
         return hash_tree(into)
 
-    from conftest import seeded_extracted_root
+    from conftest import seeded_extracted_root, tree_game
     reference = clean_manifest(
         seeded_extracted_root(fx_stage5_full, tmp_path_factory.mktemp("conv-ref")))
 
@@ -259,7 +259,7 @@ def test_interrupted_run_converges_to_clean_result(fx_stage5_full, tmp_path_fact
         env = {**os.environ, "PYTHONUTF8": "1",
                "TPC_EXTRACTED_ROOT": str(work_ext)}
         proc = subprocess.Popen(
-            [sys.executable, str(RUN_ALL), *conftest_tree_game(fx_stage5_full),
+            [sys.executable, str(RUN_ALL), str(tree_game(fx_stage5_full)),
              "--only", "emit-stub-datasets"],
             cwd=str(PACK_ROOT), env=env,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
