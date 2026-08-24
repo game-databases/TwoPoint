@@ -1,0 +1,283 @@
+# Review 002 — piece-01-extraction-pipeline.mdx
+
+**Reviewer:** reviewer-002 (PrepareTask step 4; judges, does not fix;
+spawned no subagents). **Date:** 2026-08-24.
+**Subject:** `TwoPoint/docs/specs/piece-01-extraction-pipeline.mdx` (read
+to its sentinel).
+**Inputs read in full:** the spec; `TwoPoint/README.md`, `spec.md`,
+`data-acquisition.md`, `competitor-research.md`, `toolchain.md`,
+`tools-plan.md`; `docs/scout-report-001.mdx`,
+`docs/verifications/verifyA-scout-001.mdx`, `verifyB-scout-001.mdx`;
+repo `AGENTS.md`, `_foundation/extraction-doctrine.md`,
+`_foundation/decision-register.md`, `_foundation/localization-architecture.md`,
+`FRAMEWORK.md` §2 (in full) / §7 / §8.
+
+---
+
+## Verdict
+
+**BOUNCE** — the skeleton is right (stage cut, exit codes, ledgers,
+determinism discipline, and every verifyB carry are genuinely good), but
+four contract-level defects would force the CodeWriter to invent schema,
+or worse, silently lose data or violate an owner ruling. Every fix below
+is minutes-to-an-hour; none requires re-scouting. Fix R1–R4 minimally,
+R5–R11 are cheap tightenings that prevent the second review round.
+
+---
+
+## 1. Buildability — where a CodeWriter + TestWriter pair gets stuck
+
+1. **Texture export contradicts the media-scope ruling and the pack's
+   own acquisition doc (blocking).** Stage 3 blanket-exports every
+   `Texture2D`/`Sprite` to PNG inline under `extracted/harvest/textures/`.
+   [DR-2026-08-18-media-scope] says textures are *catalogue-first*
+   ("bytes + counts … further offloads are owner choices, not agent
+   judgment calls"), and `data-acquisition.md` §Media-carve-out repeats
+   it ("textures are listed in the same catalogue with counts+bytes
+   **before any bulk retention decision**"). Extracting
+   `character-shared-textures` (170 MiB) and `environment-landscape`
+   (204 MiB) wholesale into `extracted/` is precisely the retention
+   decision the owner reserved. The spec must pick a lane: icon/UI-class
+   export with an explicit size cap + catalogue rows for the rest, or an
+   amendment note in `data-acquisition.md` recorded before build. As
+   written, stage 3 cannot be implemented compliantly.
+2. **The unnamed base locale bundle's content is destroyed (blocking).**
+   14 bundles go into stage 4; 13 tables come out; the base overlay's
+   actual string rows survive only as "evidence counts" inside
+   `base-overlay-report.json`. That breaches raw-first (Principle zero:
+   curated views are derived *over* the raw layer — there is no raw layer
+   for this bundle). Require a persisted `extracted/locales/base.jsonl`
+   (or equivalent), and pin the composition policy: is `en.jsonl`
+   english-bundle-only, english-over-base, or base-over-english? The
+   pivot pages of the whole site hang on this and the spec leaves it to
+   the report's prose instead of the emitter's behavior.
+3. **`relinks/locale_availability.jsonl` has two owners, two schemas, one
+   path (blocking).** Stage 4 writes key-granular rows; stage 5
+   overwrites the same path entity-granular. Run `--only localisation`
+   after a full pipeline and the canonical contract silently regresses to
+   key shape. Additionally: (a) the entity→localization-key join is named
+   but never specified (field-name convention? decompiled accessor?
+   `<id>_Name` heuristic?) — this is the load-bearing join of
+   localization-architecture §5.4; (b) §5.4 also requires **per-locale
+   field presence** per row, absent from both row shapes. Cleanest fix:
+   stage 5 solely owns `relinks/locale_availability.jsonl`; stage 4 keeps
+   the key substrate in `locales/locale-matrix.json` only.
+4. **Output-path collisions guaranteed (blocking).**
+   `harvest/monobehaviours/<family>/<class>/<pathId>.json` omits the
+   bundle — path_ids are only unique *within* a bundle, and families span
+   multiple bundles, so overwrites are certain. Same latent risk in the
+   elided `textures/<family>/…` and `textassets/<family>/…` shapes. Pin
+   filename conventions embedding bundle identity (e.g.
+   `<bundle>_<pathId>.json`) and make the export-manifest uniqueness a
+   stage acceptance line.
+5. **Catalog↔roster matching rule undefined.** Stage 2 hard-fails on any
+   catalog `bundle` value outside the roster, but never defines the
+   normalization (basename? strip provider path prefixes? hash-form
+   aliases for the hash-prefixed bundles?). First contact with the real
+   1.21 catalog could legitimately trip the hard-fail. Define the match
+   key, and define the universe for `distinctBundlesReferenced` /
+   `bundlesUnreferenced` (roster rows only — `catalog.bundle` itself is
+   not a roster row).
+6. **"`hierarchy row count == type count in script.json`" is not
+   executable.** Il2CppDumper's `script.json` holds methods/fields/
+   literals, not a type count. Pick the source of truth (DummyDll type
+   enumeration or `dump.cs` type headers) and restate the equality.
+7. **"Prepared tree" (§5.2) is undefined.** Which upstream outputs must
+   exist for each `--only <stage>` case? Specify the fixture-builder
+   command or the TestWriter invents six private setups.
+8. **Smaller stalls:** `contentAxis` enum spelled three ways across docs
+   (see §4); stub `kind` field enum (singular) vs filenames (plural)
+   never both pinned; `"inferred":false` pinned in the row template while
+   data-acquisition's provenance rule mandates `inferred:true + method`
+   for anything derived (heuristic family classification *is* derived);
+   identifier byte-match "sampled" with no N; `GAME=` (§5.3) vs
+   `TPC_GAME_DIR` (§1) never reconciled; UnityPy version unpinned in
+   stage-defaults (only recorded post-hoc); no output-root override, so
+   multi-GB `extracted/` lands on `C:` against toolchain.md's own
+   D:/A:-preferred guidance; `logic/` + `maps/` empty-dir contracts do
+   not survive git (need `.gitkeep` or acceptance adjusted).
+
+## 2. Acceptance-criteria quality (§3/§5 mechanicalness)
+
+Genuinely scriptable and praiseworthy: roster/count equalities, the
+Σ-census reconciliation, media-catalogue count equality, extension grep,
+locale-set character equality, availability row counts, exit-code
+mapping, double-run hashes. Named deficiencies:
+
+- **Not scriptable as written:** `base-overlay-report.json`'s
+  "merge-policy statement" — a judged prose artifact sitting inside a
+  mechanical checklist. Either enumerate the allowed policy strings or
+  move the judgment out of the acceptance line (evidence counts stay
+  mechanical).
+- **Under-specified:** "sampled `id`s byte-match" (pin N or say all);
+  "prepared tree" (above); §5.3 "every file in §4" collides with the
+  empty-dir problem; PNG byte-identity should be scoped to same-environment
+  reruns (encoder/lib versions legitimately change bytes across hosts) —
+  otherwise the criterion is flaky by construction.
+- **Tautology risk:** stage 0's "roster row count == enumerated
+  `*.bundle` count" compares the enumerator with itself; keep it, but
+  the real teeth are the `expectedBundles` DRIFT comparison — consider
+  promoting the 14-locale equality and 176-total to the same loud-warning
+  tier explicitly (they already are; just say the drift line covers them).
+
+## 3. Doctrine compliance
+
+- **Single entrypoint [DR-2026-08-18-pipeline]:** compliant —
+  discoverable, `--list`, isolation, idempotent, EXTRACTION-LOG as
+  defaults source, same-commit maintenance stated. (Nit: README promises
+  `./run_all <path>`; deliverable is `python run_all.py` + make — within
+  the doctrine's "(or a make target)", but align the README wording.)
+- **Idempotence:** compliant, with the stage-order hole of point 1.3 and
+  the exclusions list incomplete — `.pipeline-meta.json` (last-run
+  context, presumably timestamped) is not named in the byte-identity
+  exclusions; add it beside `.stage-stamps/` and the log.
+- **D2 provenance:** compliant — buildId as the sole user-facing class,
+  repo-only classes named and banned; per-row buildId enforced at 100%
+  (excellent).
+- **Media carve-out:** audio/video/mesh/animation/shader/font handling is
+  exemplary (census-only, count-checked, grep-guarded, `video-intro-hi`
+  explicitly routed). **Textures fail** — blocking item R1.
+- **Identifier preservation:** strongly compliant (verbatim ids, additive
+  slugs only, byte-match test) — except the `inferred:false` template
+  contradiction above.
+- **Localization-architecture §5:** obligations 1/2/3/6 met; obligation 4
+  (entity-granular availability with per-locale field presence,
+  regenerated every rerun) is half-met — see R3. The key-granular →
+  entity-granular handoff is *acknowledged* (good) but engineered
+  unsafely (same path, two schemas).
+- **Exit-code honesty:** the 0/1/2/3 contract with ledgered exit 2 is
+  exactly right and consistently applied.
+- **Placeholder discipline:** VALIDATION/PROOF/RELATIONS pointers are
+  correctly claim-nothing; `protocol/README.md` closes verifyB 1.3
+  without overclaiming. Good.
+
+## 4. Cross-doc consistency
+
+Fact spot-checks of spec §2 against scout §2/§9 + verifyA (**11 checked,
+all reconciled**):
+
+| # | Spec §2 claim | Ground truth | Verdict |
+|---|---|---|---|
+| 1 | buildid 20226581 = TargetBuildID; LastUpdated 2025-12-19 | verifyA #15 exact | ✓ |
+| 2 | `version.txt` `10.3.169253+2024-12-06.1241` | verifyA #3 | ✓ |
+| 3 | GameAssembly.dll 311,226,368 B at install root beside TPC.exe | verifyA #1a; scout §2 tree | ✓ |
+| 4 | global-metadata.dat 14,284,260 B | verifyA #1b exact | ✓ |
+| 5 | Addressables 1.21.10 + hash `ff59c4d7…` + local catalog | verifyA #8 verbatim | ✓ |
+| 6 | catalog.bundle 1,704,718 B | verifyA #18 exact | ✓ |
+| 7 | 158 aa + 10 space + 8 ghost = 176 | verifyA #4a/#9; supersedes scout §2 tildes — spec correctly cites recounts | ✓ |
+| 8 | 14 locale bundles = base + 13 named | verifyA #5a/#5b character-exact | ✓ |
+| 9 | Scenes 21 strict base + 1 seasonal + 3 + 1; install 25/26 | toolchain §Scene tally recount (verifyB 1.4 closed); identity.json numbers consistent | ✓ |
+| 10 | BCP-47 13-map table | scout §4 character-exact | ✓ |
+| 11 | Sanity/version offsets 0/4, v27 | **documentator-001's own recount only** — no independent verifier (data-acquisition + toolchain assert ✅). Mitigated: stage 0 re-measures every run. Acceptable, but it is the one §2 fact not independently verified | ◐ |
+
+Contradictions found beyond R1/R3:
+
+- **`contentAxis` vocabulary fork:** roster `dirClass` =
+  `dlc-space`/`dlc-ghost`; `spec.md` axes.variant-axes.content =
+  `dlc1-space`/`dlc2-ghost`; stage 3 prose strips `dlc-{space,ghost}-`.
+  Pin one emitted enum and map the others to it.
+- **Broken href:** line 6 links `../../verifications/` from
+  `docs/specs/` (resolves to `TwoPoint/verifications/` — wrong; needs
+  `../verifications/`). Display text is right, href is not.
+- **Typo:** stage 4 inputs say "`localFlag`-carrying"; the roster field is
+  `localeFlag`.
+- Otherwise the six convention docs agree with the spec everywhere I
+  probed: tool choices (Il2CppDumper primary + declared Cpp2IL
+  escalation, never auto-built), staged-tool fallback paths, exit
+  codes, kick-off pulls kept outside `run_all`, protocol surface trio,
+  scene-tally supersession rule ("this file wins" is stated and is
+  correct — it cites the recount).
+
+## 5. Value / over-engineering
+
+Scope cutting is good. Stages 0–5 is the correct piece boundary; logic/
+relink-matrix/maps/PROOF deferrals are right and their consumption
+contracts are fixed here. Nothing in scope should move later — stage 5
+stub-with-ledger is owner-mandated, and the cheap-now wins (roster as
+first artifact per verifyB 1.2; mechanical scene-tally re-verification
+every run; catalog coverage incl. cut-content keys) are exactly the ones
+worth taking now.
+
+Adjustments I would make:
+
+- **Cut:** stage 4's write of the canonical relink path (subsumed by R3 —
+  it is the one piece of redundant machinery, and it is hazardous).
+- **Add (all trivially cheap from existing stage outputs):** a
+  `stubs/_unmapped-families.jsonl` ledger for census families/classes
+  with no seeded kind — otherwise unseeded discovered content is silent,
+  the exact failure mode `_absences.jsonl` exists to prevent; the
+  `TPC_EXTRACTED_ROOT` override; UnityPy version pin in stage-defaults.
+- **Note:** toolchain.md's AssetStudioModCLI "CLI cross-checks icon
+  batches" promise is unscheduled anywhere in the spec — acceptable to
+  drop, but say so in one line so the matrix row doesn't dangle.
+
+## 6. Test obligations (§8)
+
+Fixture suite is unusually good (parsers, classifiers, reconciliation
+math, carve-out guard, exit-code mapping, runner flags). Gaps:
+
+- **THE missing test: interrupted-run convergence.** Kill a stage-3 run
+  mid-export, rerun, and require the final tree to hash-equal a clean
+  run. Every listed idempotence test covers only completed runs; a wrong
+  pipeline (partial writes, no temp+rename discipline) passes the entire
+  current §8 and still corrupts on first real interruption. Add it, and
+  state the write discipline (temp file + atomic rename) in §4.
+- Stage-order independence for any file written by more than one stage
+  (moot if R3 adopted).
+- Exit-2 *emission* fixtures (unreadable-bundle simulation) — the runner
+  test covers mapping, not the stage producing 2.
+- A synthetic ContentCatalogData fixture exercising the stage-2
+  reference-matching rule from R-matching (out-of-roster detector exists;
+  the matcher it guards is untested).
+- Whatever base/en composition policy R2 lands — it needs a fixture test;
+  currently nothing tests composition behavior at all.
+- Client-gated set is fine; auto-SKIP semantics are right.
+
+---
+
+## Required changes (exact list)
+
+1. **R1 (blocking):** resolve the texture contradiction — either cap
+   inline PNG export to icon/UI-class assets with catalogue rows for the
+   rest, or amend `data-acquisition.md` §Media-carve-out first; cite the
+   resolution in stage 3.
+2. **R2 (blocking):** persist the unnamed base locale bundle's decoded
+   rows as an artifact; pin the pivot/base composition policy for
+   `en.jsonl` and state whether `locale-matrix.json` includes base keys.
+3. **R3 (blocking):** single owner for `relinks/locale_availability.jsonl`
+   (recommended: stage 5 only); specify the entity→loc-key join
+   mechanism; add per-locale field presence per
+   localization-architecture §5.4.
+4. **R4 (blocking):** embed bundle identity in monobehaviour/textasset/
+   texture output paths; add export-path uniqueness to stage 3
+   acceptance.
+5. R5: pin one `contentAxis`/`dirClass` enum; map `spec.md`'s
+   `dlc1-space`/`dlc2-ghost` to it.
+6. R6: define the stage-2 catalog↔roster match normalization and the
+   `bundlesUnreferenced` universe.
+7. R7: restate the stage-1 hierarchy equality against a real type-count
+   source (DummyDll or `dump.cs`).
+8. R8: pin the stub `kind` enum (field vs filename), `provisional` /
+   `inferred` semantics (heuristic classification ⇒ `inferred:true` +
+   method), and the identifier-sample N.
+9. R9: ops pins — `TPC_EXTRACTED_ROOT` override; `.gitkeep` for
+   `logic/`+`maps/`; `.pipeline-meta.json` added to byte-identity
+   exclusions; `GAME=`↔`TPC_GAME_DIR` reconciliation; UnityPy version in
+   stage-defaults; scope PNG byte-identity to same-env reruns.
+10. R10: add the interrupted-run convergence test, exit-2 emission
+    fixture, catalog-shape fixture, and define the §5.2 prepared-tree.
+11. R11: fix the `../../verifications/` href; `localFlag`→`localeFlag`;
+    replace the merge-policy prose acceptance with an enum of allowed
+    policy strings; one line dismissing or scheduling the
+    AssetStudioModCLI cross-check.
+
+## Overall
+
+APPROVE the architecture, BOUNCE the artifact. R1–R4 are contract
+decisions that must be made on paper now — after build they surface as
+silent data loss (R2), a violated owner ruling (R1), schema forks (R3,
+R5), or corrupted exports (R4). With R1–R11 applied this is an
+approve-for-build spec on the next pass; no re-scouting, no new research,
+estimated well under a day of documentation work.
+
+END OF reviewer-002-piece-01

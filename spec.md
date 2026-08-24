@@ -115,7 +115,7 @@ satellite:                        # §2.17
   status: no                      # offline single-player — no live surface for an overlay to consume
   gep-check: n-a                  # no GEP-relevant events exist; revisit only if an online mode ever ships
 
-legal:                            # facts only — legality analysis is out of scope everywhere (AGENTS rule 2)
+legal:                            # FRAMEWORK §4 template block — factual rows only; never analyzed (AGENTS rule 2)
   data: provenance recorded repo-only per AGENTS rule 3 two-class rule; user surfaces carry buildId + coverage scope
   tooling: repo arsenal per toolchain.md (Cpp2IL/Il2CppDumper/UnityPy/AssetStudioMod verdicts cited there)
   fan-program: none               # per-database decision at build time [DR-2026-08-15 D6]

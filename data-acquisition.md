@@ -152,7 +152,7 @@ official-api / …), `container` (bundle path or endpoint), `appid`,
 `buildId` (**20226581** stamped everywhere user-visible truth is
 derived), tool + tool_version, extraction timestamp (machine plane
 only), and — for anything derived rather than hard-read — `inferred:
-true` + method string. Source identity, URLs, and license tags stay out
-of user-facing surfaces entirely.
+true` + method string. Repo-only provenance fields stay out of
+user-facing surfaces entirely.
 
 END OF data-acquisition.md
