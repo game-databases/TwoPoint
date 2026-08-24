@@ -67,8 +67,10 @@ def test_matrix_builder_includes_base_keys(tmp_path):
 def test_composition_policy_classifier_all_four_branches(tmp_path):
     """All FOUR compositionPolicy values must be reachable on fixtures
     (spec §8 stage 4; R2 replaced prose merge-policy with this enum).
-    Unambiguous shapes are pinned to their labels; then reachability of the
-    whole enum is required."""
+    Label semantics are deliberately NOT pinned here (spec §7: the policy is
+    "selected by this stage's deterministic classifier … not pre-pinned");
+    what is binding: enum membership, repeat-call determinism, sensitivity to
+    genuinely different compositions, and reachability of the whole enum."""
     mod = skip_if_none(load_tool("stage4_localisation.py"),
                        "tools/stage4_localisation.py")
     fn = skip_if_none(get_sym(mod, *POLICY_CLASSIFIER_NAMES),
@@ -85,18 +87,30 @@ def test_composition_policy_classifier_all_four_branches(tmp_path):
             f"classifier returned {pol!r}, not one of the pinned four values"
         return pol
 
-    # unambiguous shapes -> pinned labels
-    assert policy({"a": "A"}, {"a": "A", "c": "C"}) == "english-only"
-    assert policy({"a": "A*", "b": "B*"}, {"a": "A*"}) == "base-over-english"
-    assert policy({"a": "BASETEXT", "d": "D"}, {"a": "ENTEXT"}) == "mixed"
+    # deterministic classification: identical inputs -> identical label
+    shapes = [
+        ({"a": "A"}, {"a": "A", "c": "C"}),
+        ({"a": "A*", "b": "B*"}, {"a": "A*"}),
+        ({"a": "BASETEXT", "d": "D"}, {"a": "ENTEXT"}),
+        ({}, {}),
+    ]
+    for base, en in shapes:
+        assert policy(base, en) == policy(base, en), (
+            f"classifier is not repeat-call deterministic for "
+            f"base={base} en={en}")
 
     # exhaustive small-shape sweep: every combination must classify into the
-    # enum without crashing (robustness leg), collecting what actually occurs
+    # enum without crashing (robustness leg), collecting what actually occurs.
+    # Genuinely distinguishable compositions must NOT collapse onto one label.
     import itertools
     texts = [{}, {"a": "A1"}, {"a": "A2"}, {"a": "A1", "b": "B"}]
     seen = set()
     for base, en in itertools.product(texts, texts):
         seen.add(policy(base, en))
+    assert len(seen) >= 2, (
+        f"classifier returned the constant label {seen} across "
+        f"{len(texts) ** 2} distinguishable input compositions — it does "
+        "not classify anything, so consumers cannot observe composition")
     missing = set(COMPOSITION_POLICIES) - seen
     assert not missing, (
         f"compositionPolicy branches UNREACHABLE on any fixture shape: "
