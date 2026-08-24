@@ -11,6 +11,49 @@ figures).
 
 ---
 
+## Revision 4 (executor-001 client-reality amendments)
+
+Grounded in executor-001's real-corpus run — findings recorded in
+[`../../extracted/EXTRACTION-LOG.md`](../../extracted/EXTRACTION-LOG.md)
+run sections and its report
+([`.agents/logs/executor-001.log`](../../.agents/logs/executor-001.log)),
+2026-08-24. Four measured facts force four mechanism amendments; stage
+ids, exit codes, output paths, sentinels, and the stage-2 coverage
+universes are all unchanged:
+
+1. **This client has NO `Assembly-CSharp.dll`** (`script.json`: 0 hits;
+   `dump.cs` enumerates 100 images; game code lives in `TPS.Game.dll` /
+   `TPS.Core*.dll`). Stage 1's hard gate
+   `DummyDll/Assembly-CSharp.dll missing` could never pass here → the
+   gate becomes: the DummyDll set is NON-EMPTY AND covers every
+   assembly listed in `ScriptingAssemblies.json` classified
+   present-or-absent-with-marker; the structural hierarchy is built
+   over ALL present game-code images (Assembly-CSharp was one such
+   image, never a law). Exit codes unchanged.
+2. **The catalog payload is a TextAsset, not a MonoBehaviour**
+   (`catalog.bundle`: zero MonoBehaviours; TextAsset `"catalog"`,
+   ~11.7 MB JSON with `m_LocatorId` "AddressablesMainContentCatalog" +
+   base64-encoded binary blobs `m_KeyDataString` / `m_BucketDataString`
+   / `m_EntryDataString`). Stage 2's primary decode = that TextAsset's
+   JSON, decoding the three data strings per the Addressables 1.21.x
+   layout as far as needed for keys → bundle references;
+   MonoBehaviour probing demoted to the secondary/absent path.
+   Coverage-universe acceptance unchanged.
+3. **Content bundles' UnityFS version header reads literally `0.0.0`**
+   (`catalog.bundle` alone reports true 2020.3.47f1); UnityPy raises
+   `UnityVersionFallbackError` unless a fallback is pinned. Stages 3+4
+   seed `UnityPy.config.FALLBACK_UNITY_VERSION` from `identity.json`'s
+   `unityVersion` when a bundle header is `0.0.0`/unparseable,
+   recording fallback usage counts in the census/report outputs (fact,
+   not gloss).
+4. **Run sections state measured facts only:** `escalationTrigger` is
+   derived from the MEASURED metadata version (27 → the Cpp2IL trigger
+   stays conditional, not canned onto unrelated failures); failing
+   stages append their run section too; the dumper version is stamped
+   from its banner or `unknown` explicitly.
+
+---
+
 ## Revision 3 (arbiter-002) — clarifying, not changing the contract
 
 Applies the SPEC lane (S1+S2) of
@@ -218,18 +261,29 @@ roster as the pipeline's first artifact (verifyB 1.2).
   - `extracted/decompiled/structural/id-registries/*.jsonl` — enum /
     constants registries (name → value), preserving original member
     names verbatim.
-- **Escalation (declared, not automatic):** on stage failure the runner
-  prints the pinned Cpp2IL trigger: `dotnet publish` on
-  `tools/Cpp2IL` per toolchain.md §Primary dumper decision, version
-  selected against the measured metadata version, result pinned in
-  EXTRACTION-LOG. Piece 1 does NOT auto-build Cpp2IL.
-- **Acceptance:** exits 0; `DummyDll/Assembly-CSharp.dll` exists; every
-  `ScriptingAssemblies.json` entry appears in `assembly-index.json`
-  classified present-or-absent-with-marker; `dump.cs` non-empty;
+- **Escalation (declared, not automatic):** the Cpp2IL trigger fires
+  ONLY off the MEASURED metadata version — `>= 38` prints the pinned
+  trigger: `dotnet publish` on `tools/Cpp2IL` per toolchain.md §Primary
+  dumper decision, version selected against the measured metadata
+  version, result pinned in EXTRACTION-LOG. Piece 1 does NOT auto-build
+  Cpp2IL. Any other failure logs its own problem lines WITHOUT that
+  trigger text — on this client's measured v27 the wall is never
+  tripped, so the canned message must not appear (Revision 4). Failing
+  stages append their run section too (exitCode + problems), so the
+  ledger never depends on success.
+- **Acceptance:** exits 0; the gate is multi-image (Revision 4) — the
+  DummyDll set is NON-EMPTY AND every `ScriptingAssemblies.json` entry
+  appears in `assembly-index.json` classified
+  present-or-absent-with-marker with at least one `dummy-present` entry
+  backed by a real image (`DummyDll/Assembly-CSharp.dll` is NOT required
+  — this client ships none; game code lives in `TPS.Game.dll` /
+  `TPS.Core*.dll`, so the structural hierarchy is built over ALL
+  present game-code images); `dump.cs` non-empty;
   `script.json` parses as JSON; `stringliteral.json`
   parses; hierarchy row count == the type count of a named, mechanically
-  enumerable source — PRIMARY: typedef enumeration across
-  `DummyDll/*.dll` via the stage's .NET metadata reader; FALLBACK (only
+  enumerable source — PRIMARY: typedef enumeration across ALL present
+  game-code `DummyDll/*.dll` images via the stage's .NET metadata
+  reader; FALLBACK (only
   if no metadata reader resolves): top-level type declarations in
   `dump.cs`. The chosen source and its counting method are stamped in
   the EXTRACTION-LOG run section beside the count; mismatch = stage
@@ -243,13 +297,18 @@ key → bundle/address index — the backbone of every later join.
 
 - **Script:** `tools/stage2_harvest_catalog.py`
 - **Inputs:** `aa/catalog.bundle` (1,704,718 B), `aa/settings.json`,
-  roster from stage 0; stage 1 dummy DLLs available for typetree
-  synthesis (TypeTreeGeneratorAPI) if MonoBehaviour decoding needs
-  them. Implementation note: Addressables 1.21 stores the catalog as a
-  binary `ContentCatalogData`; UnityPy opens the bundle — whether the
-  payload decodes via typetree or needs a small dedicated parser for
-  the 1.21 binary shape is an implementation discovery this stage owns;
-  the OUTPUT contract below is fixed regardless.
+  roster from stage 0. Measured shape (Revision 4): the bundle carries
+  NO MonoBehaviour — the payload is a single TextAsset named `"catalog"`
+  holding ~11.7 MB of JSON with `m_LocatorId`
+  ("AddressablesMainContentCatalog") plus base64-encoded binary blobs
+  `m_KeyDataString` / `m_BucketDataString` / `m_EntryDataString`.
+  **Primary decode:** open the bundle with UnityPy, take that
+  TextAsset, parse its JSON, and decode the three data strings per the
+  Addressables 1.21.x layout — as far as needed to resolve keys →
+  owning-bundle references. The MonoBehaviour/typetree route (stage 1
+  dummy DLLs + TypeTreeGeneratorAPI) is the SECONDARY/absent path,
+  probed only when the TextAsset is missing or malformed — never the
+  primary. The OUTPUT contract below is fixed regardless.
 - **Outputs:**
   - `extracted/addressables/catalog.json` — `{meta:{buildId,
     addressablesVersion:"1.21.10", settingsHash, providerIds[]},
@@ -284,7 +343,15 @@ CATALOGUE-ONLY in piece 1 (arbiter-001 R1 lane).
   `tools/unitypy_util.py`)
 - **Inputs:** roster (stage 0), catalog.json (family/address hints),
   stage 1 dummy DLLs for typetree synthesis on typetree-less
-  MonoBehaviours.
+  MonoBehaviours. **Fallback-version seeding (Revision 4):** content
+  bundles' UnityFS header reads literally `0.0.0` (catalog.bundle alone
+  reports the true engine version) and UnityPy raises
+  `UnityVersionFallbackError` on it — before opening any bundle the
+  stage seeds `UnityPy.config.FALLBACK_UNITY_VERSION` from
+  `identity.json`'s `unityVersion` whenever a bundle header is
+  `0.0.0`/unparseable; each seeded open marks that bundle's census with
+  `fallbackVersionUsed:true` and the run section carries the usage
+  total — recorded fact, never gloss.
 - **Family rule:** from the bundle filename — strip trailing
   `_assets_all`/`_optimised.unity`/`.unity` shapes and the leading
   `dlc-{space,ghost}-` tag (kept as `contentAxis` ∈
@@ -347,8 +414,10 @@ CATALOGUE-ONLY in piece 1 (arbiter-001 R1 lane).
   enforces it); integration test greps `extracted/` for media and image
   extensions (`.ogg .wav .mp3 .bnk .fsb .mp4 .usm .bk2 .png .jpg
   .jpeg .tga .dds .bmp .exr`) → zero hits outside the catalogue
-  jsonl/md; rerun byte-identical (JSON sorted keys; iteration in sorted
-  order; no binary encoders exist in piece 1).
+  jsonl/md; every per-bundle census carries `fallbackVersionUsed`
+  (expected `true` on this client — every content bundle ships a
+  `0.0.0` header); rerun byte-identical (JSON sorted keys; iteration in
+  sorted order; no binary encoders exist in piece 1).
 
 ### Stage 4 — `localisation`
 
@@ -359,7 +428,10 @@ canonical availability layer is NOT this stage's output — stage 5 is
 its sole owner.
 
 - **Script:** `tools/stage4_localisation.py`
-- **Inputs:** the 14 `localeFlag`-carrying roster bundles; stage 1 dummy
+- **Inputs:** the 14 `localeFlag`-carrying roster bundles (opened under
+  the same fallback-version seeding as stage 3 — locale bundles are
+  content bundles, their headers read `0.0.0` too, Revision 4, usage
+  counted in the run section); stage 1 dummy
   DLLs (Localization-package types for typetrees); BCP-47 mapping
   (fixed table, from the verified scout inventory):
 
@@ -629,24 +701,38 @@ dir)** — fixtures are tiny synthetic files, never real game bytes:
   suffix → BCP-47 table (13 exact mappings); DRIFT-warning path.
 - stage 1: `assembly-index.json` builder against a fixture
   ScriptingAssemblies.json + fake DummyDll dir (present + stripped
-  cases); `class-hierarchy` parser on a fixture `dump.cs` slice.
+  cases); multi-image gate fixtures (Revision 4) — a DummyDll set
+  holding several game-code images and NO `Assembly-CSharp.dll` passes
+  the gate while an EMPTY set fails it; `class-hierarchy` parser on a
+  fixture `dump.cs` slice spanning more than one assembly image.
 - stage 2: catalog.json schema validator; out-of-roster reference
-  detector (must hard-fail); synthetic ContentCatalogData fixture
-  exercising the match normalization (case-folded basenames,
-  directory/provider-prefix stripping) and the coverage-universe math
-  (`catalog.bundle` in neither count).
+  detector (must hard-fail); synthetic TextAsset-catalog fixture
+  (Revision 4 — small JSON with `m_LocatorId` + tiny base64
+  `m_KeyDataString`/`m_BucketDataString`/`m_EntryDataString`) driving
+  the primary 1.21.x decode AND exercising the match normalization
+  (case-folded basenames, directory/provider-prefix stripping) and the
+  coverage-universe math (`catalog.bundle` in neither count);
+  absent/malformed TextAsset routes to the secondary path (no silent
+  garbage decode).
 - stage 3: census aggregation/reconciliation math on fabricated
   census+manifest files; media-catalogue completeness checker (now
   covering `Texture2D`/`Sprite`); carve-out extension guard incl. image
   extensions; family-name splitter (incl. `dlc-` prefixes,
   hash-prefixed names, `_optimised.unity` shapes); export-manifest
-  `outRelPath` uniqueness assertion; **exit-2 emission fixture** — a
+  `outRelPath` uniqueness assertion; fallback-version seeding fixtures
+  (shared helper with stage 4) — synthetic bundles whose UnityFS
+  headers read `0.0.0`, and ones unparseable, both trigger the
+  identity-sourced `FALLBACK_UNITY_VERSION` seed, flip
+  `fallbackVersionUsed`, and move the run-section usage total;
+  **exit-2 emission fixture** — a
   truncated/unreadable synthetic bundle drives `unreadable.jsonl` + a
   real stage exit 2.
 - stage 4: JSONL round-trip; matrix builder on fixture tables (base
   keys included); base-overlay `compositionPolicy` classifier — all
   four enum branches reachable on fixtures; BCP-47 file-set equality
-  assertion helper; stage-4 isolation leaves `relinks/` untouched.
+  assertion helper; stage-4 isolation leaves `relinks/` untouched;
+  locale bundles exercise the same fallback-version seeding helper as
+  stage 3 (Revision 4).
 - stage 5: stub-row schema validator; kind↔filename map validator;
   absence-ledger AND `_unmapped-families` logic; entity-level
   `locale_availability` regeneration on fixtures incl. `fieldPresence`
@@ -655,7 +741,11 @@ dir)** — fixtures are tiny synthetic files, never real game bytes:
   (≤1,000 rows → all, else sorted-500 sample).
 - runner: `--list` contains all six ids in order; `--only` isolation;
   stamp invalidation when a stage script's hash changes; exit-code
-  mapping (0/1/2/3); **interrupted-run convergence** — kill a stage
+  mapping (0/1/2/3); log-hygiene fixtures (Revision 4) — a FAILING
+  stage still appends its EXTRACTION-LOG run section, the
+  `escalationTrigger` text appears iff the measured metadata version
+  ≥ 38, and the dumper version stamps explicit `unknown` when no banner
+  parses; **interrupted-run convergence** — kill a stage
   mid-write on the fixture tree, rerun to completion, require the final
   tree to hash-equal a clean uninterrupted run (temp-file +
   atomic-rename discipline); prepared-tree builder covers all six
@@ -666,9 +756,13 @@ env `TPC_GAME_DIR` nor the default install path exists:
 
 - stage 0 end-to-end: identity fields + 176 roster rows + 14 locale
   rows.
-- stage 1: `Assembly-CSharp.dll` dummy produced; assembly-index covers
-  every ScriptingAssemblies entry.
+- stage 1: non-empty DummyDll set covering every ScriptingAssemblies
+  entry classified present-or-absent-with-marker
+  (`Assembly-CSharp.dll` is NOT expected on this client);
+  class-hierarchy rows span all present game-code images.
 - stage 2: every catalog bundle reference resolves into the roster.
+- stage 3: fallback-version usage recorded and > 0 (every content
+  bundle ships a `0.0.0` header on this client).
 - stage 4: 13 locale files match the BCP-47 table +
   `base-overlay.jsonl` present; stage 5: availability row count ==
   distinct joined entities with `fieldPresence` populated on every row.
