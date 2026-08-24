@@ -191,6 +191,36 @@ def append_run_section(extracted_root: Path, stage_id: str, lines: list[str]) ->
 # ---------------------------------------------------------------------------
 # Stage stamps + pipeline meta
 
+# Per-stage DECLARED final artifacts. The up-to-date decision requires every
+# one of them to exist with its stamped content, so a deleted or truncated
+# output forces re-execution even when the stamp itself matches
+# (interrupted-run convergence). The determinism-excluded files
+# (EXTRACTION-LOG.md, .stage-stamps/, .pipeline-meta.json) are deliberately
+# not listed. localisation's per-locale tables are appended in
+# stage_outputs() from the shared EMITTED_LOCALES table.
+STAGE_OUTPUTS = {
+    "verify-client": ["identity.json", "bundle-roster.jsonl"],
+    "decompile": ["decompiled/structural/assembly-index.json",
+                  "decompiled/structural/class-hierarchy.jsonl"],
+    "harvest-catalog": ["addressables/catalog.json",
+                        "addressables/settings.snapshot.json",
+                        "addressables/catalog-coverage.json"],
+    "harvest-bundles": ["harvest/export-manifest.jsonl",
+                        "harvest/census/unreadable.jsonl",
+                        "media-catalogue.jsonl", "MEDIA-CATALOGUE.md"],
+    "localisation": ["locales/locale-matrix.json",
+                     "locales/base-overlay-report.json"],
+    "emit-stub-datasets": [
+        "stubs/items.jsonl", "stubs/unlockables.jsonl", "stubs/rooms.jsonl",
+        "stubs/campus-levels.jsonl", "stubs/courses.jsonl",
+        "stubs/configs.jsonl", "stubs/staff.jsonl",
+        "stubs/metagame-nodes.jsonl", "stubs/student-types.jsonl",
+        "stubs/_absences.jsonl", "stubs/_unmapped-families.jsonl",
+        "relinks/locale_availability.jsonl",
+    ],
+}
+
+
 def stamp_path(extracted_root: Path, stage_id: str) -> Path:
     safe = stage_id.replace("/", "_")
     return extracted_root / ".stage-stamps" / f"{safe}.json"
@@ -214,17 +244,60 @@ def save_stamp(extracted_root: Path, stage_id: str, identity: str,
         "exitCode": int(exit_code),
         "finishedAt": utc_now_iso(),
     }
+    # successful runs fingerprint their declared outputs so a later run can
+    # tell "stamp matches" from "outputs actually survived intact"
+    if row["exitCode"] == 0 and STAGE_OUTPUTS.get(stage_id):
+        row["outputs"] = declared_output_state(extracted_root, stage_id)
     if extra:
         row.update(extra)
     write_json(stamp_path(extracted_root, stage_id), row)
 
 
+def stage_outputs(stage_id: str) -> list[str]:
+    """Declared final artifacts of a stage (spec §3/§4). The localisation
+    per-locale tables come from the shared locale table; the lazy import
+    keeps this module dependency-free."""
+    outs = list(STAGE_OUTPUTS.get(stage_id, ()))
+    if stage_id == "localisation":
+        import tpc_common as tc
+        outs += [f"locales/{locale}.jsonl" for locale in tc.EMITTED_LOCALES]
+    return outs
+
+
+def declared_output_state(extracted_root: Path, stage_id: str) -> dict[str, str]:
+    """rel -> sha256 for every declared output ('' when absent). Both the
+    saved stamp and the live check render through this same function, so a
+    deleted/truncated/rewritten final mismatches the stamp while a file
+    legitimately born empty (e.g. _absences.jsonl with every family
+    populated) stays consistent instead of forcing perpetual re-runs."""
+    state: dict[str, str] = {}
+    for rel in stage_outputs(stage_id):
+        p = extracted_root / rel
+        state[rel] = sha256_file(p) if p.is_file() else ""
+    return state
+
+
+def outputs_current(extracted_root: Path, stage_id: str, stamp: dict) -> bool:
+    """Every declared output must exist with its stamped content. Stamps
+    predating output fingerprinting (no 'outputs' block) count as stale so
+    the next run re-fingerprints them."""
+    if not STAGE_OUTPUTS.get(stage_id):
+        return True
+    recorded = stamp.get("outputs")
+    if not isinstance(recorded, dict):
+        return False
+    return recorded == declared_output_state(extracted_root, stage_id)
+
+
 def is_up_to_date(extracted_root: Path, stage_id: str, identity: str) -> bool:
     """A stamp counts as done ONLY when identity matches AND the recorded
-    run exited 0 — exit-2 ledger completions re-run."""
+    run exited 0 — exit-2 ledger completions re-run — AND every declared
+    output still exists with its stamped content: a deleted or truncated
+    final must be regenerated, never skipped past."""
     stamp = load_stamp(extracted_root, stage_id)
     return bool(stamp) and stamp.get("identity") == identity \
-        and stamp.get("exitCode") == 0
+        and stamp.get("exitCode") == 0 \
+        and outputs_current(extracted_root, stage_id, stamp)
 
 
 def write_pipeline_meta(extracted_root: Path, ctx: dict) -> None:

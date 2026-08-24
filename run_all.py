@@ -164,8 +164,12 @@ def stage_status(extracted_root: Path, stage_id: str, identity: str) -> str:
         return "not-run"
     if stamp.get("identity") != identity:
         return "stale"
-    return ("up-to-date" if stamp.get("exitCode") == 0
-            else f"needs-rerun(last-exit={stamp.get('exitCode')})")
+    if stamp.get("exitCode") != 0:
+        return f"needs-rerun(last-exit={stamp.get('exitCode')})"
+    # a surviving stamp is only up-to-date while its declared outputs do too
+    return ("up-to-date" if log_util.outputs_current(extracted_root,
+                                                     stage_id, stamp)
+            else "stale")
 
 
 def print_list(pack_dir: Path, extracted_root: Path, game_root: Path | None) -> None:
