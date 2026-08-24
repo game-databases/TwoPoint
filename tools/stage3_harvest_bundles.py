@@ -52,6 +52,50 @@ def _name_ext(asset_name: str, fallback: str) -> str:
     return fallback
 
 
+# ---------------------------------------------------------------------------
+# Mechanical acceptance math (pure functions over the stage's own row shapes)
+
+def reconcile_counts(censuses, manifest_rows, catalogue_rows) -> tuple[bool, list[str]]:
+    """Σ objectsByClass over per-bundle censuses == export-manifest rows +
+    media-catalogue rows + error rows + census-only residual (classes neither
+    exported nor carved out — GameObject/Transform/manager plumbing).
+    Returns (ok, problem messages)."""
+    class_totals: dict[str, int] = {}
+    error_total = 0
+    for c in censuses:
+        for cls_name, n in (c.get("objectsByClass") or {}).items():
+            class_totals[cls_name] = class_totals.get(cls_name, 0) + n
+        error_total += len(c.get("errors") or [])
+    census_objects = sum(class_totals.values())
+    accounted = len(manifest_rows) + len(catalogue_rows) + error_total
+    residual = sum(n for cls_name, n in class_totals.items()
+                   if cls_name not in EXPORT_CLASSES
+                   and cls_name not in tc.CARVE_OUT_CLASSES)
+    if census_objects != accounted + residual:
+        return False, [f"census reconciliation failed: {census_objects} objects "
+                       f"vs {accounted}+{residual} accounted"]
+    return True, []
+
+
+def check_carveout_completeness(censuses, catalogue_rows) -> tuple[bool, list[str]]:
+    """Every carved-out class's census count must equal its media-catalogue
+    row count. Returns (ok, problem messages)."""
+    carved_class_totals: dict[str, int] = {}
+    for c in censuses:
+        for cls_name, n in (c.get("objectsByClass") or {}).items():
+            if cls_name in tc.CARVE_OUT_CLASSES:
+                carved_class_totals[cls_name] = \
+                    carved_class_totals.get(cls_name, 0) + n
+    problems: list[str] = []
+    for cls_name in sorted(tc.CARVE_OUT_CLASSES):
+        want = carved_class_totals.get(cls_name, 0)
+        got = sum(1 for r in catalogue_rows if r["class"] == cls_name)
+        if want != got:
+            problems.append(f"carve-out completeness failed for {cls_name}: "
+                            f"census={want} catalogue={got}")
+    return (not problems), problems
+
+
 def run(game_root: Path, extracted_root: Path,
         only_relpaths: list[str] | None = None) -> int:
     roster = tc.load_roster(extracted_root)
@@ -89,6 +133,7 @@ def run(game_root: Path, extracted_root: Path,
     manifest_rows: list[dict] = []
     catalogue_rows: list[dict] = []
     unreadable_rows: list[dict] = []
+    censuses: list[dict] = []
     census_error_total = 0
     class_totals: dict[str, int] = {}
     carved_class_totals: dict[str, int] = {}
@@ -185,6 +230,7 @@ def run(game_root: Path, extracted_root: Path,
                     carved_class_totals.get(cls_name, 0) + n
         log_util.write_json(census_bundles_dir / (_safe(bundle_name) + ".json"),
                             census)
+        censuses.append(census)
 
     # -- ledgers -----------------------------------------------------------------
     unreadable_rows.sort(key=lambda r: r["relpath"])
@@ -205,21 +251,20 @@ def run(game_root: Path, extracted_root: Path,
     if duplicates:
         problems.append(f"duplicate outRelPath values: {sorted(duplicates)[:5]}")
 
+    # log-line scalars (the acceptance helpers re-derive these from the
+    # per-bundle censuses for the comparisons below)
     census_objects = sum(class_totals.values())
     accounted = (len(manifest_rows) + len(catalogue_rows) + census_error_total)
     residual = sum(n for cls_name, n in class_totals.items()
                    if cls_name not in EXPORT_CLASSES
                    and cls_name not in tc.CARVE_OUT_CLASSES)
-    if census_objects != accounted + residual:
-        problems.append(f"census reconciliation failed: {census_objects} objects "
-                        f"vs {accounted}+{residual} accounted")
 
-    for cls_name in sorted(tc.CARVE_OUT_CLASSES):
-        want = carved_class_totals.get(cls_name, 0)
-        got = sum(1 for r in catalogue_rows if r["class"] == cls_name)
-        if want != got:
-            problems.append(f"carve-out completeness failed for {cls_name}: "
-                            f"census={want} catalogue={got}")
+    _ok, recon_problems = reconcile_counts(censuses, manifest_rows,
+                                           catalogue_rows)
+    problems.extend(recon_problems)
+
+    _ok, carve_problems = check_carveout_completeness(censuses, catalogue_rows)
+    problems.extend(carve_problems)
 
     lines = [
         "- exitCode: 0" if not problems and not unreadable_rows else
