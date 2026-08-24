@@ -239,7 +239,12 @@ def build_locale_availability(rows_by_kind: dict[str, list[dict]],
                 for f, key in joins.items() if key in matrix_keys}
             available = set.intersection(*locales_per_field.values()) \
                 if locales_per_field else set()
-            named_fields = [f for f in joins if NAMED_FIELD_RE.search(f)]
+            # named-field coverage claims only HARD-joined keys (fail-closed):
+            # a convention-shaped named join records joinMethod but no locales,
+            # so this domain is locales_per_field — never `joins` (a
+            # convention-only named field would KeyError here)
+            named_fields = [f for f in locales_per_field
+                            if NAMED_FIELD_RE.search(f)]
             named_pool = {f: locales_per_field[f] for f in named_fields} \
                 if named_fields else locales_per_field
             named = set.union(*named_pool.values()) if named_pool else set()
