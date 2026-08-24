@@ -318,6 +318,110 @@ def _split_generic_args(s: str) -> tuple[int, str, str]:
 
 
 # ---------------------------------------------------------------------------
+# Identity-sourced FALLBACK_UNITY_VERSION seeding (spec Revision 4, item 3)
+
+_UNITYFS_MAGIC = b"UnityFS\x00"
+_UNITY_REV_OK_RE = re.compile(r"^\d+\.\d+\.\d+([fpab]\d+)?$")
+
+
+def read_unityfs_header_revision(abspath: Path) -> tuple[bool, str | None]:
+    """(is_unityfs, revision_text | None) read straight from the UnityFS
+    container header: signature, big-endian format int, then two
+    length-prefixed strings — player version, engine revision. Content
+    bundles on this client carry the literal string `0.0.0` there while
+    catalog.bundle reports the true engine version (measured, Revision 4)."""
+    try:
+        with open(abspath, "rb") as fh:
+            head = fh.read(256)
+    except OSError:
+        return False, None
+    if not head.startswith(_UNITYFS_MAGIC):
+        return False, None
+    pos = len(_UNITYFS_MAGIC) + 4   # skip the big-endian format version int
+
+    def _read_str(p: int) -> tuple[bytes | None, int]:
+        if p + 4 > len(head):
+            return None, p
+        (ln,) = struct.unpack(">i", head[p:p + 4])
+        p += 4
+        if ln < 0 or p + ln > len(head):
+            return None, p
+        return head[p:p + ln], p + ln
+
+    _player, pos = _read_str(pos)
+    rev, _pos = _read_str(pos)
+    if rev is None:
+        return True, None
+    try:
+        return True, rev.decode("ascii")
+    except UnicodeDecodeError:
+        return True, None
+
+
+def header_needs_fallback(abspath: Path) -> bool:
+    """True when a UnityFS container's revision header literally reads
+    `0.0.0` or cannot be parsed — the measured content-bundle condition.
+    Non-UnityFS files never need the seed; their open failures are different
+    defects and stay unfiltered in the ledger."""
+    is_unityfs, rev = read_unityfs_header_revision(abspath)
+    if not is_unityfs:
+        return False
+    if rev is None:
+        return True
+    text = rev.strip()
+    if not _UNITY_REV_OK_RE.match(text):
+        return True
+    return text == "0.0.0"
+
+
+class FallbackVersionSeeder:
+    """Seeds ``UnityPy.config.FALLBACK_UNITY_VERSION`` from identity.json's
+    ``unityVersion`` whenever a bundle header is 0.0.0/unparseable, and
+    counts every seeded open so the run section can record the usage total —
+    recorded fact, never gloss (spec §3 stages 3+4). Shared by stage 3 and
+    stage 4 (locale bundles are content bundles too)."""
+
+    def __init__(self, extracted_root: Path, unitypy_module):
+        self.UnityPy = unitypy_module
+        self.identity_version: str | None = None
+        identity_path = extracted_root / "identity.json"
+        if identity_path.is_file():
+            try:
+                raw = json.loads(
+                    identity_path.read_text(encoding="utf-8")).get("unityVersion")
+                if isinstance(raw, str) and raw.strip():
+                    self.identity_version = raw.strip()
+            except ValueError:
+                pass
+        self.seeded_bundles: list[str] = []   # insertion-ordered, counted only
+
+    @property
+    def seeded_count(self) -> int:
+        return len(self.seeded_bundles)
+
+    def seed_if_needed(self, abspath: Path, rel: str | None = None) -> bool:
+        """Call immediately before ``UnityPy.load()``. True when THIS open
+        rides on the identity-sourced fallback version. With no usable
+        identity version nothing is seeded — UnityPy fails loudly and the
+        failure lands in the ledger instead of being masked."""
+        if not header_needs_fallback(abspath):
+            return False
+        if self.identity_version is None:
+            return False
+        self.UnityPy.config.FALLBACK_UNITY_VERSION = self.identity_version
+        if rel is not None and rel not in self.seeded_bundles:
+            self.seeded_bundles.append(rel)
+        return True
+
+    def run_section_note(self, attempted: int) -> str:
+        src = ("identity.json unityVersion " +
+               (self.identity_version or "?")) if self.identity_version \
+            else "identity.json carried NO unityVersion — NOT seeded"
+        return (f"fallbackVersionUsedBundles: {self.seeded_count}/{attempted} "
+                f"(FALLBACK_UNITY_VERSION source: {src})")
+
+
+# ---------------------------------------------------------------------------
 # MonoBehaviour decoding with honest fallback
 
 def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None) -> tuple[dict, bool, str]:

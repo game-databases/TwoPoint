@@ -6,6 +6,10 @@ unnamed base bundle is decoded AND persisted verbatim
 (`locales/base-overlay.jsonl`); base-overlay composition is classified HERE
 into the emitted `compositionPolicy` enum (arbiter-001 R2).
 
+Locale bundles are content bundles: their UnityFS headers read `0.0.0` too,
+so opens run under the SAME identity-sourced fallback-version seeding as
+stage 3 (Revision 4), with the usage total recorded in the run section.
+
 Stage 5 is the SOLE OWNER of `relinks/locale_availability.jsonl`; this stage
 never writes under relinks/ (R3).
 """
@@ -241,9 +245,12 @@ def run(game_root: Path, extracted_root: Path) -> int:
     dump_cs = extracted_root / "decompiled" / "il2cppdumper" / "dump.cs"
     index = uu.DumpCsIndex(dump_cs) if dump_cs.is_file() else None
     synth = uu.TypetreeSynthesizer(index) if index is not None else None
+    UnityPy, _unitypy_source = uu.ensure_unitypy()
+    seeds = uu.FallbackVersionSeeder(extracted_root, UnityPy)
 
     tables: dict[str, dict[str, str]] = {}   # locale code | "BASE-OVERLAY" → rows
     warnings: list[str] = []
+    seeded_count = 0
     for row in sorted(locale_rows, key=lambda r: r["relpath"]):
         abspath = paths["root"] / row["relpath"]
         flag = row["localeFlag"]
@@ -256,6 +263,8 @@ def run(game_root: Path, extracted_root: Path) -> int:
                             f"{row['relpath']} — skipped")
             continue
         try:
+            if seeds.seed_if_needed(abspath, row["relpath"]):
+                seeded_count += 1
             rows = decode_locale_bundle(abspath, synth)
         except Exception as exc:  # noqa: BLE001 — loud ledgered failure below
             raise tc.StageError(
@@ -310,13 +319,15 @@ def run(game_root: Path, extracted_root: Path) -> int:
         f"- compositionPolicy: {report['compositionPolicy']} "
         f"(evidence: {report['evidence']})",
         f"- matrixKeys: {len(matrix_keys)}",
+        f"- {seeds.run_section_note(len(locale_rows))}",
         "- relinksWrittenHere: false (stage 5 is sole owner)",
     ]
     lines += [f"- WARNING: {w}" for w in warnings]
     log_util.append_run_section(extracted_root, "localisation", lines)
     print(f"[localisation] locales={len(emitted)} baseOverlay="
           f"{report['evidence']['baseRowCount']} "
-          f"policy={report['compositionPolicy']} matrixKeys={len(matrix_keys)}")
+          f"policy={report['compositionPolicy']} matrixKeys={len(matrix_keys)} "
+          f"fallbackVersioned={seeded_count}")
     for w in warnings:
         print(f"[localisation] WARNING: {w}", file=sys.stderr)
     return 0

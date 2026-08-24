@@ -9,6 +9,13 @@ under extracted/. Icon/sprite byte export is an owner pick taken on
 MEDIA-CATALOGUE after piece 1; the AssetStudioModCLI cross-check stays
 dormant until that pass.
 
+Fallback-version seeding (Revision 4): content bundles' UnityFS headers read
+literally `0.0.0` (catalog.bundle alone reports the true engine version), so
+before every open the stage seeds UnityPy's FALLBACK_UNITY_VERSION from
+identity.json's unityVersion when the header is 0.0.0/unparseable, marks the
+bundle census `fallbackVersionUsed:true` and totals the usage in the run
+section.
+
 Bundle identity is embedded in EVERY harvest filename (`<bundle-stem>_<pathId>`):
 path_ids are unique only WITHIN a bundle while families span bundles.
 """
@@ -113,6 +120,9 @@ def run(game_root: Path, extracted_root: Path,
     index = uu.DumpCsIndex(dump_cs) if dump_cs.is_file() else None
     synth = uu.TypetreeSynthesizer(index) if index is not None else None
     UnityPy, unitypy_source = uu.ensure_unitypy()
+    # Revision 4: content bundles ship `0.0.0` UnityFS headers — seed the
+    # fallback version from identity.json before any open, count each use.
+    seeds = uu.FallbackVersionSeeder(extracted_root, UnityPy)
 
     # rerun convergence: the whole harvest plane is rebuilt from scratch
     harvest_dir = extracted_root / "harvest"
@@ -144,7 +154,9 @@ def run(game_root: Path, extracted_root: Path,
         bundle_name = Path(rel).name
         stem = bundle_name[:-len(".bundle")] if bundle_name.endswith(".bundle") else bundle_name
         family, axis, _hash_named = tc.split_family(bundle_name, row["dirClass"])
-        census = {"objectsByClass": {}, "bytesByClass": {}, "errors": []}
+        seeded = seeds.seed_if_needed(abspath, rel)
+        census = {"objectsByClass": {}, "bytesByClass": {}, "errors": [],
+                  "fallbackVersionUsed": seeded}
 
         objects: list = []
         try:
@@ -156,11 +168,13 @@ def run(game_root: Path, extracted_root: Path,
         except Exception as exc:  # noqa: BLE001 — ledgered incompleteness
             unreadable_rows.append({
                 "relpath": rel, "dirClass": row["dirClass"],
+                "fallbackVersionUsed": seeded,
                 "reason": f"{type(exc).__name__}: {exc}"})
             continue
         if not objects:
             unreadable_rows.append({
                 "relpath": rel, "dirClass": row["dirClass"],
+                "fallbackVersionUsed": seeded,
                 "reason": "no readable serialized objects in container"})
             continue
         objects.sort(key=lambda o: o.path_id)
@@ -277,13 +291,15 @@ def run(game_root: Path, extracted_root: Path,
         f"catalogueRows: {len(catalogue_rows)}; objectErrors: "
         f"{census_error_total}; censusOnlyResidual: {residual}",
         f"- carvedClassCensus: {dict(sorted(carved_class_totals.items()))}",
+        f"- {seeds.run_section_note(len(roster))}",
     ]
     lines += [f"- PROBLEM: {p}" for p in problems]
     log_util.append_run_section(extracted_root, "harvest-bundles", lines)
 
     print(f"[harvest-bundles] bundles={len(roster)} "
           f"unreadable={len(unreadable_rows)} exports={len(manifest_rows)} "
-          f"catalogue={len(catalogue_rows)} objectErrors={census_error_total}")
+          f"catalogue={len(catalogue_rows)} objectErrors={census_error_total} "
+          f"fallbackVersioned={seeds.seeded_count}")
     for p in problems:
         print(f"[harvest-bundles] PROBLEM: {p}", file=sys.stderr)
     if problems:
