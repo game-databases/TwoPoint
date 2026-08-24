@@ -138,7 +138,10 @@ def load_monobehaviour_dumps(monobehaviours_dir: Path):
         m = re.search(r"_(\d+)$", stem)
         if m:
             path_id = int(m.group(1))
-            bundle = stem[: m.start()]
+            # roster-style basename: the dump filename embeds
+            # `<bundle-stem>_<pathId>`; restore the .bundle extension so
+            # source.bundle / unmapped bundles[] join roster basenames
+            bundle = stem[: m.start()] + ".bundle"
         cls = payload.get("_scriptClass") or cls_dir
         yield family, cls, bundle, path_id, payload, path
 

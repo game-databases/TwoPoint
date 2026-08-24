@@ -191,9 +191,15 @@ def run(game_root: Path, extracted_root: Path) -> int:
     settings_parsed = {}
     try:
         parsed = json.loads(raw_settings)
-        settings_parsed = {k: parsed.get(k) for k in sorted((
+        # client key casing drifts across builds (measured install carries
+        # `m_buildTarget`; other snapshots spell it `m_BuildTarget`) —
+        # resolve the pinned snapshot keys case-insensitively so the
+        # machine-readable half never carries a permanent null
+        by_fold = ({str(k).casefold(): v for k, v in parsed.items()}
+                   if isinstance(parsed, dict) else {})
+        settings_parsed = {k: by_fold.get(k.casefold()) for k in sorted((
             "m_AddressablesVersion", "m_SettingsHash", "m_IsLocalCatalogInBundle",
-            "m_buildTarget"))}
+            "m_BuildTarget"))}
     except ValueError:
         pass
 

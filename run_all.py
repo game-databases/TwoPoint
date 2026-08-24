@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -168,19 +169,44 @@ def stage_status(extracted_root: Path, stage_id: str, identity: str) -> str:
 
 
 def print_list(pack_dir: Path, extracted_root: Path, game_root: Path | None) -> None:
-    print(f"{'stage':<20} {'script':<34} {'tool':<24} status")
+    print(f"{'stage':<20} {'script':<34} {'tool':<24} {'version':<16} status")
     for stage_id, script_rel, _deps in tc.STAGES:
         identity = compute_stage_identity(pack_dir, extracted_root,
                                           stage_id, game_root)
         status = stage_status(extracted_root, stage_id, identity)
         tool = STAGE_TOOLS[stage_id]
+        version = "-"
         if tool == "UnityPy":
-            tool = f"UnityPy ~={resolve_unitypy_pin(extracted_root)}"
-        print(f"{stage_id:<20} {script_rel:<34} {tool:<24} {status}")
+            version = resolve_unitypy_pin(extracted_root)
+            tool = f"UnityPy ~={version}"
+        elif tool.startswith("Il2CppDumper"):
+            version = resolve_il2cppdumper_version(extracted_root) or "-"
+        print(f"{stage_id:<20} {script_rel:<34} {tool:<24} {version:<16} {status}")
     print()
     print("order: " + ", ".join(tc.STAGE_IDS))
     print("exit codes: 0 success · 1 failure · 2 completed-with-ledger · "
           "3 environment/gate refusal")
+
+
+# same shape as the decompile stage's own banner regex — requires a leading
+# digit, so an "unknown" tool version never matches
+_IL2CPP_BANNER_RE = re.compile(r"Il2CppDumper\s+v?(\d[\w.\-]*)", re.IGNORECASE)
+
+
+def resolve_il2cppdumper_version(extracted_root: Path) -> str | None:
+    """Last-measured Il2CppDumper banner version stamped in
+    EXTRACTION-LOG.md — the stage-defaults `il2cppdumper.version` key when
+    present, else the last decompile run-section banner. None (never a
+    guess) while the log carries no stamp."""
+    defaults = log_util.read_stage_defaults(extracted_root) or {}
+    pinned = (defaults.get("il2cppdumper") or {}).get("version")
+    if pinned:
+        return str(pinned)
+    path = log_util.log_path(extracted_root)
+    if not path.is_file():
+        return None
+    stamps = _IL2CPP_BANNER_RE.findall(path.read_text(encoding="utf-8"))
+    return stamps[-1] if stamps else None
 
 
 def resolve_unitypy_pin(extracted_root: Path) -> str:
