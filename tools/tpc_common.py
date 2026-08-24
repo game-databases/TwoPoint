@@ -102,13 +102,13 @@ MEDIA_EXTENSIONS_RE = re.compile(
 UNITYPY_PIN = "1.25.3"
 
 # Staged Il2CppDumper candidates, first existing wins. Repo-relative entries
-# resolve against the REPO ROOT. Order: measured-on-disk staged copy first,
-# then the spec-spelled location (harmless if absent), then the spec-pinned
-# D:\ fallback copy.
+# resolve against the REPO ROOT (no ../ prefixes — they must name paths
+# inside this repo). Order: measured-on-disk staged copy first, then the two
+# other in-repo copies, then the spec-pinned D:\ absolute fallback.
 IL2CPP_DUMPER_CANDIDATES = [
-    "../zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe",
-    "../disco-elysium/zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe",
-    "../disco-elysium/tools/Il2CppDumper/Il2CppDumper.exe",
+    "zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe",
+    "disco-elysium/zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe",
+    "disco-elysium/tools/Il2CppDumper/Il2CppDumper.exe",
     "D:\\unpacked_game_data\\albion-online\\_tooling\\il2cppdumper\\Il2CppDumper.exe",
 ]
 VENDORED_UNITYPY_CANDIDATES = ["../tools/UnityPy"]

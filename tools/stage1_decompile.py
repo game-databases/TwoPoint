@@ -33,8 +33,13 @@ def resolve_tool(extracted_root: Path, pack_dir: Path, override: str | None) -> 
             raise tc.StageError(f"--tool-path does not exist: {p}", exit_code=3)
         return p.resolve()
     defaults = log_util.read_stage_defaults(extracted_root) or {}
-    candidates = list((defaults.get("il2cppdumper") or {}).get("candidates")
-                      or tc.IL2CPP_DUMPER_CANDIDATES)
+    # the seeded stage-defaults block wins for ORDER, but the embedded
+    # candidates are always appended after it (first-occurrence dedup): a
+    # stale seeded block naming dead paths must never shadow the corrected
+    # in-repo entries
+    log_candidates = list((defaults.get("il2cppdumper") or {}).get("candidates") or [])
+    candidates = log_candidates + [c for c in tc.IL2CPP_DUMPER_CANDIDATES
+                                   if c not in log_candidates]
     repo_root = tc.resolve_repo_root(pack_dir)
     for cand in candidates:
         p = Path(cand)
