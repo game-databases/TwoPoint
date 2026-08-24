@@ -143,6 +143,19 @@ def load_monobehaviour_dumps(monobehaviours_dir: Path):
         yield family, cls, bundle, path_id, payload, path
 
 
+def index_monobehaviour_dumps(monobehaviours_dir: Path) -> dict:
+    """pathId → [(bundle, payload)] for every parseable dump, in the
+    deterministic scan order. The run() load pass builds this same index
+    inline while payloads are already in hand — this walker exists for
+    callers that only hold the directory."""
+    index: dict = {}
+    for _family, _cls, bundle, path_id, payload, _path in \
+            load_monobehaviour_dumps(monobehaviours_dir):
+        if path_id is not None:
+            index.setdefault(path_id, []).append((bundle, payload))
+    return index
+
+
 def sample_for_check(ids: list[str]) -> list[str]:
     """ALL ids when the family has <=1,000 rows, else a deterministic sorted
     sample of 500 (spec §3 stage 5 acceptance)."""
@@ -170,7 +183,7 @@ def validate_row(row: dict) -> None:
 
 def build_locale_availability(rows_by_kind: dict[str, list[dict]],
                               matrix_keys: dict[str, dict],
-                              monobehaviours_dir: Path,
+                              dumps_source,
                               build_id) -> list[dict]:
     """Entity-granular availability via the PINNED join procedure:
     1. collect the entity dump's string-valued fields;
@@ -178,11 +191,15 @@ def build_locale_availability(rows_by_kind: dict[str, list[dict]],
     3. `<entityId>_<role>` convention corroborated by the matrix → INFERRED;
     4. no other association path exists.
 
+    `dumps_source` is the pathId → [(bundle, payload)] index built during the
+    load pass; a monobehaviours directory is also accepted (indexed once).
     Availability is evidence-based (fail-closed): only HARD-joined keys grant
     locale coverage — availableLocales is the intersection of their matrix
     locale sets, and fieldPresence lists the granting fields per locale.
     Convention joins record joinMethod/joinInferred but claim no locales,
     because their keys are not observed in any locale bundle yet."""
+    if isinstance(dumps_source, Path):
+        dumps_source = index_monobehaviour_dumps(dumps_source)
     availability: list[dict] = []
     all_prefixes = set()
     for key in matrix_keys:
@@ -196,25 +213,17 @@ def build_locale_availability(rows_by_kind: dict[str, list[dict]],
             if eid in seen_ids:
                 continue
             seen_ids.add(eid)
-            payload_path: Path | None = None
-            # locate the source dump again for its full field set
+            payload: dict | None = None
+            # locate the source dump from the in-memory index (no re-walk,
+            # no re-read); the first indexed candidate whose identifier
+            # byte-matches wins, as before
             src = row["source"]
-            candidates = sorted((monobehaviours_dir).rglob(
-                f"*_{src['pathId']}.json")) if src.get("pathId") is not None else []
-            for cand in candidates:
-                try:
-                    data = json.loads(cand.read_text(encoding="utf-8"))
-                except (ValueError, OSError):
-                    continue
-                if extract_id(data.get("fields", {})) == eid \
-                        or extract_id(data) == eid:
-                    payload_path = cand
+            for _bundle, cand_payload in dumps_source.get(src.get("pathId"), []):
+                if extract_id(cand_payload.get("fields", {})) == eid \
+                        or extract_id(cand_payload) == eid:
+                    payload = cand_payload
                     break
-            if payload_path is None:
-                continue
-            try:
-                payload = json.loads(payload_path.read_text(encoding="utf-8"))
-            except (ValueError, OSError):
+            if payload is None:
                 continue
             fields_block = payload.get("fields", payload)
             hard_fields: dict[str, str] = {}
@@ -284,7 +293,6 @@ def run(game_root: Path, extracted_root: Path) -> int:
         if identity_path.is_file() else None
     matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
     matrix_keys = matrix.get("keys", {})
-    _catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     structural_inputs = sorted(p.name for p in structural.iterdir()) \
         if structural.is_dir() else []
 
@@ -299,9 +307,12 @@ def run(game_root: Path, extracted_root: Path) -> int:
     scan_scope: dict[str, dict] = {k: {"bundles": set(), "classes": set()}
                                    for k in KINDS}
     unmapped: dict[str, dict] = {}
+    dump_index: dict = {}
 
     for family, cls, bundle, path_id, payload, path in load_monobehaviour_dumps(
             monobehaviours_dir):
+        if path_id is not None:
+            dump_index.setdefault(path_id, []).append((bundle, payload))
         fields = payload.get("fields", payload)
         if not isinstance(fields, dict):
             fields = {}
@@ -354,7 +365,7 @@ def run(game_root: Path, extracted_root: Path) -> int:
     log_util.write_jsonl(stubs_dir / "_unmapped-families.jsonl", unmapped_rows)
 
     availability = build_locale_availability(rows_by_kind, matrix_keys,
-                                             monobehaviours_dir, build_id)
+                                             dump_index, build_id)
     log_util.write_jsonl(relinks_dir / "locale_availability.jsonl", availability)
 
     # -- mechanical acceptance checks ---------------------------------------------
