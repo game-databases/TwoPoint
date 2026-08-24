@@ -18,7 +18,8 @@ from _validators import (ADDRESSABLES_VERSION, APPID, BUILD_ID,
                          SETTINGS_HASH, TARGET_BUILD_ID, TOTAL_BUNDLES,
                          UNITY_VERSION, assert_unique_outrelpath,
                          diff_manifests, hash_tree, locale_file_set_matches,
-                         read_json, read_jsonl, validate_availability_row,
+                         read_json, read_jsonl, scan_tree_for_media_extensions,
+                         validate_availability_row,
                          validate_media_catalogue_row)
 
 pytestmark = pytest.mark.client_gated
@@ -238,6 +239,14 @@ def test_stage3_census_reconciliation_math_on_real_outputs(tmp_path):
     assert not any(row.get("class") in {"TextAsset", "MonoBehaviour"}
                    for row in catalogue_rows), \
         "exported classes must never appear as catalogue rows"
+
+    # whole-piece carve-out acceptance (§5.6), applied mechanically: the
+    # suite-owned scanner over the REAL extraction root must find zero media
+    # extensions outside the catalogue itself (allowlist lives in the scanner)
+    hits = scan_tree_for_media_extensions(ext)
+    assert not hits, (
+        f"§5.6 violated on the real corpus — media extensions outside "
+        f"media-catalogue.* under {ext}: {hits[:8]}")
 
     assert_unique_outrelpath(manifest_rows)
 
