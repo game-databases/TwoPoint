@@ -6,6 +6,13 @@ global-metadata.dat (IL2CPP → dummy managed assemblies + dump.cs /
 script.json / stringliteral.json), then builds the structural artifacts via
 tools/build_structural.py. Escalation to Cpp2IL is declared, never
 automatic (spec §3 stage 1).
+
+The success gate is MULTI-IMAGE (spec §3 stage 1, Revision 4): the DummyDll
+set must be non-empty and every ScriptingAssemblies.json entry classified
+present-or-absent-with-marker with at least one `dummy-present` entry backed
+by a real image. `DummyDll/Assembly-CSharp.dll` is NOT required — this
+client ships none (game code lives in TPS.Game.dll / TPS.Core*.dll), so the
+structural hierarchy is built over ALL present game-code images.
 """
 from __future__ import annotations
 
@@ -65,6 +72,45 @@ def _run_dumper(tool: Path, game_assembly: Path, metadata: Path,
     return proc.returncode, output
 
 
+def _multi_image_gate(structural_dir: Path, dummy_dll: Path) -> list[str]:
+    """Multi-image success gate (spec §3 stage 1 acceptance, Revision 4):
+    every ScriptingAssemblies.json entry must appear in assembly-index.json
+    classified present-or-absent-with-marker, with at least one
+    `dummy-present` entry backed by a real DummyDll image on disk.
+    Assembly-CSharp.dll is deliberately NOT required."""
+    idx_path = structural_dir / "assembly-index.json"
+    try:
+        obj = json.loads(idx_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return [f"assembly-index.json unreadable — cannot evaluate the "
+                f"multi-image gate: {exc}"]
+    rows = obj.get("assemblies") if isinstance(obj, dict) else obj
+    if not isinstance(rows, list) or not rows:
+        return ["assembly-index.json carries no assembly rows"]
+    problems: list[str] = []
+    unclassified = sorted(str(r.get("assembly")) for r in rows
+                          if r.get("status") not in
+                          ("dummy-present", "dummy-absent(stripped)"))
+    if unclassified:
+        problems.append(f"{len(unclassified)} ScriptingAssemblies entries "
+                        f"unclassified in assembly-index.json: "
+                        f"{unclassified[:8]}")
+    present_unbacked = sorted(
+        str(r.get("assembly")) for r in rows
+        if r.get("status") == "dummy-present"
+        and not (dummy_dll / f"{r.get('assembly')}.dll").is_file())
+    if present_unbacked:
+        problems.append(f"{len(present_unbacked)} dummy-present entries lack a "
+                        f"backing image: {present_unbacked[:8]}")
+    has_backed_present = any(
+        r.get("status") == "dummy-present"
+        and (dummy_dll / f"{r.get('assembly')}.dll").is_file() for r in rows)
+    if not has_backed_present:
+        problems.append("no dummy-present assembly backed by a real image "
+                        "(multi-image gate)")
+    return problems
+
+
 def run(game_root: Path, extracted_root: Path, tool_override: str | None = None) -> int:
     paths = tc.game_paths(game_root)
     for p in (paths["game_assembly"], paths["metadata"],
@@ -91,8 +137,10 @@ def run(game_root: Path, extracted_root: Path, tool_override: str | None = None)
     problems = []
     if exit_code != 0:
         problems.append(f"dumper exited {exit_code}")
-    if not (dummy_dll / "Assembly-CSharp.dll").is_file():
-        problems.append("DummyDll/Assembly-CSharp.dll missing")
+    dummy_count = len(sorted(dummy_dll.glob("*.dll"))) if dummy_dll.is_dir() else 0
+    if dummy_count == 0:
+        problems.append("DummyDll set is EMPTY — no managed images emitted "
+                        "(multi-image gate)")
     if not dump_cs.is_file() or dump_cs.stat().st_size == 0:
         problems.append("dump.cs missing or empty")
     for jf in (script_json, stringliteral):
@@ -115,14 +163,18 @@ def run(game_root: Path, extracted_root: Path, tool_override: str | None = None)
         except Exception as exc:  # noqa: BLE001 — stage failure with context
             raise tc.StageError(
                 f"structural artifact build failed: "
-                f"{type(exc).__name__}: {exc}; escalation is DECLARED, not "
-                f"automatic — {tc.CPP2IL_ESCALATION_MESSAGE}") from exc
+                f"{type(exc).__name__}: {exc}") from exc
+        # the multi-image gate evaluates the freshly written assembly-index
+        problems.extend(_multi_image_gate(
+            extracted_root / "decompiled" / "structural", dummy_dll))
 
     lines = [
         "- exitCode: 0" if not problems else f"- exitCode: 1 ({'; '.join(problems)})",
         f"- tool: Il2CppDumper v{tool_version} at {tool}",
         f"- inputs: GameAssembly.dll {paths['game_assembly'].stat().st_size} B, "
         f"global-metadata.dat {paths['metadata'].stat().st_size} B",
+        f"- dummyDllImages: {dummy_count} (gate: non-empty set; "
+        "Assembly-CSharp.dll not required)",
     ]
     lines += [f"- {k}: {v}" for k, v in sorted(structural_summary.items())]
     if problems:
