@@ -308,7 +308,9 @@ def locale_for_bundle(bundle_name: str) -> str | None:
     if stem == LOCALE_BUNDLE_STEM_PREFIX:
         return BASE_OVERLAY_NAME
     if stem.startswith(LOCALE_BUNDLE_STEM_PREFIX):
-        suffix = stem[len(LOCALE_BUNDLE_STEM_PREFIX):].lower()
+        # the separator `_` is not part of the table's keys ("english", not
+        # "_english") — strip it before lookup
+        suffix = stem[len(LOCALE_BUNDLE_STEM_PREFIX):].lower().lstrip("_")
         locale = LOCALE_SUFFIX_TABLE.get(suffix)
         if locale is None:
             # unknown language suffix — surface it verbatim as its own flag so

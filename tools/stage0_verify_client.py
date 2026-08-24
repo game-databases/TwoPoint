@@ -146,6 +146,27 @@ def run(game_root: Path, extracted_root: Path) -> int:
                    "dlc-space": live_by_class[tc.AXIS_DLC_SPACE],
                    "dlc-ghost": live_by_class[tc.AXIS_DLC_GHOST]}
     locale_rows = tc.roster_locale_rows(roster_rows)
+
+    # acceptance: when the full set of named localisation bundles is present,
+    # their resolved flags MUST equal exactly EMITTED_LOCALES — same failure
+    # class as the row-count acceptance (exit 1), so flag corruption (e.g. a
+    # suffix-separator mismatch surfacing as `unknown:_english`) can never
+    # pass a count-only check again.
+    named_locale_rows = [r for r in roster_rows
+                         if r["localeFlag"] not in (None, tc.BASE_OVERLAY_NAME)]
+    if len(named_locale_rows) >= len(tc.EMITTED_LOCALES):
+        resolved_flags = sorted({r["localeFlag"] for r in named_locale_rows})
+        expected_flags = sorted(tc.EMITTED_LOCALES)
+        if resolved_flags != expected_flags:
+            offending = [f"{r['relpath']} -> {r['localeFlag']!r}"
+                         for r in named_locale_rows
+                         if r["localeFlag"] not in tc.EMITTED_LOCALES]
+            unresolved = [loc for loc in tc.EMITTED_LOCALES
+                          if loc not in resolved_flags]
+            raise tc.StageError(
+                "localisation bundle localeFlags do not resolve to exactly "
+                f"EMITTED_LOCALES {expected_flags}; offending rows: "
+                f"{offending}; unresolved locales: {unresolved}", exit_code=1)
     strict_base = sum(1 for r in roster_rows
                       if r["dirClass"] == "base" and r["sceneFlag"] == ".unity")
     seasonal_base = sum(1 for r in roster_rows
