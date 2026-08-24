@@ -1,0 +1,229 @@
+# Reviewer 003 — round-2 verification of Revision 2 against arbiter-001
+
+**Reviewer:** reviewer-003 (independent; spawned no subagents; wrote only
+this file). **Date:** 2026-08-24. **Subject:**
+[`docs/specs/piece-01-extraction-pipeline.mdx`](../specs/piece-01-extraction-pipeline.mdx)
+as revised ("Revision 2"), checked against every numbered accepted change
+in [`docs/rulings/arbiter-001-piece-01.mdx`](../rulings/arbiter-001-piece-01.mdx).
+
+**Read in full:** the ruling; the revised spec to its sentinel; the git
+diff of the spec against its last committed version (regression read);
+touchpoints `spec.md`, `data-acquisition.md`, `toolchain.md` (diffed);
+`_foundation/localization-architecture.md` §5 (binding cited by R3);
+directory checks for every href the revision touches.
+
+---
+
+## Per-change verdicts
+
+**1. R1 textures → CATALOGUE-ONLY — APPLIED-CORRECTLY.**
+Stage 3 purpose names the R1 lane; `Texture2D`/`Sprite` route to
+`media-catalogue.jsonl` with the same row machinery as models/animations
+(`{class, bundle, name, pathId, bytesEstimate, contentAxis}`); "ZERO
+decoded image bytes land anywhere under `extracted/` in piece 1"; the
+PNG branch and `harvest/textures/manifest.jsonl` are deleted from both
+the export list and the §4 layout; the icon/sprite owner-pick line is
+present verbatim in intent ([DR-2026-08-18-media-scope], scheduled after
+piece 1 behind an owner-approved export pass); the §5.6 grep and the
+stage-3 integration grep both gain the seven image extensions; stage-3
+acceptance extends catalogue completeness to `Texture2D`/`Sprite`;
+§6 non-goals adds the icon/sprite pass. Remaining PNG/textures mentions
+in the file are all intentional (deletion notes, guard extensions,
+conditional caveat). No `data-acquisition.md` amendment forced — correct
+per the ruling.
+
+**2. R2 base bundle persisted + compositionPolicy enum —
+APPLIED-CORRECTLY.**
+New output `extracted/locales/base-overlay.jsonl` (verbatim rows, same
+`{id, text}` contract, UTF-8, named `base-overlay` never `base`);
+report reduced to `{compositionPolicy, evidence:{…counts}}` with the
+exact four-value enum, selected by a deterministic classifier, consumers
+directed to the field not prose; the clarifying sentence that the matrix
+covers 13 locales PLUS base keys is present; acceptance updated (enum +
+evidence > 0, base held to the JSONL contract, matrix covers keys "in
+any locale or in base"); §4 layout, §7 routed question, and §8 fixtures
+(all four classifier branches reachable; matrix builder includes base)
+all follow.
+
+**3. R3 availability sole-owner + §5.4 completeness + join procedure —
+APPLIED-CORRECTLY.**
+Stage 4 explicitly does not write the canonical path and states why;
+stage-4 acceptance gains "--only localisation leaves
+`extracted/relinks/` untouched"; stage 5 declares SOLE OWNER +
+entity-granular + REGENERATED ON EVERY run, satisfying
+localization-architecture §5.4's rerun clause (verified against the
+foundation text: availableLocales, namedLocales, per-locale field
+presence, regenerate on every extraction rerun — all present in the
+pinned row shape incl. `fieldPresence:{<locale>:[…]}`); the join is
+pinned as a 4-step deterministic procedure (exact match → hard,
+convention match → inferred + method, nothing else), with matching
+§8 fixture coverage.
+
+**4. R4 filename collisions — APPLIED-CORRECTLY.**
+Bundle identity embedded in every harvest filename across textassets
+(`<bundle-stem>_<pathId>[.<ext>]`) and monobehaviours
+(`<bundle-stem>_<pathId>.json`), with the within-bundle-pathId rationale
+stated; `outRelPath` uniqueness promoted to an explicit stage-3
+acceptance assertion; §4 layout comment and §8 test obligation carry it.
+
+**5. R5 content-axis enum — APPLIED-CORRECTLY.**
+`contentAxis ∈ base | dlc-space | dlc-ghost` pinned as the ONE emitted
+vocabulary for every piece-1 artifact, matched to the stage-0 roster's
+`dirClass`, with the one-line mapping of `spec.md`'s site-plane
+`dlc1-space`/`dlc2-ghost`. Touchpoints aligned: `data-acquisition.md`
+S2 rule now cites the pinned enum (removing what would have been a live
+contradiction); `spec.md` keeps its site-plane spellings untouched —
+correct, site renaming is ruled a later piece's concern.
+
+**6. R6 catalog↔roster match — APPLIED-CORRECTLY.**
+Match key pinned (case-folded basenames after stripping directory/
+provider-prefix segments; unmatched normalized reference = hard-fail,
+with the anti-spurious-trip rationale); coverage universes pinned in the
+output contract (`distinctBundlesReferenced` = distinct roster-matched
+relpaths; `bundlesUnreferenced` = roster rows outside that set;
+`catalog.bundle` in neither, both ⊆ the 176-row roster); §8 synthetic
+ContentCatalogData fixture exercises normalization AND universe math.
+
+**7. R7 hierarchy-equality source + prepared tree — PARTIAL.**
+The restatement itself is correct: PRIMARY typedef enumeration across
+`DummyDll/*.dll` via the .NET metadata reader, FALLBACK top-level type
+declarations in `dump.cs`, chosen source + counting method stamped in
+the EXTRACTION-LOG run section, mismatch = stage failure. Prepared tree
+defined exactly as ruled (client mode via `--skip` then `--only`;
+hostless mode via one shared `tests/build_fixture_tree.py --stage <id>`;
+all six per-stage upstream sets enumerated, each consistent with its
+stage's §3 inputs). **What is missing:** the superseded clause
+"`script.json` parses as JSON with ≥1 type entry"
+([piece-01-extraction-pipeline.mdx:214](../specs/piece-01-extraction-pipeline.mdx))
+was left standing and now *directly contradicts* the revision's own new
+parenthetical ten lines later — "`script.json` itself is a
+method/string-literal artifact and enumerates no types." Both sit in the
+same acceptance bullet; as written the criterion is self-refuting and
+unimplementable by TestWriter. R7's whole point was that script.json
+enumerates no types; the stale clause had to go with it.
+
+**8. R8 small-stalls batch — APPLIED-CORRECTLY.**
+kind↔filename map pinned as a 9-row table exactly matching spec.md
+`entities`; provenance semantics pinned (hard-read copies never flagged
+`inferred`; `inferred:true`+`method` reserved for seeded-kind assignment
+and convention-derived associations, flip-to-false condition stated) —
+the template contradiction is resolved (`"inferred":true,
+"method":"seeded-family-heuristic"`); sample N pinned (≤1,000 rows →
+all, else deterministic sorted sample of 500), mirrored in §8;
+`GAME=` ≡ `TPC_GAME_DIR` reconciled as "two spellings, one variable";
+`_unmapped-families.jsonl` added to outputs, acceptance ("maps or
+ledger row", empty-file-valid-if-nothing-unmapped), §4 layout, and §8.
+
+**9. R9 ops pins — APPLIED-CORRECTLY.**
+`TPC_EXTRACTED_ROOT` override added with the D:/A: host-realities
+rationale and the "every `extracted/…` path is relative to the resolved
+root" scoping; `.gitkeep` attached to `logic/` + `maps/` in §4;
+`.pipeline-meta.json` added to the byte-identity exclusions in BOTH §4
+determinism and §5.5; UnityPy `1.25.3` pinned as embedded fallback in
+stage-defaults (consistent with toolchain.md's precedent record),
+seeded by stage 0, installed by `make setup`; PNG fixed-encoder rule
+correctly demoted to a conditional same-env note for a future
+owner-approved pass.
+
+**10. R10 test gaps — APPLIED-CORRECTLY.**
+Temp-file + atomic-rename write discipline stated in §4 and wired to the
+new §8 interrupted-run convergence test (kill mid-write, rerun,
+hash-equal a clean run); exit-2 emission fixture added (truncated/unreadable
+synthetic bundle → `unreadable.jsonl` + a real exit 2); synthetic
+ContentCatalogData fixture rides on change 6.
+
+**11. R11 mechanicals — PARTIAL (one sub-item MISSED).**
+Applied: `localFlag`→`localeFlag` (no stray occurrence remains outside
+the review/ruling files quoting it); merge-policy acceptance replaced by
+the change-2 enum; AssetStudioModCLI cross-check marked DORMANT for
+piece 1 in stage 3 with its revival condition. **MISSED: the
+`../../verifications/` href.** The accepted change reads "Fix the
+`../../verifications/` href → `../verifications/`". Line 6 is
+byte-identical to the pre-revision commit: the anchor *text* says
+`../verifications/` but the link *target* is still
+`../../verifications/`, which resolves from `docs/specs/` to
+`TwoPoint/verifications/` — confirmed nonexistent on disk (the verdicts
+live at `TwoPoint/docs/verifications/`). Only the display text was ever
+right; the URL the ruling named was never touched. Note this also makes
+the revision header's "applied in full" claim inaccurate.
+
+---
+
+## Regression check (diff-read vs the prior committed version)
+
+No approved structure was broken:
+
+- **Skeleton:** six stage ids, order, scripts, and purposes unchanged;
+  the Revision-2 block is additive at the top and every hunk lands
+  inside the sections the ruling targeted.
+- **Exit codes:** `0/1/2/3` contract untouched; the exit-2 semantics
+  (completed-with-ledger) gained a producing-test, not a redefinition.
+- **Ledgers:** `_absences.jsonl`, `unreadable.jsonl`,
+  `export-manifest.jsonl` intact; `_unmapped-families.jsonl` added
+  symmetrically as ruled.
+- **Determinism discipline:** only strengthened (write-discipline
+  paragraph; third exclusion `.pipeline-meta.json`), never weakened; the
+  UTF-8/newline/sorted rules stand.
+- **verifyB carries:** identity.json field set, roster row shape,
+  BCP-47 table, scene-count figures, buildid stamps — all unchanged;
+  §5 items 1/3/4/7/8 verbatim, items 2/5/6 extended exactly as ruled.
+- **Touchpoints:** all three edits converge on the ruling (catalogue-only
+  textures, stage-5 sole ownership, pinned enum); none contradicts the
+  spec or introduces a second vocabulary anywhere.
+
+## Internal consistency after edits
+
+Cross-references hold: §4 layout matches every stage output change
+(locales trio, stubs ×9 + two ledgers, harvest filename note, relinks
+stage-5-ONLY, `.gitkeep`s); §5.2 upstream sets equal each stage's §3
+inputs; §8 contains a fixture/validator for every newly added acceptance
+assertion (exit-2 emission, outRelPath uniqueness, compositionPolicy
+branches, kind↔file map, join procedure, sample-N helper, convergence,
+prepared-tree builder, ContentCatalogData fixture, unmapped-families,
+relinks-untouched, image-extension guard); the carve-out extension list
+is character-consistent between stage 3 and §5.6; client-gated
+integration tests track the new outputs.
+
+Three observations, none rising to a residual:
+
+1. §8 phrases the convention join as "`inferred:true` + method" (the
+   ruling's words) while the stage-5 row shape names the fields
+   `joinInferred`/`joinMethod` — same substance, two spellings; harmless
+   since the row shape is the binding one.
+2. Stage-2's case-folded-basename match key silently assumes roster
+   basenames stay unique after normalization; today's corpus satisfies
+   that (DLC names carry `dlc-*-` prefixes), but an ambiguous basename
+   would make "resolve to a roster relpath" ill-defined. Outside the
+   ruling's scope; noting for CodeWriter awareness only.
+3. toolchain.md matrix row 4 still reads as an active secondary
+   exporter; dormancy is declared only in the spec's stage 3. The
+   ruling's "so the toolchain matrix row does not dangle" is arguably
+   served by the spec's explicit reference, but stamping row 4 itself
+   would remove all doubt.
+
+---
+
+## Verdict: FIX-REQUIRED
+
+Everything structural is done and well-done — 9 of 11 changes applied
+correctly, no regressions against anything the ruling approved. Two
+mechanical residuals block release:
+
+1. **Line 6 href (R11 sub-item, MISSED):** change the link target
+   `../../verifications/` → `../verifications/` so it resolves to
+   `TwoPoint/docs/verifications/`. One-character-class edit; also amend
+   the Revision-2 header's "applied in full" phrasing or just make it
+   true.
+2. **Stage-1 acceptance self-contradiction (R7 residue):** delete or
+   replace "`with ≥1 type entry`" at
+   [piece-01-extraction-pipeline.mdx:214](../specs/piece-01-extraction-pipeline.mdx)
+   — e.g. "`script.json` parses as JSON" — since the same bullet's new
+   closing parenthetical states script.json enumerates no types. As
+   written the criterion cannot be implemented.
+
+Both are one-line edits with zero design content; upon their application
+the spec is SPEC-READY for CodeWriter + TestWriter without further
+review round-trip (recommend the orchestrator spot-check just these two
+lines rather than launching a round 3).
+
+END OF reviewer-003-revision-2

@@ -111,10 +111,11 @@ fallbacks.
 Layer → tool → output mapping for this client:
 
 - **Data layer** — UnityPy over catalog + all 176 bundles → raw asset
-  export grouped by bundle family; Texture2D/Sprite decode;
-  TextAsset/MonoBehaviour dumps; 14 loc bundles → 13 per-locale tables +
+  export grouped by bundle family; Texture2D/Sprite catalogued (byte
+  decode = later owner-approved export pass); TextAsset/MonoBehaviour
+  dumps; 14 loc bundles → 13 per-locale tables + base overlay rows +
   `relinks/locale_availability.jsonl`; canonical JSONL skeletons per
-  entity family. Audio/video catalogued only (carve-out).
+  entity family. Audio/video/textures catalogued only (carve-out).
 - **Logic layer** — Il2CppDumper primary (metadata v27) → dummy
   assemblies + `dump.cs`/`script.json`/`stringliteral.json` under
   `extracted/decompiled/il2cppdumper/`; Cpp2IL escalation reserved for

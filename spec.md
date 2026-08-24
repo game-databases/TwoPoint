@@ -150,11 +150,13 @@ bundles ≈ 3.5 GiB under `StandaloneWindows64/` + `catalog.bundle`
 [docs/specs/piece-01-extraction-pipeline.mdx](docs/specs/piece-01-extraction-pipeline.mdx).
 
 - **Data layer** — every addressables bundle harvested raw (stage 3):
-  MonoBehaviour/ScriptableObject dumps, Texture2D/Sprite decode,
-  TextAssets, grouped by bundle family; 14 loc bundles → 13 per-locale
-  string tables keyed by stable ids + `relinks/locale_availability.jsonl`
-  (stage 4); canonical JSONL skeletons per entity family contract-pinned
-  even where fields are partially understood (stage 5).
+  MonoBehaviour/ScriptableObject dumps, Texture2D/Sprite catalogue rows
+  (byte decode deferred to a later owner-approved export pass per
+  [DR-2026-08-18-media-scope]), TextAssets, grouped by bundle family;
+  14 loc bundles → 13 per-locale string tables keyed by stable ids +
+  `relinks/locale_availability.jsonl` (stage-5 sole owner,
+  entity-granular); canonical JSONL skeletons per entity family
+  contract-pinned even where fields are partially understood (stage 5).
 - **Logic layer** — IL2CPP dummy assemblies + structural artifacts from
   `GameAssembly.dll` + `global-metadata.dat` (metadata v27; stage 1);
   derived formulas/costs/unlock trees under `extracted/logic/` land in a

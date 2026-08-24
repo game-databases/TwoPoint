@@ -83,8 +83,9 @@ tildes; they reconcile with §9 and the 176-bundle total):
 
 Total corpus: **176 bundles** (158 aa + 18 DLC). DLC handling rule: DLC
 bundles are harvested by the same stage 3 pass as base aa bundles — same
-UnityPy path, family grouping carries a `dlc1-space`/`dlc2-ghost`
-content-axis tag per row (spec axes.variant-axes.content). No separate
+UnityPy path, family grouping carries the piece-1 pinned `contentAxis`
+enum tag (`dlc-space`/`dlc-ghost`; spec.md's site-plane
+`dlc1-space`/`dlc2-ghost` map onto it) per row. No separate
 acquisition work exists: both DLCs are installed.
 
 ### S3 — Native image + metadata (decompile inputs)
