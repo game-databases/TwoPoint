@@ -191,7 +191,9 @@ def test_stage3_census_reconciliation_math_on_real_outputs(tmp_path):
     """Stage-3 acceptance math over the REAL corpus outputs (hostless suite
     covers this only with fabricated numbers):
       Σ objectsByClass over per-bundle censuses
-        == export-manifest rows + media-catalogue rows + error rows;
+        == export-manifest rows + media-catalogue rows + error rows
+           + census-only residual (per-class totals outside the exported
+             classes ∪ the carved-out classes);
       media-catalogue covers EVERY census object of carved-out classes
       (audio/video/mesh/animation/shader/font AND Texture2D/Sprite);
       every outRelPath in the export manifest is unique."""
@@ -217,16 +219,24 @@ def test_stage3_census_reconciliation_math_on_real_outputs(tmp_path):
         errors += len(c.get("errors") or [])
     sigma = sum(per_class_total.values())
 
-    manifest_rows = read_jsonl(ext / "harvest" / "export-manifest.jsonl")
-    catalogue_rows = read_jsonl(ext / "media-catalogue.jsonl")
-    assert len(manifest_rows) + len(catalogue_rows) + errors == sigma, (
-        f"reconciliation broke: ΣobjectsByClass={sigma} vs "
-        f"manifest={len(manifest_rows)} catalogue={len(catalogue_rows)} "
-        f"errors={errors}")
-
     carved = {"AudioClip", "VideoClip", "Mesh", "AnimationClip", "Shader",
               "Font", "Texture2D", "Sprite"}
     census_carved = {cls: n for cls, n in per_class_total.items() if cls in carved}
+    # Revision-3 residual-inclusive identity: a census object is exported
+    # (manifest row), carved out (catalogue row), an error, or plumbing
+    # outside both sets — the residual must account for that last bucket.
+    exported = {"TextAsset", "MonoBehaviour"}
+    census_residual = sum(n for cls, n in per_class_total.items()
+                          if cls not in exported and cls not in carved)
+
+    manifest_rows = read_jsonl(ext / "harvest" / "export-manifest.jsonl")
+    catalogue_rows = read_jsonl(ext / "media-catalogue.jsonl")
+    assert (len(manifest_rows) + len(catalogue_rows) + errors
+            + census_residual == sigma), (
+        f"reconciliation broke: ΣobjectsByClass={sigma} vs "
+        f"manifest={len(manifest_rows)} catalogue={len(catalogue_rows)} "
+        f"errors={errors} residual={census_residual}")
+
     cat_by_class = {}
     for row in catalogue_rows:
         errs = validate_media_catalogue_row(row, where="media-catalogue: ")
