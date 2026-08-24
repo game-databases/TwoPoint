@@ -1,2 +1,19 @@
 .agents/
 .claude/
+__pycache__/
+.pytest_cache/
+tests/.fixture-trees/
+.venv/
+
+# pack-local pipeline scripts are tracked source, not the Windows-only
+# toolchain the root `tools/` rule targets (anvil-empire precedent)
+!tools/
+!tools/**
+tools/__pycache__/
+
+# extraction outputs stay local (game data never enters git); only the
+# markdown layer of extracted/ is tracked (EXTRACTION-LOG.md, placeholder
+# pointers, MEDIA-CATALOGUE.md)
+extracted/**
+!extracted/**/
+!extracted/**/*.md
