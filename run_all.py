@@ -310,6 +310,10 @@ def main(argv=None) -> int:
                                 extra)
         except tc.StageError as exc:
             print(f"[{stage_id}] ERROR: {exc}", file=sys.stderr)
+            # runner-level refusals append the run section too (Revision 4):
+            # the ledger never depends on a stage reaching its own logging
+            log_util.append_failure_section(extracted_root, stage_id,
+                                            exc.exit_code, [str(exc)])
             log_util.save_stamp(extracted_root, stage_id, identity,
                                 exc.exit_code)
             executed.append({"stage": stage_id, "exitCode": exc.exit_code,

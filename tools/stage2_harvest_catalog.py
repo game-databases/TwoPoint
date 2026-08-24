@@ -321,9 +321,13 @@ def main(argv=None) -> int:
         game_root = tc.resolve_game_root(args.game_dir)
         return run(game_root, root)
     except aa_catalog.CatalogDecodeError as exc:
+        log_util.append_failure_section(root, "harvest-catalog", 1,
+                                        [f"DECODE FAILURE: {exc}"])
         print(f"[harvest-catalog] DECODE FAILURE: {exc}", file=sys.stderr)
         return 1
     except tc.StageError as exc:
+        log_util.append_failure_section(root, "harvest-catalog",
+                                        exc.exit_code, [str(exc)])
         print(f"[harvest-catalog] ERROR: {exc}", file=sys.stderr)
         return exc.exit_code
 

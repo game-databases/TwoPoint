@@ -5,7 +5,9 @@ Runs the staged compiled Il2CppDumper headless over GameAssembly.dll +
 global-metadata.dat (IL2CPP → dummy managed assemblies + dump.cs /
 script.json / stringliteral.json), then builds the structural artifacts via
 tools/build_structural.py. Escalation to Cpp2IL is declared, never
-automatic (spec §3 stage 1).
+automatic, and its trigger text fires ONLY off the MEASURED metadata
+version (>= 38) — never canned onto unrelated failures (spec §3 stage 1,
+Revision 4).
 
 The success gate is MULTI-IMAGE (spec §3 stage 1, Revision 4): the DummyDll
 set must be non-empty and every ScriptingAssemblies.json entry classified
@@ -120,6 +122,10 @@ def run(game_root: Path, extracted_root: Path, tool_override: str | None = None)
                                 exit_code=3)
     pack_dir = tc.resolve_pack_dir()
     tool = resolve_tool(extracted_root, pack_dir, tool_override)
+    # the MEASURED metadata version — the ONLY thing allowed to trip the
+    # Cpp2IL escalation text (Revision 4 item 4: no canned trigger on
+    # unrelated failures)
+    _sanity, metadata_version = tc.read_metadata_header(paths["metadata"])
 
     out_dir = extracted_root / "decompiled" / "il2cppdumper"
     exit_code, output = _run_dumper(tool, paths["game_assembly"],
@@ -173,11 +179,12 @@ def run(game_root: Path, extracted_root: Path, tool_override: str | None = None)
         f"- tool: Il2CppDumper v{tool_version} at {tool}",
         f"- inputs: GameAssembly.dll {paths['game_assembly'].stat().st_size} B, "
         f"global-metadata.dat {paths['metadata'].stat().st_size} B",
+        f"- measuredMetadataVersion: {metadata_version}",
         f"- dummyDllImages: {dummy_count} (gate: non-empty set; "
         "Assembly-CSharp.dll not required)",
     ]
     lines += [f"- {k}: {v}" for k, v in sorted(structural_summary.items())]
-    if problems:
+    if metadata_version >= tc.METADATA_VERSION_WALL:
         lines.append(f"- escalationTrigger: {tc.CPP2IL_ESCALATION_MESSAGE}")
     log_util.append_run_section(extracted_root, "decompile", lines)
 
@@ -207,12 +214,17 @@ def main(argv=None) -> int:
         game_root = tc.resolve_game_root(args.game_dir)
         return run(game_root, root, args.tool_path)
     except tc.StageError as exc:
+        log_util.append_failure_section(root, "decompile", exc.exit_code,
+                                        [str(exc)])
         print(f"[decompile] ERROR: {exc}", file=sys.stderr)
         return exc.exit_code
     except subprocess.TimeoutExpired:
-        print(f"[decompile] DEFECT: dumper blocked past "
-              f"{DUMP_TIMEOUT_SECONDS}s instead of honoring argv/stdin — fix "
-              "this stage's invocation, do not retry silently", file=sys.stderr)
+        problem = (f"dumper blocked past {DUMP_TIMEOUT_SECONDS}s instead of "
+                   "honoring argv/stdin — fix this stage's invocation, do "
+                   "not retry silently")
+        log_util.append_failure_section(root, "decompile", 1,
+                                        [f"DEFECT: {problem}"])
+        print(f"[decompile] DEFECT: {problem}", file=sys.stderr)
         return 1
 
 

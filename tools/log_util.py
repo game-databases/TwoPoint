@@ -188,6 +188,20 @@ def append_run_section(extracted_root: Path, stage_id: str, lines: list[str]) ->
     append_line(log_path(extracted_root), "\n".join(body) + "\n")
 
 
+def append_failure_section(extracted_root: Path, stage_id: str,
+                           exit_code: int, problems) -> None:
+    """Failing stages append their run section too (Revision 4): exitCode +
+    PROBLEM lines — the ledger never depends on success. Best-effort: a
+    logging error here must never mask the original failure being reported."""
+    try:
+        append_run_section(
+            extracted_root, stage_id,
+            [f"- exitCode: {int(exit_code)} (failed)"]
+            + [f"- PROBLEM: {p}" for p in problems])
+    except Exception:  # noqa: BLE001 — see docstring
+        pass
+
+
 # ---------------------------------------------------------------------------
 # Stage stamps + pipeline meta
 

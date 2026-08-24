@@ -281,9 +281,13 @@ def main(argv=None) -> int:
         game_root = tc.resolve_game_root(args.game_dir)
         return run(game_root, root)
     except tc.StageError as exc:
+        log_util.append_failure_section(root, "verify-client", exc.exit_code,
+                                        [str(exc)])
         print(f"[verify-client] ERROR: {exc}", file=sys.stderr)
         return exc.exit_code
     except OSError as exc:
+        log_util.append_failure_section(root, "verify-client", 3,
+                                        [f"environment error: {exc}"])
         print(f"[verify-client] environment error: {exc}", file=sys.stderr)
         return 3
 
