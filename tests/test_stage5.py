@@ -12,7 +12,8 @@ from pathlib import Path
 import pytest
 
 from _fixturelib import BIG_FAMILY_COUNT, ENTITIES, HARD_JOIN_IDS, UNMAPPED
-from _impl import KIND_MAP_NAMES, STUB_VALIDATE_NAMES, get_sym, load_tool
+from _impl import (JOIN_NAMES, KIND_MAP_NAMES, STUB_VALIDATE_NAMES, get_sym,
+                   load_tool)
 from _validators import (BUILD_ID, KIND_TO_FILE, check_identifier_verbatim,
                          diff_manifests, hash_tree, identifier_sample_ids,
                          read_jsonl, validate_absence_row, validate_availability_row,
