@@ -1,0 +1,472 @@
+# Piece 1 — Extraction Pipeline Spec (Two Point Campus)
+
+**Audience:** CodeWriter + TestWriter. This document is the contract for
+the extraction pipeline piece. Facts are grounded in
+[`../scout-report-001.mdx`](../scout-report-001.mdx) (verified PASS),
+both [`../verifications/`](../../verifications/) verdicts, and the
+2026-08-24 mechanical recounts recorded in
+[`../../toolchain.md`](../../toolchain.md) §Scene tally. Where a number
+here conflicts with scout prose, this file wins (it cites the recounted
+figures).
+
+---
+
+## 1. Goal
+
+ONE discoverable entrypoint at the TwoPoint pack root reproduces the
+**harvest → decompile → relink-ready raw layers** from the game install:
+
+```
+A:\SteamLibrary\steamapps\common\Two Point Campus
+```
+
+…per [DR-2026-08-18-pipeline] and the extraction doctrine's Principle
+two. Concretely:
+
+- `run_all.py` (real entrypoint) + thin `Makefile` wrapper
+  (`make setup|extract|stage|list|help`), mirroring the proven
+  against-the-storm shape.
+- `python run_all.py <game-path>` runs every stage in order;
+  `--only <stage>` runs one stage in isolation; `--list` enumerates
+  stages; `--force` ignores up-to-date stamps; `--skip a,b` skips.
+- Every stage is **idempotent** (re-running yields byte-identical
+  declared outputs) and **individually runnable**.
+- Defaults (tool paths, versions, buildid) are read from the
+  `<!-- stage-defaults-begin/end -->` JSON block in
+  `extracted/EXTRACTION-LOG.md`, with embedded fallback pins — the log
+  is the source of truth per doctrine; the entrypoint updates it in the
+  same commit that changes tooling.
+- Hardcodes no machine paths: game dir passed as argument (install root
+  or `TPC_Data` auto-detected), pack dir derived from `__file__`,
+  env overrides `TPC_GAME_DIR` / `TPC_PACK_DIR`.
+- Console discipline: force UTF-8 stdout/stderr (Windows cp1252 crash
+  lesson); all file writes explicit `encoding="utf-8"` and
+  `newline="\n"`.
+
+Piece 1 delivers the **raw layers** (stages 0–5 below). Logic
+derivation, the pairwise relink matrix, map geometry, and PROOF
+reconciliation are later pieces consuming the directory contracts this
+piece fixes (§6).
+
+## 2. Client facts the pipeline relies on (measured)
+
+| Fact | Value |
+|---|---|
+| Install root | `A:\SteamLibrary\steamapps\common\Two Point Campus` |
+| appid / buildid | 1649080 / **20226581** (= TargetBuildID); LastUpdated 2025-12-19 |
+| version.txt | `10.3.169253+2024-12-06.1241` |
+| Engine | Unity 2020.3.47f1, IL2CPP, Windows x64 |
+| IL2CPP inputs | `<root>/GameAssembly.dll` (311,226,368 B; install root, beside `TPC.exe`) + `TPC_Data/il2cpp_data/Metadata/global-metadata.dat` (14,284,260 B) |
+| Metadata header | sanity `0xFAB11BAF` @ offset 0, **version 27** @ offset 4 (int32 LE) |
+| Addressables | 1.21.10, local catalog in bundle, settings hash `ff59c4d7914829f354d3efeefc3819f0` |
+| Corpus | 158 aa bundles (~3.5 GiB) + `catalog.bundle` (1,704,718 B) + `settings.json` + `AddressablesLink/`; DLC `DLCs/space/` 10 bundles, `DLCs/ghost/` 8 bundles → **176 total** |
+| Locale bundles | 14 = unnamed base overlay + 13 named languages |
+| Scenes | 21 strict `.unity` base + 1 seasonal scene-carrying (non-`.unity` suffix) + 3 dlc1 + 1 dlc2 |
+
+## 3. Stages
+
+Stage ids are exact; scripts live under `TwoPoint/tools/`.
+
+### Stage 0 — `verify-client`
+
+**Purpose:** pin identity, gate the dumper choice, emit the bundle
+roster as the pipeline's first artifact (verifyB 1.2).
+
+- **Script:** `tools/stage0_verify_client.py`
+- **Inputs:** game root (auto-detect: root carrying `GameAssembly.dll`
+  + a `TPC_Data` child with `il2cpp_data/Metadata/global-metadata.dat`
+  and `StreamingAssets/aa/`); `appmanifest_1649080.acf` discovered by
+  walking up ≤4 levels (steamapps dir); `version.txt`;
+  `globalgamemanagers` (Unity ASCII version near offset 0x30);
+  directory listings of `aa/StandaloneWindows64/`, `DLCs/space/`,
+  `DLCs/ghost/`.
+- **Steps:** read manifest (`buildid`, `TargetBuildID`, `language`);
+  read version.txt; read Unity version; read metadata sanity+version;
+  **metadata-version gate:** version `< 38` → dumper =
+  `il2cppdumper` (primary per toolchain.md decision); `>= 38` → exit 3
+  with the Cpp2IL escalation message (KB wall; do NOT attempt);
+  enumerate every `*.bundle` under the three dirs with byte sizes and
+  classification flags.
+- **Outputs:**
+  - `extracted/identity.json` — `{appid, buildId, targetBuildId,
+    versionString, unityVersion, metadataVersion, dumper,
+    addressablesVersion, settingsHash, languageSetting,
+    expectedBundles:{aa:158,"dlc-space":10,"dlc-ghost":8},
+    localeBundleCount:14, sceneCounts:{strictUnityBase:21,
+    seasonalSceneCarryingBase:22, strictUnityInstall:25,
+    sceneCarryingInstall:26}}`
+  - `extracted/bundle-roster.jsonl` — one row per bundle:
+    `{relpath, dirClass: base|dlc-space|dlc-ghost, bytes,
+    sceneFlag: none|.unity|seasonal-scenes, localeFlag: null|base|<bundle-lang>,
+    buildId}` sorted by `relpath` (determinism).
+  - seeds `extracted/EXTRACTION-LOG.md` (header pins +
+    stage-defaults block) if absent.
+- **Acceptance:** exits 0 iff all inputs found and readable;
+  `TargetBuildID == buildid` (warn-only on mismatch — a patched install
+  must still run); roster row count == enumerated `*.bundle` count;
+  exactly 14 `localeFlag != null` rows; live counts differing from
+  `expectedBundles` print a `DRIFT:` warning line (never a failure —
+  drift detection, not a gate); second consecutive run byte-identical.
+
+### Stage 1 — `decompile`
+
+**Purpose:** IL2CPP → dummy managed assemblies + structural artifacts
+(class hierarchy, id registries).
+
+- **Scripts:** `tools/stage1_decompile.py`,
+  `tools/build_structural.py`
+- **Inputs:** `<root>/GameAssembly.dll`,
+  `TPC_Data/il2cpp_data/Metadata/global-metadata.dat`,
+  `TPC_Data/ScriptingAssemblies.json` (assembly-name list),
+  staged tool resolved from EXTRACTION-LOG defaults:
+  `disco-elysium/zero-parades/work/_tooling/il2cppdumper/Il2CppDumper.exe`
+  first, else `D:\unpacked_game_data\albion-online\_tooling\il2cppdumper\Il2CppDumper.exe`
+  (both verified on host incl. `-x86` variant, `config.json`,
+  `ghidra.py`, `ida_py3.py`); override flag `--tool-path`.
+- **Primary tool:** staged compiled **Il2CppDumper** (decision +
+  rationale in toolchain.md; metadata v27 measured in range). Run
+  headless: `Il2CppDumper.exe <GameAssembly> <global-metadata.dat>
+  <out-dir>`, stdin closed (`stdin=DEVNULL`) — if the tool blocks on a
+  console prompt instead of honoring argv/stdin, that is a defect to
+  fix in this stage, not silently retry.
+- **Outputs:**
+  - `extracted/decompiled/il2cppdumper/DummyDll/*.dll`,
+    `dump.cs`, `script.json`, `stringliteral.json` (+ whatever script
+    artifacts the tool emits, e.g. `ghidra.py`/`ida_py3.py` copies —
+    kept, they are later-piece inputs);
+  - `extracted/decompiled/structural/assembly-index.json` — every
+    `ScriptingAssemblies.json` entry mapped to
+    `dummy-present | dummy-absent(stripped)` ;
+  - `extracted/decompiled/structural/class-hierarchy.jsonl` — one row
+    per type: `{assembly, namespace, name, baseType, interfaces[],
+    methodCount, fieldCount}` parsed from `script.json`/`dump.cs`;
+  - `extracted/decompiled/structural/id-registries/*.jsonl` — enum /
+    constants registries (name → value), preserving original member
+    names verbatim.
+- **Escalation (declared, not automatic):** on stage failure the runner
+  prints the pinned Cpp2IL trigger: `dotnet publish` on
+  `tools/Cpp2IL` per toolchain.md §Primary dumper decision, version
+  selected against the measured metadata version, result pinned in
+  EXTRACTION-LOG. Piece 1 does NOT auto-build Cpp2IL.
+- **Acceptance:** exits 0; `DummyDll/Assembly-CSharp.dll` exists; every
+  `ScriptingAssemblies.json` entry appears in `assembly-index.json`
+  classified present-or-absent-with-marker; `dump.cs` non-empty;
+  `script.json` parses as JSON with ≥1 type entry; `stringliteral.json`
+  parses; hierarchy row count == type count in `script.json`.
+
+### Stage 2 — `harvest-catalog`
+
+**Purpose:** decode the Addressables catalog into the full
+key → bundle/address index — the backbone of every later join.
+
+- **Script:** `tools/stage2_harvest_catalog.py`
+- **Inputs:** `aa/catalog.bundle` (1,704,718 B), `aa/settings.json`,
+  roster from stage 0; stage 1 dummy DLLs available for typetree
+  synthesis (TypeTreeGeneratorAPI) if MonoBehaviour decoding needs
+  them. Implementation note: Addressables 1.21 stores the catalog as a
+  binary `ContentCatalogData`; UnityPy opens the bundle — whether the
+  payload decodes via typetree or needs a small dedicated parser for
+  the 1.21 binary shape is an implementation discovery this stage owns;
+  the OUTPUT contract below is fixed regardless.
+- **Outputs:**
+  - `extracted/addressables/catalog.json` — `{meta:{buildId,
+    addressablesVersion:"1.21.10", settingsHash, providerIds[]},
+    keys:[{key, kind, bundle, address, dependencies[], providerIds[]}]}`
+    sorted by `key` (determinism). Full index: every addressable key
+    with its owning bundle and internal address.
+  - `extracted/addressables/settings.snapshot.json` — verbatim copy of
+    `settings.json` + parsed subset for machine readers.
+  - `extracted/addressables/catalog-coverage.json` — `{keysTotal,
+    distinctBundlesReferenced, bundlesUnreferenced:[…]}`.
+- **Acceptance:** exits 0; `catalog.json` parses; `keysTotal > 0`;
+  every `bundle` value resolves to a `bundle-roster.jsonl` `relpath`
+  basename (hard-fail on any reference outside the roster);
+  `bundlesUnreferenced` reported (warning rows, not failures — some
+  infra bundles may legitimately sit outside the catalog); rerun
+  byte-identical.
+
+### Stage 3 — `harvest-bundles`
+
+**Purpose:** raw asset export over ALL 176 bundles (158 aa + 18 DLC),
+grouped by bundle family; media carve-out enforced.
+
+- **Script:** `tools/stage3_harvest_bundles.py` (+ shared
+  `tools/unitypy_util.py`)
+- **Inputs:** roster (stage 0), catalog.json (family/address hints),
+  stage 1 dummy DLLs for typetree synthesis on typetree-less
+  MonoBehaviours.
+- **Family rule:** from the bundle filename — strip trailing
+  `_assets_all`/`_optimised.unity`/`.unity` shapes and the leading
+  `dlc-{space,ghost}-` tag (kept as `contentAxis`):
+  e.g. `items-courses-magic_assets_all` → family `items-courses-magic`,
+  axis `base`; hash-prefixed bundles → family = suffix after the hex
+  prefix, axis `base`, `hashNamed:true`.
+- **Per bundle:** open in UnityPy → write
+  `extracted/harvest/census/bundles/<bundlename>.json`
+  (`{objectsByClass:{class:count}, bytesByClass:{…}, errors:[…]}`);
+  export:
+  - `Texture2D`/`Sprite` → PNG under
+    `harvest/textures/<family>/…` + append to
+    `harvest/textures/manifest.jsonl`
+    (`{bundle, pathId, name, pngRelPath, width, height}`);
+  - `TextAsset` → raw bytes/text under
+    `harvest/textassets/<family>/…`;
+  - `MonoBehaviour` (incl. ScriptableObjects) → JSON under
+    `harvest/monobehaviours/<family>/<class>/<pathId>.json`
+    (typetree-decoded fields where possible; otherwise raw typed dump
+    with `typetreeDecoded:false`);
+  - `AudioClip`, `VideoClip`, `Mesh`, `AnimationClip`, shaders, fonts
+    and any other heavy class → **census rows only**, appended to
+    `extracted/media-catalogue.jsonl`
+    (`{class, bundle, name, pathId, bytesEstimate, contentAxis}`) —
+    ZERO decoded media bytes land anywhere under `extracted/`
+    ([DR-2026-08-18-media-scope]; `video-intro-hi`, `audio-music`,
+    `audio-sfx`, `audio-radio_*`, `audio-tannoy_*`, DLC `*-audio_*`
+    included).
+- **Rollup:** `extracted/MEDIA-CATALOGUE.md` generated from the jsonl
+  (per-class/per-family counts + byte totals, buildId-stamped header).
+- **Export ledger:** `harvest/export-manifest.jsonl` — one row per
+  exported file: `{sourceBundle, pathId, class, outRelPath, bytes}`.
+- **Acceptance:** every roster bundle attempted exactly once per run;
+  any bundle UnityPy cannot open → row in
+  `harvest/census/unreadable.jsonl` with reason and **stage exits 2**
+  (incomplete-with-ledger; empty unreadable set → exit 0);
+  `Σ objectsByClass` over per-bundle censuses == total object count in
+  `export-manifest.jsonl` + `media-catalogue.jsonl` + error rows
+  (numbers reconcile); media-catalogue rows cover every census object
+  of carved-out classes (count equality, mechanically checked);
+  integration test greps `extracted/` for media extensions
+  (`.ogg .wav .mp3 .bnk .fsb .mp4 .usm .bk2`) → zero hits outside the
+  catalogue jsonl/md; rerun byte-identical (PNG encoded with fixed
+  encoder settings; JSON sorted keys; iteration in sorted order).
+
+### Stage 4 — `localisation`
+
+**Purpose:** all 14 locale bundles → per-locale string tables keyed by
+stable ids; base-overlay semantics resolved HERE; availability layer
+emitted.
+
+- **Script:** `tools/stage4_localisation.py`
+- **Inputs:** the 14 `localFlag`-carrying roster bundles; stage 1 dummy
+  DLLs (Localization-package types for typetrees); BCP-47 mapping
+  (fixed table, from the verified scout inventory):
+
+  | Bundle suffix | Locale | | Bundle suffix | Locale |
+  |---|---|---|---|---|
+  | *(unnamed base)* | BASE-OVERLAY | | `italian` | `it` |
+  | `english` | `en` (pivot) | | `japanese` | `ja` |
+  | `brazilianportuguese` | `pt-BR` | | `korean` | `ko` |
+  | `chinese(simplified)` | `zh-Hans` | | `polish` | `pl` |
+  | `chinese(traditional)` | `zh-Hant` | | `russian` | `ru` |
+  | `french` | `fr` | | `spanish` | `es` |
+  | `german` | `de` | | `turkish` | `tr` |
+
+  The client ships ONE `spanish` bundle → `es`. If the queued
+  appdetails pull surfaces a latam/es-419 storefront row, that is an
+  API fact recorded at kickoff — it does NOT create a 14th client
+  locale here.
+- **Outputs:**
+  - `extracted/locales/<locale>.jsonl` for exactly the 13 locales —
+    one row per key: `{id, text}`; `id` = the game's internal
+    localization key PRESERVED VERBATIM (never renamed/slugified —
+    doctrine Principle one); UTF-8.
+  - `extracted/locales/base-overlay-report.json` — the resolved
+    disposition of the unnamed bundle: `shared-key-registry |
+    default-string-table | mixed` + evidence counts + merge-policy
+    statement (how locale tables overlay onto base).
+  - `extracted/locales/locale-matrix.json` — per key: presence across
+    13 locales + base.
+  - `extracted/relinks/locale_availability.jsonl` — emitted at STRING-KEY
+    granularity in this stage (`{id, availableLocales[], namedLocales[],
+    buildId}`). Stage 5 REGENERATES this same path at ENTITY
+    granularity (localization-architecture §5 contract: one row per
+    entity driving link rows/sitemaps); key-level rows remain the
+    substrate in `locales/locale-matrix.json`.
+- **Acceptance:** exits 0; the set of emitted locale files ==
+  `{en, pt-BR, zh-Hans, zh-Hant, fr, de, it, ja, ko, pl, ru, es, tr}`
+  exactly (13); every file non-empty, every line valid JSON with `id`
+  + `text`; matrix covers every key observed in any locale;
+  `base-overlay-report.json.disposition` ∈ enum with `evidence` counts >
+  0; `locale_availability.jsonl` row count == key count; rerun
+  byte-identical.
+
+### Stage 5 — `emit-stub-datasets`
+
+**Purpose:** canonical JSONL skeletons per entity family from the
+MonoBehaviour/ScriptableObject dumps — **rows land contract-pinned even
+where fields are only partially understood** (owner rule: stub data in
+place rather than absent).
+
+- **Script:** `tools/stage5_emit_stubs.py`
+- **Inputs:** `harvest/monobehaviours/**`, `addressables/catalog.json`,
+  `decompiled/structural/*`, `locales/locale-matrix.json`.
+- **Outputs:** `extracted/stubs/<kind>.jsonl` for the seeded families —
+  `items, rooms, courses, staff, student-types, unlockables,
+  campus-levels, configs, metagame-nodes` (kind names match spec.md
+  `entities`). Row shape (pinned contract):
+  ```json
+  {"id":"<verbatim internal id>","kind":"item","slug":null,
+   "fields":{"…understood subset, raw values, identifiers untouched…"},
+   "source":{"bundle":"items-general_assets_all.bundle","pathId":123,
+             "class":"ItemConfig"},
+   "provisional":true,"inferred":false,"buildId":20226581}
+  ```
+  A family with no identifiable rows after scanning gets a row in
+  `extracted/stubs/_absences.jsonl`: `{kind, scannedBundles:[],
+  scannedClasses:[], evidence:"why nothing matched"}` — ledgered
+  absence, never silence.
+  This stage also **regenerates**
+  `extracted/relinks/locale_availability.jsonl` at entity granularity
+  (join key: entity id → its localization keys → matrix).
+- **Acceptance:** exits 0; for EVERY seeded family: non-empty
+  `<kind>.jsonl` XOR `_absences.jsonl` row naming scan scope; every row
+  passes schema check (required fields present, types correct);
+  identifier preservation test — sampled `id`s byte-match their source
+  dump values; `buildId == identity.buildId` on 100% of rows; rerun
+  byte-identical.
+
+## 4. Output contracts (directory layout under `extracted/`)
+
+```
+extracted/
+├── EXTRACTION-LOG.md            # pins + stage-defaults JSON + per-stage run sections (append)
+├── VALIDATION-REPORT.md         # PIECE-1 PLACEHOLDER: pointer to stage censuses; mechanically derived in a later piece
+├── PROOF.md                     # PLACEHOLDER pointer ONLY (later piece reconciles coverage)
+├── RELATIONS.md                 # PLACEHOLDER pointer ONLY (later piece catalogs relations)
+├── identity.json                # stage 0
+├── bundle-roster.jsonl          # stage 0
+├── addressables/                # stage 2: catalog.json, settings.snapshot.json, catalog-coverage.json
+├── decompiled/                  # stage 1: il2cppdumper/{DummyDll,dump.cs,script.json,stringliteral.json}
+│   └── structural/              #         assembly-index.json, class-hierarchy.jsonl, id-registries/
+├── harvest/                     # stage 3: census/{bundles,unreadable.jsonl}, textures/, textassets/,
+│                                #         monobehaviours/, export-manifest.jsonl
+├── locales/                     # stage 4: 13×<locale>.jsonl, base-overlay-report.json, locale-matrix.json
+├── stubs/                       # stage 5: <kind>.jsonl × 9 + _absences.jsonl
+├── MEDIA-CATALOGUE.md           # stage 3 rollup
+├── media-catalogue.jsonl        # stage 3
+├── relinks/
+│   └── locale_availability.jsonl   # stage 4 (key-granular) → stage 5 (entity-granular)
+├── logic/                       # EMPTY dir contract — later piece fills (formulas, trees, models)
+├── maps/                        # EMPTY dir contract — later piece fills (maps.json, geometry, transforms)
+├── protocol/
+│   └── README.md                # PIECE-1 placeholder naming the observed surface: steam_api64 (achievements/
+│                                #   DLC/overlay/cloud-saves), BacktraceCrashpad telemetry, NVIDIA Ansel
+├── .stage-stamps/<stage>.json   # idempotence identities
+└── .pipeline-meta.json          # last-run context
+```
+
+**Provenance rules:** `buildId` appears in `identity.json`, the
+EXTRACTION-LOG header, and as a field on every emitted row/artifact —
+it is also the ONLY provenance class allowed to reach user-facing
+surfaces later ([DR-2026-08-15 D2]); source URLs, tool identity,
+acquisition paths stay repo-plane. Internal identifiers are preserved
+verbatim everywhere (Principle one): ids, GUIDs, PPtr path_ids, loc
+keys, enum names — curated views may add slugs, never replace.
+
+**Determinism requirements (all stages):** sorted enumeration and
+sorted JSON keys; explicit `encoding="utf-8"`, `newline="\n"`; no
+wall-clock timestamps inside stage outputs (timestamps live only in
+EXTRACTION-LOG run sections and `.stage-stamps/`, which are excluded
+from byte-identity comparisons); PNG exports with fixed encoder
+parameters.
+
+**Exit-code contract:** `0` success · `1` stage failure ·
+`2` completed-with-ledger (unreadable bundles / gapped outputs — loudly
+named, never silently skipped) · `3` environment/gate refusal (missing
+dirs, metadata-version wall).
+
+## 5. Acceptance criteria (mechanical, whole piece)
+
+1. `python run_all.py --list` enumerates exactly stages
+   `verify-client, decompile, harvest-catalog, harvest-bundles,
+   localisation, emit-stub-datasets` in order with tool/version/status
+   columns; `make list` equivalent.
+2. Each stage runs in isolation via `--only <id>` on a prepared tree.
+3. Fresh clone + game path + `make setup && make extract GAME=…`
+   produces every file in §4 without a second doc.
+4. Per-stage acceptance criteria from §3 all hold (they are written as
+   testable assertions there).
+5. Rerunning ANY stage twice yields byte-identical stage-declared
+   outputs (hash manifest comparison; logs/stamps excluded).
+6. `grep -rEi '\.(ogg|wav|mp3|bnk|fsb|mp4|usm|bk2)' extracted/` hits
+   nothing outside `media-catalogue.*` (carve-out guard).
+7. `extracted/EXTRACTION-LOG.md` records, for the executed run: tool
+   names + versions (Il2CppDumper version read from its own banner;
+   UnityPy from `import UnityPy`), client buildId 20226581, metadata
+   version 27, and per-stage exit codes.
+8. Stage 4's emitted locale set equals the 13-entry BCP-47 table in
+   this spec, character-for-character.
+
+## 6. Explicit non-goals (later pieces own these)
+
+- Logic-layer derivation (formulas, unlock/research trees, happiness
+  model) — consumes stages 1+3 outputs into `extracted/logic/`.
+- Complete ordered-pair relink matrix + `RELATIONS.md` content —
+  consumes stage 5 stubs + competitor-model application
+  ([DR-2026-08-17-relink]).
+- Map geometry: `maps.json` registry, plot transforms, marker
+  coordinates (`unknown-P0` flips to `client` there) — consumes
+  `config_level_databases` + scene dumps.
+- `PROOF.md` reconciliation, residue ledger finalization,
+  VALIDATION-REPORT derivation.
+- Media offload execution (catalogue-first only; owner picks later).
+- Steam Web API pulls (appdetails/news corroboration) — kickoff steps
+  outside the pipeline, per data-acquisition.md.
+- Site, design tokens, icon CDN/webp normalization, UGC — gated behind
+  data completeness (AGENTS rule 8).
+
+## 7. Open questions routed back (scout §8 — none are blockers)
+
+| Question | Resolution route |
+|---|---|
+| Base localisation overlay semantics | **stage 4 output** (`base-overlay-report.json`) |
+| Exact metadata version / dumper pick | **RESOLVED pre-stage** (27; Il2CppDumper primary) — stage 0 re-measures and re-gates every run |
+| Full addressable key list (cut content, seasonal keys) | **stage 2 output** (`catalog.json`) |
+| Contents of `config_level_databases` + `configs-levels-prefabs` | **stage 3/5 outputs** — feed the maps piece, not this one |
+| Steam appdetails locale/DLC-name corroboration (+ es-latam check) | kickoff pull outside pipeline (data-acquisition.md §Queued external pulls) |
+| Update cadence characterization | same kickoff pull (news API); tripwire stays the local manifest watcher |
+| Wiki relationship models behind walls | competitor-research phase — scheduled ABP passes + fallback ladder, **NOT-YET-APPLIED** |
+
+## 8. Test obligations (TestWriter contract)
+
+**Fixture-based smoke tests (runnable on this host WITHOUT the game
+dir)** — fixtures are tiny synthetic files, never real game bytes:
+
+- stage 0: manifest-acf parser on fixture text; metadata-header reader
+  on synthetic 8-byte buffers (sanity/version split at offsets 0/4);
+  roster builder + sort determinism against a temp tree; scene-flag
+  classifier (strict `.unity` vs seasonal non-`.unity` nuance); locale
+  suffix → BCP-47 table (13 exact mappings); DRIFT-warning path.
+- stage 1: `assembly-index.json` builder against a fixture
+  ScriptingAssemblies.json + fake DummyDll dir (present + stripped
+  cases); `class-hierarchy` parser on a fixture `script.json` slice.
+- stage 2: catalog.json schema validator; out-of-roster reference
+  detector (must hard-fail); coverage rollup math.
+- stage 3: census aggregation/reconciliation math on fabricated
+  census+manifest files; media-catalogue completeness checker;
+  carve-out extension guard; family-name splitter (incl.
+  `dlc-` prefixes, hash-prefixed names, `_optimised.unity` shapes).
+- stage 4: JSONL round-trip; matrix builder on fixture tables;
+  base-overlay disposition classifier; BCP-47 file-set equality
+  assertion helper.
+- stage 5: stub-row schema validator; absence-ledger logic; entity-level
+  `locale_availability` regeneration on fixtures; identifier-verbatim
+  spot-check helper.
+- runner: `--list` contains all six ids in order; `--only` isolation;
+  stamp invalidation when a stage script's hash changes; exit-code
+  mapping (0/1/2/3).
+
+**Client-gated integration tests** — auto-SKIP (not fail) when neither
+env `TPC_GAME_DIR` nor the default install path exists:
+
+- stage 0 end-to-end: identity fields + 176 roster rows + 14 locale
+  rows.
+- stage 1: `Assembly-CSharp.dll` dummy produced; assembly-index covers
+  every ScriptingAssemblies entry.
+- stage 2: every catalog bundle reference resolves into the roster.
+- stage 4: 13 locale files match the BCP-47 table; availability row
+  count == key count.
+- idempotence: stage 0 double-run hash-equal; (optional `slow` mark)
+  full-pipeline double-run.
+
+END OF piece-01-extraction-pipeline.mdx
