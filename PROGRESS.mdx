@@ -60,6 +60,17 @@ item (domain+tier), nothing work-blocking.
 
 ## Log
 
+- 2026-08-24: **Executor-001 ran the real corpus — 3 client-reality
+  findings, spec Revision 4 in flight.** Stages 0/1/3 completed
+  (roster 176 exact; decompile 287 MB incl. DummyDll + dump.cs;
+  harvest ledgered exit-2). Findings: (1) NO Assembly-CSharp.dll —
+  code lives in TPS.Game/TPS.Core*.dll (100 images), stage-1 gate
+  unsatisfiable as specced; (2) catalog payload is a TextAsset JSON
+  (11.7 MB), not MonoBehaviour; (3) all 176 content bundles carry
+  UnityFS header `0.0.0` → UnityPy FALLBACK_UNITY_VERSION must be
+  seeded from identity. Exit codes/ledgers behaved exactly as
+  designed throughout (`fa16055`). documentator-003 drafting
+  Revision 4 (mechanism corrections, no new design).
 - 2026-08-24: **C0 CLOSED.** Verification round clean on both lanes:
   codereviewer-002 verified F1–F14 APPLIED-CORRECTLY with live evidence
   (real-client stage-0 legs, stamp-layer delete/rewrite legs, absence
