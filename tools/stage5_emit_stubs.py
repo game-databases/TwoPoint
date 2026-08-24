@@ -309,11 +309,17 @@ def run(game_root: Path, extracted_root: Path) -> int:
     rows_by_kind: dict[str, list[dict]] = {k: [] for k in KINDS}
     scan_scope: dict[str, dict] = {k: {"bundles": set(), "classes": set()}
                                    for k in KINDS}
+    # every family's scan walks the WHOLE dump tree; this is the actual
+    # universe a zero-candidate family scanned (absence rows must name it,
+    # never empty lists)
+    scan_universe: dict[str, set] = {"bundles": set(), "classes": set()}
     unmapped: dict[str, dict] = {}
     dump_index: dict = {}
 
     for family, cls, bundle, path_id, payload, path in load_monobehaviour_dumps(
             monobehaviours_dir):
+        scan_universe["bundles"].add(bundle)
+        scan_universe["classes"].add(cls)
         if path_id is not None:
             dump_index.setdefault(path_id, []).append((bundle, payload))
         fields = payload.get("fields", payload)
@@ -359,14 +365,21 @@ def run(game_root: Path, extracted_root: Path) -> int:
     absences = []
     for kind in KINDS:
         rows = rows_by_kind[kind]
-        out_path = stubs_dir / KIND_FILES[kind]
-        log_util.write_jsonl(out_path, rows)
-        if not rows:
+        if rows:
+            # empty data files are never emitted: a family with zero rows is
+            # represented by its absence row alone (spec §3 stage-5 XOR), and
+            # an empty <kind>.jsonl final is indistinguishable from a partial
+            # write after an interrupted run
+            log_util.write_jsonl(stubs_dir / KIND_FILES[kind], rows)
+        else:
             scope = scan_scope[kind]
+            bundles = sorted(scope["bundles"]) or sorted(scan_universe["bundles"])
+            classes = sorted(scope["classes"]) or sorted(scan_universe["classes"])
             absences.append({
                 "kind": kind,
-                "scannedBundles": sorted(scope["bundles"]),
-                "scannedClasses": sorted(scope["classes"]),
+                "buildId": build_id,
+                "scannedBundles": bundles,
+                "scannedClasses": classes,
                 "evidence": "no identifiable rows after scanning the "
                             "monobehaviour dumps",
             })
