@@ -317,17 +317,25 @@ def run(game_root: Path, extracted_root: Path) -> int:
         if not isinstance(fields, dict):
             fields = {}
         kind, inferred, method = assign_kind(cls, family, fields)
+        if kind is not None:
+            # record the scan scope BEFORE the identifier gate: a family whose
+            # candidates all matched the kind but yielded no identifier must
+            # still report the bundles/classes actually scanned (spec §3
+            # stage-5 absence rows name the scan scope)
+            scan_scope[kind]["bundles"].add(bundle)
+            scan_scope[kind]["classes"].add(cls)
         eid = extract_id(fields)
         if kind is None or eid is None:
+            # truthful per-cause evidence (ledgered absence is factual)
+            evidence = ("no seeded kind covers this class" if kind is None
+                        else "seeded kind matched but no identifier field found")
             entry = unmapped.setdefault(cls, {
                 "class": cls, "bundles": [], "objectCount": 0,
-                "evidence": "no seeded kind covers this class"})
+                "evidence": evidence})
             if bundle not in entry["bundles"]:
                 entry["bundles"].append(bundle)
             entry["objectCount"] += 1
             continue
-        scan_scope[kind]["bundles"].add(bundle)
-        scan_scope[kind]["classes"].add(cls)
         raw_fields = {k: v for k, v in fields.items()
                       if not k.startswith("_")}
         row = {
