@@ -1,11 +1,14 @@
-"""Stage 1 `decompile` obligations (spec §8 stage-1 bullets + §3 acceptance).
+"""Stage 1 `decompile` obligations (spec §8 stage-1 bullets + §3 acceptance,
+Revision 4).
 
 Hostless scope: the structural sub-artifacts — assembly-index builder
-(present + stripped cases), class-hierarchy parser on a dump.cs-format slice,
-the script.json-enumerates-no-types rule, and the primary/fallback source
-selection rule. Real Il2CppDumper execution and the PRIMARY-vs-fallback
-equality over parseable DummyDll PE files are client-gated
-(test_client_gated.py).
+(present + stripped cases), the MULTI-IMAGE success gate (non-empty DummyDll
+set covering every ScriptingAssemblies entry; Assembly-CSharp.dll NOT
+required), class-hierarchy parsing on a dump.cs-format slice spanning more
+than one assembly image, the script.json-enumerates-no-types rule, and the
+primary/fallback source selection rule. Real Il2CppDumper execution and the
+PRIMARY-vs-fallback equality over parseable DummyDll PE files are
+client-gated (test_client_gated.py).
 """
 from __future__ import annotations
 
@@ -15,11 +18,18 @@ from pathlib import Path
 
 import pytest
 
-from _impl import HIERARCHY_NAMES, get_sym, load_tool, skip_if_none
+from _impl import (HIERARCHY_NAMES, MULTI_IMAGE_GATE_NAMES, get_sym, load_tool,
+                   skip_if_none)
 
 # Real Il2CppDumper dump.cs shape: zero-indent declarations, "// Namespace:"
-# comment lines, no access modifiers.
+# comment lines, no access modifiers. Revision 4: the slice SPANS MORE THAN
+# ONE ASSEMBLY IMAGE (the `// Image N:` headers Il2CppDumper writes per
+# image) — this client's game code lives in TPS.Game/TPS.Core images, and the
+# hierarchy is built over ALL present game-code images.
 DUMP_CS_SLICE = """\
+// Image 11: mscorlib.dll - 0
+
+// Image 47: TPS.Game.dll - 2
 // Namespace: TPC.Items
 class ItemConfig : ScriptableObject, ILocNamed // TypeDefIndex: 1001
 {
@@ -37,6 +47,7 @@ interface ILocNamed // TypeDefIndex: 1002
 \tstring NameKey();
 }
 
+// Image 48: TPS.Core.dll - 2
 // Namespace: TPC.Rooms
 class RoomConfig : RoomBase // TypeDefIndex: 1003
 {
@@ -48,7 +59,7 @@ class RoomBase : MonoBehaviour // TypeDefIndex: 1004
 {
 }
 
-// Namespace: TPC.Rooms
+// Namespace: TPC.Core
 enum Rarity // TypeDefIndex: 1005
 {
 \tCommon = 0,
@@ -57,6 +68,7 @@ enum Rarity // TypeDefIndex: 1005
 """
 
 SLICE_TYPES = {"ItemConfig", "ILocNamed", "RoomConfig", "RoomBase", "Rarity"}
+SLICE_IMAGES = {"TPS.Game", "TPS.Core"}  # the game-code images in the slice
 
 SCRIPT_JSON_SLICE = json.dumps({
     "ScriptMethod": [{"Address": 1, "Name": "TPC.Items.ItemConfig.Init()"}],
@@ -178,3 +190,151 @@ def test_hierarchy_source_selection_prefers_parseable_dummydll(tmp_path):
         encoding="utf-8").splitlines()
     assert len([ln for ln in hier if ln.strip()]) == len(SLICE_TYPES), (
         f"fallback hierarchy rows != {len(SLICE_TYPES)} top-level declarations")
+
+
+# --- Revision 4: multi-image gate fixtures ------------------------------------------
+
+GAME_CODE_IMAGES = ("TPS.Game", "TPS.Core", "TPS.Core.Cpp")
+GATE_ASSEMBLY_LIST = ["Assembly-CSharp", "mscorlib", *GAME_CODE_IMAGES,
+                      "TPC.Stripped"]
+ABSENT_MARKERS = ("absent", "stripped")
+
+
+def _gate_fn():
+    mod = skip_if_none(load_tool("stage1_decompile.py"),
+                       "tools/stage1_decompile.py")
+    return skip_if_none(get_sym(mod, *MULTI_IMAGE_GATE_NAMES),
+                        "stage-1 multi-image gate")
+
+
+def _call_gate(gate, structural_dir: Path, dummy_dll: Path):
+    try:
+        return gate(structural_dir, dummy_dll)
+    except TypeError:
+        pass
+    try:
+        return gate(structural_dir=structural_dir, dummy_dll=dummy_dll)
+    except TypeError:
+        pass
+    try:
+        return gate(structural_dir=structural_dir, dummy_dll_dir=dummy_dll)
+    except TypeError:
+        return gate(dummy_dll_dir=dummy_dll, structural_dir=structural_dir)
+
+
+def _write_multi_image_inputs(tmp_path: Path):
+    """A DummyDll set of several game-code images and NO Assembly-CSharp.dll
+    (this client ships none) plus a ScriptingAssemblies.json that still lists
+    Assembly-CSharp — it must classify absent-with-marker."""
+    bs = skip_if_none(load_tool("build_structural.py"),
+                      "tools/build_structural.py")
+    run_fn = skip_if_none(get_sym(bs, *("run", "build_structural")),
+                          "structural run()/builder entrypoint")
+    dummy_out = tmp_path / "decompiled-out"
+    dll_dir = dummy_out / "DummyDll"
+    dll_dir.mkdir(parents=True)
+    for name in GAME_CODE_IMAGES:
+        (dll_dir / f"{name}.dll").write_bytes(b"MZ" + b"\x00" * 64)
+    sa = tmp_path / "ScriptingAssemblies.json"
+    sa.write_text(json.dumps({"Names": [a + ".dll" for a in GATE_ASSEMBLY_LIST]}),
+                  encoding="utf-8", newline="\n")
+    ext = tmp_path / "extracted"
+    ext.mkdir(parents=True, exist_ok=True)
+    try:
+        run_fn(dummy_out, sa, ext)
+    except TypeError:
+        run_fn(dummy_out=dummy_out, scripting_assemblies_path=sa,
+               extracted_root=ext)
+    structural_dir = ext / "decompiled" / "structural"
+    idx_path = structural_dir / "assembly-index.json"
+    return dummy_out, dll_dir, structural_dir, idx_path
+
+
+def test_multi_image_gate_passes_without_assembly_csharp(tmp_path):
+    """Revision 4 gate: several game-code images and NO Assembly-CSharp.dll
+    PASS; every ScriptingAssemblies entry is classified, Assembly-CSharp
+    absent-with-marker, ≥1 dummy-present backed by a real image."""
+    gate = _gate_fn()
+    dummy_out, dll_dir, structural_dir, idx_path = _write_multi_image_inputs(
+        tmp_path)
+    problems = list(_call_gate(gate, structural_dir, dll_dir))
+    assert not problems, (
+        f"a DummyDll set of {len(GAME_CODE_IMAGES)} game-code images with NO "
+        f"Assembly-CSharp.dll must PASS the multi-image gate; got: {problems}")
+    obj = json.loads(idx_path.read_text(encoding="utf-8"))
+    rows = obj.get("assemblies") if isinstance(obj, dict) else obj
+    by_assembly = {r["assembly"]: r["status"] for r in rows}
+    for asm in GATE_ASSEMBLY_LIST:
+        assert asm in by_assembly, (
+            f"every ScriptingAssemblies.json entry must be classified; "
+            f"missing {asm!r}")
+    assert by_assembly["TPS.Game"] == "dummy-present", (
+        f"game-code image TPS.Game classified {by_assembly['TPS.Game']!r}")
+    for absent_asm in ("Assembly-CSharp", "TPC.Stripped"):
+        status = by_assembly[absent_asm]
+        assert any(m in status for m in ABSENT_MARKERS), (
+            f"{absent_asm} (no image shipped) must classify present-or-"
+            f"absent-WITH-MARKER; got {status!r}")
+    backed = [a for a in GAME_CODE_IMAGES
+              if by_assembly[a] == "dummy-present"
+              and (dll_dir / f"{a}.dll").is_file()]
+    assert backed, "at least one dummy-present entry must be backed by a real image"
+
+
+def test_multi_image_gate_empty_dummydll_set_fails(tmp_path):
+    """Revision 4 gate: an EMPTY DummyDll set FAILS it (spec §8 stage 1)."""
+    bs = skip_if_none(load_tool("build_structural.py"),
+                      "tools/build_structural.py")
+    run_fn = skip_if_none(get_sym(bs, *("run", "build_structural")),
+                          "structural run()/builder entrypoint")
+    dummy_out = tmp_path / "empty-out"
+    dll_dir = dummy_out / "DummyDll"
+    dll_dir.mkdir(parents=True)  # EMPTY set — no images at all
+    sa = tmp_path / "ScriptingAssemblies.json"
+    sa.write_text(json.dumps({"Names": [a + ".dll" for a in GATE_ASSEMBLY_LIST]}),
+                  encoding="utf-8", newline="\n")
+    ext = tmp_path / "extracted"
+    ext.mkdir(parents=True, exist_ok=True)
+    try:
+        run_fn(dummy_out, sa, ext)
+    except TypeError:
+        run_fn(dummy_out=dummy_out, scripting_assemblies_path=sa,
+               extracted_root=ext)
+    gate = _gate_fn()
+    raised = False
+    problems = []
+    try:
+        problems = list(_call_gate(gate, ext / "decompiled" / "structural",
+                                   dll_dir) or [])
+    except Exception:  # a raised stage error also counts as failing the gate
+        raised = True
+    assert raised or problems, (
+        "an EMPTY DummyDll set must FAIL the multi-image gate (non-empty "
+        "problem list or a raised stage error)")
+
+
+def test_hierarchy_parser_spans_multiple_images(tmp_path):
+    """Revision 4 §8: the dump.cs slice spans more than one assembly image;
+    the parsed hierarchy must carry that distinction in the pinned `assembly`
+    row field (hierarchy over ALL present game-code images), never collapse
+    onto one label."""
+    mod = _structural_mod()
+    fn = skip_if_none(get_sym(mod, *HIERARCHY_NAMES), "dump.cs hierarchy parser")
+    p = tmp_path / "dump.cs"
+    p.write_text(DUMP_CS_SLICE, encoding="utf-8", newline="\n")
+    try:
+        rows = fn(p)
+    except TypeError:
+        rows = fn(p.read_text(encoding="utf-8"))
+    assert isinstance(rows, list) and rows, f"parser returned no types: {rows!r}"
+    names = {r.get("name") for r in rows if isinstance(r, dict)}
+    assert SLICE_TYPES <= names, f"multi-image slice types missed: {sorted(SLICE_TYPES - names)}"
+    assemblies = {str(r.get("assembly") or "").strip() for r in rows
+                  if isinstance(r, dict)}
+    assemblies.discard("")
+    lowered = {a.lower().removesuffix(".dll") for a in assemblies}
+    hits = {img.lower() for img in SLICE_IMAGES if any(img.lower() in a for a in lowered)}
+    assert len(hits) == len(SLICE_IMAGES), (
+        f"hierarchy rows must span the slice's assembly images "
+        f"{sorted(SLICE_IMAGES)} (Revision 4: hierarchy over ALL present "
+        f"game-code images); attributed assemblies were {sorted(assemblies)}")

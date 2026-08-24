@@ -8,6 +8,7 @@ TPC_IT_HEAVY=1 so a bare `pytest tests/` on the game host stays cheap.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -101,29 +102,69 @@ def test_stage0_double_run_hash_equal(tmp_path_factory):
 # --- heavy client-gated legs ---------------------------------------------------------
 
 @pytest.mark.heavy
-def test_stage1_dummy_dll_and_assembly_index(tmp_path):
+def test_stage1_multi_image_gate_and_hierarchy_span(tmp_path):
+    """Stage-1 acceptance under Revision 4: the DummyDll set is NON-EMPTY and
+    every ScriptingAssemblies.json entry appears in assembly-index.json
+    classified present-or-absent-with-marker with ≥1 dummy-present entry
+    backed by a real image. `Assembly-CSharp.dll` is NOT expected on this
+    client (game code lives in TPS.Game/TPS.Core images) — its absence is a
+    PASS condition, never a failure. Class-hierarchy rows span the present
+    game-code images."""
     _heavy_or_skip()
     from conftest import game_dir, run_pack
     game = game_dir()
     ext = tmp_path / "ext"
     r = run_pack([str(game), "--only", "decompile"], extracted_root=ext, timeout=3600)
     assert r.returncode == 0, f"stage 1 failed rc={r.returncode}\n{r.stdout}{r.stderr}"
-    dummy = ext / "decompiled" / "il2cppdumper" / "DummyDll" / "Assembly-CSharp.dll"
-    assert dummy.exists() and dummy.stat().st_size > 0, "DummyDll/Assembly-CSharp.dll missing"
+
+    dummy_dir = ext / "decompiled" / "il2cppdumper" / "DummyDll"
+    images = sorted(p.stem for p in dummy_dir.glob("*.dll")) if dummy_dir.is_dir() else []
+    assert images, ("DummyDll set is EMPTY — the multi-image gate requires at "
+                    "least one managed image (Assembly-CSharp.dll NOT required)")
+    assert "Assembly-CSharp" not in images, (
+        "this client ships NO Assembly-CSharp image; finding one means the "
+        "client changed — re-measure before trusting this leg")
 
     idx_path = ext / "decompiled" / "structural" / "assembly-index.json"
     idx = json.loads(idx_path.read_text(encoding="utf-8"))
-    entries = idx if isinstance(idx, list) else idx.get("entries") or list(idx.values())
-    blob = json.dumps(entries).lower()
+    rows = idx.get("assemblies") if isinstance(idx, dict) else idx
+    assert isinstance(rows, list) and rows, "assembly-index.json carries no rows"
+    by_stem = {str(row.get("assembly")): str(row.get("status")) for row in rows}
 
     sa = game / "TPC_Data" / "ScriptingAssemblies.json"
     names = json.loads(sa.read_text(encoding="utf-8"))
     names = names.get("Names", names) if isinstance(names, dict) else names
-    for n in names:
-        stem = str(n).removesuffix(".dll")
-        assert stem.lower() in blob, (
-            f"assembly-index does not cover ScriptingAssemblies entry {stem!r}")
-    # hierarchy count source stamped in EXTRACTION-LOG beside the count
+    expected = {str(n).removesuffix(".dll") for n in names}
+    missing = sorted(expected - set(by_stem))
+    assert not missing, f"ScriptingAssemblies entries unclassified in assembly-index: {missing}"
+    bad_status = {a: s for a, s in by_stem.items()
+                  if s != "dummy-present" and not any(
+                      m in s.lower() for m in ("absent", "stripped"))}
+    assert not bad_status, (
+        f"statuses must be present-or-absent-with-marker: {bad_status}")
+    backed_present = [a for a, s in by_stem.items()
+                      if s == "dummy-present"
+                      and (dummy_dir / f"{a}.dll").is_file()]
+    assert backed_present, (
+        "at least one dummy-present entry must be backed by a real DummyDll "
+        "image (multi-image gate)")
+
+    hier_path = ext / "decompiled" / "structural" / "class-hierarchy.jsonl"
+    hier_rows = read_jsonl(hier_path)
+    assert hier_rows, "class-hierarchy.jsonl is empty"
+    row_assemblies = {str(row.get("assembly") or "") for row in hier_rows}
+    source = ""
+    if isinstance(idx, dict):
+        source = str((idx.get("meta") or {}).get("hierarchySource", ""))
+    if "dumpcs" not in source.lower() and "fallback" not in source.lower():
+        spanning = {a for a in row_assemblies
+                    if any(a.lower() == img.lower()
+                           or a.lower() == img.lower().removesuffix(".dll")
+                           for img in images)}
+        assert len(spanning) >= 2, (
+            "hierarchy rows span all present game-code images (Revision 4); "
+            f"attributed assemblies were {sorted(row_assemblies)[:8]}… over "
+            f"{len(images)} images")
     log = (ext / "EXTRACTION-LOG.md").read_text(encoding="utf-8")
     assert "class-hierarchy" in log or "hierarchy" in log, \
         "EXTRACTION-LOG must record the hierarchy count + its named source"
@@ -151,6 +192,54 @@ def test_stage2_catalog_references_resolve_into_roster(tmp_path):
     assert not outside, (
         f"{len(outside)} catalog references resolve OUTSIDE the roster "
         f"(hard-fail contract): {outside[:5]}")
+
+
+@pytest.mark.heavy
+def test_stage3_fallback_version_usage_recorded(tmp_path):
+    """§8 client-gated (Revision 4): fallback-version usage is recorded and
+    > 0 — every content bundle on this client ships a `0.0.0` UnityFS header.
+    Every per-bundle census carries `fallbackVersionUsed` (presence-always,
+    value true here) and the harvest-bundles run section carries the usage
+    total."""
+    _heavy_or_skip()
+    from conftest import game_dir, run_pack
+    game = game_dir()
+    ext = tmp_path / "ext"
+    r = run_pack([str(game), "--only", "harvest-bundles"],
+                 extracted_root=ext, timeout=6 * 3600)
+    if r.returncode not in (0, 2):  # 2 = completed-with-ledger is fine here
+        pytest.skip(f"client-gated-heavy: harvest rc={r.returncode}: "
+                    f"{(r.stdout + r.stderr)[-300:]}")
+    census_dir = ext / "harvest" / "census" / "bundles"
+    censuses = sorted(census_dir.glob("*.json"))
+    assert censuses, "no per-bundle censuses emitted"
+    flagged = []
+    for p in censuses:
+        c = read_json(p)
+        assert "fallbackVersionUsed" in c, (
+            f"{p.name}: every per-bundle census must carry "
+            "fallbackVersionUsed (presence-always contract)")
+        if c["fallbackVersionUsed"] is True:
+            flagged.append(p.name)
+    assert len(flagged) == len(censuses), (
+        f"every content bundle ships a `0.0.0` header on this client, so all "
+        f"censuses expect fallbackVersionUsed=true; got {len(flagged)}/"
+        f"{len(censuses)}")
+
+    log_text = (ext / "EXTRACTION-LOG.md").read_text(encoding="utf-8",
+                                                     errors="replace")
+    # run sections are headed `### <timestamp> — <stage-id>`; this run's
+    # harvest-bundles section is the LAST one appended
+    sections = [p for p in re.split(r"(?m)^#{1,3} ", log_text)
+                if p.splitlines()[:1]
+                and "harvest-bundles" in p.splitlines()[0].lower()]
+    assert sections, "harvest-bundles run section missing from EXTRACTION-LOG.md"
+    section = sections[-1]
+    usage_matches = [int(m) for m in
+                     re.findall(r"(?i)fallback[^\n]*?(\d+)", section)]
+    assert any(n > 0 for n in usage_matches), (
+        "the run section must carry a fallback-version usage TOTAL > 0; "
+        f"fallback numbers seen: {usage_matches[:8]}")
 
 
 @pytest.mark.heavy

@@ -222,11 +222,16 @@ def build_client_inputs(tree: Path, *, full_scale=False, metadata_version=27):
     _write(tpc_data / "il2cpp_data" / "Metadata" / "global-metadata.dat",
            metadata_bytes(metadata_version))
     _write_text(tpc_data / "ScriptingAssemblies.json", json.dumps({
+        # Revision 4 client reality: NO Assembly-CSharp image ships (the entry
+        # still appears in the requested-assembly list and must classify as
+        # absent-with-marker); game code lives in TPS.Game/TPS.Core images.
         "Names": [
             "Assembly-CSharp.dll",
             "Assembly-CSharp-firstpass.dll",
             "mscorlib.dll",
             "UnityEngine.CoreModule.dll",
+            "TPS.Game.dll",
+            "TPS.Core.dll",
             "TPC.Stripped.dll",
         ]
     }, indent=2) + "\n")
@@ -469,21 +474,29 @@ def build_monobehaviours(extracted: Path):
 
 
 def build_structural_fixture(extracted: Path):
+    """Stage-1 structural OUTPUTS over the Revision-4 multi-image reality:
+    game code lives in TPS.Game/TPS.Core images; Assembly-CSharp is classified
+    absent-with-marker, never present."""
     st = extracted / "decompiled" / "structural"
     idx = [
-        {"assembly": "Assembly-CSharp", "status": "dummy-present"},
-        {"assembly": "Assembly-CSharp-firstpass", "status": "dummy-present"},
+        {"assembly": "Assembly-CSharp", "status": "dummy-absent(stripped)"},
         {"assembly": "mscorlib", "status": "dummy-present"},
         {"assembly": "UnityEngine.CoreModule", "status": "dummy-present"},
+        {"assembly": "TPS.Core", "status": "dummy-present"},
+        {"assembly": "TPS.Game", "status": "dummy-present"},
         {"assembly": "TPC.Stripped", "status": "dummy-absent(stripped)"},
     ]
-    _write_text(st / "assembly-index.json", json.dumps(idx, indent=2) + "\n")
+    _write_text(st / "assembly-index.json", json.dumps(
+        {"meta": {"hierarchySource": "dummydll-typedef-enumeration"},
+         "assemblies": idx}, indent=2) + "\n")
     hier = [
-        {"assembly": "Assembly-CSharp", "namespace": "TPC.Items", "name": "ItemConfig",
+        {"assembly": "TPS.Game", "namespace": "TPC.Items", "name": "ItemConfig",
          "baseType": "ScriptableObject", "interfaces": ["ILocNamed"],
          "methodCount": 2, "fieldCount": 3},
-        {"assembly": "Assembly-CSharp", "namespace": "TPC.Rooms", "name": "RoomConfig",
+        {"assembly": "TPS.Game", "namespace": "TPC.Rooms", "name": "RoomConfig",
          "baseType": "RoomBase", "interfaces": [], "methodCount": 0, "fieldCount": 1},
+        {"assembly": "TPS.Core", "namespace": "TPC.Core", "name": "ServiceLocator",
+         "baseType": None, "interfaces": [], "methodCount": 4, "fieldCount": 1},
     ]
     write_jsonl(st / "class-hierarchy.jsonl", hier)
     write_jsonl(st / "id-registries" / "rarity.jsonl",
@@ -503,6 +516,46 @@ def build_locale_matrix_fixture(extracted: Path):
     MATRIX_OBJ = obj
     _write_text(extracted / "locales" / "locale-matrix.json",
                 json.dumps(obj, indent=2, sort_keys=True) + "\n")
+
+
+# --- Revision-4 fallback-version seeding substrates (stages 3+4) -------------------
+# Content bundles' UnityFS headers read literally "0.0.0" on this client
+# (catalog.bundle alone reports the true engine version); UnityPy raises
+# UnityVersionFallbackError on those unless FALLBACK_UNITY_VERSION is seeded
+# from identity.json's unityVersion.
+
+ZERO_VERSION_HEADER = "0.0.0"
+
+
+def unityfs_header_bytes(version_string: str = ZERO_VERSION_HEADER,
+                         engine_version: str = UNITY_VERSION,
+                         tail: int = 256) -> bytes:
+    """Leading bytes of a synthetic UnityFS bundle: magic + format word + the
+    bundle's Unity version cstring + the engine revision cstring + filler."""
+    out = bytearray()
+    out += b"UnityFS\x00"
+    out += (7).to_bytes(4, "big")
+    out += version_string.encode("ascii") + b"\x00"
+    out += engine_version.encode("ascii") + b"\x00"
+    out += det_bytes(f"unityfs:{version_string}:{engine_version}", tail)
+    return bytes(out)
+
+
+def write_seed_probe_bundles(directory: Path) -> dict[str, Path]:
+    """The three seeding substrates shared by the stage-3 and stage-4 tests:
+    a `0.0.0` header, an unparseable/garbage header, and a well-formed one."""
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    paths = {
+        "zero": directory / "content-zero.bundle",
+        "garbage": directory / "content-garbage.bundle",
+        "true-version": directory / "catalog-like.bundle",
+    }
+    _write(paths["zero"], unityfs_header_bytes(ZERO_VERSION_HEADER))
+    _write(paths["garbage"], det_bytes("unparseable-bundle", 512))
+    _write(paths["true-version"],
+           unityfs_header_bytes(UNITY_VERSION, UNITY_VERSION))
+    return paths
 
 
 # --- orchestrator -----------------------------------------------------------------

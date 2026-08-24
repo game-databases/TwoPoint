@@ -130,6 +130,21 @@ LOCALE_TABLE_NAMES = ("LOCALE_SUFFIX_TABLE", "LOCALE_SUFFIX_TO_BCP47",
 LOCALE_FN_NAMES = ("locale_for_bundle", "locale_suffix_to_bcp47",
                    "suffix_to_locale", "to_bcp47", "bcp47_for_suffix")
 
+# Revision 4: the stage-1 gate is multi-image (non-empty DummyDll set covering
+# every ScriptingAssemblies entry, ≥1 backed dummy-present; Assembly-CSharp.dll
+# NOT required).
+MULTI_IMAGE_GATE_NAMES = ("_multi_image_gate", "multi_image_gate",
+                          "evaluate_dummydll_gate", "check_dummydll_gate",
+                          "dummydll_gate", "evaluate_gate")
+TEXTASSET_DECODE_NAMES = ("_decode_catalog_textasset", "decode_catalog_textasset",
+                          "find_catalog_textasset", "decode_textasset_catalog")
+SECONDARY_PROBE_NAMES = ("_find_catalog_monobehaviour", "find_catalog_monobehaviour",
+                         "_find_catalog_object")
+FALLBACK_SEED_NAMES = ("seed_fallback_unity_version", "ensure_fallback_unity_version",
+                       "seed_fallback_version", "apply_fallback_version_seed",
+                       "seed_unitypy_fallback", "prepare_bundle_open",
+                       "open_bundle_with_fallback", "resolve_bundle_version")
+
 STRUCTURAL_RUN_NAMES = ("run", "build_structural", "main")
 ASSEMBLY_INDEX_NAMES = ("build_assembly_index", "make_assembly_index",
                         "assembly_index", "build_index")
@@ -173,3 +188,19 @@ def skip_if_none(value, what: str):
         import pytest
         pytest.skip(f"impl-missing: {what} not resolvable yet (CodeWriter pending)")
     return value
+
+
+def try_call_shapes(fn, *shapes):
+    """Call an impl function whose exact signature is unknown: each shape is
+    (args, kwargs); the first non-TypeError result wins. Raises AssertionError
+    naming every tried shape when none matches."""
+    last = None
+    for args, kw in shapes:
+        try:
+            return fn(*args, **kw)
+        except TypeError as exc:
+            last = exc
+    name = getattr(fn, "__name__", repr(fn))
+    raise AssertionError(
+        f"{name} matched none of its expected call shapes "
+        f"({len(shapes)} tried); last TypeError: {last}")
