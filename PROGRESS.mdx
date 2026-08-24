@@ -47,8 +47,9 @@ data; extraction runs in place).
 
 | Agent | Role piece | State |
 |---|---|---|
-| scout-001 | Install inventory (§1–2 done) | **died mid-run**; sections 1–2 landed |
-| scout-002 | Continuation: §3–9 + END sentinel | **running** |
+| scout-001 / scout-002 | Install inventory + tooling/locales/map/competitors (§1–9, END sentinel) | **done** — verified PASS (facts) + READY-FOR-DOCUMENTATOR (coverage) |
+| verifyA-001 · verifyB-001 | Independent verification of the scout report | **done** — 21/21 facts CONFIRMED; carries folded into Documentator brief |
+| documentator-001 | Six pack convention docs + piece-1 extraction spec | **running** |
 
 Owner questions: [QUESTION-QUEUE.md](QUESTION-QUEUE.md) — one standing
 item (domain+tier), nothing work-blocking.
@@ -67,3 +68,11 @@ item (domain+tier), nothing work-blocking.
   domain-partitioned names; corpus only ~3.5 GiB — cheap full harvest).
   scout-002 launched on `--model ox-alpha` (verified working) with
   checkpoint discipline to finish §3–9.
+- 2026-08-24: scout-002 completed §§3–9 with sentinel. Toolchain verdict:
+  Cpp2IL/Il2CppDumper + UnityPy + AssetStudioModCLI all in-repo; compiled
+  dumpers staged; no downloads needed. Locales: 13 text + base overlay,
+  VERIFIED-FROM-CLIENT. Map: path D (authored cartography over client
+  coordinates), per-campus plot maps, 25-scene ceiling. Competitors all
+  walled to curl → ABP pass scheduled; 4 relinking-floor candidates named.
+  Both verifiers green; documentator-001 launched (six convention docs +
+  piece-1 extraction pipeline spec).

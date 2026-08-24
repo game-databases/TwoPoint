@@ -1,0 +1,214 @@
+# Verify B — requirements coverage — scout-report-001
+
+**Verifier:** verifyB (independent coverage/completeness pass; judges, does not fix;
+spawned no subagents). **Date:** 2026-08-24.
+**Subject:** `TwoPoint/docs/scout-report-001.mdx` (read to its sentinel).
+**Requirement set read in full:** repo-root `AGENTS.md`,
+`_foundation/extraction-doctrine.md`, `_foundation/site-sections.md`;
+`FRAMEWORK.md` §1, §2 (in full), §7 (heading-mapped per AGENTS reading
+discipline). No client re-measurement performed — this is a desk audit of
+the report against the binding texts.
+
+---
+
+## 1. Coverage — inputs for the convention docs and the piece-1 pipeline spec
+
+Per-document sufficiency for the Documentator (AGENTS rule 4 set +
+`tools-plan.md` per site-sections):
+
+| Doc | Seeded by report | Assessment |
+|---|---|---|
+| README.md | §2 identity/layout, §9 provenance | Sufficient. |
+| toolchain.md | §3 (engine+backend pin, tool inventory with staged-binary paths, three bound KB verdicts, sibling artifact layouts) | Strongest input — effectively a draft. Two carries: 2.4 and 1.1 below. |
+| data-acquisition.md | client path, depot map, DLC layout, no-custom-encryption finding, Addressables settings hash | Sufficient; owe a protocol-surface line (1.3) and a video carve-out clause (1.6). |
+| spec.md | §4 locales, §5 map path, Next.js default stack (§2.20-consistent), sources+readiness states | Thinnest input: first-cut entity-kind/axis list rests on bundle-name examples, not a roster (1.2). |
+| competitor-research.md | §6 target list + access state; analysis/APPLY correctly left to the pack phase | Sufficient as a fixure of targets; fallback ladder must be scheduled (§5 below). |
+| tools-plan.md | nothing beyond the Steam-community-shell probe | Inherent, not a scouting failure — mechanics enumeration (site-sections step 2) consumes the logic layer, which does not exist yet. Documentator must place the ≥5-evidence-linked-ideas quota clock at spec freeze and schedule the post-Tier-1 mechanics pass. |
+| MANIFEST.md seeds | §9 provenance table | Directly liftable. |
+
+For the **piece-1 extraction pipeline spec** the report supplies: stage-order
+hint (catalog.bundle as first artifact), tool pins + versions, artifact-layout
+templates (RF4 `decompiled/` + `work/cpp2il-*`; cast-n-chill phase shape),
+PROOF discipline precedents, the `[DR-2026-08-18-pipeline]` entrypoint
+requirement, locale-mode scope (all 14 overlays). Enough to write the spec.
+
+### Missing facts scouting could have answered (named, with why they matter)
+
+1.1 **`global-metadata.dat` metadata-version header — not read.** The scout
+    read binary headers for the Unity version (`globalgamemanagers` ~0x30),
+    so the 4-byte metadata version at offset 0 was equally in scope. It
+    decides Il2CppDumper-vs-Cpp2IL *ordering* now rather than at Tier 0,
+    and the pipeline spec must pin a primary dumper in
+    `EXTRACTION-LOG.md` defaults. The report already hedges correctly
+    ("verify the header version at Tier 0") — carry as a spec gate; not
+    worth re-scouting.
+1.2 **Complete 158-bundle name roster — not enumerated** (12 largest +
+    scattered examples only). The spec's first-cut entity-kind/variable
+    list (FRAMEWORK §3) leans on it, and the report itself asserts "the
+    names alone partition the whole entity model" without shipping the
+    partition. An `ls`-level artifact was free. Carry: emit the roster as
+    the pipeline's first artifact; Documentator writes kinds provisionally.
+1.3 **Protocol-layer surface — unaddressed.** The doctrine owes a protocol
+    section even for single-player titles (workshop, cloud saves,
+    telemetry, P2P — proof of no surface or an inventory). The §2 plugin
+    list already observes the surface (`steam_api64.dll`,
+    `BacktraceCrashpadWindows.dll`, Ansel) but no line queues its
+    inventory and §8's open-questions list does not name it. The
+    Documentator can write it from §2; the omission is real but cheap to
+    close.
+1.4 **Scene-bundle arithmetic is off by one.** §5's enumerated base rows
+    sum to 22 `.unity` bundles (frontend 4 + meta 4 + level-registry 1 +
+    campus 12 + seasonal 1) against the stated "21 `.unity` scene bundles"
+    / 25 total. Must be mechanically recounted before it hardens into the
+    maps ceiling for `maps.json`.
+1.5 **§2 vs §9 DLC bundle counts wobble** (ghost "~9" vs 8; space "~11"
+    vs 10). §9's counted figures reconcile with the "176 bundles incl.
+    DLC" claim (158 + 10 + 8); §2's tildes are stale scout-001 estimates.
+    Continuation note explains the seam; Documentator cites §9.
+1.6 **`video-intro-hi` (256 MiB, largest single bundle) is not routed
+    under the media carve-out** the way radio/tannoy audio is — one
+    clause owed in data-acquisition.
+1.7 **`spanish` mapped straight to `es`** without noting the absent
+    `latam` variant — settled by the already-queued appdetails pull; note
+    it there so the freeze check looks for it.
+1.8 **Update cadence uncharacterized.** Buildid + LastUpdated (2025-12-19)
+    are recorded, but nothing indicates whether TPC still receives
+    patches; the spec must declare an update trigger (§2.12) and the
+    staleness story benefits from one queued API/news check.
+
+None of 1.1–1.8 requires re-scouting; all close at spec freeze or Tier 0.
+
+---
+
+## 2. Tool-choice verdicts vs the cited knowledge-base rules
+
+2.1 UnityPy as ripper of record — consistent with the cited
+    `works/unitypy-asset-ripping.md` characterization.
+2.2 AssetRipper demoted to GUI-inspection-only — consistent with the
+    dead-end record and the lootbound history the report cites.
+2.3 Il2CppDumper wall scoping — correctly narrowed to metadata v38/v39
+    (Unity 6000.x), with 2020.3.47f1 reasoned to sit far below the wall
+    and the header check retained as a gate. Sound and properly hedged;
+    no contradiction with the KB verdict as quoted.
+2.4 **Unsupported leap:** "Compiled Il2CppDumper exes are already staged
+    twice … **no new downloads needed**." True for Il2CppDumper (two
+    staged locations, verified in §9) and AssetStudioModCLI (staged
+    portable), but **Cpp2IL — the named PRIMARY — exists only as source**
+    in `tools/`. The sentence hides a build/publish dependency. The
+    pipeline spec must add a Cpp2IL build stage or pin a release artifact.
+2.5 The "closest profile match" claim (cast-n-chill, ScriptableObject-
+    carried data) is asserted without a pointer to its record. Pattern
+    reuse is plausible; the Documentator should reopen cast-n-chill's
+    toolchain/spec rather than trust the summary.
+
+---
+
+## 3. Locale inventory vs FRAMEWORK §2.4
+
+**Compliant.**
+
+- All 14 bundle names read from client disk 2026-08-24 — this satisfies
+  §2.4's "verified against the client, not marketing" at the level
+  available pre-extraction, and the deeper string-level check lands at
+  extraction as expected.
+- The base-overlay row is explicitly
+  `INFERRED (existence VERIFIED-FROM-CLIENT)` with "semantics unverified
+  until opened" — exactly the required marking, and §8 queues its
+  resolution at Tier 0.
+- BCP-47 codes and Steam language ids are labeled INFERRED until
+  corroboration, and the appdetails pull is scheduled before spec freeze
+  — §2.4 makes client/API verification a mandatory freeze step; the
+  scheduling satisfies it.
+- Install-level `"language": "english"` correctly demoted to a setting,
+  not a capability row.
+- Voice/text split handled correctly: 3 spoken languages vs 13 text
+  locales, with the mandarin-voice ↔ two-written-variants trap called out
+  (no per-locale voice inference from text support). Radio/tannoy
+  correctly routed to the media carve-out while text stays the
+  launch-blocking locale set.
+- Nit: "all 14 overlays ship" counts the base overlay as a locale —
+  wording slop, substantively harmless.
+
+---
+
+## 4. Map path vs FRAMEWORK §2.6
+
+**Consistent.**
+
+- Path D primary with B contributing raw imagery material is coherent;
+  A ruled out on evidence ("no tile-service signal"), C held
+  unavailable-until-proven rather than presumed.
+- Precedent citations (MIR4, RF4) are §2.6's own Path-D evidence rows —
+  correctly matched.
+- Coordinate sourcing uses the §2.6 enum exactly: `unknown-P0` now,
+  `client` after scene extraction — no invented coordinates.
+- Third-party embeds restated banned; the imagery plan is owned
+  (extracted environment/loadingscreen art + authored cartography over
+  client transforms), meeting §2.6's delivery-path requirement.
+- Leaflet simple-CRS in game-pixel space matches the core machinery
+  paragraph; per-campus plot maps with two-way marker↔entity links match
+  §2.6 and site-sections §A.2.
+- Owed correction: the 21/22/25 scene tally (1.4) before it becomes the
+  maps registry ceiling.
+
+---
+
+## 5. Relinking floor — doctrine bar #3 ([DR-2026-08-17-relink])
+
+**On a planned path, not yet a demonstrated one — single point of failure.**
+All four candidate models were unreachable by curl; only Steam Community
+guides is confirmed alive (HTTP 200 shell, guide list not server-rendered
+in that URL shape). The planned unlock — ABP-browser passes during the
+competitor-research phase — is plausible but unproven against
+challenge-page walls, and AGENTS rule 10 forbids retrying into challenges.
+A failed ABP pass strands the floor at 1-of-3 sources, and bar #3 is
+unconditional: walls are an access fact, not a waiver.
+
+The spec MUST schedule:
+
+1. **ABP-browser analysis passes** per walled source during
+   competitor-research, walls re-recorded as findings (§6 already
+   promises this).
+2. **A named fallback ladder now**, before ABP is proven — e.g. web-archive
+   snapshots of the fandom/wiki.gg entity pages, the Steam guides corpus
+   via alternate/paginated endpoints, the gaming.tools inventory
+   (site-sections tool-discovery step 1 doubles as a source), official
+   publisher/studio resources. Without a pre-named ladder the floor has
+   no exit if the browser hits the same walls.
+3. **The APPLY artifacts.** Bar #3 fails on "lists sources without
+   extracting and applying their relationship model." §6 correctly
+   refuses to merely record; the spec must give the delta a destination —
+   added joins / derived edges landing in `extracted/relinks/` +
+   `RELATIONS.md` as a concrete pipeline stage, with repo-only provenance
+   per AGENTS rule 3 (source identity never reaches user surfaces).
+
+Credibility overall: the *target selection* is sound (two independent
+wiki instances of the same relationship model + a player-authored chain
+corpus + reserves). What is missing is only the schedule above.
+
+---
+
+## 6. Legal / licensing statements
+
+**None found.** §6's walls are recorded as HTTP/DNS access facts; the
+media carve-out and embed-ban references restate repo policy rather than
+analyze it; "not encrypted / no depot-level encryption" is technical.
+Clean under AGENTS rule 2 and the doctrine's global rule.
+
+---
+
+## 7. Overall verdict
+
+**READY-FOR-DOCUMENTATOR** — with the carries attached, none requiring
+re-scouting:
+
+- Carries into the spec/docs: 1.1 (dumper-decision gate), 1.2 (roster as
+  first artifact), 1.3 (protocol-surface line), 1.6 (video carve-out
+  clause), 1.7 (es/latam check), 1.8 (cadence check).
+- Required **before spec freeze**: 1.4 (mechanical scene-tally recount),
+  5.2 (relinking fallback ladder named), 2.4 (Cpp2IL build-stage decision).
+- Corrections while drafting: 1.5 (cite §9 counts, not §2 tildes), 2.5
+  (reopen cast-n-chill's own records), §3 wording nit (base overlay is
+  not a 14th locale), §4 scene-ceiling number pending 1.4.
+
+END OF verifyB-scout-001

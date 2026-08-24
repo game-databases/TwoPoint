@@ -160,3 +160,302 @@ post-install expansion; both figures are recorded facts, not an error.
 - `configs_assets_all`, `configs-app/common/metagame/levels-prefabs`
   bundles are where the logic layer will live; `localisation_*` are the
   locale overlays (§4).
+
+---
+
+> **Continuation note:** scout-001 died after §2. scout-002 completed
+> §§3–9 on the same date (2026-08-24), same host, same read-only scope.
+> Sections 1–2 above are scout-001's, unmodified.
+
+---
+
+## 3. Reusable tooling survey
+
+### Shared arsenal — `tools/` entries relevant to a Unity 2020.3 IL2CPP title
+
+Source clones exist in the repo-root shared arsenal (filenames observed,
+nothing re-run this session):
+
+| Tool | State in `tools/` | Role for TPC |
+|---|---|---|
+| **Cpp2IL** (+ LibCpp2IL) | full source clone: `Cpp2IL/` with `LibCpp2IL`, plugin projects (`BuildReport`, `ControlFlowGraph`, `Pdb`, `StrippedCodeRegSupport`, `Mfuscator`, `OrbisPkg`) | IL2CPP → dummy managed assemblies; primary metadata/code path |
+| **Il2CppDumper** | source clone `Il2CppDumper/` (KB records v6.7.46) | alternative dumper + Ghidra/IDA struct scripts (`ghidra.py`, `ida_py3.py` ship in prior-run copies) |
+| **UnityPy** | source clone `UnityPy/` (+ UnityPyBoost) | programmatic bundle/asset ripper — the repo-standard per KB |
+| **AssetStudioMod** | source clone incl. **AssetStudioCLI** project → CLI export exists | sprite/Texture2D batch export fallback |
+| **AssetRipper** | source clone; KB dead-end doc records 1.3.14 win-x64 ships GUI-only, no headless batch | not a pipeline driver; GUI inspection only |
+| AssetsTools.NET (+ `.Cpp2IL` variant) | source clone | low-level bundle surgery if UnityPy hits a wall |
+| ILSpy · dnSpyEx · UABE/UABEA | clones | reading dummy DLLs / inspecting serialized assets |
+| Zygisk-Il2CppDumper / -Fucker | clones | Android-runtime dumpers — N/A for this Windows client |
+
+UE-side tools (UnrealMappingsDumper, Dumper-7, FModel, CUE4Parse, …) do
+not apply.
+
+### Prior in-repo runs of exactly this chain (evidence it works here)
+
+| Pack | Artifacts on disk |
+|---|---|
+| russian-fishing-4 | `extracted/decompiled/il2cppdumper/`; `work/cpp2il-cs`, `work/cpp2il-ilrec`, `work/cpp2il-out`, `work/cpp2ilgame` — the full IL2CPP chain run end-to-end in-repo |
+| cast-n-chill | `extracted/decompiled/cpp2il/`; its `toolchain.md` pre-names the fork TPC needs: "Mono → dnSpyEx; IL2CPP → Cpp2IL on GameAssembly.dll + global-metadata.dat"; Phases A–E executed, PROOF.md present |
+| disco-elysium · zero-parades | `extracted/decompiled/cpp2il/`; zero-parades also staged runnable copies at `work/_tooling/il2cppdumper/` (**compiled `Il2CppDumper.exe` + x86 variant**) and `work/_tooling/AssetStudioModCLI/AssetStudioModCLI_net8_portable/` |
+| lootbound | ran AssetRipper (`extracted/assetripper*.log`) before switching approaches (see KB dead-end) |
+| Python precedent | venv `UnityPy.exe` entry points in corepunk, disco-elysium, lootbound, oxygen-not-included, pathfinder packs |
+| `D:\unpacked_game_data` | `albion-online/_tooling/il2cppdumper/` (compiled exes) + `albion-online/decompiled/il2cpp/`; `fishing-planet/decompiled/cpp2il/` |
+
+Repo knowledge-base verdicts that bind tool choice
+(`game-unpacking-knowledge-base-and-guides/unity/`):
+
+- `works/unitypy-asset-ripping.md` — UnityPy is the pipeline ripper of
+  record (reads SerializedFiles + UnityFS, exposes objects by `path_id`,
+  decodes Texture2D/Sprite).
+- `does-not-work/assetripper-gui.md` — AssetRipper = GUI-only, dropped
+  for headless batch.
+- `does-not-work/il2cppdumper-new-metadata.md` — Il2CppDumper v6.7.46
+  fails only on **metadata v38/v39 (Unity 6000.x)**. TPC is Unity
+  2020.3.47f1 — its `global-metadata.dat` is far below that wall, so both
+  dumpers should be in-range (verify the header version at Tier 0).
+
+### Sibling pack pipeline patterns (structural reuse)
+
+- **cast-n-chill** — closest profile match: small single-player Unity
+  client, ScriptableObject-carried data, no server plane. Its decision
+  tree already contains TPC's branch verbatim; copy its phase shape and
+  PROOF discipline.
+- **against-the-storm** — Unity Mono; `Makefile` + `run_all.py` +
+  `requirements.txt` + `tools-plan.md` skeleton; 18-language locale
+  handling and dev-data cross-check pattern.
+- **oxygen-not-included** — shows the "mine decompiled `*Config`
+  classes for entity stats" pattern TPC mirrors onto its `configs_*`
+  bundles; friendliest-profile framing.
+- **dredge** — Unity 2021; client-vs-wiki audit strategy and
+  non-EN-locale differentiation headline; Mono-vs-IL2CPP PRIMARY-VERIFY
+  gate at Tier 0.
+- **slay-the-spire** — unified two-engine contract: snapshot build →
+  recover/decompile → parse → normalize → icon pass → validate → stamp;
+  `game × kind × id` output contract.
+- **dont-starve / webfishing / backpack-battles** — non-Unity (Klei
+  engine / Godot): technical flow not reusable; their boundary doctrine
+  (media carve-out), continuation-plan binding, and pack file layout are.
+- **MiSide** — Unity narrative-horror pack restarted from zero
+  2026-08-24; greenfield sibling with nothing to import yet.
+
+### Verdict — closest reusable approach for Two Point Campus
+
+**Cpp2IL (primary) or Il2CppDumper on `GameAssembly.dll` +
+`global-metadata.dat` → dummy assemblies read with dnSpyEx/ILSpy;
+UnityPy for the 158 Addressables bundles + catalog + loc tables;
+AssetStudioModCLI as the sprite batch exporter.** Compiled Il2CppDumper
+exes are already staged twice in the repo; no new downloads needed.
+This is cast-n-chill's IL2CPP branch executed with RF4's artifact layout
+(`decompiled/` + `work/cpp2il-*`) as the template.
+
+---
+
+## 4. Locale inventory
+
+Anchor evidence: exactly **14 `localisation_assets_localisation*.bundle`
+files** in `aa/StandaloneWindows64/` (names read from disk 2026-08-24;
+full list below). This matches §2's count of 14.
+
+| Bundle (`localisation_assets_localisation…`) | Locale | BCP-47 | Steam language id (for API calls) | Tag |
+|---|---|---|---|---|
+| `….bundle` (unnamed base) | base overlay — shared keys / default strings, semantics unverified until opened | — | — | INFERRED (existence VERIFIED-FROM-CLIENT) |
+| `…english.bundle` | English | `en` | `english` | VERIFIED-FROM-CLIENT |
+| `…brazilianportuguese.bundle` | Portuguese (Brazil) | `pt-BR` | `brazilian` | VERIFIED-FROM-CLIENT |
+| `…chinese(simplified).bundle` | Chinese (Simplified) | `zh-Hans` | `schinese` | VERIFIED-FROM-CLIENT |
+| `…chinese(traditional).bundle` | Chinese (Traditional) | `zh-Hant` | `tchinese` | VERIFIED-FROM-CLIENT |
+| `…french.bundle` | French | `fr` | `french` | VERIFIED-FROM-CLIENT |
+| `…german.bundle` | German | `de` | `german` | VERIFIED-FROM-CLIENT |
+| `…italian.bundle` | Italian | `it` | `italian` | VERIFIED-FROM-CLIENT |
+| `…japanese.bundle` | Japanese | `ja` | `japanese` | VERIFIED-FROM-CLIENT |
+| `…korean.bundle` | Korean | `ko` | `korean` | VERIFIED-FROM-CLIENT |
+| `…polish.bundle` | Polish | `pl` | `polish` | VERIFIED-FROM-CLIENT |
+| `…russian.bundle` | Russian | `ru` | `russian` | VERIFIED-FROM-CLIENT |
+| `…spanish.bundle` | Spanish | `es` | `spanish` | VERIFIED-FROM-CLIENT |
+| `…turkish.bundle` | Turkish | `tr` | `turkish` | VERIFIED-FROM-CLIENT |
+
+**13 text locales + 1 base overlay = 14 bundles.** BCP-47 codes are the
+deterministic convention mapping of the verified bundle names; Steam
+language ids corroborate at first API pull (INFERRED until then).
+
+### Spoken audio vs text
+
+Spoken content is exactly **3 languages**, from the voice-bearing bundle
+names (`audio-radio_assets_*`, `audio-tannoy_assets_*`):
+`english`, `german`, `mandarin`.
+
+- Mandarin voice ↔ two written variants (`zh-Hans` + `zh-Hant`) — the
+  site must not infer voice availability per locale from text support.
+- Radio/tannoy audio falls under the media carve-out
+  ([DR-2026-08-18-media-scope]): catalogued, never held inline in
+  `extracted/`; the *text* locales are the site's launch-blocking locale
+  set per FRAMEWORK §2.4 — all 14 overlays ship.
+- Steam user config `"language": "english"` (§2) is this install's
+  setting, not a capability row.
+
+---
+
+## 5. Map/geography surface
+
+Statically knowable from bundle names (read 2026-08-24; no bundles
+opened):
+
+### Scene inventory
+
+**Base game** — `aa/StandaloneWindows64/`, 21 `.unity` scene bundles:
+
+| Group | Bundles |
+|---|---|
+| Frontend / boot | `scenes_scenes_main.unity`, `scenes_scenes_mainmenu.unity`, `scenes_scenes_frontend_cameras.unity`, `scenes_scenes_levelhud.unity` |
+| Meta layers | `scenes_scenes_metagame.unity`, `scenes_scenes_metagame_nostate.unity`, `scenes_scenes_remix.unity`, `scenes_scenes_sandbox.unity` |
+| Level registry | `scenes_scenes_config_level_databases.unity.bundle` ← machine-readable campus/level DB, plus `configs-levels-prefabs_assets_all` + `configs-metagame` |
+| Campus levels (`…_optimised.unity`) | `tutoriallevel`, `mittonlevel`, `knightlevel`, `partylevel`, `archaeologylevel`, `gastronomylevel`, `magiclevel`, `performingartslevel`, `roboticslevel`, `sportslevel`, `spylevel`, `finallevel` (12) |
+| Seasonal | `scenes-seasonalcontent_scenes_all.bundle` |
+
+**DLC space** — 3 scene bundles: `dlc1_launchpadlevel`,
+`dlc1_moonbaselevel`, `dlc1_spaceportcitylevel` (Space Academy — campus
+naming INFERRED from the DLC's public name, bundle names VERIFIED).
+**DLC ghost** — 1 scene bundle: `dlc2_ghosts_optimised`. Total: **25
+`.unity` scene bundles** across the install.
+
+Supporting art for imagery: `environment-landscape` (204 MiB), 
+`environment` (108 MiB), per-DLC `*-loadingscreen_assets_all` bundles,
+`ui-level_assets_all`.
+
+### What TPC's geography IS
+
+A campus-builder sandbox: the world is a set of **fixed, hand-authored
+campus plots** (12 base + 3 space academy + a ghost/seasonal event
+scene); rooms and buildings are player-placed on those plots. There is
+no seamless open world and no radar-tile class asset observed.
+
+### FRAMEWORK §2.6 path decision input
+
+| Path | Verdict for TPC |
+|---|---|
+| A. Official tile CDN | **No signal** — nothing in the client points at any tile service; ruled out absent new evidence. |
+| B. Client-extracted tiles/imagery | **Partial fit** — no radar tiles, but loadingscreen art, landscape/environment bundles, and plain (unencrypted) scene geometry are extractable sources for plot imagery. |
+| C. Community datasets | None identified in this pass (§6 scan may refine); treat as unavailable until proven. |
+| D. Authored cartography over client coordinates | **PRIMARY recommendation.** Plot layouts, building footprints, and room grids derive from `scenes_scenes_config_level_databases` + `configs-levels-prefabs` + each `_optimised.unity` scene; Leaflet simple-CRS in game-pixel space per §2.6. Precedent: MIR4 (coords on disk, imagery authored), RF4. |
+
+Product shape that follows: **per-campus plot maps** (25 maps ceiling,
+one per scene) with markers for plots/buildings/course-room locations,
+two-way linked to entity pages — not one world map. Coordinate source
+class: `client` (scene transforms) once extracted; until then every
+marker spec is `unknown-P0`. This satisfies the map workstream's
+delivery-path requirement with an owned-imagery plan; third-party embeds
+stay banned per §2.6.
+
+---
+
+## 6. Competitor landscape
+
+Probed 2026-08-24 via curl (default UA, one retry with a search/AI
+crawler UA where blank/walled), hard-capped at ~12 minutes. **Every
+candidate came back walled or empty — that is the finding.** Per AGENTS
+rule 10 each wall was attempted once and abandoned; none was retried
+into.
+
+| Source | Result | What it would have answered |
+|---|---|---|
+| `twopointcampus.fandom.com/wiki/Two_Point_Campus_Wiki` | HTTP **403** bot wall (5.4 KiB challenge); retry with `Claude-User` → **402** | The primary community taxonomy: entity kinds, item↔course↔room↔staff/student cross-links |
+| `twopointcampus.wiki.gg/` | HTTP **401** on both default and `OAI-SearchBot` UA | Second independent instance of the same relationship model |
+| `twopointcampus.wiki.fextralife.com` | DNS **NXDOMAIN** — no dedicated Fextralife TPC wiki exists | (absence finding) |
+| `ign.com/wikis/two-point-campus/` | **403**, body truncated at timeout | Publisher-grade entity lists (courses, rooms, items) |
+| `game8.co/games/Two-Point-Campus` | HTTP **202**, 0 B body (challenge page) | Guide-style relationship chains |
+| `neoseeker.com/two-point-campus/` | **403** wall | Entity tables + community Q&A |
+| `steamcommunity.com/app/1649080/guides/` | **HTTP 200, alive** — real `<title>Steam Community::Two Point Campus`, 60 KiB shell — but the guide list is not server-rendered in this URL shape (0 guide links in HTML) | Community pain-point mining → tool candidates |
+
+### Candidates for the applied-relationship-delta relinking floor
+(doctrine bar #3 — ≥3 independent sources whose model gets APPLIED):
+
+1. **Two Point Campus Wiki (fandom)** — primary; expect the fullest
+   course↔room↔item↔assignment graph plus DLC coverage.
+2. **Two Point Campus wiki.gg** — independent second instance; deltas
+   vs fandom expose which edges are load-bearing.
+3. **Steam Community guides corpus** — player-authored chains
+   (course→room→item needs, staff traits→course speed) = derived-edge
+   candidates our relink layer must reproduce from client data.
+4. *(reserve)* IGN wikis / Neoseeker — fourth/fifth instances if needed.
+
+The analysis itself belongs to the pack's `competitor-research.md`
+phase through the ABP browser (walls re-recorded there as findings);
+this scout only fixes the target list and records access state.
+
+---
+
+## 7. Reference-site bar
+
+What the TPC site must match or beat, from `database-visuals-examples/`
+(enka.network, wikily.gg, new-world.guide; metaforge/questlog/bray.tech
+blocked = findings):
+
+1. **Hover = definition or join, on every data-bearing field** (Enka):
+   one icon vocabulary across the page so a hover lights every instance
+   of that stat/relation bidirectionally — course requirement ↔ room
+   item ↔ student grade must highlight as one join, not tooltip prose.
+2. **State is always in the URL + title + meta description** (beats
+   Enka's measured defect: selected character absent from URL/title,
+   empty `meta description`; adopt NWG's module hashes `#map`,
+   `#use_in_quest`). One entity, one forever-URL per FRAMEWORK §2.7.
+3. **Every mentioned entity is an `<a>`** (beat Enka: weapon/set names
+   are pictures, not links): the relink graph renders as crawlable HTML
+   with aggressive internal linking per `site-sections.md` — this is the
+   SEO organism Enka lacks.
+4. **Honest empty states + fractions-vs-max**: designed empty wells for
+   missing slots, roll-quality fractions with totals row — TPC analog:
+   locale strings present/absent per language shown as data, never
+   apology copy.
+5. **Owned map module on every location-bearing campus/plot page +
+   typed language control replaced by route-coded locale URLs**
+   (`/de/`, `/pt-br/`…); MapGenie is placement/pin-density reference
+   only; colour-keyed object identity (Wikily's facet chips with counts)
+   carries the DLC/locale dimension filters.
+
+---
+
+## 8. Open questions
+
+**Answerable by more exploration (dataminer questions — AGENTS rule 8,
+never deferred to frontend):**
+
+- Semantics of the unnamed base `localisation_assets_localisation.bundle`
+  (shared key registry vs default-English table) → opens at extraction
+  Tier 0 with UnityPy.
+- Exact `global-metadata.dat` metadata version (header bytes) → picks
+  Il2CppDumper vs Cpp2IL as primary dumper; trivial read.
+- Full addressable key list inside `catalog.bundle` (1.7 MiB) → may
+  surface entities/scenes not visible in bundle filenames (e.g. cut
+  content, seasonal event keys).
+- Contents of `scenes_scenes_config_level_databases.unity.bundle` +
+  `configs-levels-prefabs` → seeds `maps.json` (§5) and the campus
+  entity model.
+- Whether Steam `appdetails` corroborates the 13-locale set and names
+  DLC 1907450 / 1884560 publicly → one API call at pack kickoff.
+- Wiki relationship models behind §6's walls → ABP browser pass during
+  `competitor-research.md` (walls already recorded).
+
+**Genuinely owner-blocked:** none new. The standing domain + trademark
+gate (AGENTS rule 6) remains the only owner-blocked item this scout
+surfaced; no additional owner decisions were created by §§3–7.
+
+---
+
+## 9. Provenance facts
+
+Measured/read 2026-08-24 on NE8K; nothing downloaded, installed, or
+extracted.
+
+| Fact | Value |
+|---|---|
+| Steam buildid | **20226581** (`TargetBuildID` equal — install at target); LastUpdated epoch 1766136803 = 2025-12-19 |
+| In-game version | `10.3.169253+2024-12-06.1241` (`version.txt`) |
+| Engine / backend | Unity **2020.3.47f1**, IL2CPP, Windows x64 |
+| Addressables runtime version | **1.21.10** (`aa/settings.json` `m_AddressablesVersion`), settings hash `ff59c4d7914829f354d3efeefc3819f0`, `m_IsLocalCatalogInBundle: true`, provider `ContentCatalogProvider`, build target `StandaloneWindows64` |
+| IL2CPP inputs | `GameAssembly.dll` 311,226,368 B; `TPC_Data/il2cpp_data/Metadata/global-metadata.dat` ~14 MiB |
+| Corpus size | `aa/` 158 bundles ≈ 3.5 GiB; `DLCs/` 556 MiB (space: 10 bundles incl. 3 scenes; ghost: 8 bundles incl. 1 scene) |
+| Locale bundles | 14 (base + 13 languages); spoken audio in exactly 3 |
+| Scene bundles | 25 `.unity` total: 21 base aa + 3 space + 1 ghost |
+| Tool versions observed on disk (not re-run) | Il2CppDumper v6.7.46 (KB record); AssetRipper 1.3.14 win-x64 (KB record); UnityPy 1.25.2 (Corepunk instance record); compiled `Il2CppDumper.exe` staged at `zero-parades/work/_tooling/il2cppdumper/` and `D:\unpacked_game_data\albion-online\_tooling\il2cppdumper\`; `AssetStudioModCLI_net8_portable` at `zero-parades/work/_tooling/` |
+| Network probes this session | 7 competitor URLs curl'd once (+1 crawler-UA retry each where walled); all walls recorded in §6 |
+
+END OF scout-report-001
