@@ -1,0 +1,239 @@
+# Reviewer 004 — Revision 4 verification (spec piece-01)
+
+**Date:** 2026-08-24 · **Scope:** commit `74ae6aa` (Revision 4,
+executor-001 client-reality amendments) verified against executor-001's
+real-corpus evidence: [`../../extracted/EXTRACTION-LOG.md`](../../extracted/EXTRACTION-LOG.md)
+(header pins + all run sections) and
+[`.agents/logs/executor-001.log`](../../.agents/logs/executor-001.log).
+Full-file read of the post-commit spec; full diff read of the commit
+(single file touched: `docs/specs/piece-01-extraction-pipeline.mdx`,
++125/−31). No subagents used.
+
+**Evidence baseline (what the run actually recorded):**
+`verify-client` exit 0 ×5 (roster 176 = 158/10/8, localeFlagged 14,
+scenes 21/22/25/26, metadataVersion 27); `decompile` exit 1
+"(DummyDll/Assembly-CSharp.dll missing)", tool stamped
+"Il2CppDumper **vunknown**", `escalationTrigger:` "**metadata version
+>= 38** exceeds the staged dumper's supported range…" printed despite
+measured v27; no run section for the failed `harvest-catalog`;
+`harvest-bundles` exit 2, 176/176 unreadable, censusObjectsTotal 0.
+Executor report adds: dump.cs lists 100 images / 101 DummyDlls, game
+code in `TPS.Game.dll`/`TPS.Core*.dll`; catalog payload TextAsset
+`"catalog"` JSON `{"m_LocatorId":"AddressablesMainContentCatalog",…}`
+11,689,576 B carrying m_KeyDataString/m_BucketDataString/
+m_EntryDataString; every content bundle's UnityFS header literally
+`0.0.0` (catalog.bundle's is `2020.3.47f1`),
+`UnityVersionFallbackError` on all of them plus the first locale
+bundle; failing stages 2/4 append no run-section while 1/3 do.
+
+---
+
+## Amendment 1 — stage-1 multi-image gate
+
+**Verdict: APPLIED-CORRECTLY**
+
+Evidence side: executor log — "this client has **no Assembly-CSharp
+image at all** (script.json: 0 hits; dump.cs lists 100 images) — game
+code lives in `TPS.Game.dll`/`TPS.Core*.dll`"; EXTRACTION-LOG decompile
+section — "exitCode: 1 (DummyDll/Assembly-CSharp.dll missing)".
+Spec side (preamble item 1): "`script.json`: 0 hits; `dump.cs`
+enumerates 100 images" — matches measurement for measurement, no
+invented numbers (the spec wisely does not pin the 101-DummyDll disk
+count anywhere).
+
+Landing spots, all present:
+
+- §3 Stage 1 acceptance rewritten: gate is "multi-image (Revision 4) —
+  the DummyDll set is NON-EMPTY AND every `ScriptingAssemblies.json`
+  entry appears in `assembly-index.json` classified
+  present-or-absent-with-marker with at least one `dummy-present` entry
+  backed by a real image (`DummyDll/Assembly-CSharp.dll` is NOT
+  required…)". The old "`DummyDll/Assembly-CSharp.dll` exists"
+  assertion is gone from the file entirely (grep: only negation or
+  preamble-evidence occurrences remain).
+- Hierarchy PRIMARY source widened consistently: "typedef enumeration
+  across ALL present game-code `DummyDll/*.dll` images"; the Revision 3
+  clause "(script.json itself is a method/string-literal artifact and
+  enumerates no types)" survives intact.
+- §8 fixtures: "a DummyDll set holding several game-code images and NO
+  `Assembly-CSharp.dll` passes the gate while an EMPTY set fails it";
+  the dump.cs-slice fixture now spans "more than one assembly image".
+- Client-gated integration test restated: "non-empty DummyDll set …
+  (`Assembly-CSharp.dll` is NOT expected on this client); class-hierarchy
+  rows span all present game-code images."
+
+Exit codes unchanged (diff touches no exit-code text; §4 contract block
+untouched).
+
+*Non-blocking note:* the new gate requires ≥1 `dummy-present` image,
+not ≥1 *game-code* image — a hypothetical dumper output emitting only
+framework dummies while marking every game assembly absent would pass
+the gate into an empty-but-valid structural layer. Not a measured
+failure mode on this client (101 DummyDlls produced) and not invented
+detail in the spec; record for a future revision if it ever bites.
+
+## Amendment 2 — stage-2 TextAsset-catalog primary decode
+
+**Verdict: APPLIED-CORRECTLY**
+
+Evidence side: executor log — "catalog.bundle contains **no
+MonoBehaviour**: payload is TextAsset `"catalog"`, JSON
+`{"m_LocatorId":"AddressablesMainContentCatalog",…}` 11,689,576 B
+carrying m_KeyDataString/m_BucketDataString/m_EntryDataString". Spec
+side: "~11.7 MB JSON with `m_LocatorId` … plus base64-encoded binary
+blobs" — 11,689,576 B ≈ 11.7 MB decimal, consistent; field names exact.
+
+Landing spots:
+
+- §3 Stage 2 inputs rewritten: primary decode = open with UnityPy →
+  take that TextAsset → parse JSON → "decode the three data strings per
+  the Addressables 1.21.x layout — as far as needed to resolve keys →
+  owning-bundle references". The decode scope ("as far as needed") is
+  correctly conservative — it does not over-specify the 1.21.x binary
+  layout beyond what resolution requires.
+- Demotion is explicit and bidirectional-safe: "MonoBehaviour/typetree
+  route … is the SECONDARY/absent path, probed only when the TextAsset
+  is missing or malformed — never the primary." Old "Implementation
+  note … binary ContentCatalogData" paragraph fully deleted (remaining
+  ContentCatalogData mention is Revision-2 changelog narration only).
+- Coverage universes untouched (preamble claim verified against diff:
+  no hunk reaches the `catalog-coverage.json` bullets or the match-key
+  acceptance), matching "Coverage-universe acceptance unchanged."
+- §8 fixture obligation follows the mechanism: "synthetic
+  TextAsset-catalog fixture (Revision 4 — small JSON with `m_LocatorId`
+  + tiny base64 … strings) driving the primary 1.21.x decode AND
+  exercising the match normalization … and the coverage-universe math";
+  plus the secondary-path branch: "absent/malformed TextAsset routes to
+  the secondary path (no silent garbage decode)." Output-contract
+  fixedness is preserved ("The OUTPUT contract below is fixed
+  regardless" retained).
+
+*Non-blocking note:* "base64-encoded" is Addressables-standard for
+these fields but the executor log names the keys without stating their
+encoding. Harmless — the decode instruction doesn't depend on it — but
+it is one adjective of mechanism beyond strict measurement.
+
+## Amendment 3 — stages 3+4 FALLBACK_UNITY_VERSION seeding + usage recording
+
+**Verdict: APPLIED-CORRECTLY**
+
+Evidence side: EXTRACTION-LOG harvest-bundles — "exitCode: 2 …
+bundlesAttempted: 176; unreadableBundles: 176; censusObjectsTotal: 0";
+executor log — "every reason `UnityVersionFallbackError`: content
+bundles' UnityFS header version is literally **`0.0.0`**
+(catalog.bundle's is `2020.3.47f1`) and the pipeline never sets
+`UnityPy.config.FALLBACK_UNITY_VERSION`", and localisation failed with
+the same error on the first locale bundle. The config knob named in the
+spec is the one the executor report itself identifies — nothing
+invented.
+
+Landing spots:
+
+- Stage 3 inputs: seed `UnityPy.config.FALLBACK_UNITY_VERSION` from
+  `identity.json`'s `unityVersion` "whenever a bundle header is
+  `0.0.0`/unparseable"; per-seeded-open census mark
+  `fallbackVersionUsed:true`; run-section usage total. Identity source
+  is well-chosen — stage 0 emits `unityVersion`, so the fallback value
+  is the measured engine version, never hardcoded.
+- Stage 3 acceptance: "every per-bundle census carries
+  `fallbackVersionUsed` (expected `true` on this client — every content
+  bundle ships a `0.0.0` header)". Correctly worded as
+  field-presence-always + value-expected-true: empirically sound since
+  all 176 roster bundles failed on 0.0.0, and `catalog.bundle` (true
+  header) is not a roster row so it cannot dilute the expectation.
+- Stage 4 inputs: "opened under the same fallback-version seeding as
+  stage 3 — locale bundles are content bundles, their headers read
+  `0.0.0` too … usage counted in the run section" — matches the
+  evidenced localisation failure.
+- §8 obligations follow: shared stage-3/4 seeding helper fixtures —
+  headers reading `0.0.0` AND unparseable ones both trigger the
+  identity-sourced seed, flip the flag, and move the run-section total;
+  stage-4 bullet reuses the same helper. Client-gated integration:
+  "fallback-version usage recorded and > 0".
+
+*Non-blocking note:* preamble wording says usage counts land "in the
+census/report outputs"; stage 4 has no census artifact, so its count
+lives only in the run section. The landed §3 mechanisms are concrete
+and correct; only the preamble phrase is loose.
+
+## Amendment 4 — log hygiene (measured escalationTrigger, failing-stage run-sections, dumper version stamp)
+
+**Verdict: APPLIED-CORRECTLY**
+
+Evidence side (all three defects measured): EXTRACTION-LOG decompile
+section prints the canned wall text — "escalationTrigger: metadata
+version >= 38 exceeds the staged dumper's supported range…" — under
+header pins reading "metadataVersion: 27", i.e. the trigger fired on an
+unrelated gate failure; the failed harvest-catalog has NO run section;
+tool stamped "Il2CppDumper vunknown". Executor anomaly #7 states the
+same three items.
+
+Landing spots:
+
+- §3 Stage 1 escalation: trigger fires "ONLY off the MEASURED metadata
+  version — `>= 38` … Any other failure logs its own problem lines
+  WITHOUT that trigger text — on this client's measured v27 the wall is
+  never tripped, so the canned message must not appear (Revision 4)".
+  The auto-build prohibition ("Piece 1 does NOT auto-build Cpp2IL")
+  survives verbatim.
+- Failing-stage ledgering: "Failing stages append their run section too
+  (exitCode + problems), so the ledger never depends on success."
+- Dumper stamp: preamble item 4 "stamped from its banner or `unknown`
+  explicitly", backed by §8 runner fixture: "the dumper version stamps
+  explicit `unknown` when no banner parses."
+
+*Non-blocking note:* §5 criterion 7 still reads "Il2CppDumper version
+read from its own banner" without naming the unknown fallback. Not a
+contradiction (the §8 fixture defines the no-banner behavior and
+criterion 7 doesn't forbid it), but one clause there would make the two
+sections byte-consistent.
+
+---
+
+## Cross-cutting checks
+
+- **Exit-code contract unchanged:** diff touches no exit-code text;
+  §4's `0/1/2/3` block, stage ids, sentinels, and the sentinel line
+  "END OF piece-01-extraction-pipeline.mdx" are intact. Stage 3's
+  completed-with-ledger semantics (unreadable.jsonl + exit 2) survive —
+  and were exactly what the real run exercised.
+- **Acceptance criteria updated where old wording assumed the dead
+  reality:** Assembly-CSharp assumption removed from stage-1 acceptance
+  + both test tiers; MonoBehaviour-catalog assumption removed from
+  stage-2 inputs/fixtures (old synthetic ContentCatalogData fixture
+  replaced by the TextAsset fixture); unreadable-header assumption
+  answered by the fallback-seeding acceptance + fixtures. No stale
+  occurrence of any of the three remains outside changelog narration or
+  explicit negation.
+- **§8 obligations follow the mechanisms:** multi-image gate fixtures,
+  TextAsset-catalog fixture incl. secondary-path routing, shared
+  fallback-seeding fixtures with run-section totals, and the three-part
+  log-hygiene runner fixture — each maps 1:1 onto a landed §3
+  mechanism; none invents a mechanism the spec body doesn't have.
+- **No regression to Revisions 2–3:** R1 carve-out intact (catalogue-
+  only Texture2D/Sprite rows, zero decoded media/image bytes, extended
+  grep guard in §3 + §5.6, AssetStudioModCLI dormant); R2
+  compositionPolicy four-value enum + evidence counts intact (§3, §7);
+  R3/stage-5 sole ownership of `relinks/locale_availability.jsonl`
+  intact (stage-4 non-write + isolation test preserved); Revision 3's
+  residual-inclusive reconciliation identity intact ("Σ `objectsByClass`
+  … == export-manifest rows + media-catalogue.jsonl rows + error rows +
+  census-only residual … residual-inclusive form per Revision 3");
+  script.json-enumerates-no-types clause intact. Revision 2's kind↔file
+  map, `_unmapped-families.jsonl`, `_absences.jsonl`,
+  `TPC_EXTRACTED_ROOT`, `.gitkeep` contracts, export-manifest
+  uniqueness, interrupted-run convergence, and exit-2 emission fixture
+  all still present.
+
+## Verdict
+
+**SPEC-READY** — release to fixers.
+
+All four amendments are grounded measurement-for-measurement in the
+executor-001 evidence, land coherently across preamble/§3/§8/test
+tiers, and preserve the Revision 2–3 contract surface. The five notes
+above (game-code-image gate edge, "base64-encoded" phrasing, preamble
+"census/report" looseness for stage 4, §5.7 banner-wording clause, and
+nothing else) are observations for a future revision, none blocking.
+
+END OF reviewer-004-revision-4
