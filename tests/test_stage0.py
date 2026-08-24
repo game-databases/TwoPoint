@@ -140,6 +140,30 @@ def test_locale_suffix_table_13_exact_mappings():
             "unnamed overlay row must resolve to 'base', never a 14th locale"
 
 
+def test_locale_for_bundle_end_to_end_real_bundle_names():
+    """F1 regression wall: drive `locale_for_bundle` over the REAL bundle
+    basenames (scout-report §4 spellings, verified-from-client), not just
+    the table dict — the prefix-strip→table lookup beside that table once
+    retained a `_` separator and every named bundle degraded to
+    `unknown:_<lang>` with zero coverage here."""
+    mod = skip_if_none(load_any("stage0_verify_client.py", "tpc_common.py"),
+                      "tools/stage0_verify_client.py | tools/tpc_common.py")
+    fn = skip_if_none(get_sym(mod, *LOCALE_FN_NAMES), "locale_for_bundle")
+    for suffix, bcp47 in sorted(LOCALE_TABLE.items()):
+        bundle = f"localisation_assets_localisation_{suffix}.bundle"
+        got = fn(bundle)
+        assert got == bcp47, (
+            f"locale_for_bundle({bundle!r}) = {got!r}, expected {bcp47!r} "
+            "(real bundle basename must resolve to its BCP-47 code)")
+    # unnamed stem → base overlay, with and without the .bundle extension
+    stem = "localisation_assets_localisation"
+    assert fn(stem + ".bundle") == "base", "unnamed base overlay bundle misflagged"
+    assert fn(stem) == "base", "bare unnamed stem must also flag as base"
+    # non-localisation bundles never carry a localeFlag
+    assert fn("items-general_assets_all.bundle") is None
+    assert fn("scenes-scene-campus1.unity.bundle") is None
+
+
 # --- black-box behavior on the prepared tree --------------------------------------
 
 def test_stage0_run_success_and_artifact_contract(fx_stage0, tmp_path):
