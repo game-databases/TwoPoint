@@ -444,6 +444,44 @@ def test_r5_nine_seeded_surfaces_and_localize_census(real_run):
         print(f"DRIFT: localizeBindings={localize} (scout seed ≈ 11,312)")
 
 
+def test_r5_tooltip_row_honesty_and_partition_on_real_census(real_run):
+    """Arbiter F3 + TR6: the tooltip-spawner row ships only meaningful
+    (script-class) definitions — Unity-generic containers noted separately,
+    never justifying a mapped row or riding as definitions — and the anchor
+    partition executes on the real emitted output."""
+    ns = real_run.ok()
+    cov = read_jsonl(ns.ext / "relinks" / "ui_link_coverage.jsonl")
+    trow = next(r for r in cov if r["surfaceId"] == "tooltip-spawner")
+    errs = rl.validate_coverage_row(trow)
+    assert not errs, errs
+    script = [d["class"] for d in trow["definitionClasses"]]
+    generic = trow.get("genericContainerClasses") or []
+    counter = ns.counter("tooltipTargetClasses")
+    assert counter is not None, "run section lost tooltipTargetClasses"
+    assert counter == len(script), (counter, len(script))
+    generic_counter = ns.counter("tooltipGenericContainers")
+    assert generic_counter is not None, \
+        "run section lost tooltipGenericContainers (F3 split)"
+    assert generic_counter == len(generic), (generic_counter, len(generic))
+    engine_names = {"MonoBehaviour", "Transform", "RectTransform",
+                    "GameObject", "MonoScript"}
+    assert not set(script) & engine_names, \
+        f"Unity-generic containers ride as tooltip definitions: {sorted(set(script) & engine_names)[:5]}"
+    if trow["status"] == "mapped-schema":
+        assert script, "mapped tooltip row carries no meaningful classes"
+        assert trow["joins"], "mapped tooltip row names no joins"
+        matrix = read_json(ns.ext / "relinks" / "matrix.json")
+        cells = {f"{p['srcKind']}_{p['dstKind']}" for p in matrix["pairs"]}
+        stray = sorted(set(trow["joins"]) - cells)
+        assert not stray, f"joins name non-measured cells: {stray[:5]}"
+        # the partition executes on the REAL census and holds
+        viol = rl.coverage_partition_violations(cov, script, [])
+        assert not viol, viol[:4]
+    else:
+        assert not trow["joins"], "gap tooltip row carries joins"
+        assert trow["gapReason"], trow
+
+
 # --- R6 ------------------------------------------------------------------------------
 
 def test_r6_floor_state_reported_truthfully(real_run):

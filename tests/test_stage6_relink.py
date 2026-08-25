@@ -935,8 +935,104 @@ def test_r5_blackbox_ui_link_coverage(fx_relink, tmp_path_factory):
     # not from the scout's prose seed spellings — only the fixture's own
     # harvested *Menu* class belongs in this census
     harvested = [rl.DISCOVERY_FLOOR_PROBE_CLASS]
+    # arbiter F3/TR6: the anchor partition RUNS AGAINST THE EMITTED OUTPUT
+    # and has teeth — the fixture plants TPC.MysteryUncoveredTarget, covered
+    # by no mapped row, and exactly that hole must fire
+    viol = rl.coverage_partition_violations(cov, rl.TOOLTIP_TARGETS,
+                                            harvested)
+    assert len(viol) == 1 and "TPC.MysteryUncoveredTarget" in viol[0], \
+        f"planted uncovered tooltip target not flagged: {viol[:4]}"
+    # F3 honesty: hostless spawner dumps carry no resolvable PPtr targets,
+    # so the row ships documented-gap naming the monoScript hop — never
+    # mapped-schema propped up by Unity-generic container classes
+    trow = next(r for r in cov if r["surfaceId"] == "tooltip-spawner")
+    assert trow["status"] == "documented-gap", trow
+    assert trow["joins"] == [] and trow["gapReason"], trow
+    assert "dump" in trow["gapReason"].lower(), trow
     viol = rl.coverage_partition_violations(cov, [], harvested)
     assert not viol, f"bar-2 gates violated on fixture inputs: {viol[:4]}"
+
+
+def test_r5_tooltip_script_hop_census_split(tmp_path):
+    """F3 preferred branch: a resolved target whose OWN dump carries
+    `_scriptClass` lands in scriptClasses; a dump-less target falls to the
+    generic cab-class bucket; same-file targets take the table hop."""
+    mod = _impl.load_any(*_impl.STAGE6_SCRIPTS)
+    fn = _impl.get_sym(mod, *_impl.TOOLTIP_CENSUS_NAMES)
+    if mod is None or fn is None:
+        pytest.skip("impl-missing: tooltip target census not resolvable yet")
+    ru_m = getattr(mod, "ru", None)
+    assert ru_m is not None, "stage6 module lost its relink_util alias"
+
+    mono = tmp_path / "monobehaviours"
+    spawner_dir = mono / "ui_assets_all" / "TPC.TooltipSpawner"
+    spawner_dir.mkdir(parents=True)
+    (spawner_dir / "ui_assets_all_8801.json").write_text(json.dumps({
+        "_sourceFile": "CAB-ui1111", "_scriptClass": "TPC.TooltipSpawner",
+        "Target": rl.PPTR_STRUCT(1, 501),      # stub entity WITH a dump
+        "Raw": rl.PPTR_STRUCT(1, 500),          # resolved, dump-less
+        "Local": rl.PPTR_STRUCT(0, 8802),       # same-file GameObject
+    }, sort_keys=True), encoding="utf-8", newline="\n")
+    tgt_dir = mono / "targets_assets_all" / "TPC.ItemConfig"
+    tgt_dir.mkdir(parents=True)
+    (tgt_dir / "targets_assets_all_501.json").write_text(json.dumps({
+        "_sourceFile": "CAB-tgt2222", "_scriptClass": "TPC.ItemConfig",
+    }, sort_keys=True), encoding="utf-8", newline="\n")
+
+    bridges = ru_m.BridgeIndexes(BUILD_ID)
+    bridges.add_bundle(
+        "TPC_Data/x/ui_assets_all.bundle",
+        [("CAB-ui1111", [(8801, "MonoBehaviour"), (8802, "GameObject")])],
+        [], False)
+    bridges.add_bundle(
+        "TPC_Data/x/targets_assets_all.bundle",
+        [("CAB-tgt2222", [(500, "MonoBehaviour"), (501, "MonoBehaviour")])],
+        [], False)
+    stubs = ru_m.StubIndex()
+    stubs.add_row({"id": "Item_A", "kind": "item", "slug": None,
+                   "fields": {},
+                   "source": {"bundle": "TPC_Data/x/targets_assets_all.bundle",
+                              "class": "TPC.ItemConfig", "pathId": 501},
+                   "provisional": True, "inferred": True,
+                   "method": "seeded-class-heuristic", "buildId": BUILD_ID})
+    externals = {("TPC_Data/x/ui_assets_all.bundle", "cab-ui1111"):
+                 {1: "archive:/CAB-tgt2222"}}
+    resolver = ru_m.CrossFileResolver(bridges, externals, stubs, {})
+    stem_to_rel = {"ui_assets_all": "TPC_Data/x/ui_assets_all.bundle"}
+
+    result = fn(mono, bridges, resolver, stem_to_rel)
+    if isinstance(result, list):     # pre-F3 shape: flat class list
+        pytest.skip("impl-shape: tooltip census still ships an unsplit list")
+    census = result
+    assert census.get("scriptClasses") == ["TPC.ItemConfig"], census
+    assert sorted(census.get("genericContainerClasses") or []) == \
+        ["GameObject", "MonoBehaviour"], census
+
+    # joins derivation: build_ui_coverage admits kinds via the stub corpus's
+    # source classes — ItemConfig belongs to `item`, so measured cells
+    # touching `item` are the only legal joins
+    cov_fn = _impl.get_sym(mod, *_impl.COVERAGE_BUILD_NAMES)
+    if cov_fn is None:
+        pytest.skip("impl-missing: ui coverage builder not resolvable yet")
+    manifest = {"TPC.ItemConfig": 4}
+    rows, counters = cov_fn(
+        manifest, set(), {("room", "item"), ("config", "config")}, census,
+        {"item": {"TPC.ItemConfig"}, "room": {"TPC.RoomConfig"}},
+        7, BUILD_ID)
+    trow = next(r for r in rows if r["surfaceId"] == "tooltip-spawner")
+    assert trow["status"] == "mapped-schema", trow
+    assert trow["joins"] == ["room_item"], trow
+    assert [d["class"] for d in trow["definitionClasses"]] == \
+        ["TPC.ItemConfig"], trow
+    assert counters["tooltipTargetClasses"] == 1
+    assert counters["tooltipGenericContainers"] == 2
+
+    # XOR contract: script classes that admit NO measured cell ship a gap
+    rows2, _ = cov_fn(manifest, set(), {("config", "config")}, census,
+                      {"staff": {"TPC.StaffConfig"}}, 7, BUILD_ID)
+    trow2 = next(r for r in rows2 if r["surfaceId"] == "tooltip-spawner")
+    assert trow2["status"] == "documented-gap", trow2
+    assert trow2["joins"] == [] and trow2["gapReason"], trow2
 
 def test_r6_blackbox_competition_absent_floor_unmet_exit2(fx_relink, tmp_path_factory):
     """Absence routing (§R6 explicit): no committed competitor inputs can only

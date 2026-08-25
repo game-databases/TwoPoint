@@ -736,18 +736,49 @@ def _count_matching(counts: Counter, prefix: str) -> tuple[int, list]:
     return total, members
 
 
+def _script_class_for_target(monobehaviours_dir: Path, bundle_rel: str,
+                             pid: int):
+    """The `_scriptClass` a harvested dump carries in-band for object
+    `(bundle_rel, pid)` — stage-3 embeds script identity on every MonoBehaviour
+    payload while the dump FILENAME spells `<bundle-stem>_<signed-pathId>`
+    under the bundle's own subdirectory. None when the object has no harvested
+    dump (engine-side targets: AnimationClip, Transforms, …)."""
+    stem = ru.bundle_base(bundle_rel)
+    if stem.endswith(".bundle"):
+        stem = stem[:-len(".bundle")]
+    d = monobehaviours_dir / stem
+    if not d.is_dir():
+        return None
+    for path in sorted(d.rglob(f"{stem}_{pid}.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            continue
+        sc = payload.get("_scriptClass")
+        if isinstance(sc, str) and sc:
+            return sc
+    return None
+
+
 def tooltip_target_classes(monobehaviours_dir: Path, bridges,
                            resolver: ru.CrossFileResolver,
-                           stem_to_rel: dict) -> list[str]:
-    """The TooltipSpawner anchor census: distinct classes of the objects its
-    own PPtr fields reference, resolved through the same-file membership +
-    externals/cab-index ladder. Dump provenance: stage-3 embeds `_sourceFile`
-    (the owning serialized file's lowered CAB name) on each payload while the
-    dump FILENAME carries `<bundle-stem>_<signed-pathId>` — so the owning
-    bundle comes from the stem→roster-relpath map and the pair is verified
-    against the bridge before any lookup (m_Script/m_GameObject leaves are
-    excluded upstream by walk_pptr_leaves — script identity ships in-band)."""
-    classes: set[str] = set()
+                           stem_to_rel: dict) -> dict:
+    """The TooltipSpawner anchor census, split by meaningfulness (arbiter F3).
+
+    Returns {"scriptClasses": [...], "genericContainerClasses": [...]}:
+    script classes come from one more hop than the bare ladder — a resolved
+    target's OWN harvested dump carries `_scriptClass` in-band — while
+    generic container classes are the Unity engine names the cab tables give
+    for targets without dumps (AnimationClip, Transform, …). Dump
+    provenance: stage-3 embeds `_sourceFile` (the owning serialized file's
+    lowered CAB name) on each payload while the dump FILENAME carries
+    `<bundle-stem>_<signed-pathId>` — the owning bundle comes from the
+    stem→roster-relpath map and the pair is verified against the bridge
+    before any lookup (m_Script/m_GameObject leaves are excluded upstream by
+    walk_pptr_leaves — script identity ships in-band)."""
+    script: set[str] = set()
+    generic: set[str] = set()
+    hop_memo: dict[tuple[str, int], str | None] = {}
     dumps = sorted(monobehaviours_dir.rglob("*/*.json"))
     for path in dumps:
         parts = path.as_posix().replace("\\", "/").split("/")
@@ -765,26 +796,40 @@ def tooltip_target_classes(monobehaviours_dir: Path, bridges,
         if bundle is None or (bundle, src_cab) not in bridges.cabs:
             continue
         table = bridges.cabs[(bundle, src_cab)]
+
+        def _note(b, pid):
+            key = (str(b), int(pid))
+            if key not in hop_memo:
+                hop_memo[key] = _script_class_for_target(
+                    monobehaviours_dir, key[0], key[1])
+            sc = hop_memo[key]
+            if sc is not None:
+                script.add(sc)
+                return
+            ci = _lookup_class_any(bridges, b, pid)
+            if ci is not None:
+                generic.add(bridges.class_name(ci))
+
         for _leaf_key, _raw_path, fid, pid in ru.walk_pptr_leaves(payload):
             if fid == 0:
-                ci = table.class_of(pid)
-                if ci is not None:
-                    classes.add(bridges.class_name(ci))
+                if table.has(pid):
+                    _note(bundle, pid)
+                else:
+                    ci = table.class_of(pid)
+                    if ci is not None:
+                        generic.add(bridges.class_name(ci))
                 continue
             out = resolver.resolve(bundle, src_cab, fid, pid)
             if out["status"] in ("stub", "scene"):
-                ci = _lookup_class_any(bridges, out.get("bundle"), pid)
-                if ci is not None:
-                    classes.add(bridges.class_name(ci))
+                _note(out.get("bundle"), pid)
             elif out["status"] == "unresolved" and out.get("extPath"):
                 for b, cab in bridges.cab_owners.get(out["extPath"], ()):
                     tbl = bridges.cabs.get((b, cab))
                     if tbl is not None and tbl.has(pid):
-                        ci = tbl.class_of(pid)
-                        if ci is not None:
-                            classes.add(bridges.class_name(ci))
+                        _note(b, pid)
                         break
-    return sorted(classes)
+    return {"scriptClasses": sorted(script),
+            "genericContainerClasses": sorted(generic)}
 
 
 def _lookup_class_any(bridges, bundle, pid):
@@ -798,17 +843,25 @@ def _lookup_class_any(bridges, bundle, pid):
 
 
 def build_ui_coverage(manifest_counts: Counter, unmapped_classes: set,
-                      measured_cells: set, tooltip_classes: list[str],
-                      localize_count: int, build_id):
+                      measured_cells: set, tooltip_census: dict,
+                      kind_classes: dict, localize_count: int, build_id):
     """R5 rows: nine seeded surfaces + the mechanical discovery floor
     (`*Menu*|*UI*|*Inspector*`) + the Localize binding census row. Every
     floor class lands mapped or gapped; every tooltip target class sits in
-    the tooltip-spawner mapped row's definitionClasses (anchor partition)."""
+    the tooltip-spawner mapped row's definitionClasses (anchor partition).
+
+    The tooltip-spawner row ships only MEANINGFUL classes in
+    definitionClasses — script identities recovered from the targets' own
+    dumps (arbiter F3). Unity-generic container classes are noted separately
+    in genericContainerClasses and never justify a mapped row; joins derive
+    from the pair-dataset cells of the kinds those script classes belong to
+    (via `kind_classes`: kind → stub-corpus source classes), never from an
+    unrelated all-cells sweep."""
     rows: list[dict] = []
 
     def row(surface_id, ui_class, exported, def_members, families, status,
-            joins, gap_reason=None, unblock=None):
-        rows.append({
+            joins, gap_reason=None, unblock=None, extra=None):
+        r = {
             "surfaceId": surface_id, "uiClass": ui_class,
             "exportedCount": exported,
             "definitionClasses": [{"class": c,
@@ -816,7 +869,10 @@ def build_ui_coverage(manifest_counts: Counter, unmapped_classes: set,
                                   for c in def_members],
             "impliedFamilies": families, "status": status, "joins": joins,
             "gapReason": gap_reason, "unblock": unblock,
-            "buildId": build_id})
+            "buildId": build_id}
+        if extra:
+            r.update(extra)
+        rows.append(r)
 
     covered: set[str] = set()
 
@@ -845,23 +901,43 @@ def build_ui_coverage(manifest_counts: Counter, unmapped_classes: set,
         covered.update(ui_members)
         covered.update(def_members)
 
-    # tooltip-spawner anchor row — definitionClasses carry the FULL census.
-    # Joins are named ONLY on a mapped row (the XOR contract: a gap carries
-    # gapReason + unblock and NO joins).
+    # tooltip-spawner anchor row — definitionClasses carry the SCRIPT-class
+    # census only. Status is honest about how it was derived: Unity-generic
+    # containers never count as definitions (arbiter F3), and a gap names
+    # the monoScript-hop unblock with NO joins (the XOR contract).
+    script_classes = list(tooltip_census.get("scriptClasses") or ())
+    generic_classes = sorted(tooltip_census.get("genericContainerClasses")
+                             or ())
+    admitted_kinds = sorted(
+        k for k, cs in (kind_classes or {}).items()
+        if cs and set(script_classes) & cs)
     tooltip_joins = sorted({f"{s}_{d}" for (s, d) in measured_cells
-                            if s != d})[:25] if tooltip_classes else []
+                            if s in admitted_kinds or d in admitted_kinds})
+    if script_classes and tooltip_joins:
+        t_status, t_gap, t_unblock = "mapped-schema", None, None
+    elif not script_classes:
+        t_status = "documented-gap"
+        t_gap = ("tooltip target MonoBehaviours' script identity not "
+                 "recoverable: resolved targets carry no harvested dump "
+                 "(monoScript hop empty) on this corpus")
+        t_unblock = ("extend stage-3 harvesting to the spawner targets' "
+                     "bundles so their dumps carry _scriptClass, then "
+                     "re-run; piece-02 §R5")
+    else:
+        t_status = "documented-gap"
+        t_gap = ("tooltip target script classes resolve but admit no "
+                 "measured pair-dataset cell yet")
+        t_unblock = ("grow cross-file PPtr resolution until one of the "
+                     "targets' kinds carries edges; piece-02 §R5")
+    extra = {"genericContainerClasses": generic_classes} \
+        if generic_classes else None
     row("tooltip-spawner", "TPC.TooltipSpawner",
         manifest_counts.get("TPC.TooltipSpawner", 0),
-        list(tooltip_classes),
+        script_classes,
         ["entity-cross-link-renderer"],
-        "mapped-schema" if tooltip_classes else "documented-gap",
-        tooltip_joins,
-        None if tooltip_classes else
-        "TooltipSpawner dumps carry no resolvable target references",
-        None if tooltip_classes else
-        "resolve spawner prefab PPtrs after bridge growth; piece-02 §R5")
+        t_status, tooltip_joins, t_gap, t_unblock, extra)
     covered.add("TPC.TooltipSpawner")
-    covered.update(tooltip_classes)
+    covered.update(script_classes)
 
     # I2.Loc.Localize binding census — the UI-localization surface
     row("i2-localize-bindings", "I2.Loc.Localize", localize_count, [],
@@ -890,7 +966,8 @@ def build_ui_coverage(manifest_counts: Counter, unmapped_classes: set,
         "mappedSchema": sum(1 for r in rows if r["status"] == "mapped-schema"),
         "documentedGaps": sum(1 for r in rows
                               if r["status"] == "documented-gap"),
-        "tooltipTargetClasses": len(tooltip_classes),
+        "tooltipTargetClasses": len(script_classes),
+        "tooltipGenericContainers": len(generic_classes),
         "localizeBindings": localize_count,
     }
     return rows, counters
@@ -1057,13 +1134,17 @@ def run(game_root: Path, extracted_root: Path) -> int:
     log_util.write_json(relinks / "locale_join_report.json", locale_report)
 
     # -- R5 ------------------------------------------------------------------
-    tooltip_classes = tooltip_target_classes(
+    tooltip_census = tooltip_target_classes(
         extracted_root / "harvest" / "monobehaviours", bridges, resolver,
         stem_to_rel)
     measured_cells = {(sk, dk) for (sk, dk) in client_cells}
+    kind_classes = {
+        k: {str((r.get("source") or {}).get("class") or "")
+            for r in rows} - {""}
+        for k, rows in stubs.rows_by_kind.items()}
     coverage_rows, r5c = build_ui_coverage(
-        manifest_counts, unmapped_classes, measured_cells, tooltip_classes,
-        manifest_counts.get("I2.Loc.Localize", 0), build_id)
+        manifest_counts, unmapped_classes, measured_cells, tooltip_census,
+        kind_classes, manifest_counts.get("I2.Loc.Localize", 0), build_id)
 
     def _target_covered(cls: str) -> bool:
         """Anchor-rule membership: the class appears in some mapped row's
@@ -1077,7 +1158,7 @@ def run(game_root: Path, extracted_root: Path) -> int:
                 return True
         return False
 
-    uncovered_targets = [c for c in tooltip_classes
+    uncovered_targets = [c for c in tooltip_census.get("scriptClasses") or ()
                          if c != "TPC.TooltipSpawner"
                          and not _target_covered(c)]
     if uncovered_targets:
@@ -1228,6 +1309,7 @@ def run(game_root: Path, extracted_root: Path) -> int:
         f"mappedSchema={r5c['mappedSchema']} "
         f"documentedGaps={r5c['documentedGaps']} "
         f"tooltipTargetClasses={r5c['tooltipTargetClasses']} "
+        f"tooltipGenericContainers={r5c['tooltipGenericContainers']} "
         f"localizeBindings={r5c['localizeBindings']} "
         f"hierarchyRowsRead={hier_rows}",
         f"- R6: sourcesRead={r6c['sourcesRead']} "

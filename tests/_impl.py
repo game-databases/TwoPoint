@@ -198,6 +198,8 @@ UNRESOLVED_ATTRIBUTION_NAMES = ("attribute_unresolved_residue",
                                 "attribute_unresolved",
                                 "classify_unresolved_residue",
                                 "unresolved_residue_charges")
+COVERAGE_BUILD_NAMES = ("build_ui_coverage", "build_coverage_map",
+                        "ui_link_coverage_rows", "coverage_rows")
 GUID_BRIDGE_NAMES = ("run_guid_bridge", "bridge_guids", "guid_bridge",
                      "resolve_asset_guid_refs", "build_guid_bridge")
 REGISTRY_BUILDER_NAMES = ("build_i2_term_registry", "build_term_registry",
