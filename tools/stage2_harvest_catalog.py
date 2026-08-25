@@ -304,10 +304,27 @@ def run(game_root: Path, extracted_root: Path) -> int:
             _find_catalog_monobehaviour(env, synth, primary_note=primary_note))
         decode_route = "monobehaviour-typetree(secondary)"
 
-    # roster universe normalized once
-    norm_to_relpath: dict[str, str] = {}
+    # roster universe normalized once. Two roster rows normalizing to the
+    # SAME case-folded basename would make this map last-write-wins and
+    # silently mis-join every catalog reference to the loser — fail loudly
+    # naming the collisions instead (CR#7; zero collisions on the measured
+    # 176-row roster).
+    by_norm: dict[str, list[str]] = {}
     for row in roster:
-        norm_to_relpath[tc.normalize_ref(row["relpath"])] = row["relpath"]
+        by_norm.setdefault(tc.normalize_ref(row["relpath"]), []) \
+            .append(row["relpath"])
+    collided = {n: rels for n, rels in by_norm.items() if len(rels) > 1}
+    if collided:
+        sample = "; ".join(f"{n!r} <- {rels}"
+                           for n, rels in sorted(collided.items())[:8])
+        raise tc.StageError(
+            f"{sum(len(v) for v in collided.values())} roster rows collide "
+            f"on {len(collided)} normalized basename(s) — the match key is "
+            "the case-folded basename after prefix stripping, so these rows "
+            f"cannot be distinguished and the join would be silent "
+            f"last-write-wins; first few: {sample}", exit_code=1)
+    norm_to_relpath: dict[str, str] = {n: rels[0]
+                                       for n, rels in by_norm.items()}
 
     details: dict = {}
     keys_out, unresolved = map_catalog_keys(decoded, norm_to_relpath, details)
