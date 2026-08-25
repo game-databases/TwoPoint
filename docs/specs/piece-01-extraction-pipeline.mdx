@@ -11,6 +11,53 @@ figures).
 
 ---
 
+## Revision 5 (executor-003 client-reality amendments)
+
+Grounded in the pipeline's first real-corpus stage failures —
+[`../../extracted/EXTRACTION-LOG.md`](../../extracted/EXTRACTION-LOG.md)
+run sections `2026-08-25T01:35:11Z` (harvest-catalog exit 1) and
+`2026-08-25T01:44:20Z` (localisation exit 1),
+[`.agents/logs/executor-003.log`](../../.agents/logs/executor-003.log),
+and orchestrator probes against the decoded catalog TextAsset and the
+locale bundles (2026-08-25). Two measured mechanism corrections; stage
+ids, exit codes, output paths, sentinels, and every emitted-file
+contract are unchanged:
+
+1. **Stage 2 dependency keys live in KEY SPACE, not the file roster.**
+   All 54,335 `m_InternalIds` are strings and only 192 end `.bundle`
+   (the rest are asset addresses); Addressables serializes dependency
+   keys as CRC-style decimal STRINGS naming OTHER CATALOG KEYS — a slot
+   literally named `-1064046067` exists and 83 entries carry it as
+   their `dependencyKey`; key kinds are `str ×56,658` + one `t4` + one
+   `t4_pair` (zero int/hash128 keys; the R8 arms stay, synthetically
+   tested). Resolving string `dependencyKey`s against the roster
+   universe was a category error, and it alone did not produce the
+   exit-1: the measured 205 misses decompose as 137 decimal key-space
+   spellings (57 negative + 80 positive) PLUS 68 `.bundle` references
+   carrying a trailing `_<32-hex>` suffix the on-disk roster filenames
+   do not have. §3 stage 2 gains two-pass key-index resolution, the
+   hash-suffix match mapping, a narrowed FILE-FORM hard gate, and
+   warning-only ledgers — `danglingDependencyKeys` (key-space danglings)
+   and `outOfRosterFileReferences` (19 distinct references to
+   uninstalled optional-DLC content, `dlc-hospital-*` /
+   `dlc-preorder-*`, absent from this install). Simulated end-to-end
+   against the real payload: every decimal key resolves transitively
+   and coverage reconciles at 176/176 roster bundles referenced.
+2. **Stage 4 locale bundles are I2 Localization `LanguageSource`
+   sources, not flat string tables.** The base overlay carries 26
+   category sources, each with `mTerms[]` (`{ID, Term, TermType,
+   TermStatus, Description, Languages[], Flags}`) and `mLanguages` (13
+   `{Name, Code}` rows); text lookup is per-term `Languages[i]` indexed
+   by that source's `mLanguages` order — the generic pair-walking
+   decoder extracted 0 rows from it → exit 1. §3 stage 4 decodes
+   LanguageSource payloads via typetree over the staged dummy DLLs,
+   emits `{id, text}` rows with the term's loc key preserved verbatim,
+   and reports per-locale `TermStatus` distributions as evidence
+   counts; the `compositionPolicy` classifier keeps operating over the
+   same observed counts with its four-value enum unchanged.
+
+---
+
 ## Revision 4 (executor-001 client-reality amendments)
 
 Grounded in executor-001's real-corpus run — findings recorded in
