@@ -294,7 +294,17 @@ def verbatim_id_of(row: dict) -> str:
 
 
 def payload_hash(payload: dict) -> str:
-    canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False,
+    """SHA-256 over the CLIENT-payload plane only: the normalized field
+    block emission reads (`payload_fields`), minus the decoder-bookkeeping
+    underscore keys (`_scriptClass`, `_decoded`, `_raw`, `_synthesis`) and,
+    for wrapped shapes, everything outside the `fields` block. Hashing route
+    metadata instead of client data could flip merge/disambiguate decisions
+    between copies of one entity that decoded via different routes (CR#5);
+    on a uniform-route corpus the hashes are unchanged."""
+    block = payload_fields(payload)
+    client_plane = {k: v for k, v in block.items()
+                    if not str(k).startswith("_")}
+    canonical = json.dumps(client_plane, sort_keys=True, ensure_ascii=False,
                            default=str)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
