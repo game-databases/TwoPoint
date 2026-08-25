@@ -77,18 +77,35 @@ RUN_SECTION_KEYS = {
     "R2": ["cellsTotal", "cellsModeled", "cellsPartial", "cellsMissing",
            "pairFilesEmitted", "edgesEmitted", "sameFileResolved",
            "crossFileResolved", "sceneAttributedEdges", "unresolvedCrossFile",
-           "builtinExternalsSkipped", "twinEndpointEdges"],
+           "builtinExternalsSkipped", "unresolvedSameFile", "twinEndpointEdges"],
     "R3": ["guidRefsTotal", "distinctGuids", "resolvedToAddress", "resolvedToStub",
            "danglingDistinctGuids", "danglingVerdicts"],
     "R4": ["languageSourcesRead", "registryRows", "registryDistinctKeys",
            "matrixKeyDiff", "instancesTotal", "sentinelZero", "registryHits",
            "registryMisses", "coverageOnNonEmpty"],
     "R5": ["surfacesTotal", "mappedSchema", "documentedGaps", "tooltipTargetClasses",
-           "localizeBindings"],
+           "tooltipGenericContainers", "localizeBindings"],
     "R6": ["sourcesRead", "sourcesApplied", "floorMet", "confirmsHard",
            "addsDerived", "flagsMissing", "wallsRecorded"],
     "R7": ["relationsMdBytes", "generatedFrom"],
 }
+
+
+def run_section_key_violations(text, *, where="run section"):
+    """Arbiter F10 (TR8): every pinned RUN_SECTION_KEYS key must appear in
+    the pass's run text with a parseable value after it (int, or true/false
+    for the boolean keys like floorMet). Returns violation strings — EMPTY
+    means the pass named all its counters; absence now FAILS instead of
+    being skipped over."""
+    e: list[str] = []
+    for section, keys in sorted(RUN_SECTION_KEYS.items()):
+        for key in keys:
+            m = re.search(rf"{re.escape(key)}\b[^0-9\n]*(-?\d+|true|false)",
+                          text, re.IGNORECASE)
+            if m is None:
+                e.append(f"{where}: {section} key {key!r} absent from the "
+                         "run section or carries no parseable value")
+    return e
 
 # --- §2 sample-edge anchors, embedded verbatim in the synthetic corpus -------------
 

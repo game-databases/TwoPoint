@@ -278,13 +278,17 @@ def test_r2_same_file_scale_anchors_and_ledger_counts(real_run):
     c_cross = ns.counter("unresolvedCrossFile")
     c_builtin = ns.counter("builtinExternalsSkipped")
     c_same = ns.counter("unresolvedSameFile")
-    if None not in (c_cross, c_builtin, c_same):
-        assert c_cross + c_builtin + c_same == len(unresolved), (
-            f"run-section counters {c_cross}+{c_builtin}+{c_same} != ledger "
-            f"rows {len(unresolved)}")
-        assert c_same == ledger_samefile, (
-            f"run-section unresolvedSameFile={c_same} != ledger's "
-            f"{ledger_samefile} extFileId==0 rows")
+    # arbiter F10: the counter identity is verified or the test FAILS — a
+    # missing run-section key can no longer silently skip the check
+    assert None not in (c_cross, c_builtin, c_same), (
+        f"run-section counter(s) missing: unresolvedCrossFile={c_cross} "
+        f"builtinExternalsSkipped={c_builtin} unresolvedSameFile={c_same}")
+    assert c_cross + c_builtin + c_same == len(unresolved), (
+        f"run-section counters {c_cross}+{c_builtin}+{c_same} != ledger "
+        f"rows {len(unresolved)}")
+    assert c_same == ledger_samefile, (
+        f"run-section unresolvedSameFile={c_same} != ledger's "
+        f"{ledger_samefile} extFileId==0 rows")
     keys = [(u["srcKind"], u["srcId"], u["fieldPath"], u["extPath"], u["m_PathID"])
             for u in unresolved]
     assert keys == sorted(keys), "_unresolved_pptrs pinned sort order violated"
@@ -335,6 +339,17 @@ def test_r2_scene_edges_resolve_against_roster_ids(real_run):
 
 
 # --- R6 ------------------------------------------------------------------------------
+
+def test_run_section_names_every_pinned_key(real_run):
+    """Arbiter F10 (TR8) on the real pass: every pinned RUN_SECTION_KEYS
+    key must appear with a parseable value in the run output or the log —
+    a missing key fails this lane instead of skipping the checks that need
+    it."""
+    ns = real_run.ok()
+    text = "\n".join(ns._sources())
+    errs = rl.run_section_key_violations(text)
+    assert not errs, errs[:8]
+
 
 def test_ac9_no_overlay_methods_in_client_datasets(real_run):
     """Arbiter F7/AC9: community overlays live ONLY in *.competitor.jsonl

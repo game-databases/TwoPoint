@@ -1188,6 +1188,15 @@ def test_r6_blackbox_competition_absent_floor_unmet_exit2(fx_relink, tmp_path_fa
     assert "acquisition cannot flip" in text and "alias" in text, text
     for row in ledger:
         assert rl.validate_competitor_ledger_row(row) == []
+    # arbiter F10 (TR8): the pass must name every pinned run-section key
+    # with a parseable value — absence is a failure, never a skip
+    log_text = r.stdout + r.stderr
+    log_file = ext / "EXTRACTION-LOG.md"
+    if log_file.exists():
+        log_text += "\n" + log_file.read_text(encoding="utf-8",
+                                              errors="replace")
+    errs = rl.run_section_key_violations(log_text)
+    assert not errs, errs[:8]
 
 
 def test_r6_flags_missing_samples_and_applied_semantics(tmp_path):
