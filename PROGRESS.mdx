@@ -65,6 +65,20 @@ nothing work-blocking.
 
 ## Log
 
+- 2026-08-25: **PIECE-02 RELINKING LANDED (pending formal review
+  round).** Spec SPEC-READY (`1ec82f59`, reviewer bounce F1–F12
+  applied) + Revision 7 registration (`6b601835`) + competitor models
+  gathered (`b95bbb4a`). Blind build pair → interface reconciliation →
+  `0b9d9a93` "corpus-proven". **`extracted/relinks/` = 37 real
+  artifacts**: matrix.json (10-node/100-cell pinned), pair datasets,
+  `entity_locale.jsonl` (GUID-path locale join v2),
+  `i2_term_registry`, `guid_bridge_report`, UI-link coverage,
+  competitor application. Orchestrator independent checks: 46/46
+  stage6+R11 tests green (D:-drive basetemp after the `.pytest_tmp`
+  recursion-bomb incident — my bug, cleaned, lesson recorded in #33).
+  Round survived repeated provider deaths via resume addenda + short-
+  scoping. NEXT: piece-2 review round → map geometry (#9), logic
+  layer, contracts (#10), PROOF.md (#11) → Phase D opens.
 - 2026-08-25: **REVIEW ROUND + R10 FIX ROUND COMPLETE — piece 1
   formally closed.** Reviewers: codereviewer-003 FIX-REQUIRED (#1–#3,
   independently re-proving the corpus behavior genuine),
