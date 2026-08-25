@@ -324,6 +324,23 @@ def test_r2_scene_edges_resolve_against_roster_ids(real_run):
               "install; occurrence may move with corpus changes")
 
 
+# --- R6 ------------------------------------------------------------------------------
+
+def test_ac9_no_overlay_methods_in_client_datasets(real_run):
+    """Arbiter F7/AC9: community overlays live ONLY in *.competitor.jsonl
+    siblings — every client pair dataset must be free of
+    competitor-model:* methods."""
+    ns = real_run.ok()
+    checked = 0
+    for name, rows in _pair_files(ns.ext).items():
+        bad = [r for r in rows
+               if str(r.get("method", "")).startswith("competitor-model:")]
+        assert not bad, \
+            f"{name} carries {len(bad)} overlay methods on client rows"
+        checked += len(rows)
+    assert checked > 0, "no client pair rows found to audit"
+
+
 # --- R3 ------------------------------------------------------------------------------
 
 def test_ac4_identifier_verbatim_on_real_pair_datasets(real_run):

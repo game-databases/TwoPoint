@@ -1070,6 +1070,100 @@ def test_ac4_sweep_bite(tmp_path):
     assert any("dstId outside" in x for x in errs), errs
 
 
+def test_r6_mapper_exact_convention_dedup_and_floor(tmp_path):
+    """Arbiter F7 (TR3; AC9): drive the real competitor mapper end-to-end —
+    exact match confirms-hard against the MEASURED edge set (no overlay row
+    may exist for it), convention matches ship inferred overlays validated
+    under validate_pair_row(overlay=True), disposition counting reconciles,
+    and the bar-3 floor flips exactly between two and three applied sources."""
+    mod, fn = _unit(_impl.COMPETITOR_APPLY_NAMES)
+
+    def claim(sk, sn, ok_, on, verb="requires"):
+        return {"subjectKind": sk, "subjectName": sn, "relationVerb": verb,
+                "objectKind": ok_, "objectName": on,
+                "sourcePage": f"https://fixture.invalid/{sn}/{on}"}
+
+    root = tmp_path / "competitor"
+    write_jsonl(root / "fandom" / "model.jsonl", [
+        # EXACT match AND present in the measured edge set -> confirms-hard,
+        # dedup-vs-measured: no overlay row for this edge
+        claim("room", rl.ANCHOR_ROOM, "item", rl.ANCHOR_ITEM),
+        # CONVENTION match (casefold + space->underscore) onto an edge the
+        # measured set does NOT carry -> adds-derived overlay row
+        claim("room", "room archaeology display", "item", rl.TWIN_ID),
+    ])
+    write_jsonl(root / "wiki-gg" / "model.jsonl", [
+        # community kind `event` maps to our `config` (declared convention)
+        claim("course", "Course_Archaeology", "event", rl.COURSE_MODULE_ID,
+              verb="teaches"),
+    ])
+    write_jsonl(root / "steam-guides" / "model.jsonl", [
+        claim("campus", "CampusLevel_Metagame", "item", rl.ANCHOR_ITEM,
+              verb="grants"),
+    ])
+
+    stubs = ru_m_stub_index()
+    measured = {
+        ("room", rl.ANCHOR_ROOM, "item", rl.ANCHOR_ITEM),
+        ("course", "Course_Archaeology", "config", rl.COURSE_MODULE_ID),
+    }
+    ledger, overlays, counts, floor_met = fn(root, stubs, measured, BUILD_ID)
+
+    by_src = {r["sourceId"]: r for r in ledger if r.get("sourceId") != "~floor"}
+    assert by_src["fandom"]["dispositions"] == {
+        "confirms-hard": 1, "adds-derived": 1, "flags-missing": 0}
+    assert by_src["wiki-gg"]["dispositions"]["confirms-hard"] == 1
+    assert by_src["steam-guides"]["dispositions"]["adds-derived"] == 1
+    assert not [r for r in ledger if r.get("sourceId") == "~floor"], \
+        "three applied sources must meet the floor — no terminal row"
+    assert floor_met is True
+    assert counts["confirmsHard"] == 2 and counts["addsDerived"] == 2
+
+    # overlays: only the NON-measured claims, one per remaining edge
+    got = {}
+    for g in overlays.groups.values():
+        row = overlays.finalize(g)
+        errs = rl.validate_pair_row(row, where="overlay ", overlay=True)
+        assert not errs, errs
+        cell = (row["srcKind"], row["dstKind"])
+        got.setdefault(cell, []).append(row)
+    # only the two NON-measured claims emit overlays; the measured-set
+    # claims (fandom exact + wiki-gg) confirm hard and never overlay
+    assert sorted(got) == [("campus-level", "item"), ("room", "item")]
+    assert all(r["method"].startswith("competitor-model:") for cell_rows in
+               got.values() for r in cell_rows)
+    assert all(r["inferred"] is True and r["mechanism"] == "inferred"
+               for cell_rows in got.values() for r in cell_rows)
+    assert any(r["method"] == "competitor-model:fandom"
+               and r["dstId"] == rl.TWIN_ID
+               for r in got[("room", "item")])
+    assert any(r["evidence"]["fieldPath"] == "grants"
+               for r in got[("campus-level", "item")])
+    # dedup-vs-measured bite: rerun WITHOUT the measured set — the exact
+    # claim now becomes an overlay too (its own dedup group), proving the
+    # first run's absence was measured-set-driven
+    ledger2, overlays2, counts2, _ = fn(root, stubs, set(), BUILD_ID)
+    assert len(overlays2.groups) == 4   # 2x room_item + course_config + campus-level_item
+    assert counts2["confirmsHard"] == 0 and counts2["addsDerived"] == 4
+    ri = [overlays2.finalize(g) for g in overlays2.groups.values()
+          if (g["srcKind"], g["dstKind"]) == ("room", "item")]
+    assert sorted(r["dstId"] for r in ri) == \
+        sorted([rl.ANCHOR_ITEM, rl.TWIN_ID]), ri
+    assert all(r["evidence"]["refCount"] == 1 for r in ri), ri
+
+
+def ru_m_stub_index():
+    """StubIndex loaded from the fixture corpus (shared by R6 mapper legs)."""
+    import _impl as _im
+    mod = _im.load_any(*_im.STAGE6_SCRIPTS)
+    ru_m = getattr(mod, "ru")
+    stubs = ru_m.StubIndex()
+    for kind, rows in rl.relink_stub_rows().items():
+        for r in rows:
+            stubs.add_row(r)
+    return stubs
+
+
 def test_r6_blackbox_competition_absent_floor_unmet_exit2(fx_relink, tmp_path_factory):
     """Absence routing (§R6 explicit): no committed competitor inputs can only
     lower the floor result — exit 2 + terminal ledger naming the unblock,

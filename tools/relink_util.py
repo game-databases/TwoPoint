@@ -1154,7 +1154,7 @@ def validate_pair_row(row: dict, node_universe=frozenset(NODE_UNIVERSE)) -> None
         raise RelinkError("pair row evidence must be an object", 1)
     optional_keys: frozenset = frozenset()
     if is_overlay:
-        want = {"claim", "sourcePage"}
+        want = {"claim", "fieldPath", "sourcePage"}
         # the accumulator stamps refCount on every merged group (AC3: int ≥ 1)
         optional_keys = frozenset({"refCount"})
     elif is_convention:
@@ -1336,13 +1336,24 @@ def apply_competitor_sources(competitor_root: Path, stubs: StubIndex,
                 claim = json.loads(line)
                 subj_kind = COMMUNITY_KIND_MAP.get(str(claim.get("subjectKind")))
                 obj_kind = COMMUNITY_KIND_MAP.get(str(claim.get("objectKind")))
+                # resolve against the MAPPED kind: the declared convention
+                # (`event` -> config, `campus` -> campus-level, …) must carry
+                # name resolution, not just cell addressing — resolving with
+                # the raw community spelling made every mapped-spelling
+                # claim structurally unresolvable
                 subj_id, subj_close = (
-                    resolver.resolve(str(claim.get("subjectKind")),
+                    resolver.resolve(subj_kind,
                                      str(claim.get("subjectName")))
                     if subj_kind else (None, []))
-                obj_id, obj_close = (resolver.resolve(str(claim.get("objectKind")),
+                obj_id, obj_close = (resolver.resolve(obj_kind,
                                                       str(claim.get("objectName")))
                                      if obj_kind else (None, []))
+                # resolve() signals success with an inferred bool, failure
+                # with the candidate list — normalize before merging
+                if not isinstance(subj_close, (list, tuple)):
+                    subj_close = []
+                if not isinstance(obj_close, (list, tuple)):
+                    obj_close = []
                 if subj_kind is None or obj_kind is None or subj_id is None \
                         or obj_id is None:
                     disp["flags-missing"] += 1
@@ -1370,7 +1381,8 @@ def apply_competitor_sources(competitor_root: Path, stubs: StubIndex,
                         subj_kind, subj_id, obj_kind, obj_id,
                         f"competitor-model:{sid}",
                         str(claim.get("relationVerb") or ""),
-                        {"claim": str(claim.get("relationVerb") or ""),
+                        {"fieldPath": str(claim.get("relationVerb") or ""),
+                         "claim": str(claim.get("relationVerb") or ""),
                          "sourcePage": str(claim.get("sourcePage") or "")},
                         True, mechanism="inferred")
         artifact = f"data/sources/competitor/{sid}/model.jsonl"
