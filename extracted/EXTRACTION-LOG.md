@@ -89,3 +89,27 @@ changes land in it in the same commit that changes the entrypoint.
 - bundlesAttempted: 176; unreadableBundles: 176
 - censusObjectsTotal: 0; exports: 0; catalogueRows: 0; objectErrors: 0; censusOnlyResidual: 0
 - carvedClassCensus: {}
+### 2026-08-24T20:43:26Z — verify-client
+- exitCode: 0
+- buildId: 20226581 (TargetBuildID 20226581)
+- metadataVersion: 27; dumper: il2cppdumper
+- unityVersion: 2020.3.47f1; versionString: `10.3.169253+2024-12-06.1241`
+- addressablesVersion: 1.21.10; settingsHash: ff59c4d7914829f354d3efeefc3819f0
+- rosterRows: 176 (by class: [('base', 158), ('dlc-ghost', 8), ('dlc-space', 10)]); localeFlagged: 14
+- sceneCounts: {'strictUnityBase': 21, 'seasonalSceneCarryingBase': 22, 'strictUnityInstall': 25, 'sceneCarryingInstall': 26}
+- extractionLogSeeded: False
+### 2026-08-24T20:43:37Z — decompile
+- exitCode: 0
+- tool: Il2CppDumper vunknown at D:\unpacked_game_data\albion-online\_tooling\il2cppdumper\Il2CppDumper.exe
+- inputs: GameAssembly.dll 311226368 B, global-metadata.dat 14284260 B
+- measuredMetadataVersion: 27
+- dummyDllImages: 101 (gate: non-empty set; Assembly-CSharp.dll not required)
+- assemblyIndexPresent: 88
+- assemblyIndexTotal: 148
+- dllParseErrors: 0
+- hierarchyRowCount: 20037
+- hierarchySource: dummydll-typedef-enumeration
+- registryCount: 1900
+### 2026-08-24T20:43:40Z — harvest-catalog
+- exitCode: 1 (failed)
+- PROBLEM: catalog.bundle decoded via NEITHER route: the primary TextAsset "catalog" is absent or malformed AND no decodable ContentCatalogData MonoBehaviour exists — the secondary typetree route needs stage-1 dump.cs (decompiled/il2cppdumper/dump.cs)

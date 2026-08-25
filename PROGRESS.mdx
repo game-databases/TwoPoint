@@ -53,13 +53,32 @@ data; extraction runs in place).
 | reviewer-001 → reviewer-002 → reviewer-003 | Spec review rounds (bounce R1–R11 → FIX-REQUIRED ×2 one-liners) | **done** — release sanctioned after spot-check |
 | arbiter-001 | 11-item accepted-change ruling on the spec | **done** — all applied by Revision 2 |
 | fixer-003 | Two one-line residuals on Revision 2 | **done** — orchestrator spot-checked both lines (`9575203`) |
-| codewriter-001 · testwriter-001 | Piece-1 build pair: pipeline impl ∥ test suite, blind to each other | **running** |
+| codewriter-001 · testwriter-001 | Piece-1 build pair: pipeline impl ∥ test suite, blind to each other | **done** — C0 closed |
+| executor-001 | Real-corpus stage run → 3 client-reality findings | **done** — Rev 4 amendments |
+| executor-002 | Real-corpus re-run post-R4 | **blocked** — launch config lacked exec + A:\ grant; zero writes, clean read-only audit of `de04c7e` |
+| codefixer-006 | R5–R8 catalog-decoder root-cause round | **done-as-parked** — session write-denied; patch transcribed |
+| codefixer-007 | Apply parked R8 decoder patch (tools+tests+commit) | **running** (relaunched orchestrator, 2026-08-25) |
 
-Owner questions: [QUESTION-QUEUE.md](QUESTION-QUEUE.md) — one standing
-item (domain+tier), nothing work-blocking.
+Owner questions: [QUESTION-QUEUE.md](QUESTION-QUEUE.md) — two standing
+items (domain+tier; compositionPolicy semantics pinning after stage 4),
+nothing work-blocking.
 
 ## Log
 
+- 2026-08-25: **Orchestrator relaunched after full stop.** Previous
+  session went write/exec-sandboxed around fixer round 5 and was
+  stopped; rounds 5–8 survived only as a parked memory patch. This
+  session probed WRITE-OK (hostname Ne8k). State reconstructed: all six
+  Revision-4 fixes verified in-tree at `de04c7e`; the uncommitted
+  EXTRACTION-LOG rows (20:43Z verify-client 0 / decompile 0 /
+  harvest-catalog fail) are pre-R8 measured facts — committed as
+  bookkeeping. Round-8 patch (drop false Σ-memberships==entryCount
+  invariant; real payload 81,146 memberships over 66,129 entries;
+  prime-int + Hash128 key arms) transcribed verbatim to
+  `.agents/round8-catalog-decoder.patch.mdx`; **codefixer-007 seated**
+  to apply + pytest + commit. Next: independent verification, delete
+  parked memory, then executor-003 re-runs harvest-catalog on the real
+  client with full grants.
 - 2026-08-24: **Executor-001 ran the real corpus — 3 client-reality
   findings, spec Revision 4 in flight.** Stages 0/1/3 completed
   (roster 176 exact; decompile 287 MB incl. DummyDll + dump.cs;
