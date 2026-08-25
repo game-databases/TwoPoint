@@ -361,6 +361,129 @@ def _iter_string_fields(node, path=""):
                 stack.append((f"{p}[{i}]", v))
 
 
+# node spellings with separators stripped, for leaf-key matching only
+_KIND_BY_LEAF = {re.sub(r"[^a-z0-9]", "", k): k for k in ru.NODE_UNIVERSE}
+
+
+def _leaf_named_kind(field_path: str):
+    """The node-universe kind a field path's leaf key NAMES, or None — the
+    `.references.NNNN.data.Course` probe rule generalized to every source
+    kind (arbiter F1). Match is exact on the separator-stripped lowercased
+    leaf against the node spellings: plurals (`Items`) and compounds
+    (`BalanceConfig`, `OverrideAnims`) never match."""
+    leaf = field_path.rsplit(".", 1)[-1]
+    cut = leaf.find("[")
+    if cut >= 0:
+        leaf = leaf[:cut]
+    return _KIND_BY_LEAF.get(re.sub(r"[^a-z0-9]", "", leaf.lower()))
+
+
+def attribute_unresolved_residue(unresolved, stubs: ru.StubIndex,
+                                 bridges: ru.BridgeIndexes,
+                                 resolver: ru.CrossFileResolver):
+    """Destination-derived attribution of ledgered PPtr residue (piece-02 §3
+    R7, arbiter F1). A cell's `evidence.unresolvedRefs` — and the `partial`
+    flip it triggers — may count only refs attributed to THAT cell's
+    destination, never a whole srcKind's field-sharing cohort:
+
+    1. R1 ladder — each ref's target is resolved as far as the bridges
+       allow (same-file membership / externals + cab index, the same ladder
+       `tooltip_target_classes` walks). A target that lands on an emitted
+       entity or scene-flagged bundle charges exactly the cell whose
+       destination id space it landed in. Walker output cannot reach these
+       statuses today (stub/scene landings emit edges, not ledger rows), so
+       this branch pins defensive correctness for upstream growth.
+    2. Leaf-key naming — otherwise a leaf key that NAMES a destination kind
+       (`…data.Course` → course) charges that one cell.
+    3. Everything else — engine-class targets (AnimationClip, components),
+       built-in externals, unresolvable extPaths — inflates NO cell; it
+       stays visible in `relinks/_unresolved_pptrs.jsonl` and the R2
+       `unresolvedCrossFile` counter only.
+
+    Returns (charges, tally): `{(srcKind, dstKind): n}` plus a Counter of
+    landed / leafKeyNamed / nonEntity / unresolvable dispositions for the
+    run log."""
+    src_meta: dict[tuple[str, str], tuple[str, int]] = {}
+    for kind, rows in stubs.rows_by_kind.items():
+        for row in rows:
+            src = row.get("source") or {}
+            if src.get("bundle") is not None \
+                    and src.get("pathId") is not None:
+                src_meta[(kind, str(row["id"]))] = (
+                    str(src["bundle"]), int(src["pathId"]))
+    charges: dict[tuple[str, str], int] = {}
+    tally: Counter = Counter()
+
+    def _charge(cell):
+        charges[cell] = charges.get(cell, 0) + 1
+
+    for u in unresolved:
+        sk = u["srcKind"]
+        fp = str(u["fieldPath"])
+        fid = int(u["extFileId"])
+        pid = int(u["m_PathID"])
+        landing = None
+        disposition = "unresolvable"
+        meta = src_meta.get((sk, str(u["srcId"])))
+        if meta is not None:
+            bundle, src_pid = meta
+            if fid == 0:
+                t = resolver.same_file_target(bundle, pid)
+                if t is not None:
+                    landing = t["kind"] if t["status"] == "stub" \
+                        else ru.SCENE_NODE
+                    disposition = "landed"
+                elif _same_file_object_present(bridges, bundle, src_pid, pid):
+                    disposition = "nonEntity"   # e.g. an AnimationClip
+            else:
+                out = resolver.resolve(
+                    bundle, bridges.cab_of(bundle, src_pid), fid, pid)
+                st_status = out["status"]
+                if st_status == "stub":
+                    landing, disposition = out["kind"], "landed"
+                elif st_status == "scene":
+                    landing, disposition = ru.SCENE_NODE, "landed"
+                elif st_status == "builtin" or (
+                        st_status == "unresolved"
+                        and _external_object_present(bridges, out, pid)):
+                    disposition = "nonEntity"
+        if landing is not None:
+            _charge((sk, landing))
+            tally["landed"] += 1
+            continue
+        named = _leaf_named_kind(fp)
+        if named is not None:
+            _charge((sk, named))
+            tally["leafKeyNamed"] += 1
+        else:
+            tally[disposition] += 1
+    return charges, tally
+
+
+def _same_file_object_present(bridges: ru.BridgeIndexes, bundle: str,
+                              src_pid: int, pid: int) -> bool:
+    """True when the same-file target exists as an indexed object (its class
+    is recoverable) without being an emitted entity."""
+    cab = bridges.cab_of(bundle, src_pid)
+    tbl = bridges.cabs.get((bundle, cab)) if cab is not None else None
+    return tbl is not None and tbl.has(pid)
+
+
+def _external_object_present(bridges: ru.BridgeIndexes, out: dict,
+                             pid: int) -> bool:
+    """The cab_owners hop of tooltip_target_classes: True when the
+    unresolved external's owning serialized file holds the pathId (its
+    engine class identifies a non-entity target such as AnimationClip)."""
+    ext_path = str(out.get("extPath") or "")
+    if not ext_path:
+        return False
+    for b, cab in bridges.cab_owners.get(ext_path, ()):
+        tbl = bridges.cabs.get((b, cab))
+        if tbl is not None and tbl.has(pid):
+            return True
+    return False
+
+
 def run_guid_bridge_pass(stubs: ru.StubIndex, bridges: ru.BridgeIndexes,
                          guid_index: dict, edges: ru.EdgeAccumulator,
                          raw_by_cell, scene_bundles: dict, build_id):
@@ -988,9 +1111,6 @@ def run(game_root: Path, extracted_root: Path) -> int:
 
     # -- R7 ------------------------------------------------------------------
     cell_states: dict[tuple[str, str], ru.CellState] = {}
-    field_paths_by_cell: dict[tuple[str, str], set] = {}
-    for (sk, dk), fps in raw_by_cell.items():
-        field_paths_by_cell[(sk, dk)] = set(fps)
     for (sk, dk), group in client_cells.items():
         st = ru.CellState()
         st.edges = len(group)
@@ -998,26 +1118,21 @@ def run(game_root: Path, extracted_root: Path) -> int:
         st.src_entities = {g["srcId"] for g in group}
         st.raw_by_field = raw_by_cell.get((sk, dk), Counter())
         cell_states[(sk, dk)] = st
-    unresolved_shared: dict[tuple[str, str], int] = {}
-    course_dangling = 0
-    for u in unresolved:
-        sk = u["srcKind"]
-        fp = u["fieldPath"]
-        if sk == "metagame-node" and fp.endswith(".Course"):
-            # the leaf key NAMES the intended destination kind — attribute the
-            # residue directly to that one cell instead of the field-sharing
-            # heuristic (which could double-count it)
-            course_dangling += 1
-            continue
-        for (s, d), fps in field_paths_by_cell.items():
-            if s == sk and fp in fps:
-                unresolved_shared[(s, d)] = unresolved_shared.get((s, d), 0) + 1
-    for cell, n in unresolved_shared.items():
-        cell_states.setdefault(cell, ru.CellState()).unresolved_shared = n
-    if course_dangling:
-        st = cell_states.setdefault(("metagame-node", "course"),
-                                    ru.CellState())
-        st.unresolved_shared += course_dangling
+    # destination-derived residue attribution (arbiter F1): only refs whose
+    # target demonstrably lands in a cell's destination id space (R1 ladder)
+    # or whose leaf key names it may charge that cell — field-sharing across
+    # a srcKind is gone (it wrote e.g. 368 AnimationClip danglers onto
+    # config_unlockable's single true edge)
+    attr_charges, attr_tally = attribute_unresolved_residue(
+        unresolved, stubs, bridges, resolver)
+    for cell, n in sorted(attr_charges.items()):
+        cell_states.setdefault(cell, ru.CellState()).unresolved_shared += n
+    # the needs-probe text counts .Course-named dangles specifically — the
+    # same population the leaf-key rule charges onto metagame-node_course
+    course_dangling = sum(
+        1 for u in unresolved
+        if u["srcKind"] == "metagame-node"
+        and _leaf_named_kind(str(u["fieldPath"])) == "course")
 
     probe_cells = {}
     if ("unlockable", "campus-level") not in cell_states:
@@ -1083,6 +1198,12 @@ def run(game_root: Path, extracted_root: Path) -> int:
         f"probeUnlockableLevelRefs={probe_found}",
         f"- R2-ledger: _unresolved_pptrs rows={len(unresolved)} "
         f"(sorted by (srcKind, srcId, fieldPath, extPath, m_PathID))",
+        f"- R2-attribution: chargedCells={len(attr_charges)} "
+        f"chargedRefs={sum(attr_charges.values())} "
+        f"landed={attr_tally['landed']} "
+        f"leafKeyNamed={attr_tally['leafKeyNamed']} "
+        f"nonEntityTargets={attr_tally['nonEntity']} "
+        f"unresolvable={attr_tally['unresolvable']}",
         f"- R3: guidRefsTotal={guid_report['guidRefsTotal']} "
         f"distinctGuids={guid_report['distinctGuids']} "
         f"resolvedToAddress={guid_report['resolvedToAddress']} "

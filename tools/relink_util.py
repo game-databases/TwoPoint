@@ -1613,8 +1613,9 @@ def assemble_cell_matrix(cell_states, scene_src_unblock, probe_cells,
                     # a named probe cell states its own concrete next probe;
                     # the generic sentence is the fallback
                     unblock = probe_cells.get((src, dst)) or (
-                        f"{st.unresolved_shared} unresolved PPtr refs "
-                        "share this cell's fields — see relinks/"
+                        f"{st.unresolved_shared} unresolved PPtr refs are "
+                        "attributed to this destination (target lands here "
+                        "or its field-path leaf key names it) — see relinks/"
                         "_unresolved_pptrs.jsonl")
                 else:
                     status = "modeled"

@@ -957,6 +957,95 @@ def test_r6_blackbox_competition_absent_floor_unmet_exit2(fx_relink, tmp_path_fa
         assert rl.validate_competitor_ledger_row(row) == []
 
 
+def test_r7_unresolved_residue_attribution_is_destination_derived():
+    """Arbiter F1: residue charges only the cell whose destination id space
+    the target demonstrably lands in (R1 ladder) or whose leaf key names it
+    — never the field-sharing cohort of a whole srcKind."""
+    mod = _impl.load_any(*_impl.STAGE6_SCRIPTS)
+    fn = _impl.get_sym(mod, *_impl.UNRESOLVED_ATTRIBUTION_NAMES)
+    if mod is None or fn is None:
+        pytest.skip("impl-missing: unresolved-residue attribution helper "
+                    "not resolvable yet (CodeWriter pending)")
+    ru_m = getattr(mod, "ru", None)
+    assert ru_m is not None, "stage6 module lost its relink_util alias"
+
+    # --- substrate: two bundles with real CAB object tables --------------
+    bridges = ru_m.BridgeIndexes(BUILD_ID)
+    bridges.add_bundle(
+        "TPC_Data/x/configs_assets_all.bundle",
+        [("CAB-aaaa1111", [(11, "MonoBehaviour"), (12, "AnimationClip"),
+                           (13, "GameObject")])],
+        [], False)
+    bridges.add_bundle(
+        "TPC_Data/x/clips_assets_all.bundle",
+        [("CAB-bbbb2222", [(500, "AnimationClip"), (501, "TPC.UnlockableConfig"),
+                           (512, "AnimationClip")])],
+        [], False)
+    stubs = ru_m.StubIndex()
+    stubs.add_row({"id": "Config_X", "kind": "config", "slug": None,
+                   "fields": {},
+                   "source": {"bundle": "TPC_Data/x/configs_assets_all.bundle",
+                              "class": "TPC.ActivityConfig", "pathId": 11},
+                   "provisional": True, "inferred": True,
+                   "method": "seeded-class-heuristic", "buildId": BUILD_ID})
+    stubs.add_row({"id": "Unlock_Y", "kind": "unlockable", "slug": None,
+                   "fields": {},
+                   "source": {"bundle": "TPC_Data/x/clips_assets_all.bundle",
+                              "class": "TPC.UnlockableConfig",
+                              "pathId": 501},
+                   "provisional": True, "inferred": True,
+                   "method": "seeded-class-heuristic", "buildId": BUILD_ID})
+    externals = {("TPC_Data/x/configs_assets_all.bundle", "cab-aaaa1111"):
+                 {1: "archive:/CAB-bbbb2222",
+                  2: "Resources/unity_builtin_extra"}}
+    resolver = ru_m.CrossFileResolver(bridges, externals, stubs, {})
+
+    def row(sk, sid, fp, fid, pid, reason="x"):
+        return {"srcKind": sk, "srcId": sid, "fieldPath": fp,
+                "extFileId": fid, "extPath": "", "m_PathID": pid,
+                "reason": reason, "buildId": BUILD_ID}
+
+    unresolved = [
+        # shared fieldPath on TWO srcKinds whose danglings belong to
+        # NEITHER destination: an AnimationClip across the externals ladder
+        # and a same-file AnimationClip — under field-sharing these wrote
+        # phantom residue onto every cell carrying the field
+        row("config", "Config_X", "OverrideAnims[]", 1, 500),
+        row("unlockable", "Unlock_Y", "OverrideAnims[]", 0, 512),
+        # unresolvable extPath + unknown fileId + built-in external
+        row("config", "Config_X", "DeadRef", 1, 5999),
+        row("config", "Config_X", "GhostRef", 9, 1),
+        row("config", "Config_X", "BuiltinRef", 2, 5),
+    ]
+    charges, tally = fn(unresolved, stubs, bridges, resolver)
+    assert charges == {}, \
+        f"non-entity/unresolvable danglers must charge no cell: {charges}"
+    assert set(tally) <= {"landed", "leafKeyNamed", "nonEntity",
+                          "unresolvable"}, sorted(tally)
+    assert tally["nonEntity"] >= 3, (
+        f"AnimationClip/builtin targets must classify as non-entity: {tally}")
+    assert tally["unresolvable"] >= 2, \
+        f"dead/unknown refs must classify as unresolvable: {tally}"
+
+    # leaf-key naming fires for exactly one cell when nothing lands
+    charges_lk, tally_lk = fn([row("staff", "Staff_Z", "data.Course",
+                                   0, 404)],
+                              stubs, bridges, resolver)
+    assert charges_lk == {("staff", "course"): 1}, charges_lk
+    assert tally_lk["leafKeyNamed"] == 1, dict(tally_lk)
+
+    # R1-ladder landing branch (walker output cannot reach it today — those
+    # emit edges — so this pins defensive correctness): a same-file target
+    # that IS an emitted entity charges exactly that destination's cell;
+    # likewise a cross-file landing resolved through the externals ladder.
+    charges_same, _ = fn([row("config", "Config_X", "PartnerRef", 0, 11)],
+                         stubs, bridges, resolver)
+    assert charges_same == {("config", "config"): 1}, charges_same
+    charges_cross, _ = fn([row("config", "Config_X", "ClipRef", 1, 501)],
+                          stubs, bridges, resolver)
+    assert charges_cross == {("config", "unlockable"): 1}, charges_cross
+
+
 def test_r7_blackbox_matrix_relations_and_double_run_determinism(
         fx_relink, tmp_path_factory):
     _bb()
@@ -970,6 +1059,16 @@ def test_r7_blackbox_matrix_relations_and_double_run_determinism(
     statuses = [p["status"] for p in matrix["pairs"]]
     assert statuses.count("missing") > 0, \
         "fixture corpus cannot model all 100 cells — silence would be a lie"
+
+    # arbiter F1 honesty surface: fixture residue carries NO destination
+    # attribution except the .Course-named dangle — config's GhostRef /
+    # BuiltinRef / Graph danglers belong to no destination and must inflate
+    # no cell
+    charged = {(p["srcKind"], p["dstKind"]):
+               p["evidence"]["unresolvedRefs"]
+               for p in matrix["pairs"]
+               if (p.get("evidence") or {}).get("unresolvedRefs")}
+    assert charged == {("metagame-node", "course"): 1}, charged
 
     rel_md = (ext / "RELATIONS.md").read_text(encoding="utf-8")
     errs = rl.validate_relations_md(rel_md)

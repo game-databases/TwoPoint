@@ -194,6 +194,10 @@ STUB_INDEX_NAMES = ("build_stub_index", "load_stub_index", "stub_index",
 CROSSFILE_RESOLVER_NAMES = ("resolve_cross_file", "resolve_pptr_cross_file",
                             "resolve_external_ref", "cross_file_resolver",
                             "resolve_ext_ref")
+UNRESOLVED_ATTRIBUTION_NAMES = ("attribute_unresolved_residue",
+                                "attribute_unresolved",
+                                "classify_unresolved_residue",
+                                "unresolved_residue_charges")
 GUID_BRIDGE_NAMES = ("run_guid_bridge", "bridge_guids", "guid_bridge",
                      "resolve_asset_guid_refs", "build_guid_bridge")
 REGISTRY_BUILDER_NAMES = ("build_i2_term_registry", "build_term_registry",
