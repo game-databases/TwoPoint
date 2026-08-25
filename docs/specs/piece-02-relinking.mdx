@@ -591,6 +591,19 @@ user-facing surfaces later may carry buildId only).
    upstream set synthetically, including a minimal synthetic bundle
    carrying TWO serialized files so a cross-file PPtr + externals row
    resolve end-to-end).
+   **AMENDMENT 2026-08-26 (arbiter-piece02 F13 / CR6 — AC1 fixture-premise
+   delta, recorded outside prose):** the landed hostless fixture bundles
+   are header+filler bytes carrying NO object tables, so the
+   two-serialized-files leg above cannot complete cross-file resolution on
+   synthetic bytes alone. Rerouted, not dropped: cross-file/externals
+   resolution is proven at unit level over bridge-env substrates
+   (`test_r1_impl_bridge_builders_over_fake_envs`,
+   `test_r2_crossfile_resolver_unit_happy_twin_builtin_dangling_scene`)
+   and end-to-end on real client bytes in the client-gated lane; the
+   hostless black-box asserts unresolvable refs land in
+   `_unresolved_pptrs.jsonl` instead of silence. Seating real serialized
+   files into the fixture bundles remains routed to the orchestrator
+   (large; arbiter out-of-scope fence).
 2. **Matrix completeness:** `matrix.json` parses; `pairs` length ==
    100; the 90 off-diagonal cells each carry `joinKey`, `mechanism`,
    `status`, `cardinality`, `pairFiles`; every `partial`/`missing` cell
