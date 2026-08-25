@@ -1050,6 +1050,15 @@ def test_ac4_identifier_verbatim_over_pair_datasets(fx_relink, tmp_path_factory)
     assert r.returncode in (0, 2), r.stdout + r.stderr
     errs = rl.ac4_pair_dataset_sweep(ext)
     assert not errs, errs[:8]
+    # arbiter F11: no relinks/*.jsonl may dodge the pair-file contract
+    # under a rejected/INVALID name that pins no artifact
+    errs = rl.invalid_pair_filename_violations(ext)
+    assert not errs, errs[:8]
+    # teeth: the planted spelling bug fires, the pinned artifacts don't
+    (ext / "relinks" / "configs_config.jsonl").write_text(
+        '{"srcId": "X"}\n', encoding="utf-8", newline="\n")
+    errs = rl.invalid_pair_filename_violations(ext)
+    assert len(errs) == 1 and "configs_config.jsonl" in errs[0], errs
 
 
 def test_ac4_sweep_bite(tmp_path):

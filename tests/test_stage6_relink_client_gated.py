@@ -374,6 +374,10 @@ def test_ac4_identifier_verbatim_on_real_pair_datasets(real_run):
     ns = real_run.ok()
     errs = rl.ac4_pair_dataset_sweep(ns.ext)
     assert not errs, errs[:8]
+    # arbiter F11 on real bytes: every rejected/INVALID relinks/*.jsonl name
+    # must be one of the pinned non-pair artifacts — nothing unaccounted
+    errs = rl.invalid_pair_filename_violations(ns.ext)
+    assert not errs, errs[:8]
 
 
 def test_r3_guid_report_arithmetic_and_campus_level_modeled(real_run):

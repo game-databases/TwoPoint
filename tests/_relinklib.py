@@ -1396,6 +1396,44 @@ def ac4_pair_dataset_sweep(ext):
     return e
 
 
+# Stage-owned relinks/ artifacts whose NAMES are not <src>_<dst> pair
+# datasets. classify_pair_filename marks some of them INVALID purely because
+# their pinned names don't decompose over the node universe — they are legal,
+# every OTHER rejection is a spelling bug (arbiter F11).
+PINNED_NON_PAIR_RELINKS = frozenset({
+    "entity_locale.jsonl",        # R4 authoritative entity-granular join
+    "entity_asset_guid.jsonl",    # R3 GUID-bridge asset rows
+    "i2_term_registry.jsonl",     # R4 I2 term registry
+    "locale_term_entity.jsonl",   # R4 reverse term→entities index
+    "competitor_applied.jsonl",   # R6 application ledger
+    "locale_availability.jsonl",  # stage-5 SOLE property (R4 pin)
+    "ui_link_coverage.jsonl",     # R5 UI-link map
+})
+
+
+def invalid_pair_filename_violations(ext):
+    """Arbiter F11 (TR7; AC3): any relinks/*.jsonl that
+    classify_pair_filename rejects (None) or marks INVALID must be one of
+    the PINNED_NON_PAIR_RELINKS artifacts (or a `_`-prefixed ledger);
+    anything else — a `configs_config.jsonl`-class family-vs-kind spelling
+    bug — is a hard violation instead of a silent exclusion."""
+    e: list[str] = []
+    relinks = Path(ext) / "relinks"
+    if not relinks.is_dir():
+        return e
+    for f in sorted(relinks.glob("*.jsonl")):
+        kind = classify_pair_filename(f.name)
+        rejected = kind is None or kind[0] == "INVALID"
+        if not rejected:
+            continue
+        if f.name in PINNED_NON_PAIR_RELINKS or f.name.startswith("_"):
+            continue
+        e.append(f"relinks/{f.name}: rejected by classify_pair_filename "
+                 f"({kind!r}) and pins no artifact — misspelled pair "
+                 f"dataset?")
+    return e
+
+
 def floor_gate(dispositions_by_source):
     """Bar-3 floor (DR-2026-08-17-relink, arbiter F4b): MET iff >=3 distinct
     sourceIds each carry >=1 confirms-hard / adds-derived disposition —
