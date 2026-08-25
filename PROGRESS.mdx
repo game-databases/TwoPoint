@@ -65,6 +65,22 @@ nothing work-blocking.
 
 ## Log
 
+- 2026-08-25: **PIECE-1 RAW LAYERS COMPLETE — all six stage gates exit 0
+  on the real client (pending formal review round).** R10 landed as
+  `b49bf2c` per spec Revision 6 (`c4d9fa4`): stage-5 identity policy
+  (**12,764 stub rows across all nine kinds, zero empty ids**;
+  componentExcluded=152,463 · merged=21 · disambiguated=22), signed-
+  pathId contract (167,069 stems parsed), typetree synthesis live at
+  **99.56% decoded**, byte-match 2,124 checked/0 mismatch, consecutive
+  runs byte-identical (hash manifests). Harvest rerun: 176/176 bundles,
+  167,069 exports, catalogue 47,939. Orchestrator spot-checks green.
+  **Key discovery for the relinking piece:** the game links locales by
+  GUID, not name/id — measured zero name-based join surface both
+  directions (`joinEvidence` in run section); `locale_availability`
+  honestly reports 0 rows until the GUID path is pinned. Open after a
+  context break: R10 review round (fresh reviewers + arbiter),
+  testfixer-006 fixture lane still unlaunched, task #27 DLC-mapping doc
+  fix, then Phase C pivots to relinking/logic/maps pieces.
 - 2026-08-25: **R8 LANDED AND VERIFIED; real-corpus execution restarted.**
   codefixer-007 applied the parked patch as `34b7320` (exactly
   tools/aa_catalog.py + stage2_harvest_catalog.py + tests/test_stage2.py,
