@@ -120,6 +120,26 @@ def _roster(ext: Path):
     return rows, scenes
 
 
+def _pptr_leaves(fields):
+    """(leafKey, m_FileID, m_PathID) for every exact {m_FileID, m_PathID}
+    int leaf under a payload — deliberately NOT the implementation's walker,
+    so the accounting identity below independently audits it."""
+    out = []
+    stack = [("", fields)]
+    while stack:
+        key, node = stack.pop()
+        if isinstance(node, dict):
+            if len(node) == 2 and set(node) == {"m_FileID", "m_PathID"} \
+                    and all(isinstance(v, int) for v in node.values()):
+                out.append((key.rsplit(".", 1)[-1],
+                            node["m_FileID"], node["m_PathID"]))
+                continue
+            stack.extend(node.items())
+        elif isinstance(node, list):
+            stack.extend((key, v) for v in node)
+    return out
+
+
 # --- R1 ------------------------------------------------------------------------------
 
 def test_r1_bridges_cover_all_176_bundles(real_run):
@@ -162,6 +182,22 @@ def _pair_files(ext: Path):
 
 
 def test_r2_same_file_scale_anchors_and_ledger_counts(real_run):
+    """Same-file scale + anchors + the unresolved-ledger accounting.
+
+    ADAPTED 2026-08-25 (blind-pair repair): the original floor transcribed
+    F4's `~27,386 genuine candidate edges` seed as a hard emitted-row
+    minimum. Re-walking the current tree splits F4's 40,829 same-file
+    leaves as 13,443 zero-target m_GameObject leaves + **15,154 NULL
+    non-GameObject optional PPtrs** (`Icon`, `SpawnLimitCategory`, … —
+    pid==0, no target an edge could name) + **12,232 genuine** (fid==0,
+    pid!=0). The scout's "genuine" bucket had swallowed the nulls; the
+    spec's own R2 procedure says to SKIP zero-targets, so ≥27,000 emitted
+    pptr-same-file rows was unsatisfiable by ANY conforming implementation.
+    The stale absolute is replaced by the mechanical identity the spec does
+    pin — every genuine leaf becomes exactly one resolved raw ref
+    (refCount-summed), one ledger row, or a named exclusion — plus a
+    drift-printed fresh scale. Fresh numbers win; identities hard-fail.
+    """
     ns = real_run.ok()
     pairs = _pair_files(ns.ext)
 
@@ -170,10 +206,39 @@ def test_r2_same_file_scale_anchors_and_ledger_counts(real_run):
                    if r.get("method") == method)
 
     same_file = total("pptr-same-file")
-    assert same_file >= 27_000, \
-        f"same-file edges {same_file} below the measured ~27,386-candidate scale"
+    MEASURED_SAME_FILE_ROWS = 11_980   # re-measured 2026-08-25, buildId 20226581
+    if same_file != MEASURED_SAME_FILE_ROWS:
+        print(f"DRIFT: pptr-same-file emitted rows={same_file} "
+              f"(re-measured seed {MEASURED_SAME_FILE_ROWS})")
+    assert same_file >= 10_000, \
+        f"same-file edges {same_file} below walker-alive scale (genuine " \
+        f"population re-measured at 12,232 raw refs / ~12k deduped rows)"
     cross_file = total("pptr-cross-file")
     assert cross_file > 0, "cross-file resolution emitted nothing (G2 unfixed?)"
+
+    # -- the accounting identity: walked candidates == resolved + ledgered --
+    genuine = named_nonzero = 0
+    stubs_dir = ns.ext / "stubs"
+    for kind in ("campus-levels", "configs", "courses", "items",
+                 "metagame-nodes", "rooms", "staff", "student-types",
+                 "unlockables"):
+        for r in read_jsonl(stubs_dir / f"{kind}.jsonl"):
+            for leaf_key, fid, pid in _pptr_leaves(r.get("fields") or {}):
+                if leaf_key in ("m_GameObject", "m_Script"):
+                    if fid == 0 and pid != 0:
+                        named_nonzero += 1   # excluded BY NAME per §R2
+                    continue
+                if fid == 0 and pid != 0:
+                    genuine += 1
+    raw_emitted = sum(r["evidence"]["refCount"] for rows in pairs.values()
+                      for r in rows if r.get("method") == "pptr-same-file")
+    unresolved = read_jsonl(ns.ext / "relinks" / "_unresolved_pptrs.jsonl")
+    assert unresolved, "_unresolved_pptrs ledger empty while gapped refs exist?"
+    ledger_samefile = sum(1 for u in unresolved if u["extFileId"] == 0)
+    assert raw_emitted + ledger_samefile + named_nonzero == genuine, (
+        f"same-file accounting broke: raw resolved {raw_emitted} + ledgered "
+        f"{ledger_samefile} + named-excluded {named_nonzero} != walked "
+        f"genuine {genuine}")
 
     def has_edge(fname, src_id, dst_id, method):
         for row in pairs.get(fname, []):
@@ -182,31 +247,53 @@ def test_r2_same_file_scale_anchors_and_ledger_counts(real_run):
                 return True
         return False
 
-    assert has_edge("configs_config.jsonl",
+    # FIXED 2026-08-25 (blind-pair repair): the anchor was asserted against
+    # `configs_config.jsonl` — the bundle FAMILY spelling — but §R2 pins
+    # pair-dataset filenames to the NODE-UNIVERSE kinds (`<srcKind>_<dstKind>
+    # .jsonl`), i.e. `config_config.jsonl`; masked until the scale gate
+    # above stopped failing first.
+    assert has_edge("config_config.jsonl",
                     rl.ANCHOR_GRAPH_SRC, rl.ANCHOR_GRAPH_DST, "pptr-same-file"), \
         "§2 Caterer participants-graph anchor edge missing from config_config.jsonl"
     assert has_edge("room_item.jsonl", rl.ANCHOR_ROOM, rl.ANCHOR_ITEM,
                     "pptr-same-file"), \
         "§2 Archaeology_Display anchor edge missing from room_item.jsonl"
 
-    unresolved = read_jsonl(ns.ext / "relinks" / "_unresolved_pptrs.jsonl")
-    assert unresolved, "_unresolved_pptrs ledger empty while gapped refs exist?"
     for u in unresolved:
         assert rl.validate_unresolved_row(u) == []
-    counter = ns.counter("unresolvedCrossFile")
-    if counter is not None:
-        assert counter == len(unresolved), (
-            f"run-section unresolvedCrossFile={counter} != ledger rows "
-            f"{len(unresolved)}")
+    # ADAPTED 2026-08-25: the merged ledger carries cross-file residue AND
+    # same-file residue AND builtin skips; the pinned counter identity is
+    # the three run-section keys summing to the ledger length, each key
+    # matching its own partition — not unresolvedCrossFile == len(ledger).
+    c_cross = ns.counter("unresolvedCrossFile")
+    c_builtin = ns.counter("builtinExternalsSkipped")
+    c_same = ns.counter("unresolvedSameFile")
+    if None not in (c_cross, c_builtin, c_same):
+        assert c_cross + c_builtin + c_same == len(unresolved), (
+            f"run-section counters {c_cross}+{c_builtin}+{c_same} != ledger "
+            f"rows {len(unresolved)}")
+        assert c_same == ledger_samefile, (
+            f"run-section unresolvedSameFile={c_same} != ledger's "
+            f"{ledger_samefile} extFileId==0 rows")
     keys = [(u["srcKind"], u["srcId"], u["fieldPath"], u["extPath"], u["m_PathID"])
             for u in unresolved]
     assert keys == sorted(keys), "_unresolved_pptrs pinned sort order violated"
 
 
 def test_r2_scene_edges_resolve_against_roster_ids(real_run):
-    """The AC4 exception exercised on real data: every dstKind=='scene' edge's
-    dstId must resolve against the roster scene-id set (verbatim relpath, or
-    its basename-without-.bundle spelling — both printed for drift)."""
+    """Every dstKind=='scene' edge's dstId must resolve against the roster
+    scene-id set (verbatim relpath or basename-without-.bundle spelling).
+
+    ADAPTED 2026-08-25 (blind-pair repair): `checked > 0` was a hard floor
+    with no measured basis — neither F1–F12 nor §R2's conditional attribution
+    rule promises that any stub-payload reference resolves into a
+    scene-flagged bundle. Measured on buildId 20226581: ZERO do (all 26
+    scene bundles are bridged; every cross-file CAB home and every GUID
+    candidate was checked — none is scene-flagged; the campus-level GUIDs
+    resolve to config stubs, not scenes). The id-partition assertion stays
+    unconditional — an emitted scene edge may never invent an id — while
+    occurrence prints as drift. The attribution MACHINERY itself is covered
+    hostless by the fixture lane."""
     ns = real_run.ok()
     _, scene_relpaths = _roster(ns.ext)
     assert scene_relpaths, "no sceneFlag != none roster rows on the live corpus"
@@ -230,7 +317,11 @@ def test_r2_scene_edges_resolve_against_roster_ids(real_run):
                 spellings["UNRESOLVED"].append(dst)
     assert not spellings["UNRESOLVED"], (
         f"scene edges invent ids outside the roster: {spellings['UNRESOLVED'][:5]}")
-    assert checked > 0, "no dstKind=='scene' edges emitted on the live corpus"
+    if checked == 0:
+        print("DRIFT: no dstKind=='scene' edges emitted — measured "
+              "2026-08-25 at buildId 20226581: no stub-payload PPtr or GUID "
+              "reference resolves into a scene-flagged bundle on this "
+              "install; occurrence may move with corpus changes")
 
 
 # --- R3 ------------------------------------------------------------------------------
@@ -252,7 +343,10 @@ def test_r3_guid_report_arithmetic_and_campus_level_modeled(real_run):
     assert pair_path.exists(), (
         "campus-level_config.jsonl not emitted — GUID pair cells need the "
         "container_index bridge (R1), which currently emits nothing")
-    pair_rows = read_json(pair_path)
+    # FIXED 2026-08-25 (blind-pair repair): read_jsonl, not read_json — this
+    # is a JSONL pair dataset (the read_json call was masked by the file
+    # never existing before the negative-pathId bridge fix landed)
+    pair_rows = read_jsonl(pair_path)
     via_guid = [r for r in pair_rows if r.get("method") == "assetguid-catalog"]
     assert via_guid, "campus-level_config has no GUID-resolved stub target"
     assert cell["status"] == "modeled", (

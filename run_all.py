@@ -47,6 +47,17 @@ UPSTREAMS = {
                            "addressables/catalog.json",
                            "decompiled/structural",
                            "locales/locale-matrix.json"],
+    # piece-01 Revision 7 §5.2: stage-6 prepared-tree upstream set (+ the
+    # game dir — the R1 bridge passes open the roster bundles read-only)
+    "relink": ["stubs",
+               "harvest/export-manifest.jsonl",
+               "harvest/externals.jsonl",
+               "harvest/monobehaviours/localisation_assets_localisation/"
+               "I2.Loc.LanguageSourceAsset",
+               "addressables/catalog.json",
+               "locales/locale-matrix.json",
+               "decompiled/structural",
+               "bundle-roster.jsonl"],
 }
 
 STAGE_TOOLS = {
@@ -56,6 +67,7 @@ STAGE_TOOLS = {
     "harvest-bundles": "UnityPy",
     "localisation": "UnityPy",
     "emit-stub-datasets": "stdlib",
+    "relink": "UnityPy",
 }
 
 
@@ -164,7 +176,7 @@ def stage_status(extracted_root: Path, stage_id: str, identity: str) -> str:
         return "not-run"
     if stamp.get("identity") != identity:
         return "stale"
-    if stamp.get("exitCode") != 0:
+    if stamp.get("exitCode") not in (0, 2):
         return f"needs-rerun(last-exit={stamp.get('exitCode')})"
     # a surviving stamp is only up-to-date while its declared outputs do too
     return ("up-to-date" if log_util.outputs_current(extracted_root,

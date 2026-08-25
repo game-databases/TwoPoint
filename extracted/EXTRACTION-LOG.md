@@ -362,3 +362,29 @@ changes land in it in the same commit that changes the entrypoint.
 - externalsTables: 222 serialized files across 176 readable bundles; totalExternalRefs 1781 (harvest/externals.jsonl — R11 G2 cross-file PPtr sidecar)
 - monoScriptIndex: {'scriptsIndexed': 1140, 'bundlesWithScripts': 1, 'distinctEntries': 1140}; monobehaviourScriptClass: resolved=166704 unresolved(generic)=10; decodeRoutes: embedded=165982 oracle=0 synthesis=688 residue=44; embeddedTreeOracle: 1127 script trees captured
 - fallbackVersionUsedBundles: 176/176 (FALLBACK_UNITY_VERSION source: identity.json unityVersion 2020.3.47f1)
+### 2026-08-25T19:50:14Z — relink
+- exitCode: 2 (completed-with-ledger)
+- R1: bundlesBridged=176 cabRows=2026658 containerRows=49855 fallbackVersionUsedBundles=176 containerAddressCollisions=45838
+- R1-note: fallbackVersionUsedBundles: 176/176 (FALLBACK_UNITY_VERSION source: identity.json unityVersion 2020.3.47f1); unitypyVersion: 1.25.3
+- R2: cellsTotal=100 cellsModeled=20 cellsPartial=6 cellsMissing=74 pairFilesEmitted=24 edgesEmitted=24583 sameFileResolved=12125 crossFileResolved=8909 sceneAttributedEdges=0 unresolvedCrossFile=2284 builtinExternalsSkipped=0 twinEndpointEdges=14 unresolvedSameFile=107 probeUnlockableLevelRefs=0
+- R2-ledger: _unresolved_pptrs rows=2391 (sorted by (srcKind, srcId, fieldPath, extPath, m_PathID))
+- R3: guidRefsTotal=20170 distinctGuids=5584 resolvedToAddress=16110 resolvedToStub=3747 danglingDistinctGuids=1137 danglingVerdicts={'unresolved-open': 1137} resolveRateAddress=0.7987 resolveRateStub=0.1858 sceneGuidEdges=0
+- R4: languageSourcesRead=26 registryRows=15675 registryDistinctKeys=15672 matrixKeyDiff=0 instancesTotal=20070 sentinelZero=9101 registryHits=10964 registryMisses=5 coverageOnNonEmpty=0.9995 entityLocaleRows=10964 reverseRows=6526
+- R5: surfacesTotal=344 mappedSchema=10 documentedGaps=334 tooltipTargetClasses=3 localizeBindings=11312 hierarchyRowsRead=20037
+- R6: sourcesRead=2 sourcesApplied=2 floorMet=False confirmsHard=0 addsDerived=0 flagsMissing=417 wallsRecorded=0 overlayFiles=0
+- R7: relationsMdBytes=29321 generatedFrom={"edgesEmitted": 24583, "registryRows": 15675, "guidRefsTotal": 20170, "coverageRows": 344, "competitorLedgerRows": 3}
+- DRIFT: GUID bridge measures 20170 refs / 5584 distinct / 1137 dangling against seed F9 (20042/5548/1137) — fresh wins
+- LEDGER-CONTRIBUTORS (exit 2): _dangling_guids.jsonl unresolved-open: 1137; registryMisses: 5; competitor floor unmet (<3 applied sources; terminal ledger row ~floor)
+### 2026-08-25T19:52:43Z — relink
+- exitCode: 2 (completed-with-ledger)
+- R1: bundlesBridged=176 cabRows=2026658 containerRows=49855 fallbackVersionUsedBundles=176 containerAddressCollisions=45838
+- R1-note: fallbackVersionUsedBundles: 176/176 (FALLBACK_UNITY_VERSION source: identity.json unityVersion 2020.3.47f1); unitypyVersion: 1.25.3
+- R2: cellsTotal=100 cellsModeled=20 cellsPartial=6 cellsMissing=74 pairFilesEmitted=24 edgesEmitted=24583 sameFileResolved=12125 crossFileResolved=8909 sceneAttributedEdges=0 unresolvedCrossFile=2284 builtinExternalsSkipped=0 twinEndpointEdges=14 unresolvedSameFile=107 probeUnlockableLevelRefs=0
+- R2-ledger: _unresolved_pptrs rows=2391 (sorted by (srcKind, srcId, fieldPath, extPath, m_PathID))
+- R3: guidRefsTotal=20170 distinctGuids=5584 resolvedToAddress=16110 resolvedToStub=3747 danglingDistinctGuids=1137 danglingVerdicts={'unresolved-open': 1137} resolveRateAddress=0.7987 resolveRateStub=0.1858 sceneGuidEdges=0
+- R4: languageSourcesRead=26 registryRows=15675 registryDistinctKeys=15672 matrixKeyDiff=0 instancesTotal=20070 sentinelZero=9101 registryHits=10964 registryMisses=5 coverageOnNonEmpty=0.9995 entityLocaleRows=10964 reverseRows=6526
+- R5: surfacesTotal=344 mappedSchema=10 documentedGaps=334 tooltipTargetClasses=3 localizeBindings=11312 hierarchyRowsRead=20037
+- R6: sourcesRead=2 sourcesApplied=2 floorMet=False confirmsHard=0 addsDerived=0 flagsMissing=417 wallsRecorded=0 overlayFiles=0
+- R7: relationsMdBytes=29321 generatedFrom={"edgesEmitted": 24583, "registryRows": 15675, "guidRefsTotal": 20170, "coverageRows": 344, "competitorLedgerRows": 3}
+- DRIFT: GUID bridge measures 20170 refs / 5584 distinct / 1137 dangling against seed F9 (20042/5548/1137) — fresh wins
+- LEDGER-CONTRIBUTORS (exit 2): _dangling_guids.jsonl unresolved-open: 1137; registryMisses: 5; competitor floor unmet (<3 applied sources; terminal ledger row ~floor)

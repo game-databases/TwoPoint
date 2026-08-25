@@ -232,6 +232,28 @@ STAGE_OUTPUTS = {
         "stubs/_absences.jsonl", "stubs/_unmapped-families.jsonl",
         "relinks/locale_availability.jsonl",
     ],
+    # stage 6 (piece-02): every stage-6-OWNED path of the §4 layout. The
+    # pair/overlay datasets are data-dependent (one file per cell with ≥1
+    # edge) so their CLOSED universe — all ordered pairs over the 10-node
+    # universe — is generated; absent files hash "" like any born-empty
+    # artifact. `locale_availability.jsonl` is deliberately NOT here: it is
+    # stage-5's sole property and this stage never writes it.
+    "relink": [
+        "RELATIONS.md",
+        "relinks/matrix.json",
+        "relinks/entity_asset_guid.jsonl",
+        "relinks/guid_bridge_report.json",
+        "relinks/_dangling_guids.jsonl",
+        "relinks/i2_term_registry.jsonl",
+        "relinks/entity_locale.jsonl",
+        "relinks/locale_term_entity.jsonl",
+        "relinks/locale_join_report.json",
+        "relinks/ui_link_coverage.jsonl",
+        "relinks/competitor_applied.jsonl",
+        "relinks/_unresolved_pptrs.jsonl",
+        "relinks/bridges/cab_index.jsonl",
+        "relinks/bridges/container_index.jsonl",
+    ],
 }
 
 
@@ -258,9 +280,12 @@ def save_stamp(extracted_root: Path, stage_id: str, identity: str,
         "exitCode": int(exit_code),
         "finishedAt": utc_now_iso(),
     }
-    # successful runs fingerprint their declared outputs so a later run can
-    # tell "stamp matches" from "outputs actually survived intact"
-    if row["exitCode"] == 0 and STAGE_OUTPUTS.get(stage_id):
+    # completed runs fingerprint their declared outputs so a later run can
+    # tell "stamp matches" from "outputs actually survived intact". Exit 2
+    # (completed-with-ledger) fingerprints too: its ledger IS the honest
+    # terminal state, so an unchanged rerun must skip execution
+    # (piece-02 runner contract — stamp identity on stage 6).
+    if row["exitCode"] in (0, 2) and STAGE_OUTPUTS.get(stage_id):
         row["outputs"] = declared_output_state(extracted_root, stage_id)
     if extra:
         row.update(extra)
@@ -269,12 +294,21 @@ def save_stamp(extracted_root: Path, stage_id: str, identity: str,
 
 def stage_outputs(stage_id: str) -> list[str]:
     """Declared final artifacts of a stage (spec §3/§4). The localisation
-    per-locale tables come from the shared locale table; the lazy import
-    keeps this module dependency-free."""
+    per-locale tables come from the shared locale table; stage 6's
+    pair/overlay datasets generate their closed universe from the pinned
+    10-node matrix order. Lazy imports keep this module dependency-free."""
     outs = list(STAGE_OUTPUTS.get(stage_id, ()))
     if stage_id == "localisation":
         import tpc_common as tc
         outs += [f"locales/{locale}.jsonl" for locale in tc.EMITTED_LOCALES]
+    if stage_id == "relink":
+        import relink_util
+        outs += [f"relinks/{s}_{d}.jsonl"
+                 for s in relink_util.NODE_UNIVERSE
+                 for d in relink_util.NODE_UNIVERSE]
+        outs += [f"relinks/{s}_{d}.competitor.jsonl"
+                 for s in relink_util.NODE_UNIVERSE
+                 for d in relink_util.NODE_UNIVERSE]
     return outs
 
 
@@ -305,12 +339,15 @@ def outputs_current(extracted_root: Path, stage_id: str, stamp: dict) -> bool:
 
 def is_up_to_date(extracted_root: Path, stage_id: str, identity: str) -> bool:
     """A stamp counts as done ONLY when identity matches AND the recorded
-    run exited 0 — exit-2 ledger completions re-run — AND every declared
-    output still exists with its stamped content: a deleted or truncated
-    final must be regenerated, never skipped past."""
+    run COMPLETED — exit 0, or exit 2 (completed-with-ledger: the ledgered
+    gaps are the honest terminal state, and re-executing an unchanged run
+    would breach the piece-02 runner contract's stamp identity) — AND every
+    declared output still exists with its stamped content: a deleted or
+    truncated final must be regenerated, never skipped past. Stamps saved
+    before output fingerprinting (no 'outputs' block) stay stale."""
     stamp = load_stamp(extracted_root, stage_id)
     return bool(stamp) and stamp.get("identity") == identity \
-        and stamp.get("exitCode") == 0 \
+        and stamp.get("exitCode") in (0, 2) \
         and outputs_current(extracted_root, stage_id, stamp)
 
 

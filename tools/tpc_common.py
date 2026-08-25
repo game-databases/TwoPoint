@@ -131,6 +131,10 @@ STAGES = [
     ("emit-stub-datasets", "tools/stage5_emit_stubs.py",
      ["stage5_emit_stubs.py", "unitypy_util.py",
       "tpc_common.py", "log_util.py"]),
+    # piece-02 relinking stage (piece-01 Revision 7 §5.1: seventh stage,
+    # registered ADDITIVELY — stages 0–5 byte-behave identically)
+    ("relink", "tools/stage6_relink.py",
+     ["stage6_relink.py", "relink_util.py", "tpc_common.py", "log_util.py"]),
 ]
 STAGE_IDS = [sid for sid, _script, _deps in STAGES]
 

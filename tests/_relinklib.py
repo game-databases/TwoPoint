@@ -10,15 +10,17 @@ exactly like the real corpus.
 Layout of the little world (all ids verbatim-stable, hand-computed oracle in
 EXPECTED_* below):
 
-  rooms_assets_all.bundle            Room_Archaeology_Display (anchor edges,
-                                     repeat-collapse, scene attribution,
-                                     dangling pathId)
+  rooms_assets_all.bundle            Room_Archaeology_Display + the anchor
+                                     ITEM at pathId 3001 (same-file anchor
+                                     edges, repeat-collapse, scene
+                                     attribution, dangling pathId)
   items-general_assets_all.bundle    TWO serialized files (CAB-items-a/-b);
-                                     anchor item + the @hash8 twin endpoint
+                                     the @hash8 twin endpoint only
   configs_assets_all.bundle          Caterer participants-graph anchor (same-
                                      file config->config), ghost/builtin/
                                      twin cross-file refs, dangling-GUID holder
-  items-courses-magic_assets_all     Course_Archaeology -> config module edge
+  items-courses-magic_assets_all     Course_Archaeology -> its own-bundle
+                                     module config edge (same-file)
   character-shared_assets_all        Staff_Assistant term-ID anchor, nerd,
                                      sentinel-0, registry-miss students
   unlockables_assets_all             Unlock_Kudosh_Chair (probe cell substrate)
@@ -94,6 +96,16 @@ ANCHOR_GRAPH_SRC = "Activity_Dynamic_Social_Item_Caterer"
 ANCHOR_GRAPH_DST = "BG_Character_Interaction_Caterer"
 ANCHOR_ROOM = "Room_Archaeology_Display"
 ANCHOR_ITEM = "Item_Door_Building_Archaeology_Display"
+# ADAPTED 2026-08-25 (blind-pair repair): the course edge's destination was
+# pinned to ANCHOR_GRAPH_DST while referencing pathId +1002 from another
+# bundle — unresolvable as a same-file PPtr under Unity semantics (a fid==0
+# reference names an object in the SAME serialized file; the spec's §2
+# sample edges pin the room/course anchors as measured same-file pairs,
+# which on the real corpus ride Unity's dependent-definition duplication
+# INSIDE the referring bundle). The fixture now models that reality: the
+# anchor item lives in the rooms bundle, and the course references a module
+# config resident in its own bundle.
+COURSE_MODULE_ID = "Course_Module_Archaeology"
 ANCHOR_STAFF = "Staff_Assistant"
 STAFF_TERM_ID = -1312157894                    # corrected value per spec §2
 STAFF_TERM_KEY = "UI/General/Sims/Assistant"
@@ -149,7 +161,7 @@ EXPECTED_PAIR_EDGES = [
     # (srcKind, srcId, dstKind, dstId, method, fieldPath, refCount)
     ("config", ANCHOR_GRAPH_SRC, "config", ANCHOR_GRAPH_DST,
      "pptr-same-file", "ParticipantsGraph", 1),
-    ("course", "Course_Archaeology", "config", ANCHOR_GRAPH_DST,
+    ("course", "Course_Archaeology", "config", COURSE_MODULE_ID,
      "pptr-same-file", "Modules[].Definition", 1),
     ("room", ANCHOR_ROOM, "item", ANCHOR_ITEM,
      "pptr-same-file", "RequiredItems[].DefaultItem", 2),
@@ -223,6 +235,12 @@ def relink_entities():
             **_ptr_edge_fields(),
             "IconReference": icon_ref(GUID_DANGLING),
         }),
+        # the course's own-bundle module definition (see COURSE_MODULE_ID note)
+        ("config", "TPC.CourseModuleDefinition", B_COURSE,
+         "items-courses-magic_assets_all", 1002, {
+            **_ptr_edge_fields(),
+            "DisplayName": loc_field("Archaeology module", 20001),
+        }),
         ("campus-level", "TPC.CampusLevelConfig", B_CONFIGS, "configs_assets_all",
          1005, {
             **_ptr_edge_fields(),
@@ -231,7 +249,10 @@ def relink_entities():
             "MetagameConfig": {"m_AssetGUID": ANCHOR_LEVEL_GUID},
             "SceneBanner": {"m_AssetGUID": GUID_SCENE},
         }),
-        ("item", "TPC.ItemConfig", B_ITEMS, "items-general_assets_all", 3001, {
+        # ADAPTED 2026-08-25: the anchor item is resident in the ROOMS bundle
+        # (dependent-definition duplication — same-file PPtr target), not in
+        # items-general; items-general now carries only the twin endpoint.
+        ("item", "TPC.ItemConfig", B_ROOMS, "rooms_assets_all", 3001, {
             **_ptr_edge_fields(),
             "Name": loc_field("Archaeology door", 10003),
             "Price": 12,
@@ -295,6 +316,7 @@ def relink_stub_rows():
     """kind -> list of piece-1-pinned stub rows (sorted by id)."""
     named = {
         1001: ANCHOR_GRAPH_SRC, ANCHOR_DST_PID: ANCHOR_GRAPH_DST,
+        1002: COURSE_MODULE_ID,
         1003: "Config_Dangling_Guid_Holder", 1004: "Node_Research_Tree",
         1005: "CampusLevel_Metagame", 3001: ANCHOR_ITEM, 3500: TWIN_ID,
         2001: ANCHOR_ROOM, 4001: "Course_Archaeology", 5001: ANCHOR_STAFF,
@@ -518,8 +540,11 @@ def i2_dump_sources():
                  {"Name": "Japanese", "Code": "ja"}]
 
     def cells(order, filled):
-        return [next((t for l, t in zip(order, filled) if l["Code"] == code), "")
-                for code in [l["Code"] for l in order]]
+        # per-language text cells indexed by the SOURCE's mLanguages order
+        # (ADAPTED 2026-08-25: the previous `zip(order, filled)` paired the
+        # language objects with a dict's KEYS — a type misuse that shifted
+        # every text one slot; the intent was always code-keyed lookup)
+        return [filled.get(l["Code"], "") for l in order]
 
     def wrap(name, langs, terms):
         return {"_decoded": {"method": "typetree+synthesis", "typetreeDecoded": True},
