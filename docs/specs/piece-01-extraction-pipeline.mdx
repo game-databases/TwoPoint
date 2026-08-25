@@ -11,6 +11,56 @@ figures).
 
 ---
 
+## Revision 7 (piece-02 `relink` — seventh stage registered)
+
+Grounded in [`piece-02-relinking.mdx`](piece-02-relinking.mdx) §1/§3 —
+the relinking piece's delivered contract, executing the amendment set
+routed in its §7 (2026-08-25). Piece 2 adds ONE entrypoint stage: id
+`relink`, scripts `tools/stage6_relink.py` + shared
+`tools/relink_util.py`, registered ADDITIVELY in
+`tools/tpc_common.py::STAGES` — the existing six stages byte-behave
+identically. Three amendments land in THIS file; stage ids 0–5,
+sentinels, every emitted-file contract above, the determinism and
+write-discipline rules, and the 0/1/2/3 exit codes are unchanged (stage
+6 inherits the contract verbatim — exit 2 = completed-with-ledger is
+its EXPECTED steady state until its ledgers close):
+
+1. **§4 layout:** `extracted/relinks/` grows from the single
+   stage-5-owned `locale_availability.jsonl` (UNTOUCHED — the
+   sole-owner rule stands; piece-02 §R4 pins it and reroutes consumers
+   to `entity_locale.jsonl`, the authoritative entity-granular locale
+   relation) to the full stage-6 emission set: `matrix.json` (ALL 100
+   ordered cells over the 10-node universe), `<src>_<dst>.jsonl` pair
+   datasets, `<src>_<dst>.competitor.jsonl` overlays, the GUID-bridge
+   artifacts (`entity_asset_guid.jsonl`, `guid_bridge_report.json`,
+   `_dangling_guids.jsonl`), the I2 locale artifacts
+   (`i2_term_registry.jsonl`, `entity_locale.jsonl`,
+   `locale_term_entity.jsonl`, `locale_join_report.json`),
+   `ui_link_coverage.jsonl`, `competitor_applied.jsonl`,
+   `_unresolved_pptrs.jsonl`, and
+   `bridges/{cab_index,container_index}.jsonl`.
+2. **§5.1:** `--list` enumerates SEVEN stages — `relink` AFTER
+   `emit-stub-datasets`; `make list` equivalent.
+3. **§5.2:** the stage-6 prepared-tree upstream set is pinned:
+   `stubs/**` + `harvest/export-manifest.jsonl` +
+   `harvest/externals.jsonl` + the I2 `LanguageSourceAsset` dumps +
+   `addressables/catalog.json` + `locales/locale-matrix.json` +
+   `decompiled/structural/*` + `bundle-roster.jsonl` — PLUS the game
+   dir (like stage 3): the R1 bridge passes open all 176 bundles
+   read-only under the shared fallback-version seeding. Hostless mode
+   materializes the same set synthetically
+   (`tests/build_fixture_tree.py --stage relink`, incl. a synthetic
+   bundle carrying TWO serialized files so a cross-file PPtr resolves
+   end-to-end).
+
+Note-only (no contract change): §8's fixture bullets remain written
+against the six piece-1 stages — the seventh stage's TestWriter
+contract (seven-stage `--list`, prepared-tree coverage of the §3
+upstream set, exit-2 ledger enumeration, R1–R7 fixtures) lives in and
+is owned by piece-02 §8.
+
+---
+
 ## Revision 6 (executor-004b stage-5 identity & signed-pathId amendments)
 
 Grounded in the pipeline's first real-corpus run with stages 0–4 green —
@@ -723,7 +773,23 @@ extracted/
 ├── MEDIA-CATALOGUE.md           # stage 3 rollup
 ├── media-catalogue.jsonl        # stage 3
 ├── relinks/
-│   └── locale_availability.jsonl   # stage 5 ONLY (sole owner; entity-granular; regenerated every stage-5 run)
+│   ├── locale_availability.jsonl   # stage 5 ONLY (sole owner; entity-granular; regenerated every stage-5 run)
+│   ├── matrix.json                 # stage 6: 100 ordered cells (10-node universe), frozen vocabularies
+│   ├── <src>_<dst>.jsonl           # stage 6: pair datasets (kind values verbatim in filenames)
+│   ├── <src>_<dst>.competitor.jsonl # stage 6: applied community deltas (overlays, never mixed into client pairs)
+│   ├── entity_asset_guid.jsonl     # stage 6: entity→asset-address edges (hard)
+│   ├── i2_term_registry.jsonl      # stage 6: term-ID→Term-key registry (canonical-on-key)
+│   ├── entity_locale.jsonl         # stage 6: AUTHORITATIVE entity-granular locale relation
+│   ├── locale_term_entity.jsonl    # stage 6: reverse index
+│   ├── locale_join_report.json     # stage 6: counts + unresolved-ID ledger
+│   ├── guid_bridge_report.json     # stage 6: resolve rates as emitted facts
+│   ├── ui_link_coverage.jsonl      # stage 6: bar-2 map (mapped-schema XOR documented-gap)
+│   ├── competitor_applied.jsonl    # stage 6: application ledger + wall rows
+│   ├── _unresolved_pptrs.jsonl     # stage 6 ledger (empty file valid iff nothing unresolved)
+│   ├── _dangling_guids.jsonl       # stage 6 ledger (verdicts; empty valid iff none dangle)
+│   └── bridges/                    # stage 6 R1 identity indexes over the 176 roster bundles
+│       ├── cab_index.jsonl         # serialized-file identity (CAB → bundle/pathId)
+│       └── container_index.jsonl   # address → bundle/pathId/class
 ├── logic/                       # EMPTY dir contract — later piece fills (formulas, trees, models); .gitkeep
 ├── maps/                        # EMPTY dir contract — later piece fills (maps.json, geometry, transforms); .gitkeep
 ├── protocol/
@@ -763,8 +829,8 @@ dirs, metadata-version wall).
 
 1. `python run_all.py --list` enumerates exactly stages
    `verify-client, decompile, harvest-catalog, harvest-bundles,
-   localisation, emit-stub-datasets` in order with tool/version/status
-   columns; `make list` equivalent.
+   localisation, emit-stub-datasets, relink` in order with
+   tool/version/status columns; `make list` equivalent.
 2. Each stage runs in isolation via `--only <id>` on a prepared tree.
    **Prepared tree, defined** (one harness, no private setups):
    *client mode* — `python run_all.py <game> --skip <target-stage>`
@@ -779,7 +845,12 @@ dirs, metadata-version wall).
    addressables/catalog.json (+ dummy DLLs); stage 4 ← locale-flagged
    roster rows + dummy DLLs; stage 5 ← harvest/monobehaviours/** +
    addressables/catalog.json + decompiled/structural/* +
-   locales/locale-matrix.json.
+   locales/locale-matrix.json; stage 6 ← stubs/** +
+   harvest/export-manifest.jsonl + harvest/externals.jsonl + the I2
+   `LanguageSourceAsset` dumps + addressables/catalog.json +
+   locales/locale-matrix.json + decompiled/structural/* +
+   bundle-roster.jsonl (+ the game dir — the R1 bridge passes open all
+   176 bundles read-only under the shared fallback-version seeding).
 3. Fresh clone + game path + `make setup && make extract GAME=…`
    produces every file in §4 without a second doc.
 4. Per-stage acceptance criteria from §3 all hold (they are written as
