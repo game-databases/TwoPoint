@@ -76,6 +76,13 @@ I2_SOURCE_DIR = ("harvest/monobehaviours/localisation_assets_localisation/"
 F7_ROWS, F7_KEYS = 15_675, 15_672
 F8_KNOWN_UNRESOLVED_IDS = 5
 F9_REFS, F9_DISTINCT, F9_DANGLING = 20_042, 5_548, 1_137
+# §2 preamble pair-fact seed (arbiter F5): the campus-level→metagame-node
+# carrier was scouted at 13 GUID rows, but stage-5 kinds the resolved target
+# `Config_Metagame` as kind `config` — so the rows land in
+# campus-level_config.jsonl and the metagame-node cell measures 0 until the
+# kinding is re-examined (owner-routable decision-register question).
+F12_CAMPUS_META_SEED = 13
+CONFIG_METAGAME_ID = "Config_Metagame"
 
 SCENE_SRC_UNBLOCK = ru.SCENE_SRC_UNBLOCK
 PROBE_UNLOCKABLE_LEVEL_UNBLOCK = (
@@ -86,6 +93,13 @@ PROBE_METAGAME_COURSE_TMPL = (
     "needs-probe cell: .references.NNNN.data.Course PPtrs resolve through "
     "the R1 bridges; {dangling} still dangle against non-stub (scene/"
     "prefab-resident) objects — owner: scene-dump walk (maps piece)")
+PROBE_CAMPUS_METAGAME_UNBLOCK = (
+    "carrier found and resolving: campus-level payloads' "
+    ".MetagameConfig.m_AssetGUID → catalog → Config_Metagame resolves, but "
+    "stage-5 emits that asset as kind `config`, so the rows land in "
+    "campus-level_config.jsonl — metagame-node identity is blocked on the "
+    "KINDING, not on a missing carrier (owner-routable via the decision "
+    "register; no dual-kind rows are emitted)")
 
 
 # ---------------------------------------------------------------------------
@@ -1100,6 +1114,7 @@ def run(game_root: Path, extracted_root: Path) -> int:
     pair_files_emitted = 0
     edges_emitted = 0
     twin_endpoint_edges = r2c["twinEndpointEdges"]
+    campus_meta_landing_rows = 0
     for (sk, dk), group in sorted(client_cells.items()):
         rows = edges.rows_for_cell(sk, dk)
         rows = ru.attach_source_axes(rows, stubs)
@@ -1114,6 +1129,9 @@ def run(game_root: Path, extracted_root: Path) -> int:
         log_util.write_jsonl(relinks / f"{sk}_{dk}.jsonl", rows)
         pair_files_emitted += 1
         edges_emitted += len(rows)
+        if (sk, dk) == ("campus-level", "config"):
+            campus_meta_landing_rows = sum(
+                1 for r in rows if r["dstId"] == CONFIG_METAGAME_ID)
 
     log_util.write_jsonl(relinks / "_unresolved_pptrs.jsonl", unresolved)
     log_util.write_jsonl(relinks / "entity_asset_guid.jsonl", asset_rows)
@@ -1228,10 +1246,26 @@ def run(game_root: Path, extracted_root: Path) -> int:
     # nothing resolved at all
     probe_cells[("metagame-node", "course")] = \
         PROBE_METAGAME_COURSE_TMPL.format(dangling=course_dangling)
+    # always named (arbiter F5): the carrier EXISTS — it lands one kind over;
+    # the cell must never read missing/"no carrier found"
+    probe_cells[("campus-level", "metagame-node")] = \
+        PROBE_CAMPUS_METAGAME_UNBLOCK
 
     matrix = ru.assemble_cell_matrix(cell_states, SCENE_SRC_UNBLOCK,
                                      probe_cells, build_id)
     ru.validate_matrix(matrix)
+    meta_cell_edges = next(
+        (p["cardinality"]["edges"] for p in matrix["pairs"]
+         if p["srcKind"] == "campus-level"
+         and p["dstKind"] == "metagame-node"), 0)
+    if meta_cell_edges != F12_CAMPUS_META_SEED:
+        drift_lines.append(
+            f"DRIFT: seeded campus-level->metagame-node pair fact "
+            f"{F12_CAMPUS_META_SEED} vs measured {meta_cell_edges} — the "
+            f"seed's carrier (.MetagameConfig.m_AssetGUID → "
+            f"{CONFIG_METAGAME_ID}) is kinded `config` by stage-5 and its "
+            f"{campus_meta_landing_rows} rows land in campus-level_config."
+            f"jsonl — fresh numbers win")
     log_util.write_json(relinks / "matrix.json", matrix)
 
     relations_lines = _relations_lines(

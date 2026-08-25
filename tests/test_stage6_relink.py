@@ -1355,6 +1355,35 @@ def test_r7_matrix_reconciliation_bite(tmp_path):
         "unclaimed dataset on disk passed silently"
 
 
+def test_r7_campus_level_metagame_node_carrier_cell():
+    """Arbiter F5 (CR4): the campus-level→metagame-node cell never reads
+    missing/"no carrier found" — the carrier resolves and lands one kind
+    over (stage-5 kinds Config_Metagame as `config`), so the cell ships
+    partial with a concrete unblock naming the landing place."""
+    mod = _impl.load_any(*_impl.STAGE6_SCRIPTS)
+    ru_m = getattr(mod, "ru", None) if mod else None
+    acm = getattr(ru_m, "assemble_cell_matrix", None) if ru_m else None
+    if acm is None and mod is not None:
+        acm = _impl.get_sym(mod, "assemble_cell_matrix")
+    probe = getattr(mod, "PROBE_CAMPUS_METAGAME_UNBLOCK", None)
+    scene_unblock = getattr(mod, "SCENE_SRC_UNBLOCK", None)
+    if acm is None or probe is None or scene_unblock is None:
+        pytest.skip("impl-missing: cell-matrix seam not resolvable yet")
+    matrix = acm({}, scene_unblock,
+                 {("campus-level", "metagame-node"): probe}, BUILD_ID)
+    cell = next(p for p in matrix["pairs"]
+                if p["srcKind"] == "campus-level"
+                and p["dstKind"] == "metagame-node")
+    assert cell["status"] == "partial", cell
+    unblock = cell.get("unblock") or ""
+    assert "Config_Metagame" in unblock, unblock
+    assert "campus-level_config.jsonl" in unblock, unblock
+    assert "kinding" in unblock.lower(), unblock
+    errs = rl.validate_matrix(matrix)
+    assert not errs, errs[:8]
+    assert ru_m is not None
+
+
 def test_r7_relations_generator_unit_deterministic(tmp_path):
     mod = _impl.load_any(*_impl.STAGE6_SCRIPTS)
     fn = _impl.get_sym(mod, *_impl.RELATIONS_GEN_NAMES)

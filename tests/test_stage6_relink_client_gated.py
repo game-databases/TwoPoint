@@ -358,6 +358,30 @@ def test_r3_guid_report_arithmetic_and_campus_level_modeled(real_run):
         f"({len(via_guid)} rows)")
 
 
+def test_r7_campus_meta_carrier_cell_and_drift_line(real_run):
+    """Arbiter F5 (CR4) on real bytes: the seeded 13-row pair fact measures
+    0 in the metagame-node cell — the cell must read PARTIAL with the
+    carrier-found unblock (never missing/"no carrier found"), and the
+    F12 reconciliation line beside F9 must name seed vs measured with the
+    seed's landing place."""
+    ns = real_run.ok()
+    matrix = read_json(ns.ext / "relinks" / "matrix.json")
+    cell = next(p for p in matrix["pairs"]
+                if p["srcKind"] == "campus-level"
+                and p["dstKind"] == "metagame-node")
+    assert cell["status"] == "partial", cell
+    unblock = cell.get("unblock") or ""
+    assert "Config_Metagame" in unblock, unblock
+    assert "no carrier found" not in unblock, unblock
+    # the landing place carries the seed's rows
+    rows = read_jsonl(ns.ext / "relinks" / "campus-level_config.jsonl")
+    landing = [r for r in rows if r["dstId"] == "Config_Metagame"]
+    assert landing, "seed-carrier rows absent from campus-level_config.jsonl"
+    # F12 reconciliation line: seeded 13 vs measured 0, landing named
+    assert "campus-level->metagame-node" in ns.combined, ns.combined[-2000:]
+    assert str(len(landing)) in ns.combined or "DRIFT" in ns.combined
+
+
 # --- R4 ------------------------------------------------------------------------------
 
 def _term_instances(fields):
