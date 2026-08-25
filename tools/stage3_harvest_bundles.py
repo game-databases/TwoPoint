@@ -16,8 +16,11 @@ identity.json's unityVersion when the header is 0.0.0/unparseable, marks the
 bundle census `fallbackVersionUsed:true` and totals the usage in the run
 section.
 
-Bundle identity is embedded in EVERY harvest filename (`<bundle-stem>_<pathId>`):
-path_ids are unique only WITHIN a bundle while families span bundles.
+Bundle identity is embedded in EVERY harvest filename
+(`<bundle-stem>_<signed-int64 pathId>` — path_ids are int64 and NEGATIVE on
+this client, Revision 6): path_ids are unique only WITHIN a bundle while
+families span bundles. Stage 5's loaders and checkers parse the sign via
+tpc_common.parse_harvest_stem.
 """
 from __future__ import annotations
 
@@ -124,6 +127,22 @@ def run(game_root: Path, extracted_root: Path,
     # fallback version from identity.json before any open, count each use.
     seeds = uu.FallbackVersionSeeder(extracted_root, UnityPy)
 
+    # Revision 6 fix lane: MonoBehaviour m_Script PPtrs point into SEPARATE
+    # monoscript bundles, so class names resolve only through a cross-bundle
+    # index built BEFORE the export pass. Phase A scans every roster bundle
+    # for MonoScript objects (the seeding dedup keeps fallback counts honest);
+    # phase B exports against the finished table.
+    script_index = uu.MonoScriptIndex()
+    for row in roster:
+        abspath_a = paths["root"] / row["relpath"]
+        seeds.seed_if_needed(abspath_a, row["relpath"])
+        try:
+            env_a = UnityPy.load(str(abspath_a))
+            script_index.index_environment(env_a, row["relpath"])
+            del env_a
+        except Exception:  # noqa: BLE001 — phase B ledgers unreadable bundles
+            continue
+
     # rerun convergence: the whole harvest plane is rebuilt from scratch
     harvest_dir = extracted_root / "harvest"
     if harvest_dir.exists():
@@ -147,6 +166,8 @@ def run(game_root: Path, extracted_root: Path,
     census_error_total = 0
     class_totals: dict[str, int] = {}
     carved_class_totals: dict[str, int] = {}
+    mb_resolved = 0       # MonoBehaviours with a cross-bundle-resolved script
+    mb_unresolved = 0     # m_Script PPtr unresolved → generic MonoBehaviour
 
     for row in roster:
         rel = row["relpath"]
@@ -218,8 +239,13 @@ def run(game_root: Path, extracted_root: Path,
                         "outRelPath": out_path.relative_to(extracted_root).as_posix(),
                         "bytes": len(raw)})
                 else:
-                    payload, decoded, method = uu.decode_monobehaviour(obj, synth)
+                    payload, decoded, method = uu.decode_monobehaviour(
+                        obj, synth, script_index=script_index)
                     script_class = payload.get("_scriptClass") or "MonoBehaviour"
+                    if script_class != "MonoBehaviour":
+                        mb_resolved += 1
+                    else:
+                        mb_unresolved += 1
                     payload["_scriptClass"] = script_class
                     out_path = (monobehaviours_dir / _safe(family)
                                 / _safe(script_class)
@@ -228,7 +254,7 @@ def run(game_root: Path, extracted_root: Path,
                     log_util.write_json(out_path, payload)
                     manifest_rows.append({
                         "sourceBundle": rel, "pathId": obj.path_id,
-                        "class": script_class if decoded else cls_name,
+                        "class": script_class,
                         "outRelPath": out_path.relative_to(extracted_root).as_posix(),
                         "bytes": int(getattr(obj, "byte_size", 0) or 0)})
             except Exception as exc:  # noqa: BLE001 — census errors stay loud
@@ -291,6 +317,8 @@ def run(game_root: Path, extracted_root: Path,
         f"catalogueRows: {len(catalogue_rows)}; objectErrors: "
         f"{census_error_total}; censusOnlyResidual: {residual}",
         f"- carvedClassCensus: {dict(sorted(carved_class_totals.items()))}",
+        f"- monoScriptIndex: {script_index.stats()}; monobehaviourScriptClass: "
+        f"resolved={mb_resolved} unresolved(generic)={mb_unresolved}",
         f"- {seeds.run_section_note(len(roster))}",
     ]
     lines += [f"- PROBLEM: {p}" for p in problems]
@@ -299,7 +327,8 @@ def run(game_root: Path, extracted_root: Path,
     print(f"[harvest-bundles] bundles={len(roster)} "
           f"unreadable={len(unreadable_rows)} exports={len(manifest_rows)} "
           f"catalogue={len(catalogue_rows)} objectErrors={census_error_total} "
-          f"fallbackVersioned={seeds.seeded_count}")
+          f"fallbackVersioned={seeds.seeded_count} "
+          f"mbScriptResolved={mb_resolved}/{mb_resolved + mb_unresolved}")
     for p in problems:
         print(f"[harvest-bundles] PROBLEM: {p}", file=sys.stderr)
     if problems:

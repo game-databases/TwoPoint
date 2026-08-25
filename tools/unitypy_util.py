@@ -6,12 +6,16 @@ version), then the vendored source clone under `<repo>/tools/UnityPy`. The
 resolved source marker ("venv-pip" | "vendored-clone") is returned so stages
 can record it in EXTRACTION-LOG.md run sections instead of silently guessing.
 
-IL2CPP bundles ship MonoBehaviours WITHOUT embedded typetrees. Decoding is
-attempted through a synthesized typetree driven by the dump.cs field tables
-(Il2CppDumper emits exact `// 0x…` instance-field offsets, which double as
-ground truth for alignment flags). Anything that fails to synthesize or
-decode falls back to a raw typed dump with `typetreeDecoded: false` — never
-a silent guess (spec §3 stage 3).
+MonoBehaviour decoding (measured on the real corpus, Revision 6): most
+bundles DO ship embedded typetrees — UnityPy reads those directly. For
+typetree-less payloads the synthesized typetree fires, driven by the dump.cs
+field tables (Il2CppDumper emits exact `// 0x…` instance-field offsets,
+which double as ground truth for alignment flags). Script-class names come
+from :class:`MonoScriptIndex` — m_Script PPtrs point into SEPARATE
+monoscript bundles, resolved through each file's externals by
+``(cab name, path_id)``. Anything that fails to decode falls back to a raw
+typed dump with `typetreeDecoded: false` + the exact reason — never a
+silent guess (spec §3 stage 3).
 """
 from __future__ import annotations
 
@@ -514,27 +518,160 @@ class FallbackVersionSeeder:
 # ---------------------------------------------------------------------------
 # MonoBehaviour decoding with honest fallback
 
-def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None) -> tuple[dict, bool, str]:
+def _simplify_external_path(path: str) -> str:
+    """`archive:/CAB-xxx/CAB-xxx` → `cab-xxx` (PPtr external match key)."""
+    p = str(path).replace("\\", "/")
+    if p.startswith("archive:/"):
+        p = p[len("archive:/"):]
+    if p.startswith("assets/"):
+        p = p[len("assets/"):]
+    return p.rsplit("/", 1)[-1].lower()
+
+
+class MonoScriptIndex:
+    """Cross-bundle MonoScript resolution table (Revision 6 fix lane).
+
+    IL2CPP bundles ship MonoBehaviours whose ``m_Script`` PPtr points at a
+    MonoScript object living in a SEPARATE monoscript bundle — UnityPy's
+    per-bundle environment cannot dereference it, and UnityPy 1.25.3 exposes
+    no ``mono_script`` helper at all. The index is built by scanning the
+    roster bundles for MonoScript objects BEFORE the export pass and keyed by
+    ``(serialized-file cab name lowercased, path_id)``, which is exactly what
+    an external PPtr names: ``m_FileID`` indexes the referring file's
+    ``externals`` list (1-based; 0 = same file), each entry spelling
+    ``archive:/<cab>/<cab>``."""
+
+    def __init__(self):
+        self._entries: dict[tuple[str, int], str] = {}
+        self.bundles_with_scripts: list[str] = []   # insertion-ordered rels
+        self.scripts_indexed = 0
+
+    def index_environment(self, env, rel: str | None = None) -> int:
+        """Index every MonoScript of an already-loaded environment.
+        Returns the count added."""
+        added = 0
+        for f in iter_environment_files(env):
+            cab = (getattr(f, "name", "") or "").lower()
+            for obj in iter_objects_sorted(f):
+                if getattr(getattr(obj, "type", None), "name", "") != "MonoScript":
+                    continue
+                try:
+                    d = obj.read_typetree(wrap=False)
+                except Exception:  # noqa: BLE001 — unreadable script stays absent
+                    continue
+                ns = d.get("m_Namespace") or ""
+                cn = d.get("m_ClassName") or ""
+                full = f"{ns}.{cn}" if ns else cn
+                if not full:
+                    continue
+                self._entries.setdefault((cab, obj.path_id), full)
+                added += 1
+        if added and rel:
+            if rel not in self.bundles_with_scripts:
+                self.bundles_with_scripts.append(rel)
+        self.scripts_indexed += added
+        return added
+
+    def scan_bundle(self, UnityPy, abspath) -> int:
+        """Load one bundle and index its MonoScripts. Returns count added."""
+        env = UnityPy.load(str(abspath))
+        rel = abspath.as_posix() if hasattr(abspath, "as_posix") else None
+        return self.index_environment(env, rel)
+
+    def resolve(self, obj, head: dict | None = None) -> str | None:
+        """Resolved script fullname for one MonoBehaviour object, or None.
+        `head` is the embedded-typetree payload when one was already read —
+        it carries ``m_Script`` without a second decode."""
+        ms = (head or {}).get("m_Script")
+        if not isinstance(ms, dict):
+            try:
+                ms = obj.read_typetree(wrap=False, check_read=False).get("m_Script")
+            except Exception:  # noqa: BLE001
+                return None
+            if not isinstance(ms, dict):
+                return None
+        try:
+            fid = int(ms.get("m_FileID", 0) or 0)
+            pid = int(ms.get("m_PathID", 0) or 0)
+        except (TypeError, ValueError):
+            return None
+        if pid == 0:
+            return None
+        if fid == 0:
+            cab = (getattr(getattr(obj, "assets_file", None), "name", "")
+                   or "").lower()
+        else:
+            exts = getattr(getattr(obj, "assets_file", None), "externals",
+                           None) or []
+            if fid < 1 or fid > len(exts):
+                return None
+            cab = _simplify_external_path(getattr(exts[fid - 1], "path", ""))
+        return self._entries.get((cab, pid))
+
+    def stats(self) -> dict:
+        return {"scriptsIndexed": self.scripts_indexed,
+                "bundlesWithScripts": len(self.bundles_with_scripts),
+                "distinctEntries": len(self._entries)}
+
+
+def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None,
+                         script_index: MonoScriptIndex | None = None,
+                         ) -> tuple[dict, bool, str]:
     """Returns (payload_dict, typetree_decoded, method_note). Never raises —
-    falls back to the raw typed dump."""
+    falls back to the raw typed dump.
+
+    Decode routes, first fit wins (spec §3 stage 3: typetree-decoded fields
+    where possible, `typetreeDecoded:false` marking only genuine residue):
+      1. embedded typetree — UnityPy reads the tree the bundle itself ships;
+      2. synthesized typetree — typetree-less payloads driven through the
+         dump.cs field tables for the RESOLVED script class;
+      3. raw typed dump with `_raw.typetreeDecoded:false` + the exact reason.
+
+    The resolved script class rides along as `_scriptClass` on EVERY route
+    where it is known (Rev 6: the class discriminator downstream must not
+    depend on which decode route fired)."""
     try:
         head = obj.read_typetree(wrap=False, check_read=False)
     except Exception:
         head = {}
-    script_class = _script_class_name(obj)
+    embedded_ok = isinstance(head, dict) and bool(head)
+
+    script_class = None
+    if script_index is not None:
+        script_class = script_index.resolve(
+            obj, head if embedded_ok else None)
+    if script_class is None:
+        script_class = _script_class_name(obj)   # legacy best-effort
+
+    # Route 1: embedded typetree — the bundle's own authoritative layout.
+    if embedded_ok:
+        payload = dict(head)
+        if script_class:
+            payload["_scriptClass"] = script_class
+        payload["_decoded"] = {"typetreeDecoded": True,
+                               "method": "embedded-typetree"}
+        return payload, True, "embedded-typetree"
+
+    # Route 2: synthesized typetree over the dump.cs field tables.
+    last_error = ("no serialized typetree and no dump.cs index available"
+                  if synth is None else
+                  "no serialized typetree and script class unresolved")
     if synth is not None and script_class:
         try:
             nodes = synth.monobehaviour_nodes(script_class)
             data = obj.read_typetree(nodes=nodes, wrap=False, check_read=True)
             data.setdefault("_synthesis", {
                 "method": "dumpcs-typetree-synthesis", "class": script_class})
+            data["_scriptClass"] = script_class
+            data.setdefault("_decoded", {
+                "typetreeDecoded": True,
+                "method": "dumpcs-typetree-synthesis"})
             return data, True, "dumpcs-typetree-synthesis"
         except Exception as exc:  # noqa: BLE001 — fallback is contractual
-            last_error = f"{type(exc).__name__}: {exc}"
-        else:
-            last_error = None
-    else:
-        last_error = "no dump.cs index available"
+            last_error = (f"synthesis failed for {script_class}: "
+                          f"{type(exc).__name__}: {exc}")
+
+    # Route 3: genuine raw-typed residue.
     raw = obj.get_raw_data()
     payload = dict(head) if isinstance(head, dict) else {}
     payload["_raw"] = {
@@ -543,18 +680,24 @@ def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None) -> tuple[dict, 
         "rawByteCount": len(raw),
         "reason": last_error,
     }
+    if script_class:
+        payload["_scriptClass"] = script_class
     return payload, False, "raw-typed-dump"
 
 
 def _script_class_name(obj) -> str | None:
-    """Best-effort MonoBehaviour payload class: UnityPy exposes m_Script as a
-    PPtr; the MonoScript name sits in objects cache — resolve via bundle
-    objects when possible, else fall back to the object's own name."""
+    """Legacy best-effort: UnityPy ≥1.20 exposes no `mono_script` attribute,
+    so this only fires when an environment happens to carry one — kept as a
+    fallback behind :meth:`MonoScriptIndex.resolve`, never the primary."""
     try:
         script = getattr(obj, "mono_script", None) or getattr(getattr(obj, "object", None),
                                                              "mono_script", None)
         if script is not None:
-            return getattr(script, "m_ClassName", None)
+            ns = getattr(script, "m_Namespace", None) or ""
+            cn = getattr(script, "m_ClassName", None)
+            if cn:
+                return f"{ns}.{cn}" if ns else cn
+            return None
     except Exception:  # noqa: BLE001
         return None
     return None

@@ -299,6 +299,50 @@ def read_metadata_header(metadata_path: Path) -> tuple[int, int]:
 
 
 # ---------------------------------------------------------------------------
+# Harvest filename contract (spec §3 stage 3, Revision 6)
+
+# Every harvest filename embeds `<bundle-stem>_<signed-int64 pathId>`:
+# path_ids are int64 and NEGATIVE on this client (60,582 of 167,069 manifest
+# rows measured), so the embedded spelling carries an optional leading `-`.
+# EVERY stem parser — stage-5 loaders AND checkers alike — accepts the sign
+# through this one helper.
+_HARVEST_STEM_RE = re.compile(r"^(?P<base>.+)_(?P<pid>-?\d+)$")
+_HARVEST_EXT_RE = re.compile(r"\.[A-Za-z0-9]{1,5}$")
+
+
+def parse_harvest_stem(name: str) -> tuple[str, int] | None:
+    """`<bundle-stem>_<signed-int64 pathId>[.<ext>]` → (bundle-stem,
+    path_id); None when no trailing signed decimal is present.
+
+    The optional `-` belongs to the path_id (Rev 6). A trailing file
+    extension (`.json`, `.txt`, …) is stripped first when present; a bundle
+    stem that itself ends in `_<digits>` parses correctly because the
+    greedy base group always takes the LAST `_`-separated decimal."""
+    s = str(name)
+    m = _HARVEST_EXT_RE.search(s)
+    if m and m.end() == len(s):
+        sm = _HARVEST_STEM_RE.match(s[: m.start()])
+        if sm is not None:
+            return sm.group("base"), int(sm.group("pid"))
+    sm = _HARVEST_STEM_RE.match(s)
+    if sm is not None:
+        return sm.group("base"), int(sm.group("pid"))
+    return None
+
+
+def axis_for_bundle_name(bundle_name: str) -> str:
+    """Content axis from a bundle FILENAME alone (stage-5 side has no roster):
+    DLC bundles carry the axis as their filename tag (`dlc-space-…`,
+    `dlc-ghost-…`); everything else is `base` — the ONE emitted enum."""
+    stem = bundle_name[:-len(".bundle")] \
+        if bundle_name.endswith(".bundle") else bundle_name
+    for axis in (AXIS_DLC_SPACE, AXIS_DLC_GHOST):
+        if stem.startswith(axis + "-"):
+            return axis
+    return AXIS_BASE
+
+
+# ---------------------------------------------------------------------------
 # Roster classification helpers
 
 def locale_for_bundle(bundle_name: str) -> str | None:
