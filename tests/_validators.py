@@ -1,8 +1,10 @@
 """Contract constants + schema validators for the TwoPoint piece-1 test suite.
 
 Every pin here is lifted from docs/specs/piece-01-extraction-pipeline.mdx
-(Revision 2). These helpers are TEST-ONLY: they validate emitted artifacts
-and fixture shapes; they never import the implementation.
+(Revisions 2–6 — the stage-5 `axes`/`@<hash8>` row vocabulary and the
+base-overlay evidence keys are Revision 5/6 additions). These helpers are
+TEST-ONLY: they validate emitted artifacts and fixture shapes; they never
+import the implementation.
 """
 from __future__ import annotations
 
@@ -336,8 +338,23 @@ def assert_unique_outrelpath(rows):
     return True
 
 
-def validate_stub_row(row, where=""):
-    """Pinned stage-5 row contract (spec §3 stage 5 Row shape)."""
+_HASH8_ID_RE = re.compile(r"@[0-9a-f]{8}$")
+
+
+def validate_stub_row(row, where="", contributors=None):
+    """Pinned stage-5 row contract (spec §3 stage 5 Row shape + Revision-6
+    identity-policy vocabulary).
+
+    Rev-6 additions (testreviewer-003 G7 / arbiter-003 F9):
+    - `axes`, when present, is a non-empty list ⊆ CONTENT_AXES. It marks
+      multi-contributor provenance — the implementation emits it for any
+      row that absorbed >1 contributor INCLUDING single-axis merges, so the
+      rule is "present iff absorbed >1 contributor", never "present iff
+      multi-axis". Pass `contributors=<int>` where the fixture knows the
+      absorbed count and both directions of that iff are enforced.
+    - an `id` ending `@<8-hex>` (duplicate-policy disambiguation) requires
+      `fields.id` present and equal to the bare verbatim id.
+    """
     e = []
     if not isinstance(row, dict):
         return [f"{where}stub row is not an object"]
@@ -363,6 +380,37 @@ def validate_stub_row(row, where=""):
             _err(e, f"{where}source.pathId not an int")
     if row.get("inferred") is False and not row.get("method"):
         _err(e, f"{where}method string required even when inferred=false (provenance)")
+
+    # --- Revision 6: axes provenance vocabulary ------------------------------
+    axes = row.get("axes")
+    if axes is not None:
+        if not isinstance(axes, list) or not axes:
+            _err(e, f"{where}axes must be a non-empty list when present "
+                    f"(got {axes!r})")
+        else:
+            for a in axes:
+                if a not in CONTENT_AXES:
+                    _err(e, f"{where}axes value {a!r} not in {CONTENT_AXES}")
+        if contributors is not None and contributors <= 1:
+            _err(e, f"{where}axes present but the row absorbed "
+                    f"{contributors} contributor(s) — axes marks "
+                    "multi-contributor provenance only")
+    elif contributors is not None and contributors > 1:
+        _err(e, f"{where}row absorbed {contributors} contributors but "
+                "carries no axes list")
+
+    # --- Revision 6: disambiguated ids preserve the verbatim id --------------
+    rid = row.get("id")
+    if isinstance(rid, str) and _HASH8_ID_RE.search(rid):
+        f = row.get("fields")
+        bare = rid[: rid.rfind("@")]
+        if not isinstance(f, dict) or f.get("id") is None:
+            _err(e, f"{where}disambiguated id {rid!r} without fields.id — "
+                    "the verbatim identifier must survive inside fields "
+                    "(Principle one)")
+        elif str(f.get("id")) != bare:
+            _err(e, f"{where}disambiguated id {rid!r}: fields.id "
+                    f"{f.get('id')!r} != bare verbatim {bare!r}")
     return e
 
 
