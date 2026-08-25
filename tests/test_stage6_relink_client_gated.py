@@ -490,6 +490,13 @@ def test_r4_registry_triple_diff_zero_and_kind_coverage(real_run):
 
     el = read_jsonl(ns.ext / "relinks" / "entity_locale.jsonl")
     hits = {(x["srcId"], x["evidence"]["termId"]) for x in el}
+    # arbiter F14: the emitted rows' locale evidence is swept against the
+    # 13-code set too (previously only registry rows were)
+    bad_el_locales = sorted({loc for x in el for loc in
+                             (x.get("evidence") or {}).get("locales") or ()
+                             if loc not in LOCALE_13})
+    assert not bad_el_locales, \
+        f"entity_locale locales outside the 13-code set: {bad_el_locales[:5]}"
     stubs = ns.ext / "stubs"
     for kind in ("staff", "course", "student-type"):
         rows = read_jsonl(stubs / rl.fx_roster_style_kind_file(kind))

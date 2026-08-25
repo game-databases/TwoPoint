@@ -350,6 +350,11 @@ def test_registry_agreement_helper_passes_on_seed_and_bites_on_drift():
     drift = [r for r in seed if r["termKey"] != rl.STAFF_TERM_KEY]
     diff = rl.registry_agreement(drift)
     assert diff["missingKeys"] == [rl.STAFF_TERM_KEY]
+    # arbiter F14: the EXTRA side of the bidirectional diff has teeth too
+    foreign = dict(seed[0], termKey="UI/Foreign/New_Key", termId=999999)
+    diff2 = rl.registry_agreement(seed + [foreign])
+    assert diff2["extraKeys"] == ["UI/Foreign/New_Key"], diff2
+    assert diff2["extraRows"] == [(999999, "UI/Foreign/New_Key")], diff2
     nocanon = [dict(r, canonical=False) for r in seed]
     assert rl.registry_agreement(nocanon)["canonicalViolations"]
     # relations/coverage validators refuse placeholder output
@@ -509,6 +514,18 @@ def test_r1_fallback_seeding_flips_on_probe_bundles(fx_relink):
     assert flipped_zero or flipped_garbage or any(
         isinstance(v, dict) for v in outcomes.values()), \
         f"seeding produced no usable signal: {outcomes}"
+    # arbiter F14: the true-version header must NOT flip fallback seeding —
+    # asserted whenever the helper returns flip-semantic values (bool/None);
+    # richer shapes carry no readable flip signal and degrade loudly
+    tv = outcomes["true-version"]
+    if isinstance(tv, bool) or tv is None:
+        assert not tv, \
+            f"true-version header must NOT flip fallback seeding: {tv!r}"
+    elif isinstance(tv, dict):
+        seeded_flag = tv.get("seeded", tv.get("flipped"))
+        if isinstance(seeded_flag, bool):
+            assert not seeded_flag, \
+                f"true-version header must NOT flip seeding: {tv!r}"
 
 
 # =====================================================================================
@@ -562,39 +579,52 @@ def test_r2_crossfile_resolver_unit_happy_twin_builtin_dangling_scene():
         pytest.skip(f"impl-missing-shape: cross-file resolver signature "
                     f"unmatched ({last})")
 
+    def drive_kw(args, **kw):
+        """Kwarg-tolerant call per suite policy: a signature drift on
+        `scene_bundles=` degrades to a LOUD skip, never an error/pass."""
+        try:
+            return fn(*args, **kw)
+        except TypeError as exc:
+            pytest.skip(f"impl-missing-shape: cross-file resolver rejected "
+                        f"kwargs {sorted(kw)} ({exc})")
+
     twin = drive("configs_assets_all.bundle", "Graph", 1, 3500)
+    assert twin.get("status") == "stub", \
+        f"twin edge must resolve as a stub hit: {twin}"
     blob = json.dumps(twin, default=str)
     assert rl.TWIN_ID in blob or rl.TWIN_BARE_ID in blob, \
         f"twin endpoint (@hash8) not preserved: {blob[:200]}"
     builtin = drive("configs_assets_all.bundle", "BuiltinRef", 2, 5)
-    bblob = json.dumps(builtin, default=str).lower()
-    assert "builtin" in bblob or "library" in bblob or "unresolved" in bblob, \
-        "built-in external must never resolve into a pair"
+    assert builtin.get("status") == "builtin", \
+        f"a built-in external must classify builtin, never resolve into " \
+        f"a pair: {builtin}"
     dead = drive("rooms_assets_all.bundle", "DeadRef", 1, 7999)
-    dblob = json.dumps(dead, default=str).lower()
-    assert "unresolved" in dblob or "dangling" in dblob or "none" in dblob, \
-        "dangling pathId must fall to the ledger path"
+    assert dead.get("status") == "unresolved", \
+        f"dangling pathId must fall to the ledger path: {dead}"
     ghost = drive("configs_assets_all.bundle", "GhostRef", 9, 1)
+    assert ghost.get("status") == "unresolved", \
+        f"unknown fileId must be unresolved with its cause named: {ghost}"
     gblob = json.dumps(ghost, default=str).lower()
-    assert "unknown" in gblob or "unresolved" in gblob or "none" in gblob
+    assert "fileid" in gblob, \
+        f"unknown-fileId refusal must name the fileId cause: {gblob[:200]}"
 
     # scene attribution through the same ladder (the hostless black-box tree
     # cannot carry it — see test_r2_blackbox note): a resolved target inside
     # a sceneFlag != none bundle that is NOT a stub entity attributes to the
     # scene node; a pathId absent from the resolved file stays dangling.
     scene_names = {Path(p).name for p in rl.roster_scene_ids()}
-    scene = fn(ext_by_bundle, cab_rows, sidx,
-               {"bundle": "rooms_assets_all.bundle",
-                "fieldPath": "SceneProp", "m_FileID": 1, "m_PathID": 7001},
-               scene_bundles=scene_names)
+    scene = drive_kw((ext_by_bundle, cab_rows, sidx,
+                      {"bundle": "rooms_assets_all.bundle",
+                       "fieldPath": "SceneProp", "m_FileID": 1,
+                       "m_PathID": 7001}), scene_bundles=scene_names)
     assert scene.get("status") == "scene", \
         f"scene attribution failed: {scene}"
     assert scene.get("relpath") in scene_names
-    dead_scene_pid = fn(ext_by_bundle, cab_rows, sidx,
-                        {"bundle": "rooms_assets_all.bundle",
-                         "fieldPath": "DeadRef", "m_FileID": 1,
-                         "m_PathID": 7999},
-                        scene_bundles=scene_names)
+    dead_scene_pid = drive_kw((ext_by_bundle, cab_rows, sidx,
+                               {"bundle": "rooms_assets_all.bundle",
+                                "fieldPath": "DeadRef", "m_FileID": 1,
+                                "m_PathID": 7999}),
+                              scene_bundles=scene_names)
     assert dead_scene_pid.get("status") == "unresolved", \
         f"a dangling pathId must not attribute to the scene node: {dead_scene_pid}"
 
@@ -703,11 +733,51 @@ def test_r2_blackbox_end_to_end_over_fixture_tree(fx_relink, tmp_path_factory):
     assert {d["assetGuid"] for d in danglings} >= set(rl.EXPECTED_DANGLING_GUIDS)
     for d in danglings:
         assert rl.validate_dangling_row(d) == []
+    # arbiter F14 teeth (hostless black-box):
+    # (a) the dangling ledger sorts by its pinned key
+    dang_keys = [d["assetGuid"] for d in danglings]
+    assert dang_keys == sorted(dang_keys), \
+        "_dangling_guids.jsonl not sorted by assetGuid"
+    # (b) guid_bridge_report arithmetic identities hold on the emitted bytes
+    report = read_json(ext / "relinks" / "guid_bridge_report.json")
+    errs = rl.validate_guid_report(report)
+    assert not errs, errs
+    assert report["resolvedToStub"] <= report["resolvedToAddress"] \
+        <= report["guidRefsTotal"], report
+    assert report["danglingDistinctGuids"] <= report["distinctGuids"], report
+    # (c) non-entity GUID targets (address terminations, dstKind=="asset")
+    # emit ZERO kind-pair rows — they live only in entity_asset_guid.jsonl
+    for fname, rows in _pair_file_rows(ext).items():
+        offenders = [r for r in rows if r.get("dstKind") == "asset"]
+        assert not offenders, \
+            f"{fname} carries {len(offenders)} non-entity asset-target rows"
 
 
 # =====================================================================================
 # R3 — GUID bridge
 # =====================================================================================
+
+def test_r3_duplicate_guid_keys_ship_as_list(tmp_path):
+    """Arbiter F14: duplicate GUID keys are LEGAL Addressables — the catalog
+    index must keep them as a sorted list of entries, never collapse."""
+    mod = _impl.load_any(*_impl.STAGE6_SCRIPTS)
+    fn = _impl.get_sym(mod, "load_catalog_guid_index",
+                       "build_catalog_guid_index", "catalog_guid_index")
+    if fn is None:
+        pytest.skip("impl-missing: catalog guid-index loader not resolvable")
+    dup = "a" * 32
+    cat = {"keys": [
+        {"key": dup, "kind": "guid", "address": "Assets/a", "bundle": "b2"},
+        {"key": dup, "kind": "guid", "address": "Assets/a", "bundle": "b1"},
+        {"key": "b" * 32, "kind": "bundle", "bundle": "x", "address": None},
+    ]}
+    p = tmp_path / "catalog.json"
+    p.write_text(json.dumps(cat), encoding="utf-8")
+    idx = fn(p)
+    entries = idx.get(dup) or []
+    assert len(entries) == 2, f"duplicate guid collapsed: {entries}"
+    assert [e["bundle"] for e in entries] == ["b1", "b2"], entries
+
 
 def test_r3_resolve_rate_arithmetic_exact_unit():
     mod, fn = _unit(_impl.GUID_BRIDGE_NAMES)
