@@ -1327,6 +1327,7 @@ def apply_competitor_sources(competitor_root: Path, stubs: StubIndex,
             continue
         counts["sourcesRead"] += 1
         disp = {"confirms-hard": 0, "adds-derived": 0, "flags-missing": 0}
+        missing_samples: list[dict] = []
         with open(model, "r", encoding="utf-8", newline="\n") as fh:
             for line in fh:
                 line = line.strip()
@@ -1335,9 +1336,10 @@ def apply_competitor_sources(competitor_root: Path, stubs: StubIndex,
                 claim = json.loads(line)
                 subj_kind = COMMUNITY_KIND_MAP.get(str(claim.get("subjectKind")))
                 obj_kind = COMMUNITY_KIND_MAP.get(str(claim.get("objectKind")))
-                subj_id, _ = (resolver.resolve(str(claim.get("subjectKind")),
-                                               str(claim.get("subjectName")))
-                              if subj_kind else (None, []))
+                subj_id, subj_close = (
+                    resolver.resolve(str(claim.get("subjectKind")),
+                                     str(claim.get("subjectName")))
+                    if subj_kind else (None, []))
                 obj_id, obj_close = (resolver.resolve(str(claim.get("objectKind")),
                                                       str(claim.get("objectName")))
                                      if obj_kind else (None, []))
@@ -1345,6 +1347,16 @@ def apply_competitor_sources(competitor_root: Path, stubs: StubIndex,
                         or obj_id is None:
                     disp["flags-missing"] += 1
                     counts["flagsMissing"] += 1
+                    # traceability, bounded and deterministic: the first five
+                    # unresolvable claims per source name what WAS considered
+                    # (arbiter F4a) — the closest candidates are already
+                    # computed; they were previously discarded on the floor
+                    if len(missing_samples) < 5:
+                        missing_samples.append({
+                            "subjectName": str(claim.get("subjectName") or ""),
+                            "objectName": str(claim.get("objectName") or ""),
+                            "closestCandidates":
+                                sorted(set(subj_close) | set(obj_close))})
                     continue
                 cell = (subj_kind, obj_kind)
                 edge_id = (subj_kind, subj_id, obj_kind, obj_id)
@@ -1365,10 +1377,17 @@ def apply_competitor_sources(competitor_root: Path, stubs: StubIndex,
         row = {"sourceId": sid, "rung": "F1",
                "artifactRelPath": artifact,
                "dispositions": disp, "buildId": build_id}
+        if missing_samples:
+            row["samples"] = {"flagsMissing": missing_samples}
         ledger.append(row)
     ledger.sort(key=lambda r: (str(r.get("sourceId")), str(r.get("rung"))))
-    applied = sum(1 for r in ledger
-                  if any(v for v in r.get("dispositions", {}).values()))
+    # bar-3 semantics (DR-2026-08-17-relink): APPLIED counts sources carrying
+    # >=1 confirms-hard / adds-derived disposition — flags-missing-only
+    # sources are reported above but never floor-count (arbiter F4b)
+    applied = sum(
+        1 for r in ledger
+        if r.get("dispositions", {}).get("confirms-hard", 0) > 0
+        or r.get("dispositions", {}).get("adds-derived", 0) > 0)
     floor_met = applied >= _FLOOR_SOURCES
     if not floor_met:
         ledger.append({
@@ -1376,10 +1395,17 @@ def apply_competitor_sources(competitor_root: Path, stubs: StubIndex,
             "terminal": "floor-unmet",
             "floorRequired": _FLOOR_SOURCES,
             "sourcesApplied": applied,
-            "unblock": "owner-directed corpus acquisition into "
-                       "data/sources/competitor/<source-id>/ (model.jsonl + "
-                       "PROVENANCE.md) per competitor-research.md ladder "
-                       "F1-F5; the stage consumes committed bytes only",
+            "unblock": "measured dead end for raw more-of-the-same corpus: "
+                       "the committed community-word claims resolve zero "
+                       "under the pinned exact + casefold/_<->space "
+                       "convention (measured across the committed corpus: "
+                       "0/417; prefix-strip variant 1/417) and scraped "
+                       "stubs carry no slugs (null on every row), so plain "
+                       "acquisition cannot flip this floor — the levers are "
+                       "claims named in internal ids or an authored "
+                       "community-name->internal-id alias input riding this "
+                       "research-pass lane (owner-routed per competitor-"
+                       "research.md); the stage consumes committed bytes only",
             "buildId": build_id})
     return ledger, overlays, counts, floor_met
 

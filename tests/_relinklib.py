@@ -1303,9 +1303,12 @@ def validate_competitor_ledger_row(row, where=""):
 
 
 def floor_gate(dispositions_by_source):
-    """Floor MET iff >=3 distinct sourceIds carry >=1 disposition each."""
+    """Bar-3 floor (DR-2026-08-17-relink, arbiter F4b): MET iff >=3 distinct
+    sourceIds each carry >=1 confirms-hard / adds-derived disposition —
+    flags-missing-only sources are reported but never floor-count."""
     met = sum(1 for d in dispositions_by_source.values()
-              if sum(int(v) for v in d.values()) >= 1)
+              if int(d.get("confirms-hard", 0)) > 0
+              or int(d.get("adds-derived", 0)) > 0)
     return met >= 3, met
 
 

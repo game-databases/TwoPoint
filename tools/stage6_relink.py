@@ -56,6 +56,7 @@ import unitypy_util as uu
 # the seam vocabulary here so consumers resolving THIS stage module (the
 # suite's impl adapter loads stage scripts by name) see the whole surface.
 from relink_util import (  # noqa: E402,F401
+    apply_competitor_sources,
     assemble_matrix,
     build_cab_index,
     build_container_index,
@@ -1186,9 +1187,12 @@ def run(game_root: Path, extracted_root: Path) -> int:
         log_util.write_jsonl(relinks / f"{sk}_{dk}.competitor.jsonl", rows)
         overlay_files += 1
     log_util.write_jsonl(relinks / "competitor_applied.jsonl", ledger_rows)
+    # bar-3 APPLIED semantics (arbiter F4b): >=1 confirms-hard/adds-derived —
+    # flags-missing-only sources are ledgered but never floor-count
     sources_applied = sum(
         1 for r in ledger_rows
-        if any(v for v in r.get("dispositions", {}).values()))
+        if r.get("dispositions", {}).get("confirms-hard", 0) > 0
+        or r.get("dispositions", {}).get("adds-derived", 0) > 0)
 
     # -- R7 ------------------------------------------------------------------
     cell_states: dict[tuple[str, str], ru.CellState] = {}

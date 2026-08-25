@@ -217,8 +217,9 @@ TOOLTIP_CENSUS_NAMES = ("tooltip_target_census", "enumerate_tooltip_targets",
                         "tooltip_targets", "tooltip_target_classes")
 DISCOVERY_FLOOR_NAMES = ("discover_ui_classes", "ui_class_discovery",
                          "menu_ui_inspector_classes", "discovery_floor_classes")
-COMPETITOR_APPLY_NAMES = ("apply_competitor_model", "apply_model",
-                          "map_competitor_rows", "competitor_dispositions")
+COMPETITOR_APPLY_NAMES = ("apply_competitor_sources", "apply_competitor_model",
+                          "apply_model", "map_competitor_rows",
+                          "competitor_dispositions")
 FLOOR_GATE_NAMES = ("floor_met", "competitor_floor_met", "evaluate_floor",
                     "floor_status")
 MATRIX_ASSEMBLER_NAMES = ("assemble_matrix", "build_relation_matrix",

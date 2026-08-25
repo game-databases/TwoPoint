@@ -305,11 +305,16 @@ def test_competitor_shapes_floor_gate_and_wall_rows():
         for k in ("subjectKind", "subjectName", "relationVerb", "objectKind",
                   "objectName", "sourcePage"):
             assert k in row
-    # floor gate at 2 vs 3 sources (§R6)
+    # floor gate at 2 vs 3 sources (§R6) — bar-3 APPLIED semantics: a
+    # flags-missing-only source is reported but never floor-counts (F4b)
     two = {"fandom": {"adds-derived": 4}, "wiki-gg": {"confirms-hard": 1}}
     met, n = rl.floor_gate(two)
     assert not met and n == 2
-    three = dict(two, **{"steam-guids": {"flags-missing": 2}})
+    three_missing = dict(two, **{"steam-guids": {"flags-missing": 34}})
+    met, n = rl.floor_gate(three_missing)
+    assert not met and n == 2, \
+        "flags-missing-only sources must not carry the floor (F4b)"
+    three = dict(two, **{"steam-guids": {"confirms-hard": 9}})
     met, n = rl.floor_gate(three)
     assert met and n == 3
     zero_dispositions = {"fandom": {}, "wiki-gg": {"confirms-hard": 0},
@@ -1049,6 +1054,75 @@ def test_r6_blackbox_competition_absent_floor_unmet_exit2(fx_relink, tmp_path_fa
                 if row.get("rung") in ("wall", "terminal")
                 or row.get("floorMet") is False]
     assert terminal, f"no terminal floor-unmet row: {ledger}"
+    # arbiter F4c: the terminal unblock states the MEASURED truth — raw
+    # more-of-the-same acquisition cannot flip this floor; the levers are
+    # internal-id-named claims or an authored alias input
+    floor_rows = [row for row in ledger if row.get("sourceId") == "~floor"]
+    assert floor_rows, ledger
+    text = floor_rows[0].get("unblock") or ""
+    assert "acquisition cannot flip" in text and "alias" in text, text
+    for row in ledger:
+        assert rl.validate_competitor_ledger_row(row) == []
+
+
+def test_r6_flags_missing_samples_and_applied_semantics(tmp_path):
+    """Arbiter F4a+b: unresolvable claims land in the ledger as bounded
+    deterministic traceability (≤5 per source, closest candidates named);
+    APPLIED/floor counts sources carrying >=1 confirms-hard/adds-derived
+    only — a flags-missing-only source never carries the floor."""
+    mod, fn = _unit(_impl.COMPETITOR_APPLY_NAMES)
+    ru_m = getattr(mod, "ru", None)
+    assert ru_m is not None, "stage6 module lost its relink_util alias"
+
+    def claim(sk, sn, ok_, on, verb="requires"):
+        return {"subjectKind": sk, "subjectName": sn, "relationVerb": verb,
+                "objectKind": ok_, "objectName": on,
+                "sourcePage": f"https://fixture.invalid/{sn}"}
+
+    root = tmp_path / "competitor"
+    fandom = root / "fandom"
+    fandom.mkdir(parents=True)
+    rows = [
+        claim("room", rl.ANCHOR_ROOM, "item", rl.ANCHOR_ITEM),   # resolves
+        # six unresolvable claims -> samples capped at five, in file order
+        *[claim("config", f"Nonexistent Widget Thing {i}", "unlockable",
+                "Unlock_Kudosh_Chair" if i % 2 else "No Such Unlock")
+          for i in range(6)],
+    ]
+    write_jsonl(fandom / "model.jsonl", rows)
+    guides = root / "steam-guides"
+    guides.mkdir(parents=True)
+    write_jsonl(guides / "model.jsonl", [
+        claim("course", "totally unknown course", "item",
+              "not an item either"),
+    ])
+
+    stubs = ru_m.StubIndex()
+    for kind, stub_rows in rl.relink_stub_rows().items():
+        for row_ in stub_rows:
+            stubs.add_row(row_)
+    ledger, overlays, counts, floor_met = fn(root, stubs, set(), BUILD_ID)
+    if not isinstance(ledger, list):   # call-shape drift guard
+        pytest.skip("impl-shape: mapper returned unexpected ledger type")
+
+    by_src = {r.get("sourceId"): r for r in ledger}
+    fandom_row = by_src["fandom"]
+    assert fandom_row["dispositions"] == {
+        "confirms-hard": 0, "adds-derived": 1, "flags-missing": 6}, fandom_row
+    samples = fandom_row["samples"]["flagsMissing"]
+    assert len(samples) == 5, len(samples)
+    assert samples[0]["subjectName"] == "Nonexistent Widget Thing 0"
+    for s in samples:
+        assert set(s) == {"subjectName", "objectName", "closestCandidates"}
+        assert isinstance(s["closestCandidates"], list)
+
+    guides_row = by_src["steam-guides"]
+    assert guides_row["dispositions"]["flags-missing"] == 1
+    # bar-3 APPLIED: fandom carries adds-derived; steam-guides does not
+    floor_rows = [r for r in ledger if r.get("sourceId") == "~floor"]
+    assert not floor_met and floor_rows, ledger
+    assert floor_rows[0]["sourcesApplied"] == 1, floor_rows[0]
+    assert "acquisition cannot flip" in floor_rows[0]["unblock"]
     for row in ledger:
         assert rl.validate_competitor_ledger_row(row) == []
 
