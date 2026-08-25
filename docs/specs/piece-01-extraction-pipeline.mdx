@@ -11,6 +11,59 @@ figures).
 
 ---
 
+## Revision 6 (executor-004b stage-5 identity & signed-pathId amendments)
+
+Grounded in the pipeline's first real-corpus run with stages 0–4 green —
+[`../../extracted/EXTRACTION-LOG.md`](../../extracted/EXTRACTION-LOG.md)
+run section `2026-08-25T03:55:37Z` (emit-stub-datasets exit 1 on its own
+duplicate-id acceptance) and the evidence report
+[`.agents/logs/executor-004b.log`](../../.agents/logs/executor-004b.log),
+cross-checked against the emitted corpus (stub rows, export-manifest,
+flat harvest dumps) on 2026-08-25. Three amendments; stage ids, output
+paths, sentinels, and the 0/1/2/3 exit-code contract are unchanged:
+
+1. **Stage-5 entity identity policy.** The seeded-family heuristic swept
+   prefab COMPONENT MonoBehaviours into entity kinds — rooms 156/156,
+   student-types 33/33, items 8,829/8,896 rows carry `id=''` — alongside
+   LEGITIMATE cross-bundle definition copies (`Bloom` ×24;
+   `Config_DLC1`/`Config_DLC2` mirror the base config per DLC axis).
+   §3 stage 5 gains the four-rule identity policy below: components are
+   never entities (resolved `_scriptClass` discriminates), `id=''` rows
+   are ledgered not emitted, identical-id rows merge on equal payload
+   hash or disambiguate via `@<contentHash8>`, and uniqueness is
+   asserted post-policy with every decision counted.
+2. **The stage-3↔5 filename contract carries SIGNED path_ids.**
+   60,582 of 167,069 export-manifest rows hold NEGATIVE int64
+   path_ids; the embedded spelling is therefore
+   `<bundle-stem>_<signed-int64 pathId>` with an optional leading `-`,
+   and EVERY stem parser — stage-5 loaders and checkers alike — accepts
+   the sign (`_(|-)\d+$`). The unsigned parser turned those rows into
+   `source.pathId=None`, truncated bundle names, and a nonsense
+   absence-ledger universe; stage 5 must recover `source.pathId` and
+   the full bundle name for ALL manifest rows (assert 0 unparsed
+   stems).
+3. **The byte-match checker validates the REAL artifact shapes.** The
+   identifier-verbatim test read a nonexistent `fields` wrapper off the
+   flat harvest dumps (`{_raw,_scriptClass,m_Enabled,m_GameObject,
+   m_Name,m_Script}`) and could only ever report `checked=0` — which
+   the run then recorded without failing. The test now checks THE id
+   contract of whatever shape the implementation emits, and
+   `checked > 0` is enforced: a checked=0 run fails its own gate.
+   Sample arithmetic unchanged (≤1,000 rows → all; else deterministic
+   sorted 500).
+
+Note-only (no contract change): typetree synthesis fired 0/166,714 and
+`_scriptClass` resolved to generic `MonoBehaviour` on every sampled
+payload — an IMPLEMENTATION defect under investigation by the fix lane
+(`unitypy_util.py` MonoScript PPtr cross-bundle resolution). The
+binding requirement the fixer must meet is already in this spec: stage
+3 takes the stage-1 dummy DLLs as INPUTS for typetree synthesis on
+typetree-less MonoBehaviours and emits typetree-decoded fields where
+possible, `typetreeDecoded:false` marking only genuine raw-typed
+residue — a 100%-raw run does not meet it.
+
+---
+
 ## Revision 5 (executor-003 client-reality amendments)
 
 Grounded in the pipeline's first real-corpus stage failures —
@@ -436,6 +489,17 @@ CATALOGUE-ONLY in piece 1 (arbiter-001 R1 lane).
     `audio-sfx`, `audio-radio_*`, `audio-tannoy_*`, DLC `*-audio_*`
     included).
 
+  **Signed-pathId filename contract (Revision 6):** the `<pathId>`
+  placeholder in the export bullets above is the SIGNED int64 decimal —
+  path_ids are int64 and NEGATIVE on this client (60,582 of 167,069
+  manifest rows measured), so emitted names carry an optional leading
+  `-` (real emitted name:
+  `dlc-ghost-art_assets_all_-1030583540197932202.json`). Every consumer
+  that parses harvest stems — stage-5 loaders AND checkers — accepts
+  the sign (`_(|-)\d+$`); should any writer ever need a spelling where
+  `-` is unsafe, negative ids normalize with a leading `n` prefix.
+  Stage 3 itself always emits the signed decimal.
+
   **Icon/sprite byte export is NOT in piece 1**: it is an owner pick
   taken on MEDIA-CATALOGUE per [DR-2026-08-18-media-scope], scheduled
   after piece 1 behind an owner-approved export pass. Consequently the
@@ -541,6 +605,35 @@ place rather than absent).
 - **Script:** `tools/stage5_emit_stubs.py`
 - **Inputs:** `harvest/monobehaviours/**`, `addressables/catalog.json`,
   `decompiled/structural/*`, `locales/locale-matrix.json`.
+- **Entity identity policy (Revision 6):** applied before any row is
+  emitted; every rule's decisions are counted in the run section.
+  1. **COMPONENT EXCLUSION** — only entity-bearing scriptable
+     definitions are candidates: a MonoBehaviour whose script class
+     resolves into the game's config/definition hierarchy qualifies.
+     Engine/primitive components (Transform, Collider, Renderer,
+     MonoBehaviour-without-resolved-script, `Interaction*`, …) NEVER
+     become entity rows. The resolved `_scriptClass` (post
+     typetree/synthesis fix) is the discriminator; unresolved-generic
+     dumps are census rows, not entities.
+  2. **ID RESOLUTION** — a row without a resolvable verbatim identifier
+     is NOT emitted as an entity (`id=''` swept in en masse on the
+     measured run: rooms 156/156, student-types 33/33,
+     items 8,829/8,896); it lands in `_absences.jsonl` (counted,
+     sampled), never silently and never as a stub row.
+  3. **DUPLICATE POLICY** — within a family, identical-id rows whose
+     full payload hashes EQUAL merge into ONE row carrying an
+     `axes:[base|dlc-space|dlc-ghost]` provenance list naming every
+     content axis that contributed (legitimate cross-bundle definition
+     copies measured: `Bloom` ×24; `Config_DLC1`/`Config_DLC2` mirror
+     base configs per DLC axis); identical-id rows with DIFFERING
+     payloads stay DISTINCT via the deterministic composite suffix
+     `@<contentHash8>` on the emitted `id`, the original verbatim id
+     preserved inside `fields` (Principle one holds — the suffix is
+     additive, nothing is renamed away). Counters: `mergedDuplicates`,
+     `disambiguatedDuplicates`.
+  4. **POST-POLICY UNIQUENESS** — per-family schema uniqueness is
+     asserted after exclusion + merge/disambiguation, never over raw
+     sweep order.
 - **Outputs:** `extracted/stubs/<kind>.jsonl` for the seeded families —
   kind names match spec.md `entities`; the kind VALUE ↔ FILENAME map is
   pinned exactly (the schema validator depends on it):
