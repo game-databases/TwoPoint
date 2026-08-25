@@ -1422,10 +1422,81 @@ def validate_matrix(obj, *, where="matrix"):
                 _err(e, f"{w}cardinality.edges negative")
         if not isinstance(p.get("pairFiles"), list):
             _err(e, f"{w}pairFiles must be a list (possibly empty)")
-    if (n_modeled, n_partial, n_missing) != (
-            sum(1 for p in pairs if p.get("status") == "modeled"),
-            n_partial, n_missing):
-        _err(e, f"{where}status tallies drifted")
+    return e
+
+
+def reconcile_matrix_to_pair_files(matrix, relinks_dir, *, where="matrix"):
+    """Arbiter F2 (TR1; spec §8-R7): the matrix's per-cell numbers must
+    reconcile to the emitted pair datasets on disk — for every cell naming
+    pairFiles, each entry exists under `relinks_dir`, is spelled
+    `<src>_<dst>.jsonl`, carries exactly cardinality.edges rows and exactly
+    srcEntitiesWithEdges distinct srcIds. Phantom numbers hard-fail in BOTH
+    directions (edges without a file, files without a claiming cell), and
+    the swept row total must equal the summed edges — the real cross-check
+    that replaced validate_matrix's self-voiding status-tally comparison.
+    Overlays (`*.competitor.jsonl`) and non-pair artifacts are excluded from
+    the sweep exactly as classify_pair_filename draws the line; INVALID
+    naming is F11's tripwire's job, not this leg's."""
+    d = Path(relinks_dir)
+    e: list[str] = []
+    claimed: dict[str, int] = {}
+    claimed_rows = 0
+    sum_edges = 0
+    for p in matrix.get("pairs") or []:
+        w = f"{where}({p.get('srcKind')}->{p.get('dstKind')}) "
+        card = p.get("cardinality") or {}
+        edges = card.get("edges")
+        want_src = card.get("srcEntitiesWithEdges")
+        names = p.get("pairFiles") or []
+        if not isinstance(edges, int):
+            _err(e, f"{w}cardinality.edges not an int: {edges!r}")
+            continue
+        expected = f"{p.get('srcKind')}_{p.get('dstKind')}.jsonl"
+        if edges == 0:
+            if names:
+                _err(e, f"{w}zero-edge cell names pairFiles {sorted(names)!r}")
+            continue
+        sum_edges += edges
+        if not names:
+            _err(e, f"{w}edges={edges} but no pairFiles named")
+            continue
+        for name in names:
+            if name != expected:
+                _err(e, f"{w}pairFiles entry {name!r} != pinned spelling "
+                        f"{expected!r}")
+                continue
+            f = d / name
+            if not f.is_file():
+                _err(e, f"{w}names {name!r}: absent under {d.name}/")
+                continue
+            rows = read_jsonl(f)
+            claimed[name] = len(rows)
+            claimed_rows += len(rows)
+            if len(rows) != edges:
+                _err(e, f"{w}{name}: {len(rows)} rows on disk != "
+                        f"cardinality.edges={edges}")
+            distinct_src = len({str(r.get("srcId")) for r in rows})
+            if distinct_src != want_src:
+                _err(e, f"{w}{name}: {distinct_src} distinct srcId != "
+                        f"srcEntitiesWithEdges={want_src}")
+    swept: dict[str, int] = {}
+    if d.is_dir():
+        for f in sorted(d.glob("*.jsonl")):
+            kind = classify_pair_filename(f.name)
+            if kind is None or kind[0] == "INVALID" or kind[2]:
+                continue   # ledgers/reports/overlays are not client cells
+            swept[f.name] = len(read_jsonl(f))
+    unclaimed = sorted(set(swept) - set(claimed))
+    if unclaimed:
+        _err(e, f"{where}: pair dataset(s) on disk no cell claims: "
+                f"{unclaimed[:5]}")
+    phantom = sorted(set(claimed) - set(swept))
+    if phantom:
+        _err(e, f"{where}: cells claim pair dataset(s) absent from the "
+                f"sweep: {phantom[:5]}")
+    if claimed_rows != sum_edges:
+        _err(e, f"{where}: swept claimed pair datasets carry {claimed_rows} "
+                f"rows != sum(cardinality.edges)={sum_edges}")
     return e
 
 

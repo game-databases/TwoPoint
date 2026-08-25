@@ -1056,6 +1056,10 @@ def test_r7_blackbox_matrix_relations_and_double_run_determinism(
     matrix = read_json(ext / "relinks" / "matrix.json")
     errs = rl.validate_matrix(matrix)
     assert not errs, errs[:8]
+    # arbiter F2: per-cell numbers must reconcile to the emitted pair
+    # datasets on disk (rows == edges, distinct srcIds == srcEntities)
+    errs = rl.reconcile_matrix_to_pair_files(matrix, ext / "relinks")
+    assert not errs, errs[:8]
     statuses = [p["status"] for p in matrix["pairs"]]
     assert statuses.count("missing") > 0, \
         "fixture corpus cannot model all 100 cells — silence would be a lie"
@@ -1113,6 +1117,72 @@ def test_r7_matrix_assembler_unit_over_synthetic_datasets(tmp_path):
     obj = result if isinstance(result, dict) else read_json(Path(result))
     errs = rl.validate_matrix(obj)
     assert not errs, errs[:8]
+    # arbiter F2: reconstruction reconciles to the same bytes it read
+    errs = rl.reconcile_matrix_to_pair_files(obj, relinks)
+    assert not errs, errs[:8]
+
+
+def test_r7_matrix_reconciliation_bite(tmp_path):
+    """Arbiter F2 negative controls: phantom edges, wrong spelling, absent
+    files, distinct-srcId drift and unclaimed datasets all hard-fail."""
+    good = _good_pair_row()
+    second = _good_pair_row(srcId="Room_Second",
+                            evidence={**good["evidence"],
+                                      "fieldPath": "RequiredWorkingItems[]",
+                                      "srcPathId": 2010})
+    relinks = tmp_path / "relinks"
+    relinks.mkdir()
+    write_jsonl(relinks / "room_item.jsonl", [good, second])
+
+    def matrix_for(edges, src_entities, pair_files):
+        return {"meta": {"buildId": BUILD_ID}, "pairs": [
+            {"srcKind": "room", "dstKind": "item", "joinKey": "x",
+             "mechanism": "hard", "status": "modeled",
+             "cardinality": {"perSrc": "0..N", "perDst": "0..M",
+                             "srcEntitiesWithEdges": src_entities,
+                             "edges": edges},
+             "pairFiles": pair_files}]}
+
+    ok = matrix_for(2, 2, ["room_item.jsonl"])
+    assert rl.reconcile_matrix_to_pair_files(ok, relinks) == []
+
+    phantom_edges = matrix_for(3, 2, ["room_item.jsonl"])
+    assert rl.reconcile_matrix_to_pair_files(phantom_edges, relinks), \
+        "row-count lie passed reconciliation"
+
+    phantom_srcs = matrix_for(2, 5, ["room_item.jsonl"])
+    errs = rl.reconcile_matrix_to_pair_files(phantom_srcs, relinks)
+    assert any("distinct srcId" in x for x in errs), errs
+
+    bad_name = matrix_for(2, 2, ["rooms_items.jsonl"])
+    assert rl.reconcile_matrix_to_pair_files(bad_name, relinks), \
+        "misspelled pairFiles entry passed"
+
+    def two_cell_matrix(cc_edges, cc_files):
+        m = matrix_for(2, 2, ["room_item.jsonl"])
+        m["pairs"].append(
+            {"srcKind": "config", "dstKind": "config", "joinKey": "x",
+             "mechanism": "hard", "status": "modeled",
+             "cardinality": {"perSrc": "0..N", "perDst": "0..M",
+                             "srcEntitiesWithEdges": cc_edges,
+                             "edges": cc_edges},
+             "pairFiles": cc_files})
+        return m
+
+    errs = rl.reconcile_matrix_to_pair_files(
+        two_cell_matrix(0, ["config_config.jsonl"]), relinks)
+    # zero-edge cell naming a file + a file no cell claims both fire
+    assert any("zero-edge" in x for x in errs), errs
+    absent = two_cell_matrix(1, ["config_config.jsonl"])
+    errs = rl.reconcile_matrix_to_pair_files(absent, relinks)
+    assert any("absent under" in x for x in errs), errs
+
+    unclaimed = matrix_for(0, 0, [])
+    (relinks / "config_config.jsonl").write_text(
+        '{"srcId": "X"}\n', encoding="utf-8", newline="\n")
+    errs = rl.reconcile_matrix_to_pair_files(unclaimed, relinks)
+    assert any("no cell claims" in x for x in errs), \
+        "unclaimed dataset on disk passed silently"
 
 
 def test_r7_relations_generator_unit_deterministic(tmp_path):

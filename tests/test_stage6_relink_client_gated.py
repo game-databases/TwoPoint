@@ -337,6 +337,10 @@ def test_r3_guid_report_arithmetic_and_campus_level_modeled(real_run):
         print(f"{'DRIFT:' if moved else 'match: '} guid_bridge_report.{k}={got} "
               f"(scout-time F9 seed {seed})")
     matrix = read_json(ns.ext / "relinks" / "matrix.json")
+    # arbiter F2 on real bytes: every cell's cardinality must reconcile to
+    # the emitted pair datasets (rows == edges, distinct srcIds, no phantom)
+    errs = rl.reconcile_matrix_to_pair_files(matrix, ns.ext / "relinks")
+    assert not errs, errs[:8]
     cell = next(p for p in matrix["pairs"]
                 if p["srcKind"] == "campus-level" and p["dstKind"] == "config")
     pair_path = ns.ext / "relinks" / "campus-level_config.jsonl"
