@@ -483,7 +483,12 @@ def run(game_root: Path, extracted_root: Path) -> int:
     catalog_path = extracted_root / "addressables" / "catalog.json"
     matrix_path = extracted_root / "locales" / "locale-matrix.json"
     structural = extracted_root / "decompiled" / "structural"
-    for p in (monobehaviours_dir, catalog_path, matrix_path):
+    # CR#2/Rev 6 rule 1: the hierarchy FILE (not just the dir) is a required
+    # upstream — without it DefinitionGate loads nothing and every resolved
+    # class classifies "unknown", so component exclusion silently evaporates
+    # behind a green exit.
+    hierarchy_path = structural / "class-hierarchy.jsonl"
+    for p in (monobehaviours_dir, catalog_path, matrix_path, hierarchy_path):
         if not p.exists():
             raise tc.StageError(
                 f"missing upstream artifact {p} — run the upstream stages "
