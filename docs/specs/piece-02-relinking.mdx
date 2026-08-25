@@ -1,0 +1,749 @@
+# Piece 2 — Relinking Spec (Two Point Campus)
+
+**Audience:** CodeWriter + TestWriter. This document is the contract for
+the relinking piece. Facts are grounded in
+[`../scout-report-piece-02.mdx`](../scout-report-piece-02.mdx) (measured
+2026-08-25 on the landed corpus), the extraction doctrine's three
+non-negotiable relink bars [DR-2026-08-17-relink], and piece-1's frozen
+pipeline vocabulary
+([Revision 5](piece-01-extraction-pipeline.mdx) +
+[Revision 6](piece-01-extraction-pipeline.mdx)). Where a number here
+conflicts with scout prose, this file wins: the scout probed a
+12,764-row corpus; piece-1's R11 rounds (`cbbd0c85` typetree synthesis,
+`a7ec6975` per-bundle externals tables) landed afterwards, and every
+corpus number below was **re-measured on the current tree** (13,443
+stub rows, buildId 20226581) on 2026-08-25. Scout gap G1 (typetree
+decode failures) and G2 (cross-file PPtr externals) are FIXED in the
+current tree — the mechanisms they blocked are this piece's core work.
+
+---
+
+## 1. Goal
+
+The landed corpus holds complete *rows* (13,443 stub entities across 9
+kinds) but almost no *relations*: the only file under `extracted/relinks/`
+is stage-5's `locale_availability.jsonl`, which measures 0 rows because
+stage-5's seeded join procedure (payload-string == matrix-key) is
+mechanically wrong for this game (scout §2 REFUTED it; the real
+mechanism is a signed int32 term ID through an I2 registry).
+
+This piece turns the corpus into the doctrine's relink layer:
+
+- ONE new entrypoint stage — `relink` — that derives, deterministically
+  and from committed artifacts, the complete ordered-pair relation
+  matrix over the entity kinds plus every extended relation family the
+  client data carries (locale terms, asset-GUID targets, scenes);
+- the full pair datasets behind every modeled cell;
+- the UI-link coverage map (bar 2) and the competitor-model application
+  (bar 3);
+- a regenerated `RELATIONS.md` catalog replacing its placeholder.
+
+Everything runs through the single entrypoint ([DR-2026-08-18-pipeline]):
+`python run_all.py <game-dir> --only relink` must reproduce every
+declared output byte-identically. Site/UI anything, media export, and
+PROOF derivation stay out (§6).
+
+## 2. Corpus facts the relink stage relies on (measured)
+
+All figures measured 2026-08-25 on `extracted/` at buildId 20226581,
+post-R11. Probe method stated per claim; these are the numbers the
+implementation should reconcile against (drift ⇒ `DRIFT:` warning line,
+re-measured fact wins — never a silent stale constant).
+
+| # | Fact | Value |
+|---|---|---|
+| F1 | Stub rows | **13,443** across 9 kinds: config 8,430 · item 3,885 · unlockable 415 · metagame-node 454 · room 116 · student-type 54 · course 69 · staff 3 · campus-level 17 |
+| F2 | Decode routes (stage-3 log) | embedded 165,982 · synthesis 688 · residue **44** raw-typed (scout's G1 population of 732 is fixed; `TPC.CourseModuleDefinition` and co. decode today) |
+| F3 | Externals sidecar (R11 G2) | `harvest/externals.jsonl` — **222 serialized files across all 176 readable bundles, 1,781 external refs**; 1,671 refs are `archive:/CAB-<hex>` paths with all-zero GUIDs, 110 are Unity built-in paths (`Library/unity default resources`, …), all `type: 0` |
+| F4 | PPtr leaves in stub payloads | **65,465** total = 40,829 same-file (`m_FileID == 0`) + 24,636 cross-file. Same-file splits into 13,443 zero-target `m_GameObject` leaves + **27,386 genuine candidate edges**. Cross-file splits into 13,443 `m_Script` leaves (exactly one per row, `fileId == 1`, already resolved in-band as `_scriptClass`) + **11,193 genuine candidate cross-file edges** (top leaves: `ListFilters` 3,398, `ObjectiveTypeOverride` 992, `EventType`, `ValidLocations[]`, `ParentType`, `Graph`, `ArrivalMethods[]`) |
+| F5 | Catalog key universe | 56,660 keys = 2,516 `address` + 54,144 `guid` rows (**54,143 distinct GUIDs**) — the GUID bridge's index source |
+| F6 | Locale matrix | 15,672 keys × 13 locales (+ base keys included, `includesBaseKeys: true`) |
+| F7 | I2 term registry (scout §2, seed `_scout2_term_registry.json`) | 26 `I2.Loc.LanguageSourceAsset` dumps at `harvest/monobehaviours/localisation_assets_localisation/I2.Loc.LanguageSourceAsset/*.json` (26 files on disk); `mSource.mTerms[]` rows `{ID, Term, TermType, TermStatus, Languages[13], Flags[13], Languages_Touch}`; **15,675 term IDs → 15,672 distinct Term keys — bidirectional diff vs locale-matrix keys == 0**; runtime lookup confirmed in code (`LanguageSourceData.mDictionaryID: Dictionary<int, TermData>`) |
+| F8 | LocalisedString instances | Entity payloads carry `{_dev: string, _termID: int32}` structs (19,272 instances at scout time on the smaller corpus; re-measure — the G1-fixed definitions add more). Sentinel `_termID: 0` = unlocalized/dev-only, never a miss. Scout-time coverage on non-empty localised strings: **10,480/10,484 = 99.96%**, with 4 non-registry IDs at scout time (`-1168948158`, `-2044546668`, `-1942168175`, `-1451566921`) — re-walked on the current tree 2026-08-25: **5 distinct non-registry IDs**, the four plus post-R11 `-1172386361` ("Wants a {ITEM}", a G1-fixed definition) |
+| F9 | AssetGUID refs | 20,042 GUID-shaped refs across stubs → 5,548 distinct GUIDs; scout-time **79.7% (15,982)** resolve to catalog addresses; 1,137 distinct GUIDs dangle (G3). IconReference-style `{m_AssetGUID, m_SubObjectName}` fields target art assets (sprite atlases), NOT stub entities |
+| F10 | Twin policy interaction | Identical-id differing-payload rows exist as `<id>@<contentHash8>` twins (17 disambiguated, 26 merged at last run); the emitted `id` carries the suffix, the verbatim original survives in `fields.id`. Edge resolution must treat twins as DISTINCT definition versions of one logical entity — never collapse |
+| F11 | No CAB inventory exists yet | Nothing on disk maps inner `CAB-<hex>` names → owning bundle/object. `harvest/census/bundles/*.json` records class counts only. The bridge pass (R1 below) is the first emitter of this mapping |
+| F12 | Measured hard-join seeds (scout §1) | **20 measured ordered pairs = 18 same-file-PPtr pairs + 2 GUID-carried cells** — the seeded cell list in §3 R2. (The scout's headline "19 same-file PPtr pairs" counted its needs-probe `metagame-node→item (1)` cell, whose targets did not land on stub entities; the list below drops it. The two campus-level cells ride `.LevelConfig.m_AssetGUID` / `.MetagameConfig.m_AssetGUID`, NOT PPtrs.) Headline counts (distinct source entities): config→config 2,528 · config→item 513 · config→room 353 · room→config 111 · item→config 160 · course→config 45 · config→course 34 · unlockable→unlockable 70 · unlockable→item 38 · student-type→config 27 · room→item 59 · course→course 28 · campus-level→config 13 and campus-level→metagame-node 13 (the GUID-carried cells above) · config→staff 14 · staff→config 3 · config→metagame-node 3 · item→item 31 · metagame-node→config 4 · room→unlockable 1 |
+
+Sample edges pinned for tests (stable anchors — verbatim from scout §1,
+except the staff term-ID corrected against the current tree):
+
+- `configs/Activity_Dynamic_Social_Item_Caterer.Group.ParticipantsGraph → config/BG_Character_Interaction_Caterer`
+- `rooms/Room_Archaeology_Display.RequiredItems[].DefaultItem → item/Item_Door_Building_Archaeology_Display`
+- `staff/Staff_Assistant.LocalisedName._termID = -1312157894` → registry
+  term key `UI/General/Sims/Assistant` (resolve via registry, assert
+  non-empty key + locale presence). CORRECTED 2026-08-25 against the
+  current tree: the scout's §2 quote carried `-744531364`, which is
+  `Staff_Janitor`'s ID (`UI/General/Sims/Janitor`) — no value on the
+  Staff_Assistant row ever matched it
+- campus-level GUID `1676b22c239b1554fad03b6027331112` resolves toward address `…Config_Metagame.asset`
+
+## 3. Stage 6 — `relink`
+
+- **Stage id:** `relink` (entrypoint `--list` enumerates it AFTER
+  `emit-stub-datasets`; seven stages total — see §5.1 and the routed
+  piece-1 amendment note in §7).
+- **Scripts:** `tools/stage6_relink.py` + shared `tools/relink_util.py`
+  (bridge builders, PPtr walker, resolvers). Registered in
+  `tools/tpc_common.py::STAGES` with script-hash deps
+  `["stage6_relink.py", "relink_util.py", "tpc_common.py", "log_util.py"]`.
+- **Inputs (upstream set):**
+  `stubs/<kind>.jsonl` ×9 + `stubs/_absences.jsonl` +
+  `stubs/_unmapped-families.jsonl`; `harvest/export-manifest.jsonl`;
+  `harvest/externals.jsonl`;
+  `harvest/monobehaviours/localisation_assets_localisation/I2.Loc.LanguageSourceAsset/*.json`;
+  `addressables/catalog.json`; `locales/locale-matrix.json`;
+  `decompiled/structural/class-hierarchy.jsonl`; `bundle-roster.jsonl`.
+  PLUS the game dir (like stage 3): the R1 bridge pass opens bundles.
+  Missing upstream artifact ⇒ exit 3 naming it (runner pre-check,
+  piece-1 pattern). Hostless testing goes through the fixture tree
+  (§8), never through a degraded real run.
+- **Console/write discipline:** inherited unchanged from piece-1 §4 —
+  UTF-8 stdout/stderr, explicit `encoding="utf-8"` + `newline="\n"`,
+  sorted enumeration + sorted JSON keys, no wall-clock timestamps inside
+  outputs, temp-file + atomic-rename writes, byte-identical reruns
+  (EXTRACTION-LOG, `.stage-stamps/`, `.pipeline-meta.json` excluded).
+- **Exit codes:** the piece-1 contract applies unchanged — `0` success ·
+  `1` stage failure (schema/validation breakage) · `2`
+  completed-with-ledger (gapped outputs loudly named — the EXPECTED
+  steady state on this corpus until the ledgers close: dangling GUIDs,
+  partial cells, competitor floor pending) · `3` environment/gate
+  refusal. Exact per-condition mapping is pinned in §5.7.
+
+Sub-passes run in order; each appends its counters to the EXTRACTION-LOG
+run section (key names pinned per pass — the log is the acceptance
+surface, piece-1 style).
+
+### R1 — Bridges (identity passes over the bundles)
+
+Two deterministic UnityPy light passes over all 176 roster bundles
+(same fallback-version seeding as stage 3 — headers read `0.0.0`,
+seed from `identity.json.unityVersion`, count usage). These produce the
+two indexes every resolver downstream needs; nothing else on disk
+carries them (F11).
+
+1. **CAB index** — per bundle, the names of its inner serialized files
+   (`CAB-<hex>`) and, per serialized file, its object pathIds + classes.
+   Emitted as `extracted/relinks/bridges/cab_index.jsonl`, one row per
+   serialized file:
+   `{bundle, cab, objects:[{pathId, class}], buildId}`, sorted by
+   `(bundle, cab)`.
+2. **Container/address index** — per bundle, UnityPy's container map
+   (address → object). Emitted as
+   `extracted/relinks/bridges/container_index.jsonl`, one row per
+   address: `{bundle, address, pathId, class, buildId}`, sorted by
+   `(bundle, address)`.
+
+Run-section counters: `bundlesBridged: 176`, `cabRows`, `containerRows`,
+`fallbackVersionUsedBundles`.
+
+### R2 — Ordered-pair matrix + pair datasets (bar 1)
+
+**Node universe (pinned):** the 9 stub kinds PLUS `scene` = **10
+nodes**. Arithmetic the whole contract hangs on: 10 nodes → **100
+ordered cells = 90 off-diagonal pairs + 10 diagonal self-pairs**. The
+`scene` node's id space = the `bundle-roster.jsonl` rows with
+`sceneFlag != none` (26 scene-carrying bundles on this install), ids
+verbatim `relpath` values — scene objects have no stubs by design; the
+maps piece consumes this seam. **Scene-edge attribution rule (the
+emission path that keeps the node live):** when any resolved target
+lands in a roster bundle whose `sceneFlag != none` and that target is
+not itself a stub entity, the edge attributes to the scene node —
+`dstKind:"scene"`, `dstId` = that roster row's `relpath`. Attribution
+chain: the resolving bridge already names the owning bundle
+(`container_index` for GUID targets; `externals → cab_index` for
+cross-file PPtrs) → roster `relpath` lookup. So every destination-side
+scene cell (`<srcKind>→scene`, 9 cells) emits from the same walkers
+below; the source-side cells (`scene→<dstKind>` plus the diagonal,
+10 cells) have no stub-payload emitter by design and each ships
+`missing`/`partial` with an explicit `unblock` naming the maps piece's
+scene-dump walk as owner — never silent, never structurally dead.
+(Rationale for the 10th node: scout §1
+names `campus-level → scene` as a live needs-probe and spec.md's
+relation seeds need course↔campus-level↔scene adjacency; routing it
+through the matrix keeps the completeness claim mechanical instead of
+prose.)
+
+**`extracted/relinks/matrix.json`** — one row per ordered cell, ALL 100
+cells shipped, none droppable. `pairs[]` ordering is PINNED: row-major
+over `meta.nodeUniverse.nodes` (the AC5 byte-determinism gate hashes
+this array, so its order is contract, not convention):
+
+```json
+{"meta": {"buildId": 20226581,
+          "nodeUniverse": {"nodes": ["config","item","room","course","staff",
+                                     "student-type","unlockable","metagame-node",
+                                     "campus-level","scene"],
+                           "arithmetic": "10 nodes -> 100 ordered cells "
+                                         "= 90 off-diagonal + 10 diagonal"},
+          "enums": {"mechanism": ["hard","logic","inferred"],
+                    "status": ["modeled","partial","missing"]}},
+ "pairs": [{"srcKind":"room","dstKind":"item",
+            "joinKey":"PPtr(m_FileID,m_PathID)",
+            "mechanism":"hard","status":"modeled",
+            "cardinality":{"perSrc":"0..N","perDst":"0..M",
+                           "srcEntitiesWithEdges":59,"edges":110},
+            "pairFiles":["room_item.jsonl"],
+            "evidence":{"topFields":{"RequiredItems[].DefaultItem":110,
+                                     "RequiredWorkingItems[]":22}}},
+           {"srcKind":"course","dstKind":"room",
+            "joinKey":"none-established","mechanism":"inferred",
+            "status":"partial",
+            "cardinality":{"perSrc":"0","perDst":"0",
+                           "srcEntitiesWithEdges":0,"edges":0},
+            "pairFiles":[],
+            "unblock":"direct edge not found; chain runs course->config "
+                      "(SelfStudyAssignments[].Definition) then config->room; "
+                      "re-check after cross-file PPtr resolution lands"}]}
+```
+
+Frozen vocabularies: `joinKey` ∈
+`PPtr(m_FileID,m_PathID)` ·
+`AssetGUID(m_AssetGUID)->catalog.guid->container-address->pathId` ·
+`LocalisedString(_termID)->I2-termID->Term-key` ·
+`name-equality(<rule>)` · `none-established`.
+`mechanism` ∈ `hard|logic|inferred`; `status` ∈ `modeled|partial|missing`
+(doctrine words). Rules:
+
+- `modeled` = carrier mechanism established end-to-end and edges
+  emitted to a named `pairFiles[]` entry.
+- `partial` = carrier identified but residue named (cross-file targets
+  unresolved, bridge misses, needs-probe populations) — `unblock` key
+  REQUIRED stating the concrete next probe.
+- `missing` = no carrier found in client data today — `unblock` key
+  REQUIRED. Missing-with-unblock is a legitimate terminal state
+  (doctrine bar 1); silence is not.
+- Diagonal cells ship too (`config→config` GOOSE graph lattice is the
+  largest relation family in the game — 2,528 source entities).
+- Counts are RE-MEASURED every run from the emitted datasets — the
+  scout's F12 numbers are seeds to reconcile against, never constants.
+- Ref-vs-row semantics (defined once): `cardinality.edges` counts
+  DEDUPED emitted rows for the cell; `evidence.topFields[*]` counts RAW
+  references before repeat-collapse. The `room→item` example above is
+  the worked case: `edges:110` deduped rows beside
+  `110 + 22 = 132` raw refs across two fields.
+
+**Pair datasets** — `extracted/relinks/<srcKind>_<dstKind>.jsonl`, one
+file per cell with ≥1 emitted edge, kind values verbatim (hyphens kept:
+`campus-level_config.jsonl`, `student-type_config.jsonl`). Seeded mode
+set = F12's 20 measured pairs (18 same-file PPtr + 2 GUID-carried
+campus-level cells) + the two orchestrator-named
+probe cells `unlockable_campus-level` (no measured carrier today — scan
+unlockable payloads for `Levels[]` / `LevelFilters` / level-name
+segments) and `metagame-node_course` (needs-probe:
+`.references.NNNN.data.Course` PPtrs whose targets were not stub
+entities — resolve via R1 bridges against scene/prefab-resident
+objects, ledger what still dangles). Every other cell starts
+`missing`/`partial` and earns rows only through a measured carrier.
+
+Row shape (frozen; NO additional or missing keys):
+
+```json
+{"srcKind":"room","srcId":"Room_Archaeology_Display",
+ "dstKind":"item","dstId":"Item_Door_Building_Archaeology_Display",
+ "mechanism":"hard","method":"pptr-same-file","inferred":false,
+ "evidence":{"fieldPath":"RequiredItems[].DefaultItem",
+             "srcBundle":"rooms_assets_all.bundle","srcPathId":-851,
+             "dstBundle":"items-general_assets_all.bundle","dstPathId":4021,
+             "refCount":1},
+ "buildId":20226581}
+```
+
+- `method` frozen vocabulary: `pptr-same-file` · `pptr-cross-file` ·
+  `assetguid-catalog` · `i2-termid-registry` · `name-convention:<rule>`
+  · `code-analysis:<descriptor>` · `competitor-model:<source-id>`.
+- `inferred:false` ONLY for verbatim reads (`pptr-*`, `assetguid-*`,
+  `i2-termid-*`); everything convention-, code-, or community-derived
+  is `inferred:true` with `method` naming the rule (doctrine Principle
+  one; piece-1 provenance flags semantics).
+- `evidence` keys validated per method: PPtr edges carry
+  `fieldPath, srcBundle, srcPathId, dstBundle, dstPathId, refCount`;
+  cross-file adds `extFileId, dstCab` +
+  `resolvedVia:"externals+cab-index"` — `dstCab` names the resolved
+  serialized file because Unity pathIds are per-serialized-file and
+  bundles carry several (222 files across 176 bundles, F3), so
+  `(dstBundle, dstPathId)` alone under-determines a target; the same
+  identity is what `_unresolved_pptrs` already models as `extPath`;
+  GUID edges carry `fieldPath, assetGuid, catalogAddress`. Dedup
+  identity is unchanged by this (evidence is not part of the tuple).
+  `refCount` collapses repeats inside one array field into one row.
+- Dedup identity: `(srcKind, srcId, dstKind, dstId, method, fieldPath)`.
+- Sort: lexicographic by that same tuple. Ids ALWAYS verbatim — never
+  slugified, case-folded, or trimmed (Principle one; the byte-match
+  test enforces it).
+- Cross-file resolution procedure (now UNBLOCKED by F3/F11): walk stub
+  payloads for `{m_FileID, m_PathID}` leaves; skip `m_FileID == 0`
+  zero-targets, `m_GameObject` leaves, and `m_Script` leaves (script
+  identity already ships in-band on stub rows as `_scriptClass` — do
+  NOT duplicate it as a relation family); resolve `m_FileID > 0`
+  through `externals.jsonl` (bundle → fileId → CAB/built-in path) →
+  `cab_index.jsonl` (CAB → candidate bundles) → `(bundle, pathId)` →
+  stub index → emitted stub id (twins keep their `@hash8` suffix —
+  F10). A resolved `(bundle, pathId)` ABSENT from the stub index whose
+  bundle carries `sceneFlag != none` in the roster emits the edge as
+  `dstKind:"scene"` / `dstId` = roster `relpath` (attribution rule,
+  node universe above) instead of falling to `_unresolved_pptrs`.
+  Built-in externals (`Library/unity default resources` et al.)
+  are not entity targets: count them, ledger them, never resolve them
+  into pairs. Unresolved cross-file refs stay visible: per-cell
+  `unresolvedRefs` counter in matrix evidence + a
+  `relinks/_unresolved_pptrs.jsonl` ledger
+  `{srcKind, srcId, fieldPath, extFileId, extPath, m_PathID, reason, buildId}`
+  — sorted by `(srcKind, srcId, fieldPath, extPath, m_PathID)` (pinned;
+  the global "sorted enumeration" discipline names no key for this
+  file) — gapped resolution is data, never silence.
+- Axes provenance (scout §3): each row inherits `sourceAxes` from its
+  endpoint rows' `axes` when present (omitted when both absent — most
+  rows); twin endpoints keep the `@hash8` id as `dstId`/`srcId` and the
+  verbatim original stays reachable through the stub row's
+  `fields.id`. No axis-scoped collapsing anywhere.
+- Content-axis vocabulary stays the piece-1 enum
+  `base | dlc-space | dlc-ghost` wherever an axis value is emitted.
+
+### R3 — GUID bridge
+
+Procedure (each step's failure mode ledgered, never swallowed):
+
+1. **catalog-GUID→address index**: filter `catalog.json` keys with
+   `kind == "guid"` → `guid → [{bundle, address}]` (54,143 distinct on
+   F5; duplicate-guid keys are legal Addressables and ship as a list).
+2. **address→object**: `container_index.jsonl` resolves
+   `(bundle, address)` → `pathId` (+ class).
+3. **object→entity**: exact-match rules against the stub index — (a)
+   dump identity `(bundle, pathId)` present in export-manifest → stub
+   row; (b) otherwise, if the resolved object's bundle carries
+   `sceneFlag != none` in the roster, the edge attributes to the scene
+   node (`dstId` = roster `relpath`; the R2 attribution rule — this is
+   how `campus-level→scene` and kin reach emission); (c) otherwise the
+   target is a NON-entity object (sprite atlas,
+   texture, prefab component): the edge terminates at the ADDRESS, not
+   an entity.
+4. **Emission**: GUID references FROM stub fields (`m_AssetGUID` /
+   `IconReference` shapes) emit rows into
+   `extracted/relinks/entity_asset_guid.jsonl` —
+   `{srcKind, srcId, dstKind:"asset", dstId:<catalog address verbatim>,
+     mechanism:"hard", method:"assetguid-catalog", inferred:false,
+     evidence:{fieldPath, assetGuid, subObjectName?, resolvedVia}, buildId}`
+   sorted by `(srcKind, srcId, fieldPath, dstId)` — PLUS, where step 3a
+   hits a stub entity, a second row into the corresponding kind-pair
+   file (`campus-level_config`, `campus-level_metagame-node`) with
+   `method:"assetguid-catalog"`, `dstId` = the resolved stub id, and
+   where step 3b attributes the target to the scene node, a second row
+   into the corresponding `<src>_scene` pair file with `dstKind:"scene"`,
+   `dstId` = roster `relpath`. This
+   is how the two campus-level cells (F12) reach `modeled`.
+5. **Resolve-rate is an EMITTED FACT**, never prose:
+   `extracted/relinks/guid_bridge_report.json` =
+   `{guidRefsTotal, distinctGuids, resolvedToAddress, resolvedToStub,
+     danglingDistinctGuids, resolveRateAddress, resolveRateStub, buildId}`.
+   Scout-time expectations to reconcile: 20,042 refs / 5,548 distinct /
+   79.7% address-resolve / 1,137 dangling (F9).
+6. **Dangling ledger** (G3):
+   `extracted/relinks/_dangling_guids.jsonl` — sorted by `assetGuid`
+   (pinned, same rationale as `_unresolved_pptrs`) — one row per dangling
+   GUID: `{assetGuid, sampleRefs:[{srcKind, srcId, fieldPath}] (≤5),
+     verdict:"unresolved-open"|"resolved-scene"|"resolved-editor-only"|
+     "removed-content", unblock?, buildId}`. Verdicts upgrade via a
+   bounded probe against scene dumps + census (one pass, deterministic);
+   anything still `unresolved-open` keeps exit 2 honest (§5.7).
+
+### R4 — Locale join v2 (the term-ID path) — ownership PINNED
+
+Mechanism (scout §2, measured end-to-end): entity field
+`{_dev, _termID}` → int32 term ID → I2 registry ID → `Term` key →
+locale-matrix key. The GUID/localization hypothesis of the R10 era is
+REFUTED; the string-equality procedure stage 5 shipped is REFUTED (it
+honestly reports `hardJoins: 0`).
+
+**Ownership decision (pin): stage 5 KEEPS sole ownership of
+`relinks/locale_availability.jsonl`; this piece NEVER writes that
+file.** This piece owns NEW files instead. Why: (a) single-writer
+invariant — piece-1 Revision 2/R3 cut a two-writer regression hazard on
+exactly this path; reopening it trades a known hazard for cosmetics;
+(b) forward-only stage DAG — the registry below is PRODUCED AFTER
+stage 5 runs, so making stage 5 consume it would make stage-5 output
+depend on whether a LATER stage had ever run (breaks first-run
+convergence + idempotence gates); (c) the v1 file is honest as it
+stands — 0 data rows, with the refuted procedure's zero-yield
+documented in stage-5's `joinEvidence` block in the EXTRACTION-LOG run
+sections (the file itself carries no such block).
+Consumers are routed: RELATIONS.md names
+`entity_locale.jsonl` as the authoritative entity-granular locale
+relation. (Retiring the v1 artifact outright needs a piece-1 revision —
+routed in §7, not done here.)
+
+Artifacts:
+
+1. **`extracted/relinks/i2_term_registry.jsonl`** — built FROM THE 26
+   LanguageSource dumps (F7 glob), not from the scout scratch file;
+   the scratch `_scout2_term_registry.json` stays at pack root as a
+   cross-check seed only. One row per (termId, termKey):
+   `{termId:int, termKey:string, sourceAsset:string, termType,
+     termStatus, locales:[<BCP-47 codes with non-empty text>],
+     canonical:boolean, buildId}` — `canonical:true` marks the primary
+   ID when a key registered under multiple IDs (G10: canonicalize on
+   Term KEY; keep every ID as a row, secondary indexes by construction).
+   Sorted by `(termKey, termId)`. Expected reconciliation: 15,675 rows,
+   15,672 distinct keys, bidirectional diff vs locale-matrix keys == 0
+   (F7). Per-term `locales[]` comes from `mTerms[].Languages[i]`
+   indexed by that source's `mLanguages` order (piece-1 stage-4
+   mechanism) — this makes the registry the per-term availability
+   layer, not just an ID map.
+2. **`extracted/relinks/entity_locale.jsonl`** — one row per
+   localised-field instance found by walking ALL stub payloads for
+   two-key `{_dev, _termID}` structs:
+   `{srcKind, srcId, dstKind:"locale-term",
+     dstId:<termKey>, mechanism:"hard", method:"i2-termid-registry",
+     inferred:false, evidence:{fieldPath, termId, dev, locales:[…]},
+     buildId}` — sorted by `(srcKind, srcId, fieldPath, dstId)`.
+   Registry-hit rows carry the key + per-term locale projection.
+   Sentinel `_termID == 0` instances are EXCLUDED from rows and COUNTED
+   (declared-empty class, G4 — never a gap row, never silence).
+3. **Reverse index** `extracted/relinks/locale_term_entity.jsonl` —
+   `{termKey, usages:[{srcKind, srcId, fieldPath}], locales, buildId}`
+   sorted by `termKey`.
+4. **Misses + report**: non-zero termIds absent from the registry land
+   in `extracted/relinks/locale_join_report.json`:
+   `{instancesTotal, sentinelZero, registryHits, registryMisses,
+     unresolvedIds:[{termId, sampleRefs≤5}], coverageOnNonEmpty,
+     perKindHits:{…}, codeRefTerms:{note, auditPath}, buildId}`.
+   Fresh expectations (current tree, re-walked 2026-08-25): ≥4
+   unresolved IDs — **5 measured** (the scout's four + post-R11
+   `-1172386361`, F8); drift prints `DRIFT:` and fresh wins;
+   runtime-created code-ref terms resolve via the `I2LS_CodeRef`
+   source audit (~586 terms, G4) — audit the source if present in the
+   26 dumps, else ledger the note verbatim.
+
+### R5 — UI-link coverage map (bar 2)
+
+Every relationship surface the game's UI renders must resolve to a
+schema/join or be a documented gap. Artifact:
+`extracted/relinks/ui_link_coverage.jsonl`, one row per surface:
+
+```json
+{"surfaceId":"tooltip-spawner","uiClass":"TPC.TooltipSpawner",
+ "exportedCount":4866,
+ "definitionClasses":[{"class":"TPC.CourseModuleDefinition","corpusCount":321}],
+ "impliedFamilies":["course-room-item-requirements","entity-effect"],
+ "status":"mapped-schema",
+ "joins":["config_item","config_room","course_config"],
+ "gapReason":null,"unblock":null,"buildId":20226581}
+```
+
+- `status` ∈ `mapped-schema | documented-gap` (XOR, enforced);
+  `joins[]` names matrix cells / family files that satisfy the surface;
+  a gap row carries `gapReason` + `unblock` and NO joins.
+- Seeded surfaces = scout §4's table (all nine rows ship at first run):
+  CourseManagementMenu_Requirements*, InspectorRoomCourseItem,
+  TrainingMenu_Qualification*, ResearchProjectInspector/ResearchBaseUI,
+  StaffJobAssignmentUI_*, CampusEventMenu_* (8 classes),
+  InboxMenuMessageUI_PersonalGoalRequest/WidgetPersonalGoal,
+  ObjectiveView/status-effects, TooltipSpawner (4,866 exported) +
+  I2.Loc.Localize bindings (11,312). Counts re-measured from
+  export-manifest each run.
+- **TooltipSpawner anchor rule** (the generic cross-link renderer):
+  enumerate the tooltip target classes from the TooltipSpawner dumps'
+  own fields; every distinct target class must appear either in some
+  `definitionClasses` of a mapped row or in an explicit gap row — the
+  coverage map may not silently shrink below the tooltip census.
+- **Discovery floor (mechanical, keeps bar 2 from being prose-seeded):**
+  every distinct harvested class whose name matches
+  `*Menu*|*UI*|*Inspector*` must appear in `ui_link_coverage.jsonl` —
+  as a mapped row's `uiClass` or `definitionClasses[]` member, or in an
+  explicit `documented-gap` row — whether or not the scout table seeded
+  it. The nine seeded surfaces are a starting seed, not the universe;
+  bar 2 says EVERY relationship surface, so the floor derives
+  mechanically from the harvest, not from prose.
+- The `I2.Loc.Localize` binding census doubles as the UI-localization
+  surface: binds by Term key, same key space as R4 — record the census
+  count in the row and route text lookups to `entity_locale.jsonl`.
+
+### R6 — Competitor application (bar 3)
+
+≥3 independent sources' relationship models APPLIED — listed sources
+alone do not meet the bar. Architecture keeps determinism: the ladder
+(F1–F5 in `competitor-research.md`) executes OUTSIDE the pipeline as
+research passes writing committed input files; the stage CONSUMES those
+bytes deterministically. Absent inputs can only lower the floor result,
+never fabricate it.
+
+- **Inputs:** `data/sources/competitor/<source-id>/model.jsonl` +
+  `PROVENANCE.md` (repo-only provenance per AGENTS rule 3).
+  `source-id` ∈ `fandom | wiki-gg | steam-guides | reddit | ign | game8
+  | neoseeker` (floor candidates C1–C3 = fandom, wiki-gg, steam-guides;
+  reserves per the ladder). `model.jsonl` row shape:
+  `{subjectKind, subjectName, relationVerb, objectKind, objectName,
+    cardinalityClaim?, notes?, sourcePage}` — community naming, NOT our
+  ids.
+- **Absence routing (explicit):** missing `data/sources/competitor/*`
+  artifacts are NOT the §3 exit-3 condition — that clause governs the
+  stage's own upstream set, and the competitor ladder executes outside
+  the pipeline as research passes. Absent competitor inputs read as
+  FLOOR-UNMET: exit 2 + the terminal ledger row naming the unblock
+  (floor gate below), never exit 3.
+- **Mapping:** community names resolve to internal ids by exact verbatim
+  match against stub ids first, then by declared convention
+  (`casefold`/`_`↔space normalization — flagged `inferred:true`).
+  Unresolvable names do NOT vanish: they land in the application ledger
+  as `flags-missing` rows naming the closest candidates considered.
+- **Emission:** applied deltas go to OVERLAY files
+  `extracted/relinks/<srcKind>_<dstKind>.competitor.jsonl` (same row
+  schema as pair datasets, `method:"competitor-model:<source-id>"`,
+  `inferred:true`, `evidence.sourcePage` + `evidence.claim` added) —
+  client-derived pair files stay pure so byte-diffs separate measured
+  truth from community claims. An edge the community asserts that we
+  ALSO measure hard is recorded once, in the ledger, as
+  `confirms-hard` (never duplicated as an overlay row).
+- **Ledger:** `extracted/relinks/competitor_applied.jsonl` — one row per
+  (source, disposition):
+  `{sourceId, rung:"F1".."F5"|"wall", artifactRelPath?,
+    dispositions:{confirms-hard:n, adds-derived:n, flags-missing:n},
+    wall?:{httpStatus, oneQuestionItWouldHaveAnswered},
+    buildId}`. Walls are data rows (AGENTS rule 10: one attempt per
+  rung, never retried into).
+- **Floor gate:** floor MET iff ≥3 distinct sourceIds carry ≥1
+  disposition each. Unmet after F1–F5 ⇒ terminal ledger state naming
+  the owner-directed unblock (corpus acquisition into
+  `data/sources/competitor/`), surfaced as exit 2 + a routed PROOF
+  residue entry (written by the later PROOF piece — see §6). Never a
+  waiver, never a silent shortfall.
+- Expected concrete contributions (from scout §5): course→room→item
+  requirement tables, Kudosh-price lists, research-tree layouts,
+  staff-trait effects — each lands as confirms-hard, adds-derived, or
+  flags-missing against the F12 carriers.
+
+### R7 — Matrix assembly + RELATIONS.md
+
+Final pass: assemble `matrix.json` from the emitted datasets (counts
+recomputed from rows, never accumulated mutably; `pairs[]` in the
+pinned nodeUniverse row-major order — R2), regenerate
+`extracted/RELATIONS.md` mechanically from matrix + ledgers — per
+doctrine: every relation family, its mechanism, its coverage counts,
+every proven-absent/unreachable relation, the locale-join ownership
+routing note (§R4), the unresolved ledgers with sizes, and the
+competitor application summary. buildId-stamped header. The placeholder
+pointer text is REPLACED (piece-1 pins the path; this piece fills it).
+Deterministic markdown: fixed section order, counts interpolated from
+the same sorted structures — reruns byte-identical.
+
+### Run-section keys (pinned, appended per pass)
+
+```
+R1: bundlesBridged / cabRows / containerRows / fallbackVersionUsedBundles
+R2: cellsTotal=100 / cellsModeled / cellsPartial / cellsMissing /
+    pairFilesEmitted / edgesEmitted / sameFileResolved / crossFileResolved /
+    sceneAttributedEdges / unresolvedCrossFile / builtinExternalsSkipped /
+    twinEndpointEdges
+R3: guidRefsTotal / distinctGuids / resolvedToAddress / resolvedToStub /
+    danglingDistinctGuids / danglingVerdicts:{…}
+R4: languageSourcesRead / registryRows / registryDistinctKeys /
+    matrixKeyDiff=0 / instancesTotal / sentinelZero / registryHits /
+    registryMisses / coverageOnNonEmpty
+R5: surfacesTotal / mappedSchema / documentedGaps / tooltipTargetClasses /
+    localizeBindings
+R6: sourcesRead / sourcesApplied / floorMet / confirmsHard / addsDerived /
+    flagsMissing / wallsRecorded
+R7: relationsMdBytes / generatedFrom:{edgesEmitted, registryRows, …}
+```
+
+## 4. Output contracts (additions under `extracted/`)
+
+```
+extracted/
+├── EXTRACTION-LOG.md                  # += relink run sections (append-only, unchanged rules)
+├── RELATIONS.md                       # REGENERATED here (placeholder replaced) — stage relink ONLY
+├── relinks/
+│   ├── locale_availability.jsonl      # stage-5 SOLE owner — UNTOUCHED by this piece (R4 pin)
+│   ├── matrix.json                    # R2: 100 ordered cells, frozen vocabularies
+│   ├── <src>_<dst>.jsonl              # R2: pair datasets (kind values verbatim in filenames)
+│   ├── <src>_<dst>.competitor.jsonl   # R6: applied community deltas (overlays, never mixed)
+│   ├── entity_asset_guid.jsonl        # R3: entity→asset-address edges (hard)
+│   ├── i2_term_registry.jsonl         # R4: 15,675-row ID→key registry (canonical-on-key)
+│   ├── entity_locale.jsonl            # R4: authoritative entity-granular locale relation
+│   ├── locale_term_entity.jsonl       # R4: reverse index
+│   ├── locale_join_report.json        # R4: counts + unresolved-ID ledger + codeRef note
+│   ├── guid_bridge_report.json        # R3: resolve rates as emitted facts
+│   ├── ui_link_coverage.jsonl         # R5: bar-2 map (mapped-schema XOR documented-gap)
+│   ├── competitor_applied.jsonl       # R6: application ledger + wall rows
+│   ├── _unresolved_pptrs.jsonl        # R2 ledger (empty file valid iff nothing unresolved)
+│   ├── _dangling_guids.jsonl          # R3 ledger (verdicts; empty valid iff none dangle)
+│   └── bridges/
+│       ├── cab_index.jsonl            # R1: serialized-file identity (CAB → bundle/pathId)
+│       └── container_index.jsonl      # R1: address → bundle/pathId/class
+```
+
+Ownership: EVERY path above is written by `stage6_relink.py` alone,
+except `locale_availability.jsonl` (stage 5, untouched) and
+EXTRACTION-LOG/.stage-stamps/.pipeline-meta (runner). No other stage
+gains writers here. All JSONL sorted + UTF-8 + LF; all JSON sorted-keys;
+atomic renames; `buildId` on 100% of rows (piece-1 provenance rule;
+user-facing surfaces later may carry buildId only).
+
+## 5. Acceptance criteria (mechanical, whole piece)
+
+1. **Entrypoint:** `python run_all.py --list` enumerates exactly
+   `verify-client, decompile, harvest-catalog, harvest-bundles,
+   localisation, emit-stub-datasets, relink` — seven stages, that order,
+   with tool/version/status columns; `make list` equivalent.
+   `--only relink` runs in isolation on a prepared tree (client mode:
+   `--skip relink` then `--only relink`; hostless smoke:
+   `tests/build_fixture_tree.py --stage relink` materializes the §3
+   upstream set synthetically, including a minimal synthetic bundle
+   carrying TWO serialized files so a cross-file PPtr + externals row
+   resolve end-to-end).
+2. **Matrix completeness:** `matrix.json` parses; `pairs` length ==
+   100; the 90 off-diagonal cells each carry `joinKey`, `mechanism`,
+   `status`, `cardinality`, `pairFiles`; every `partial`/`missing` cell
+   carries a non-empty `unblock`; statuses ∈ the frozen enum;
+   `meta.nodeUniverse.arithmetic` states the 90/10 split.
+3. **Pair-dataset schema:** every `*.jsonl` under `relinks/` EXCEPT
+   stage-5-owned `locale_availability.jsonl` (whose v1 schema is
+   intentionally foreign — R4 ownership pin) validates
+   against the frozen row shapes (exact key sets per artifact type;
+   enums enforced; `refCount ≥ 1`); filenames match
+   `<srcKind>_<dstKind>.jsonl` with both kinds from the node universe;
+   global sort order holds per file; no duplicate dedup-identity tuples.
+4. **Id verbatim:** every `srcId`/`dstId` in pair files resolves to an
+   emitted stub `id` (twins matched WITH suffix) — sampled ≤1,000 rows
+   → all, else deterministic sorted 500, mirroring piece-1's sampler.
+   Exception pinned: `dstKind == "scene"` resolves against the roster
+   scene-id set; `dstKind == "asset"` resolves against
+   `container_index` addresses; `dstKind == "locale-term"` resolves
+   against the registry. Zero ids invented: spot-checked sample edges
+   from §2 must exist verbatim in the emitted files.
+5. **Determinism:** rerunning `--only relink` twice yields
+   byte-identical declared outputs (hash-manifest comparison; log/
+   stamps/meta excluded); interrupted-run convergence holds
+   (temp+rename discipline).
+6. **Locale artifacts:** registry reconciles with F7 (15,675 / 15,672 /
+   diff-vs-matrix == 0 on this build — drift prints `DRIFT:` and the
+   fresh numbers win); `entity_locale.jsonl` contains ZERO
+   `_termID == 0` rows while `sentinelZero` counts them; every row's
+   `locales[]` ⊆ the 13-code BCP-47 set; `coverageOnNonEmpty` reported;
+   `registryMisses` reconciled fresh against the current tree (five IDs
+   known 2026-08-25 — F8), never a pinned census.
+7. **Exit codes:** `0` iff all 100 cells SHIPPED — every cell present
+   with a schema-valid status; `partial`/`missing` cells allowed with
+   their unblocks ledgered ("populated" never demands zero gapped
+   cells, else R2's own missing-with-unblock doctrine could never reach
+   exit 0) — AND no
+   `unresolved-open` dangling GUIDs AND `registryMisses == 0` AND
+   competitor floor met; `2` iff any of those ledgers is non-empty
+   (run section names every contributing ledger + size — expected
+   steady state on today's corpus: **exit 2**); `1` on any schema/
+   validation failure; `3` on missing upstream/game-root. The runner
+   treats exit 2 as completed-with-ledger (piece-1 semantics; pipeline
+   continues).
+8. **Bar-2 gate:** every scout-§4 surface has a coverage row; every row
+   is `mapped-schema` XOR `documented-gap` (with reason + unblock);
+   tooltip-target census fully partitioned by the anchor rule; the
+   name-pattern discovery floor holds — every harvested class matching
+   `*Menu*|*UI*|*Inspector*` appears as mapped or gapped.
+9. **Bar-3 gate:** `competitor_applied.jsonl` shows ≥3 distinct applied
+   sources, or the terminal ledger row naming the owner-directed
+   unblock exists and exit is 2. Overlay rows always carry the
+   `competitor-model:` method prefix; client pair files contain none.
+10. **RELATIONS.md:** regenerated, placeholder gone, covers every
+    family + mechanism + coverage + absent/unreachable relations +
+    ownership-routing note; byte-stable across reruns.
+11. **Carve-out guard intact:** the piece emits ZERO media bytes —
+    piece-1's media-extension grep over `extracted/` still passes
+    (bridges open bundles read-only and emit metadata only).
+
+## 6. Explicit non-goals (later pieces own these)
+
+- Site/UI anything — pages, tokens, icon CDN, UGC (AGENTS rule 8 gate
+  stays closed until the data layer finishes).
+- Media export / icon PNG decode — catalogue-first stands
+  [DR-2026-08-18-media-scope]; owner pick on MEDIA-CATALOGUE.
+- `PROOF.md` reconciliation + `VALIDATION-REPORT.md` derivation — the
+  PROOF piece consumes THIS piece's ledgers (bar-3 terminal entries
+  ROUTE there; this piece never writes PROOF.md).
+- Logic-layer derivation (formulas, drop/catch chances, happiness
+  model, deep behavior graphs) — the `extracted/logic/` piece. This
+  piece ships the RELATION edges (unlock chains, requirement links)
+  that logic derivation will consume; it does not simulate mechanics.
+- Map geometry (`maps.json`, plot transforms) — the maps piece, which
+  inherits the `scene` node seam.
+- Protocol section content (single-player proof) — later piece.
+- Acquiring unowned DLC axes (hospital/preorder — QUESTION-QUEUE #3):
+  affected cells stay `partial` with that unblock named.
+- Modifying stage-5 outputs, `locale_availability.jsonl`, or any
+  piece-1 stage script's behavior (the entrypoint registration in
+  `tpc_common.py` is additive; existing six stages byte-behave
+  identically).
+
+## 7. Open questions routed back (none block the build)
+
+| Question | Resolution route |
+|---|---|
+| The 10th matrix node is pinned as `scene` (10 nodes → the 90 off-diagonal arithmetic). If the intended 10th was another node (e.g. `monoscript`), it is a one-field swap in `meta.nodeUniverse`; cell machinery unchanged | Orchestrator confirms or renames at review |
+| Piece-1 doc implications of the 7th stage: §4 layout block, §5.1 `--list` enumeration, §5.2 prepared-tree upstream sets, §8 fixture bullets all gain a `relink` entry | Suggest piece-1 **Revision 7** one-liner set by the documentator/orchestrator seat — that file is outside this piece's write scope |
+| `locale_availability.jsonl` endgame: pinned here as stage-5-owned-and-frozen; consumers routed to `entity_locale.jsonl`. Full retirement (stop emitting the v1 file) would be a piece-1 Revision changing stage 5 | Owner/orchestrator decides after this piece lands |
+| Who executes the F1 ABP ladder passes (producing `data/sources/competitor/*`) — the build pair, or a dedicated scout seated in parallel? Floor-met exit 0 is impossible until those inputs exist | Orchestrator seats it; stage behaves honestly at exit 2 meanwhile |
+| `admittedUnknown: 344` stage-5 identity-policy rows (unverified chains) — SETTLED: ruled ordinary stub rows, edge-eligible like any other (orchestrator ruling recorded at the piece-02 review, 2026-08-25) | Closed; excluding them would be a requirements change routed through the decision register |
+
+## 8. Test obligations (TestWriter contract)
+
+**Fixture-based (hostless; synthetic bytes only):**
+
+- R1: bridge builders over synthetic bundles — two-CAB bundle emits two
+  `cab_index` rows; container addresses emit `container_index` rows;
+  fallback-version seeding flips `fallbackVersionUsed` (shared helper
+  with stage 3/4 fixtures).
+- R2: PPtr walker — nested dicts/arrays, signed pathIds, zero-target +
+  `m_GameObject` + `m_Script` exclusion, repeat-collapse into
+  `refCount`; cross-file resolver happy path (externals row → CAB →
+  (bundle,pathId) → stub id incl. `@hash8` twin endpoint) and every
+  failure mode (unknown fileId, built-in path, dangling pathId →
+  `_unresolved_pptrs` row + counter); scene attribution (a resolved
+  target in a synthetic `sceneFlag != none` bundle emits
+  `dstKind:"scene"`, NOT an unresolved row); schema validator (exact key sets,
+  enums); sort/dedup determinism; sample-edge assertions (§2 anchors).
+- R3: GUID bridge on a synthetic catalog + container index — address
+  hit, non-entity address termination, dangling → verdict ledger;
+  resolve-rate arithmetic exact.
+- R4: registry builder over a synthetic LanguageSource dump
+  (`mTerms`/`mLanguages` ordering, `Languages_Touch` ignored safely,
+  duplicate-ID-per-key canonicalization, `canonical` flag) ;
+  `entity_locale` emitter — hit, sentinel-0 exclusion, miss-ledger;
+  reverse-index round-trip; agreement-helper vs a seed registry file.
+- R5: coverage validator — mapped-XOR-gap enforcement; anchor-rule
+  partition (an uncovered tooltip target class FAILS).
+- R6: model.jsonl mapper — exact match, convention match (inferred
+  flag), unresolvable → flags-missing row; disposition counting; floor
+  gate at 2-vs-3 sources (exit-2 emission fixture); wall-row shape.
+- R7: matrix assembler — 100-cell completeness assert, unblock-on-
+  partial/missing assert, count reconciliation vs emitted rows;
+  RELATIONS.md generator determinism (two builds byte-equal).
+- Runner: `--list` shows seven stages in order; `--only relink`
+  isolation; prepared-tree builder covers the §3 upstream set; exit-code
+  mapping (0/1/2/3) incl. the exit-2 ledger enumeration; stamp
+  invalidation on script-hash change; interrupted-run convergence;
+  carve-out guard still green.
+
+**Client-gated integration (auto-SKIP without `TPC_GAME_DIR`/default
+install):**
+
+- R1: 176 bundles bridged; cab/container row counts > 0; fallback usage
+  recorded 176/176.
+- R2: same-file edges ≥ 27,000; cross-file resolved edges > 0;
+  `config_config.jsonl` contains the Caterer participants-graph anchor
+  edge; `room_item.jsonl` contains the Archaeology_Display anchor edge;
+  unresolved ledger populated with counts matching the run section;
+  every emitted `dstKind:"scene"` edge's `dstId` resolves against the
+  roster scene-id set (the AC4 exception exercised on real data).
+- R3: guid report within reconciliation distance of F9 (fresh numbers
+  win; `DRIFT:` on movement); `campus-level_config` reaches `modeled`
+  via at least one GUID-resolved stub target.
+- R4: registry == F7 triple (15,675 / 15,672 / diff 0); staff/course/
+  student-type kinds at 100% registry coverage on non-empty strings;
+  every unresolved ID on the current tree ledgered (five known
+  2026-08-25 — F8).
+- R5: nine seeded surfaces present; Localize binding count ≈ 11,312
+  (drift-tolerant).
+- R6: floor state reported truthfully for whatever inputs are
+  committed.
+- Idempotence: `--only relink` double-run hash-equal on the real tree.
+
+END OF piece-02-relinking.mdx
