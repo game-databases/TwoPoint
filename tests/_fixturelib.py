@@ -561,7 +561,8 @@ def write_seed_probe_bundles(directory: Path) -> dict[str, Path]:
 # --- orchestrator -----------------------------------------------------------------
 
 STAGE_ARTIFACTS = ("verify-client", "decompile", "harvest-catalog",
-                   "harvest-bundles", "localisation", "emit-stub-datasets")
+                   "harvest-bundles", "localisation", "emit-stub-datasets",
+                   "relink")  # piece-02 Revision 7: seventh stage, appended
 
 
 def build_tree(out: Path, stage: str, *, full_scale=False, metadata_version=27) -> Path:
@@ -582,6 +583,10 @@ def build_tree(out: Path, stage: str, *, full_scale=False, metadata_version=27) 
         build_structural_fixture(extracted)
     if order >= 5:
         build_locale_matrix_fixture(extracted)
+    if stage == "relink":  # piece-02 §3 upstream set + seeding-probe bundle headers
+        import _relinklib
+        _relinklib.build_relink_upstream(extracted)
+        _relinklib.stamp_probe_headers(out)
     return out
 
 

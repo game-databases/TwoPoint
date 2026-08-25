@@ -181,6 +181,47 @@ STUB_VALIDATE_NAMES = ("validate_row", "validate_stub_row", "check_stub_row",
 JOIN_NAMES = ("build_locale_availability", "join_locale", "join_loc_keys",
               "resolve_join", "join_entity_locale", "compute_availability")
 
+# piece-02 relink stage (spec §3 pins tools/stage6_relink.py + relink_util.py).
+# Ordered: plausible implementation names first, spec-vocabulary alternates after.
+RELINK_WALKER_NAMES = ("walk_pptr_refs", "iter_pptr_refs", "find_pptr_leaves",
+                       "collect_pptr_refs", "pptr_leaves", "walk_pptrs")
+CAB_INDEX_NAMES = ("build_cab_index", "cab_index_rows", "bridge_cab_index",
+                   "emit_cab_index", "index_cabs")
+CONTAINER_INDEX_NAMES = ("build_container_index", "container_index_rows",
+                         "bridge_container_index", "emit_container_index")
+STUB_INDEX_NAMES = ("build_stub_index", "load_stub_index", "stub_index",
+                    "index_stubs")
+CROSSFILE_RESOLVER_NAMES = ("resolve_cross_file", "resolve_pptr_cross_file",
+                            "resolve_external_ref", "cross_file_resolver",
+                            "resolve_ext_ref")
+GUID_BRIDGE_NAMES = ("run_guid_bridge", "bridge_guids", "guid_bridge",
+                     "resolve_asset_guid_refs", "build_guid_bridge")
+REGISTRY_BUILDER_NAMES = ("build_i2_term_registry", "build_term_registry",
+                          "i2_term_registry_rows", "build_registry")
+ENTITY_LOCALE_NAMES = ("emit_entity_locale", "entity_locale_rows",
+                       "build_entity_locale", "localised_instances",
+                       "walk_localised_strings")
+REVERSE_INDEX_NAMES = ("build_locale_term_entity", "locale_term_entity_rows",
+                       "reverse_locale_index", "build_reverse_index")
+JOIN_REPORT_NAMES = ("build_locale_join_report", "locale_join_report",
+                     "join_report_counts")
+COVERAGE_VALIDATE_NAMES = ("validate_ui_link_coverage", "coverage_violations",
+                           "check_ui_link_coverage", "validate_coverage_map")
+TOOLTIP_CENSUS_NAMES = ("tooltip_target_census", "enumerate_tooltip_targets",
+                        "tooltip_targets", "tooltip_target_classes")
+DISCOVERY_FLOOR_NAMES = ("discover_ui_classes", "ui_class_discovery",
+                         "menu_ui_inspector_classes", "discovery_floor_classes")
+COMPETITOR_APPLY_NAMES = ("apply_competitor_model", "apply_model",
+                          "map_competitor_rows", "competitor_dispositions")
+FLOOR_GATE_NAMES = ("floor_met", "competitor_floor_met", "evaluate_floor",
+                    "floor_status")
+MATRIX_ASSEMBLER_NAMES = ("assemble_matrix", "build_relation_matrix",
+                          "matrix_from_datasets", "build_matrix")
+RELATIONS_GEN_NAMES = ("render_relations_md", "generate_relations_md",
+                       "build_relations_md", "relations_markdown",
+                       "write_relations_md")
+STAGE6_SCRIPTS = ("stage6_relink.py", "relink_util.py")
+
 
 def skip_if_none(value, what: str):
     """pytest.skip LOUDLY when an impl symbol/module is absent."""

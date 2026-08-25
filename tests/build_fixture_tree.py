@@ -5,7 +5,8 @@
                                       [--metadata-version N]
 
 --stage <id>   one of: verify-client decompile harvest-catalog
-               harvest-bundles localisation emit-stub-datasets
+               harvest-bundles localisation emit-stub-datasets relink
+               (`relink` = piece-02 §3 upstream set, Revision 7)
 --out DIR      target directory (default: a fresh sibling of this file,
                `.fixture-trees/<id>`; created, never cleared)
 --full         scale the aa listing to the real 158/10/8 corpus counts

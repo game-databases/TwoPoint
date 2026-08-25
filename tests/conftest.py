@@ -140,6 +140,14 @@ def fx_stage5_full(tmp_path_factory) -> Path:
     return _TREES[key]
 
 
+@pytest.fixture(scope="session")
+def fx_relink(tmp_path_factory) -> Path:
+    """piece-02 §3 stage-6 prepared tree (Revision 7 hostless mode)."""
+    if "relink" not in _TREES:
+        _TREES["relink"] = build_tree("relink", tmp_path_factory, "fx_relink")
+    return _TREES["relink"]
+
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "client_gated: needs TPC_GAME_DIR/default install; auto-skips when absent")
     config.addinivalue_line("markers", "heavy: rewrites real extracted/ at scale; also needs TPC_IT_HEAVY=1")
