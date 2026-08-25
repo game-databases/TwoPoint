@@ -388,3 +388,18 @@ changes land in it in the same commit that changes the entrypoint.
 - R7: relationsMdBytes=29321 generatedFrom={"edgesEmitted": 24583, "registryRows": 15675, "guidRefsTotal": 20170, "coverageRows": 344, "competitorLedgerRows": 3}
 - DRIFT: GUID bridge measures 20170 refs / 5584 distinct / 1137 dangling against seed F9 (20042/5548/1137) — fresh wins
 - LEDGER-CONTRIBUTORS (exit 2): _dangling_guids.jsonl unresolved-open: 1137; registryMisses: 5; competitor floor unmet (<3 applied sources; terminal ledger row ~floor)
+### 2026-08-25T23:49:25Z — relink
+- exitCode: 2 (completed-with-ledger)
+- R1: bundlesBridged=176 cabRows=222 cabObjects=2026658 containerRows=49855 fallbackVersionUsedBundles=176 containerAddressCollisions=45838
+- R1-note: fallbackVersionUsedBundles: 176/176 (FALLBACK_UNITY_VERSION source: identity.json unityVersion 2020.3.47f1); unitypyVersion: 1.25.3
+- R2: cellsTotal=100 cellsModeled=24 cellsPartial=3 cellsMissing=73 pairFilesEmitted=24 edgesEmitted=24583 sameFileResolved=12125 crossFileResolved=8909 sceneAttributedEdges=0 unresolvedCrossFile=2284 builtinExternalsSkipped=0 twinEndpointEdges=14 unresolvedSameFile=107 probeUnlockableLevelRefs=0
+- R2-ledger: _unresolved_pptrs rows=2391 (sorted by (srcKind, srcId, fieldPath, extPath, m_PathID))
+- R2-attribution: chargedCells=0 chargedRefs=0 landed=0 leafKeyNamed=0 nonEntityTargets=2391 unresolvable=0
+- R3: guidRefsTotal=20170 distinctGuids=5584 resolvedToAddress=16110 resolvedToStub=3747 danglingDistinctGuids=1137 danglingVerdicts={'unresolved-open': 1137} resolveRateAddress=0.7987 resolveRateStub=0.1858 sceneGuidEdges=0
+- R4: languageSourcesRead=26 registryRows=15675 registryDistinctKeys=15672 matrixKeyDiff=0 instancesTotal=20070 sentinelZero=9101 registryHits=10964 registryMisses=5 coverageOnNonEmpty=0.9995 entityLocaleRows=10964 reverseRows=6526
+- R5: surfacesTotal=344 mappedSchema=9 documentedGaps=335 tooltipTargetClasses=0 tooltipGenericContainers=4 localizeBindings=11312 hierarchyRowsRead=20037
+- R6: sourcesRead=2 sourcesApplied=0 floorMet=False confirmsHard=0 addsDerived=0 flagsMissing=417 wallsRecorded=0 overlayFiles=0
+- R7: relationsMdBytes=29346 generatedFrom={"edgesEmitted": 24583, "registryRows": 15675, "guidRefsTotal": 20170, "coverageRows": 344, "competitorLedgerRows": 3}
+- DRIFT: GUID bridge measures 20170 refs / 5584 distinct / 1137 dangling against seed F9 (20042/5548/1137) — fresh wins
+- DRIFT: seeded campus-level->metagame-node pair fact 13 vs measured 0 — the seed's carrier (.MetagameConfig.m_AssetGUID → Config_Metagame) is kinded `config` by stage-5 and its 13 rows land in campus-level_config.jsonl — fresh numbers win
+- LEDGER-CONTRIBUTORS (exit 2): _dangling_guids.jsonl unresolved-open: 1137; registryMisses: 5; competitor floor unmet (<3 applied sources; terminal ledger row ~floor)
