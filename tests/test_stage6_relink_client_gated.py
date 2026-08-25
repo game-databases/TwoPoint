@@ -420,6 +420,13 @@ def test_r7_campus_meta_carrier_cell_and_drift_line(real_run):
     seed's landing place."""
     ns = real_run.ok()
     matrix = read_json(ns.ext / "relinks" / "matrix.json")
+    # arbiter F12: validate_matrix carries the scene-source terminal pin —
+    # all ten scene→* cells on the REAL tree ship missing|partial, zero
+    # edges, and the SCENE_SRC_UNBLOCK marker
+    errs = rl.validate_matrix(matrix)
+    assert not errs, errs[:8]
+    assert sum(1 for p in matrix["pairs"]
+               if p["srcKind"] == "scene") == 10
     cell = next(p for p in matrix["pairs"]
                 if p["srcKind"] == "campus-level"
                 and p["dstKind"] == "metagame-node")

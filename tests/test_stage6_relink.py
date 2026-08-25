@@ -1359,6 +1359,56 @@ def test_r7_unresolved_residue_attribution_is_destination_derived():
     assert charges_cross == {("config", "unlockable"): 1}, charges_cross
 
 
+def test_scene_source_terminal_state_pin():
+    """Arbiter F12 (TR5/R2): the ten scene→* cells are pinned terminal —
+    missing|partial, zero edges, SCENE_SRC_UNBLOCK marker present;
+    scene→scene modeled used to pass validate_matrix and must now fail."""
+    def synth():
+        pairs = []
+        for s, d in rl.matrix_cell_order():
+            pairs.append({"srcKind": s, "dstKind": d,
+                          "joinKey": "none-established",
+                          "mechanism": "inferred", "status": "missing",
+                          "unblock": rl.SCENE_SRC_MARKER,
+                          "cardinality": {"perSrc": "0", "perDst": "0",
+                                          "srcEntitiesWithEdges": 0,
+                                          "edges": 0},
+                          "pairFiles": []})
+        return {"meta": {"buildId": BUILD_ID,
+                         "nodeUniverse": {"nodes": list(rl.NODE_UNIVERSE),
+                                          "arithmetic": rl.ARITHMETIC_PIN},
+                         "enums": {"mechanism": list(rl.MECHANISMS),
+                                   "status": list(rl.STATUSES)}},
+                "pairs": pairs}
+
+    m = synth()
+    scene_cells = [p for p in m["pairs"] if p["srcKind"] == "scene"]
+    assert len(scene_cells) == 10
+    errs = rl.validate_matrix(m)
+    assert not errs, errs[:4]
+
+    scene_to_scene = next(p for p in m["pairs"]
+                          if p["srcKind"] == "scene"
+                          and p["dstKind"] == "scene")
+    scene_to_scene["status"] = "modeled"
+    errs = rl.validate_matrix(m)
+    assert any("scene-source cell ships 'modeled'" in x for x in errs), \
+        f"scene→scene modeled passed validation: {errs[:4]}"
+    scene_to_scene["status"] = "missing"
+
+    scene_to_item = next(p for p in m["pairs"]
+                         if p["srcKind"] == "scene"
+                         and p["dstKind"] == "item")
+    scene_to_item["cardinality"]["edges"] = 2
+    errs = rl.validate_matrix(m)
+    assert any("carries 2 edges" in x for x in errs), errs[:4]
+    scene_to_item["cardinality"]["edges"] = 0
+
+    scene_to_item.pop("unblock")
+    errs = rl.validate_matrix(m)
+    assert any("pinned marker" in x for x in errs), errs[:4]
+
+
 def test_r7_blackbox_matrix_relations_and_double_run_determinism(
         fx_relink, tmp_path_factory):
     _bb()
@@ -1386,6 +1436,13 @@ def test_r7_blackbox_matrix_relations_and_double_run_determinism(
                for p in matrix["pairs"]
                if (p.get("evidence") or {}).get("unresolvedRefs")}
     assert charged == {("metagame-node", "course"): 1}, charged
+
+    # arbiter F12: the ten scene→* cells ship the pinned terminal state
+    for p in matrix["pairs"]:
+        if p["srcKind"] == "scene":
+            assert p["status"] in ("missing", "partial"), p
+            assert p["cardinality"]["edges"] == 0, p
+            assert rl.SCENE_SRC_MARKER in (p.get("unblock") or ""), p
 
     rel_md = (ext / "RELATIONS.md").read_text(encoding="utf-8")
     errs = rl.validate_relations_md(rel_md)

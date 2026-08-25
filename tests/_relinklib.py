@@ -1494,6 +1494,12 @@ def registry_agreement(emitted_rows, seed_rows=None):
     }
 
 
+# R2's pinned scene-source terminal state (arbiter F12): scene sources have
+# no stub-payload emitter by design, so every scene→* cell ships
+# missing|partial, carries ZERO edges, and states this unblock.
+SCENE_SRC_MARKER = "no stub-payload emitter"
+
+
 def validate_matrix(obj, *, where="matrix"):
     """AC2 + R2/R7 frozen shape over ALL 100 cells."""
     e = []
@@ -1557,6 +1563,19 @@ def validate_matrix(obj, *, where="matrix"):
                 _err(e, f"{w}cardinality.edges negative")
         if not isinstance(p.get("pairFiles"), list):
             _err(e, f"{w}pairFiles must be a list (possibly empty)")
+        # node-specific rule (arbiter F12 / TR5): scene→scene modeled used to
+        # pass — the scene-source terminal state is now pinned
+        if p.get("srcKind") == "scene":
+            if st in ("modeled",):
+                _err(e, f"{w}scene-source cell ships {st!r} — R2 pins "
+                        f"missing|partial with zero edges")
+            card_edges = (p.get("cardinality") or {}).get("edges")
+            if isinstance(card_edges, int) and card_edges > 0:
+                _err(e, f"{w}scene-source cell carries {card_edges} edges — "
+                        f"scene sources emit none")
+            if SCENE_SRC_MARKER not in str(p.get("unblock") or ""):
+                _err(e, f"{w}scene-source unblock lacks the pinned marker "
+                        f"{SCENE_SRC_MARKER!r}")
     return e
 
 
