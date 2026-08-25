@@ -9,13 +9,16 @@ can record it in EXTRACTION-LOG.md run sections instead of silently guessing.
 MonoBehaviour decoding (measured on the real corpus, Revision 6): most
 bundles DO ship embedded typetrees — UnityPy reads those directly. For
 typetree-less payloads the synthesized typetree fires, driven by the dump.cs
-field tables (Il2CppDumper emits exact `// 0x…` instance-field offsets,
-which double as ground truth for alignment flags). Script-class names come
-from :class:`MonoScriptIndex` — m_Script PPtrs point into SEPARATE
-monoscript bundles, resolved through each file's externals by
-``(cab name, path_id)``. Anything that fails to decode falls back to a raw
-typed dump with `typetreeDecoded: false` + the exact reason — never a
-silent guess (spec §3 stage 3).
+field tables under Unity's serialization rules (Revision 11: member
+visibility/attribute filtering, base-chain inheritance, engine-object PPtr
+mapping, and the measured managed-reference trailer — dump.cs `// 0x…`
+offsets are RUNTIME MEMORY offsets and decide field ORDER/presence only,
+never stream alignment). Script-class names come from
+:class:`MonoScriptIndex` — m_Script PPtrs point into SEPARATE monoscript
+bundles, resolved through each file's externals by ``(cab name,
+path_id)``. Anything that fails to decode falls back to a raw typed dump
+with `typetreeDecoded: false` + the exact reason — never a silent guess
+(spec §3 stage 3).
 """
 from __future__ import annotations
 
@@ -60,17 +63,32 @@ def ensure_unitypy():
 _TYPE_DECL_RE = re.compile(
     r"^(\t*)((?:\[(?:[^\[\]]|\[[^\[\]]*\])*\]\s*)*)"
     r"((?:public|private|protected|internal|sealed|abstract|static|partial|new)\s+)*"
-    r"(class|struct|interface|enum)\s+([A-Za-z_][\w.`]*)(?:<[^>]*>)?"
+    r"(class|struct|interface|enum)\s+([A-Za-z_][\w.`]*)(<[^>]*>)?"
     r"\s*(?::\s*(.+?))?\s*(?://[^\n]*)?$")
 _FIELD_RE = re.compile(
-    r"^(\t*)((?:public|private|protected|internal|static|readonly|const|volatile|new|extern|unsafe|sealed|event)\s+)*"
+    r"^(\t*)((?:(?:public|private|protected|internal|static|readonly|const|volatile|new|extern|unsafe|sealed|event)\s+)+)"
     r"([\w.`<>,+\[\]()\s]+?)\s+([A-Za-z_][\w.]*)\s*(?:=[^;]*)?;"
     r"\s*(?://\s*(?:0x)?([0-9A-Fa-f]+))?\s*$")
 _NAMESPACE_RE = re.compile(r"^// Namespace: (.+?)\s*$")
+# Standalone serialization-affecting attribute lines (`[SerializeField] // RVA…`).
+# Il2CppDumper prints them on their own line directly above the field they
+# attach to; inline spellings do not occur in this corpus (measured R11).
+_ATTR_LINE_RE = re.compile(r"^\[(SerializeField|SerializeReference|NonSerialized)\]")
+# attribute class name → modifier word encoded into the member's mods string
+_ATTR_TOKEN = {"SerializeField": "serializeField",
+               "SerializeReference": "serializeReference",
+               "NonSerialized": "nonSerialized"}
 
 
 class DumpCsIndex:
-    """fullname → {'fields': [(name, type_string, offset_or_None)]}."""
+    """fullname → {'fields': [(name, type_string, offset_or_None)],
+    'members': [(name, type_string, offset_or_None, modifiers)],
+    'kind': 'class'|'struct'|'interface'|'enum', 'base': raw base spelling,
+    'namespace': declaring namespace}.
+
+    ``fields`` keeps its pre-R11 shape (every instance-or-static field line
+    with its memory offset) for backward compatibility; the synthesizer
+    reads the richer ``members``/``kind``/``base`` records."""
 
     def __init__(self, dump_cs_path: Path):
         text = Path(dump_cs_path).read_text(encoding="utf-8", errors="replace")
@@ -82,42 +100,90 @@ class DumpCsIndex:
         # stacks of (indent, fullname)
         type_stack: list[tuple[int, str]] = []
         cur_fields: list[tuple[str, str, int | None]] = []
+        cur_members: list[tuple[str, str, int | None, str]] = []
+        cur_kind = ""
+        cur_base = ""
+        cur_generic = ""
+        cur_abstract = False
+        cur_ns = ""
         pending_ns = ""
+        pending_attrs: set[str] = set()
 
-        def commit(fullname: str) -> None:
-            if fullname in self.types and cur_fields:
+        def commit(fullname: str, ftype_ns: str) -> None:
+            if fullname in self.types and cur_members:
                 return
-            if fullname not in self.types:
-                self.types[fullname] = {"fields": []}
-            self.types[fullname]["fields"] = list(cur_fields)
+            entry = self.types.setdefault(fullname, {
+                "fields": [], "members": [], "kind": None,
+                "base": None, "namespace": ftype_ns})
+            if cur_members:
+                entry["fields"] = [(n, t, o) for (n, t, o, _m) in cur_members]
+                entry["members"] = list(cur_members)
+            if cur_kind:
+                entry["kind"] = cur_kind
+            if cur_base:
+                entry["base"] = cur_base
+            if cur_abstract:
+                entry["abstract"] = True
+            if cur_generic:
+                entry["generic_params"] = [
+                    p.strip() for p in cur_generic.strip("<>").split(",")]
+
+        def close_one() -> None:
+            nonlocal cur_fields, cur_members, cur_kind, cur_base, \
+                cur_generic, cur_abstract
+            done_fullname = type_stack.pop()[1]
+            commit(done_fullname, cur_ns)
+            cur_fields = []
+            cur_members = []
+            cur_kind = ""
+            cur_base = ""
+            cur_generic = ""
+            cur_abstract = False
 
         for raw in text.splitlines():
             line = raw.rstrip()
             if not line.strip():
                 continue
-            ns_m = _NAMESPACE_RE.match(line.strip())
+            stripped = line.strip()
+            ns_m = _NAMESPACE_RE.match(stripped)
             if ns_m:
                 pending_ns = ns_m.group(1)
                 continue
+            attr_m = _ATTR_LINE_RE.match(stripped)
+            if attr_m and type_stack:
+                pending_attrs.add(attr_m.group(1))
+                continue
             decl = _TYPE_DECL_RE.match(line)
             if decl and "(" not in line.split("//")[0]:
-                indent = len(decl.group(1))
-                name = decl.group(5)
-                while type_stack and indent <= type_stack[-1][0]:
-                    done_fullname = type_stack.pop()[1]
-                    commit(done_fullname)
-                    cur_fields.clear()
+                while type_stack and len(decl.group(1)) <= type_stack[-1][0]:
+                    close_one()
                 namespace = pending_ns
-                base = ""
-                if type_stack and indent > type_stack[-1][0]:
+                name = decl.group(5)
+                if type_stack and len(decl.group(1)) > type_stack[-1][0]:
                     base = type_stack[-1][1] + "+"
+                    type_ns = self.types.get(type_stack[-1][1], {}).get("namespace") or namespace
                 elif not type_stack:
                     base = f"{namespace}." if namespace else ""
                     if base == ".":
                         base = ""
+                    type_ns = namespace
+                else:
+                    base = ""
+                    type_ns = namespace
                 fullname = base + name
-                type_stack.append((indent, fullname))
-                cur_fields.clear()
+                # group(6) is the optional `<T, …>` parameter list; group(7)
+                # the base-type list
+                base_spelling = (decl.group(7) or "").strip()
+                cur_kind = decl.group(4)
+                cur_base = base_spelling.split("<")[0].split(",")[0].strip() \
+                    if base_spelling else ""
+                cur_generic = (decl.group(6) or "").strip()
+                cur_abstract = "abstract " in (" " + (decl.group(3) or ""))
+                cur_ns = type_ns
+                type_stack.append((len(decl.group(1)), fullname))
+                cur_fields = []
+                cur_members = []
+                pending_attrs = set()
                 continue
             if type_stack:
                 fld = _FIELD_RE.match(line)
@@ -126,12 +192,28 @@ class DumpCsIndex:
                     top_indent = type_stack[-1][0] if type_stack else 0
                     if indent > top_indent:  # member of the innermost type
                         mods = fld.group(2) or ""
+                        if pending_attrs:
+                            # standalone [SerializeField] / [SerializeReference]
+                            # / [NonSerialized] lines attach to THIS field,
+                            # encoded as lower-camel modifier words
+                            mods = (mods.rstrip() + " " + " ".join(sorted(
+                                _ATTR_TOKEN[a] for a in pending_attrs)))
                         off_txt = fld.group(5)
                         offset = int(off_txt, 16) if off_txt else None
-                        cur_fields.append((fld.group(4), fld.group(3).strip(), offset))
+                        fname = fld.group(4)
+                        ftype = fld.group(3).strip()
+                        cur_fields.append((fname, ftype, offset))
+                        cur_members.append((fname, ftype, offset, mods))
+                        pending_attrs = set()
+                        continue
+                # any other member construct (methods, properties, section
+                # comments) invalidates attributes aimed at a field
+                if "(" in stripped.split("//")[0] \
+                        or stripped.startswith("//") \
+                        or stripped.startswith("{") or stripped.startswith("}"):
+                    pending_attrs = set()
         while type_stack:
-            commit(type_stack.pop()[1])
-            cur_fields.clear()
+            close_one()
 
     def fields(self, fullname: str) -> list[tuple[str, str, int | None]] | None:
         t = self.types.get(fullname)
@@ -139,7 +221,55 @@ class DumpCsIndex:
             # tolerate assembly-qualified spellings `Ns.Type, Assembly`
             stem = fullname.split(",")[0].strip()
             t = self.types.get(stem)
+        if t is None:
+            resolved = self.resolve(fullname)
+            t = self.types.get(resolved) if resolved else None
         return list(t["fields"]) if t is not None else None
+
+    # -- R11: deterministic name resolution ----------------------------------
+
+    def resolve(self, spelling: str, context_ns: str = "") -> str | None:
+        """Member-type spelling from dump.cs → indexed fullname, or None.
+
+        Ladder (deterministic at every step):
+          1. exact key;
+          2. assembly-qualified stem (`Ns.Type, Assembly`);
+          3. unique suffix match on the full spelling (`Outer.Inner` forms);
+          4. unique leaf match on the bare name;
+          5. ambiguous leaf → the candidate declared in ``context_ns``
+             wins; still ambiguous → None (caller raises, never guesses)."""
+        s = str(spelling).strip()
+        if not s:
+            return None
+        if s in self.types:
+            return s
+        stem = s.split(",")[0].strip()
+        if stem != s and stem in self.types:
+            return stem
+        norm = stem.replace("+", ".")
+        cands = sorted(k for k in self.types
+                       if k.replace("+", ".").endswith("." + norm)
+                       or k.replace("+", ".") == norm)
+        if len(cands) == 1:
+            return cands[0]
+        leaf = norm.rsplit(".", 1)[-1]
+        cands = sorted(k for k in self.types
+                       if k.rsplit(".", 1)[-1].replace("+", ".") == leaf)
+        if len(cands) > 1 and context_ns:
+            same = [k for k in cands
+                    if self.types[k].get("namespace") == context_ns]
+            if len(same) == 1:
+                return same[0]
+            if len(same) > 1:
+                # several same-namespace declarations: C# scope order takes
+                # the OUTERMOST (e.g. TPC.WallPiece shadows the nested
+                # TPC.WallMesh.WallPiece); ambiguous only on a depth tie
+                depths = sorted((k.count("."), k) for k in same)
+                if depths[0][0] < depths[1][0]:
+                    return depths[0][1]
+        if len(cands) == 1:
+            return cands[0]
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -182,24 +312,167 @@ class SynthesisError(Exception):
 
 
 def _cs_type_stem(t: str) -> str:
-    """Normalize a C# spelling from dump.cs to a lookup key."""
-    t = t.replace(" ", "").split(",")[0]
+    """Normalize a C# spelling from dump.cs to a PRIMITIVE lookup key.
+    Structural decisions (List/Dictionary/generics) go through
+    :func:`_norm_cs`/:func:`_generic_args`, which KEEP the arguments."""
+    t = str(t).replace(" ", "").split(",")[0]
     t = re.sub(r"<.*>", "", t)
     t = t.replace("+", ".")
     return t
 
 
+def _norm_cs(t: str) -> str:
+    """Normalize spelling KEEPING generic args: whitespace out, assembly
+    qualifier stripped, nested-type `+` flattened to `.`."""
+    return str(t).replace(" ", "").split(",")[0].replace("+", ".")
+
+
+def _generic_args(norm: str) -> tuple[str, str] | None:
+    """`Head<args>` → (bare Head, args-string); non-generic → None."""
+    if not norm.endswith(">") or "<" not in norm:
+        return None
+    idx = norm.index("<")
+    return norm[:idx].rsplit(".", 1)[-1], norm[idx + 1:-1]
+
+
+def _split_top_args(s: str) -> list[str]:
+    """Split a generic argument list on top-level commas only."""
+    parts, depth, cur = [], 0, ""
+    for ch in s:
+        if ch == "<":
+            depth += 1
+        elif ch == ">":
+            depth -= 1
+        if ch == "," and depth == 0:
+            parts.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    if cur:
+        parts.append(cur)
+    return [p.strip() for p in parts]
+
+
+def _subst_token(cs_type: str, subst: dict[str, str]) -> str:
+    """Substitute generic TYPE PARAMETER names inside a member-type
+    spelling (exact-token at top level, recursively inside generics)."""
+    if not subst:
+        return cs_type
+    norm = _norm_cs(cs_type)
+    hit = subst.get(norm)
+    if hit is not None:
+        suffix = "[]" if norm.endswith("[]") else ""
+        return hit + suffix
+    g = _generic_args(norm)
+    if g:
+        head, args = g
+        parts = [_subst_token(p, subst) for p in _split_top_args(args)]
+        return f"{head}<{','.join(parts)}>" + ("[]" if norm.endswith("[]") else "")
+    return cs_type
+
+
+# Unity serializes only public members plus [SerializeField] /
+# [SerializeReference] ones. These modifier words (verbatim from dump.cs
+# member lines) force exclusion — measured R11: statics DO carry offset
+# comments (e.g. LocalisedString.kPluralCodes `// 0x0`), so offset presence
+# alone cannot separate them.
+_NONSERIALIZED_MODS = frozenset({"static", "const", "event"})
+_SERIALIZING_FLAGS = frozenset({"serializeField", "serializeReference"})
+
+
+class _Shape:
+    """Serialized node plan for one field type: typetree type string plus
+    the ABSOLUTE-LEVEL child nodes it expands to (``child_base`` records
+    the level they start at, so containers can re-base element plans)."""
+
+    __slots__ = ("node_type", "children", "child_base")
+
+    def __init__(self, node_type: str, children: list | None = None,
+                 child_base: int = 0):
+        self.node_type = node_type
+        self.children = children if children is not None else []
+        self.child_base = child_base
+
+
+_PPTR_CHILDREN = [
+    {"m_Level": 0, "m_Type": "UInt32", "m_Name": "m_FileID", "m_MetaFlag": 0},
+    {"m_Level": 0, "m_Type": "SInt64", "m_Name": "m_PathID", "m_MetaFlag": 0}]
+
+_ENUM_UNDERLYING = {
+    "byte": "UInt8", "sbyte": "SInt8",
+    "short": "short", "ushort": "unsigned short",
+    "int": "int", "uint": "unsigned int",
+    "long": "long long", "ulong": "unsigned long long",
+}
+# (the module-level _PPTR_SHAPE constant was folded into
+#  TypetreeSynthesizer._pptr_shape(level) in R11)
+
+
 class TypetreeSynthesizer:
     """Builds UnityPy node lists ([{m_Level,m_Type,m_Name,m_MetaFlag}, …])
-    from a DumpCsIndex, honoring measured field offsets for align flags."""
+    from a DumpCsIndex.
+
+    R11 serialization model (the input-set fix behind the scout piece-02
+    decode-failure census — route 2 had NEVER fired on this corpus):
+    dump.cs lists every instance field with RUNTIME MEMORY offsets, but
+    Unity serializes only a subset of them, and the stream is packed
+    independently of memory layout (a reference field is an 8-byte pointer
+    in memory, an inline value in the stream). The synthesized tree
+    therefore follows Unity's serialization rules instead of offsets:
+
+    - member selection: public / [SerializeField] / [SerializeReference]
+      instance fields only; static, const, event and [NonSerialized]
+      members are excluded;
+    - base-chain inheritance: classes declaring no serialized fields of
+      their own (e.g. TPC.SocialActivityDefinition) read them from the
+      chain below, stopping at the UnityEngine serialization boundary;
+    - engine objects (transitively UnityEngine.Object-derived, decided
+      from the indexed hierarchy rather than a hand list) become
+      PPtr<Object> nodes;
+    - enums serialize as their underlying integer type;
+    - Dictionaries, Nullable, delegates and plain interface fields are
+      omitted exactly where Unity omits them; [SerializeReference] fields
+      carry their managed-reference id;
+    - name resolution is the deterministic DumpCsIndex.resolve ladder
+      (exact → assembly-qualified → unique suffix → context-namespace
+      tie-break); an unresolved REQUIRED type raises a cause-distinct
+      SynthesisError so the dump falls back to raw bytes instead of a
+      silent misparse (UnityPy ``check_read`` demands the tree consume
+      exactly byte_size, so any residual misfit fails loudly)."""
 
     MAX_DEPTH = 24
 
+    # the serialization boundary: chains stop once they reach these
+    # UnityEngine bases — their serialized form IS the MonoBehaviour header
+    _ENGINE_BOUNDARY = {"UnityEngine.Object", "UnityEngine.MonoBehaviour",
+                        "UnityEngine.ScriptableObject"}
+
     def __init__(self, index: DumpCsIndex | None):
         self.index = index
+        self._engine_obj_cache: dict[str, bool] = {}
+
+    # Measured R11 on the real corpus: EVERY typetree-less MonoBehaviour
+    # payload ends with an embedded managed-reference type table —
+    # `[SInt32 count=1][string "Terminus"][string "UnityEngine.DMAT"]
+    # [string "FAKE_ASM"]`, byte-identical across all 732 census payloads.
+    # (These are exactly the SerializeReference-bearing classes, whose
+    # typetrees the bundler strips — the instance's MR type table travels
+    # inline instead.) Underscore names keep the block out of stage-5 stub
+    # fields and payload hashes (both filter `_`-prefixed keys).
+    _MR_TRAILER_TEMPLATE = [
+        {"m_Level": 0, "m_Type": "ManagedReferencesRegistry",
+         "m_Name": "_managedRefTypes", "m_MetaFlag": _ALIGN_FLAG},
+        {"m_Level": 1, "m_Type": "Array", "m_Name": "Array", "m_MetaFlag": 0},
+        {"m_Level": 2, "m_Type": "int", "m_Name": "size", "m_MetaFlag": 0},
+        {"m_Level": 2, "m_Type": "complex", "m_Name": "data", "m_MetaFlag": 0},
+        {"m_Level": 3, "m_Type": "string", "m_Name": "class", "m_MetaFlag": 0},
+        {"m_Level": 3, "m_Type": "string", "m_Name": "namespace", "m_MetaFlag": 0},
+        {"m_Level": 3, "m_Type": "string", "m_Name": "assembly", "m_MetaFlag": 0},
+    ]
 
     def monobehaviour_nodes(self, class_fullname: str) -> list[dict]:
-        """Full MonoBehaviour node list: fixed header + synthesized payload."""
+        """Full MonoBehaviour node list: fixed header + synthesized payload +
+        the measured managed-reference table trailer."""
         nodes: list[dict] = [{"m_Level": 0, "m_Type": "MonoBehaviour",
                               "m_Name": "Base", "m_MetaFlag": 0}]
         nodes += [
@@ -213,102 +486,294 @@ class TypetreeSynthesizer:
             {"m_Level": 1, "m_Type": "string", "m_Name": "m_Name", "m_MetaFlag": _ALIGN_FLAG},
         ]
         nodes += self.class_nodes(class_fullname, level=1)
+        nodes += self._shift(self._MR_TRAILER_TEMPLATE, 1)
         return nodes
 
+    # -- entry ---------------------------------------------------------------
+
     def class_nodes(self, fullname: str, level: int,
-                    _seen: frozenset[str] = frozenset()) -> list[dict]:
+                    _seen: frozenset[str] = frozenset(),
+                    _subst: dict[str, str] | None = None,
+                    _allow_empty: bool = False) -> list[dict]:
         if self.index is None:
             raise SynthesisError("no dump.cs index loaded")
-        if len(_seen) >= self.MAX_DEPTH or fullname in _seen:
+        subst = _subst or {}
+        resolved = self._resolve_required(
+            fullname, self._context_of(fullname))
+        if resolved in _seen or len(_seen) >= self.MAX_DEPTH:
             raise SynthesisError(f"recursion/cycle limit reached at {fullname}")
-        fields = self.index.fields(fullname)
-        if fields is None:
-            raise SynthesisError(f"type '{fullname}' not present in dump.cs")
-        instance = [(n, t, o) for (n, t, o) in fields if o is not None]
-        if not instance:
-            raise SynthesisError(f"no instance fields with offsets for {fullname}")
+        members = self._serialized_members(resolved, subst)
+        if not members:
+            if _allow_empty:
+                # a NESTED type with no serialized members consumes zero
+                # stream bytes (Unity emits the node, the serializer writes
+                # nothing) — e.g. Unity.Entities native containers inside a
+                # job struct pulled into a definition's field graph
+                return []
+            raise SynthesisError(
+                f"no serialized instance fields with offsets for {resolved}")
+        ns = self.index.types[resolved].get("namespace") or ""
         nodes: list[dict] = []
-        for i, (fname, ftype, off) in enumerate(instance):
-            nxt_off = instance[i + 1][2] if i + 1 < len(instance) else None
-            meta = _ALIGN_FLAG if self._needs_align(ftype, off, nxt_off) else 0
-            nodes.append({"m_Level": level, "m_Type": self._node_type(ftype),
-                          "m_Name": fname, "m_MetaFlag": meta})
-            nodes += self._child_nodes(ftype, level + 1, _seen | {fullname})
+        for fname, ftype, _off, flags in members:
+            shape = self.field_shape(ftype, flags, ns,
+                                     _seen | {resolved}, level + 1, subst)
+            if shape is None:
+                continue          # Unity omits this field — so does the tree
+            nodes.append({"m_Level": level, "m_Type": shape.node_type,
+                          "m_Name": fname,
+                          "m_MetaFlag": self._meta_of(shape)})
+            # shape children are already ABSOLUTE at level+1 (field_shape
+            # contract) — no re-shift here
+            nodes += shape.children
         return nodes
+
+    # -- member selection (what Unity actually writes) ------------------------
+
+    def _serialized_members(self, fullname: str,
+                            subst: dict[str, str]) -> list[tuple]:
+        """Serialized members of one type INCLUDING its base chain
+        (root first — derived fields follow base fields in both memory
+        layout and stream order)."""
+        out: list[tuple] = []
+        for ancestor in self._base_chain(fullname):
+            entry = self.index.types[ancestor]
+            for (fname, ftype, off, mods) in entry.get("members") or []:
+                mod_words = set(mods.split())
+                if mod_words & _NONSERIALIZED_MODS:
+                    continue          # static/const/event never serialize
+                if off is None:
+                    continue          # no memory placement → not serialized
+                flags = frozenset(mod_words & _SERIALIZING_FLAGS)
+                if "public" not in mod_words \
+                        and not (flags & _SERIALIZING_FLAGS):
+                    continue          # private/protected without attributes
+                ftype = _subst_token(ftype, subst)
+                out.append((fname, ftype, off, flags))
+        return out
+
+    def _base_chain(self, fullname: str) -> list[str]:
+        """fullname → [root ancestor, …, fullname]; stops at the engine
+        serialization boundary (engine bases contribute no payload fields)
+        and tolerates chains that leave the indexed surface."""
+        chain = [fullname]
+        seen = {fullname}
+        cur = fullname
+        while True:
+            entry = self.index.types.get(cur) or {}
+            base_spelling = entry.get("base")
+            if not base_spelling:
+                break
+            nxt = self.index.resolve(base_spelling,
+                                     entry.get("namespace") or "")
+            if nxt is None or nxt in seen or nxt in self._ENGINE_BOUNDARY:
+                break
+            chain.insert(0, nxt)
+            seen.add(nxt)
+            cur = nxt
+        return chain
+
+    def _is_engine_object(self, fullname: str) -> bool:
+        """True when the type derives from UnityEngine.Object — such fields
+        serialize as PPtr<Object>. Cached chain walk over the index."""
+        cached = self._engine_obj_cache.get(fullname)
+        if cached is not None:
+            return cached
+        seen: set[str] = set()
+        cur = fullname
+        result = False
+        while cur and cur not in seen:
+            seen.add(cur)
+            if cur in self._ENGINE_BOUNDARY:
+                result = True
+                break
+            entry = self.index.types.get(cur) or {}
+            base = entry.get("base")
+            if not base:
+                break
+            nxt = self.index.resolve(base, entry.get("namespace") or "")
+            if nxt is None:
+                # unresolvable link: a UnityEngine leaf spelling settles it
+                result = base.rsplit(".", 1)[-1] in (
+                    "Object", "MonoBehaviour", "ScriptableObject",
+                    "Component", "Behaviour") \
+                    and base.startswith("UnityEngine.")
+                break
+            cur = nxt
+        self._engine_obj_cache[fullname] = result
+        return result
+
+    # -- field-type planning ---------------------------------------------------
+
+    def field_shape(self, cs_type: str, flags: frozenset, owner_ns: str,
+                    seen: frozenset[str], level: int,
+                    subst: dict[str, str] | None = None) -> _Shape | None:
+        """Node plan for one member type, or None when Unity does not
+        serialize it. ``level`` is the ABSOLUTE level this field's expansion
+        starts at; every child node in the returned shape carries its final
+        absolute m_Level."""
+        subst = subst or {}
+        norm = _norm_cs(cs_type)
+
+        # managed-reference collections: vector of {int id} items
+        # (node shape measured from the game's own trees R11:
+        #  `managedRefArrayItem` with a single int `id` child)
+        if "serializeReference" in flags and (
+                norm.endswith("[]") or (_generic_args(norm) or ("", ""))[0]
+                == "List"):
+            return _Shape("vector", [
+                {"m_Level": level, "m_Type": "Array", "m_Name": "Array",
+                 "m_MetaFlag": 0},
+                {"m_Level": level + 1, "m_Type": "int", "m_Name": "size",
+                 "m_MetaFlag": 0},
+                {"m_Level": level + 1, "m_Type": "managedRefArrayItem",
+                 "m_Name": "data", "m_MetaFlag": 0},
+                {"m_Level": level + 2, "m_Type": "int", "m_Name": "id",
+                 "m_MetaFlag": 0},
+            ], level)
+
+        if norm.endswith("[]"):                      # single-dim arrays only
+            elem = self.field_shape(norm[:-2], flags, owner_ns, seen,
+                                    level + 2, subst)
+            return self._vector_shape(elem, level) \
+                if elem is not None else None
+
+        g = _generic_args(norm)
+        if g:
+            head, args = g
+            if head == "List":
+                elem = self.field_shape(args, flags, owner_ns, seen,
+                                        level + 2, subst)
+                return self._vector_shape(elem, level) \
+                    if elem is not None else None
+            if head == "PPtr":
+                return self._pptr_shape(level)
+            if head in ("Dictionary", "HashSet", "Nullable", "IReadOnlyList",
+                        "IEnumerable", "ICollection", "IList", "Action",
+                        "Func", "UnityAction"):
+                return None           # never Unity-serialized
+            # concrete generic instantiation → synthesize the definition
+            defname = norm[:norm.index("<")]
+            r = self.index.resolve(defname, owner_ns)
+            if r is None or self.index.types[r].get("kind") == "interface":
+                return None
+            params = self.index.types[r].get("generic_params") or []
+            sub_map = {p: a for p, a in zip(params, _split_top_args(args))}
+            merged = dict(subst)
+            merged.update(sub_map)
+            if self._is_engine_object(r):
+                return self._pptr_shape(level)
+            children = self.class_nodes(r, level, seen, merged,
+                                        _allow_empty=True)
+            return _Shape("complex", children, level)
+
+        prim = _PRIMITIVE_NODES.get(cs_type.strip()) \
+            or _PRIMITIVE_NODES.get(_cs_type_stem(cs_type))
+        if prim:
+            return None if prim[0] is None else _Shape(prim[0])
+        if norm in ("object", "System.Object"):
+            return None               # plain object refs are not serialized
+
+        r = self.index.resolve(norm, owner_ns)
+        entry = self.index.types[r] if r is not None else {}
+        kind = entry.get("kind")
+        # managed references ([SerializeReference]): the serialized value is
+        # its registry id — EXCEPT engine-object types, which the serializer
+        # PPtrs regardless of the printed attribute (measured R11:
+        # InteractionDefinition's SR'd ScriptableObjectWithID-typed fields
+        # carry 12-byte PPtrs, not 8-byte ids)
+        if kind == "enum":
+            und = (entry.get("base") or "int").strip()
+            return _Shape(_ENUM_UNDERLYING.get(und, "int"))
+        if kind == "interface":
+            if "serializeReference" in flags:
+                return self._managed_ref_shape(level)
+            return None               # plain interface refs are not written
+        if r is not None and self._is_engine_object(r):
+            return self._pptr_shape(level)
+        if "serializeReference" in flags:
+            return self._managed_ref_shape(level)
+        if r is None:
+            return None               # unresolvable → treated as not-written
+        children = self.class_nodes(r, level, seen, subst, _allow_empty=True)
+        return _Shape("complex", children, level)
+
+    def _managed_ref_shape(self, level: int) -> _Shape:
+        """Single managed reference: the game's own trees name the node
+        `managedReference` with one int `id` child (measured R11) — a
+        4-byte registry id, not the 8-byte id an earlier draft assumed."""
+        return _Shape("managedReference", [
+            {"m_Level": level, "m_Type": "int", "m_Name": "id",
+             "m_MetaFlag": 0}], level)
 
     # -- internals -----------------------------------------------------------
 
-    def _node_type(self, cs_type: str) -> str:
-        stem = _cs_type_stem(cs_type)
-        prim = _PRIMITIVE_NODES.get(cs_type.strip()) or _PRIMITIVE_NODES.get(stem)
-        if prim:
-            return prim[0]
-        if cs_type.endswith("[]"):
-            return "vector"
-        if stem.startswith(("List<", "IReadOnlyList<")):
-            return "vector"
-        if stem.startswith(("Dictionary<",)):
-            return "vector"
-        if stem.startswith(("PPtr<", "UnityEngine.PPtr<")):
-            return "PPtr<Object>"
-        if stem.startswith("UnityEngine.Object"):
-            return "PPtr<Object>"
-        return "complex"
+    @staticmethod
+    def _context_of(fullname: str) -> str:
+        return fullname.rsplit(".", 1)[0] if "." in fullname else ""
 
-    def _needs_align(self, cs_type: str, off: int, nxt_off: int | None) -> bool:
-        if nxt_off is None:
-            return False
-        stem = _cs_type_stem(cs_type)
-        prim = _PRIMITIVE_NODES.get(cs_type.strip()) or _PRIMITIVE_NODES.get(stem)
-        if prim is None or prim[1] is None:
-            return True  # variable-length payloads are followed by alignment
-        size = prim[1] if prim[0] != "vector" else 4
-        end = off + size
-        padded = end + ((-end) % 4)
-        return nxt_off > end and nxt_off >= padded
+    def _resolve_required(self, spelling: str, context_ns: str) -> str:
+        r = self.index.resolve(spelling, context_ns)
+        if r is None:
+            raise SynthesisError(f"type '{spelling}' not present in dump.cs")
+        return r
+
+    def _vector_shape(self, elem: _Shape, level: int) -> _Shape:
+        data_level = level + 1
+        children = [
+            {"m_Level": level, "m_Type": "Array", "m_Name": "Array",
+             "m_MetaFlag": 0},
+            {"m_Level": data_level, "m_Type": "int", "m_Name": "size",
+             "m_MetaFlag": 0},
+            {"m_Level": data_level, "m_Type": elem.node_type, "m_Name": "data",
+             "m_MetaFlag": 0},
+        ] + self._shift(elem.children,
+                        (level + 2) - elem.child_base)
+        return _Shape("vector", children, level)
+
+    def _pptr_shape(self, level: int) -> _Shape:
+        return _Shape("PPtr<Object>",
+                      self._shift(_PPTR_CHILDREN, level), level)
+
+    @staticmethod
+    def _shift(children: list[dict], delta: int) -> list[dict]:
+        return [dict(c, m_Level=c["m_Level"] + delta) for c in children]
+
+    # Scalars narrower than 4 bytes self-pad to 4 in the serialized stream
+    # (measured R11 on TPC.QualificationDefinition: two adjacent-in-memory
+    # bools occupy 8 stream bytes, exactly like the m_Enabled header bool).
+    _SUB4_TYPES = ("bool", "UInt8", "SInt8", "char", "short", "unsigned short")
+
+    @staticmethod
+    def _meta_of(shape: _Shape) -> int:
+        """kAlign on exactly the nodes the game's own serializer pads:
+        variable-width payloads (strings, vectors, complexes containing
+        either) and sub-4-byte scalars. 4/8-byte scalars and PPtrs stay
+        packed — a stray align there would inject phantom padding into
+        the byte-exact read."""
+        t = shape.node_type
+        if t in ("string", "vector") or t in TypetreeSynthesizer._SUB4_TYPES:
+            return _ALIGN_FLAG
+        if t == "complex":
+            stack = list(shape.children)
+            while stack:
+                c = stack.pop()
+                if c["m_Type"] in ("string", "vector", "Array") \
+                        or c["m_Type"] in TypetreeSynthesizer._SUB4_TYPES:
+                    return _ALIGN_FLAG
+            return 0
+        return 0
+
+    def _needs_align(self, cs_type: str, off, nxt_off) -> bool:  # legacy API
+        return False
 
     def _child_nodes(self, cs_type: str, level: int,
-                     seen: frozenset[str]) -> list[dict]:
-        stem = _cs_type_stem(cs_type)
-        prim = _PRIMITIVE_NODES.get(cs_type.strip()) or _PRIMITIVE_NODES.get(stem)
-        if prim:
-            return []
-        if cs_type.endswith("[]"):
-            elem = cs_type[:-2]
-            return self._vector_children(elem, level, seen)
-        if stem.startswith(("List<", "IReadOnlyList<")):
-            elem = cs_type[cs_type.index("<") + 1:cs_type.rindex(">")]
-            return self._vector_children(elem, level, seen)
-        if stem.startswith("Dictionary<"):
-            kv = cs_type[cs_type.index("<") + 1:cs_type.rindex(">")]
-            depth, k, v = _split_generic_args(kv)
-            arr = [{"m_Level": level, "m_Type": "Array", "m_Name": "Array", "m_MetaFlag": 0},
-                   {"m_Level": level + 1, "m_Type": "int", "m_Name": "size", "m_MetaFlag": 0}]
-            pair = [{"m_Level": level + 1, "m_Type": "pair", "m_Name": "data", "m_MetaFlag": 0}]
-            pair.append({"m_Level": level + 2, "m_Type": self._node_type(k),
-                         "m_Name": "key", "m_MetaFlag": 0})
-            pair += self._child_nodes(k, level + 3, seen)
-            pair.append({"m_Level": level + 2, "m_Type": self._node_type(v),
-                         "m_Name": "value", "m_MetaFlag": 0})
-            pair += self._child_nodes(v, level + 3, seen)
-            return arr + pair
-        if stem.startswith(("PPtr<", "UnityEngine.PPtr<")):
-            return [{"m_Level": level, "m_Type": "UInt32", "m_Name": "m_FileID", "m_MetaFlag": 0},
-                    {"m_Level": level, "m_Type": "SInt64", "m_Name": "m_PathID", "m_MetaFlag": 0}]
-        if stem.startswith("UnityEngine.Object") or stem == "UnityEngine.Object":
-            return [{"m_Level": level, "m_Type": "UInt32", "m_Name": "m_FileID", "m_MetaFlag": 0},
-                    {"m_Level": level, "m_Type": "SInt64", "m_Name": "m_PathID", "m_MetaFlag": 0}]
-        if "<" in stem:  # unhandled generic instantiation
-            raise SynthesisError(f"unsupported generic type '{cs_type}'")
-        return self.class_nodes(cs_type, level, seen)
+                     seen: frozenset[str]) -> list[dict]:  # legacy API
+        shape = self.field_shape(cs_type, frozenset(), "", seen, level)
+        return [] if shape is None else self._shift(shape.children, level)
 
-    def _vector_children(self, elem: str, level: int, seen: frozenset[str]) -> list[dict]:
-        return [
-            {"m_Level": level, "m_Type": "Array", "m_Name": "Array", "m_MetaFlag": 0},
-            {"m_Level": level + 1, "m_Type": "int", "m_Name": "size", "m_MetaFlag": 0},
-            {"m_Level": level + 1, "m_Type": self._node_type(elem),
-             "m_Name": "data", "m_MetaFlag": 0},
-        ] + self._child_nodes(elem, level + 2, seen)
+    def _node_type(self, cs_type: str) -> str:  # legacy API
+        shape = self.field_shape(cs_type, frozenset(), "", frozenset(), 1)
+        return shape.node_type if shape is not None else "complex"
 
 
 def _split_generic_args(s: str) -> tuple[int, str, str]:
@@ -655,8 +1120,120 @@ class MonoScriptIndex:
                 "distinctEntries": len(self._entries)}
 
 
+class EmbeddedTreeOracle:
+    """Cross-file embedded-typetree lender (R11 G1).
+
+    Unity strips typetrees per SERIALIZED FILE, not per build: the same
+    script class carries its game-generated tree in most files and none in
+    a few (measured: TPC.GameItemDefinition decodes embedded in 1,654
+    dumps while 44 payloads across other files carry no tree). For those
+    few, the honest decode is the GAME'S OWN tree of a same-CLASS object
+    from another file — keyed by the RESOLVED script class fullname via the
+    :class:`MonoScriptIndex` (different files reference different MonoScript
+    objects for one class, so the script PPtr itself cannot be the key).
+
+    Captured during stage-3 phase A (the monoscript scan already loads
+    every bundle); consulted by :func:`decode_monobehaviour` between the
+    local-embedded route and synthesis."""
+
+    def __init__(self, script_index: MonoScriptIndex | None = None):
+        self.script_index = script_index
+        self._by_script: dict[tuple[str, int], object] = {}
+        self._by_class: dict[str, object] = {}
+        self.classes_captured: list[str] = []
+        self.captured = 0
+        self._finalized = False
+
+    def _script_key(self, obj) -> tuple[str, int] | None:
+        """(script-cab, path_id) for THIS object's m_Script off the fixed
+        raw header — no typetree read needed."""
+        pptr = monoscript_pptr_from_raw(obj)
+        if not isinstance(pptr, dict):
+            return None
+        fid = int(pptr.get("m_FileID", 0) or 0)
+        pid = int(pptr.get("m_PathID", 0) or 0)
+        if pid == 0:
+            return None
+        af = getattr(obj, "assets_file", None)
+        if fid == 0:
+            cab = (getattr(af, "name", "") or "").lower()
+        else:
+            exts = getattr(af, "externals", None) or []
+            if fid < 1 or fid > len(exts):
+                return None
+            cab = _simplify_external_path(getattr(exts[fid - 1], "path", ""))
+        return cab, pid
+
+    def capture(self, env) -> int:
+        """Index one loaded environment's MonoBehaviour trees, keyed by the
+        m_Script PPtr target. Returns the number of NEW script keys
+        captured. Class resolution is DEFERRED to :meth:`finalize` because
+        a bundle's scripts may live in monoscript bundles the phase-A scan
+        has not reached yet."""
+        added = 0
+        for f in iter_environment_files(env):
+            cab_own = (getattr(f, "name", "") or "").lower()
+            exts = getattr(f, "externals", None) or []
+            for obj in iter_objects_sorted(f):
+                if getattr(getattr(obj, "type", None), "name", "") \
+                        != "MonoBehaviour":
+                    continue
+                node = getattr(getattr(obj, "serialized_type", None),
+                               "node", None)
+                if node is None:
+                    continue
+                pptr = monoscript_pptr_from_raw(obj)
+                if not isinstance(pptr, dict):
+                    continue
+                fid = int(pptr.get("m_FileID", 0) or 0)
+                pid = int(pptr.get("m_PathID", 0) or 0)
+                if pid == 0:
+                    continue
+                if fid == 0:
+                    cab = cab_own
+                elif 1 <= fid <= len(exts):
+                    cab = _simplify_external_path(
+                        getattr(exts[fid - 1], "path", ""))
+                else:
+                    continue
+                key = (cab, pid)
+                if key not in self._by_script:
+                    self._by_script[key] = node
+                    added += 1
+        self.captured += added
+        return added
+
+    def finalize(self) -> int:
+        """Resolve captured script keys to class fullnames through the
+        finished MonoScriptIndex. Call ONCE after the phase-A scan."""
+        self._finalized = True
+        if self.script_index is None:
+            return 0
+        for (cab, pid), cls in self.script_index._entries.items():
+            node = self._by_script.get((cab, pid))
+            if node is not None and cls not in self._by_class:
+                self._by_class[cls] = node
+                self.classes_captured.append(cls)
+        return len(self._by_class)
+
+    def get(self, obj, script_class: str | None = None):
+        """The game-generated tree for THIS object's class, or None.
+        ``script_class`` skips the header lookup when the caller already
+        resolved the class."""
+        if not self._finalized:
+            self.finalize()
+        cls = script_class
+        if cls is None:
+            key = self._script_key(obj)
+            if key is None:
+                return None
+            cls = (self.script_index or MonoScriptIndex())._entries.get(key)
+        return self._by_class.get(cls) if cls else None
+
+
 def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None,
                          script_index: MonoScriptIndex | None = None,
+                         tree_oracle: EmbeddedTreeOracle | None = None,
                          ) -> tuple[dict, bool, str]:
     """Returns (payload_dict, typetree_decoded, method_note). Never raises —
     falls back to the raw typed dump.
@@ -664,13 +1241,16 @@ def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None,
     Decode routes, first fit wins (spec §3 stage 3: typetree-decoded fields
     where possible, `typetreeDecoded:false` marking only genuine residue):
       1. embedded typetree — UnityPy reads the tree the bundle itself ships;
-      2. synthesized typetree — typetree-less payloads driven through the
+      2. borrowed embedded tree (R11) — the game-generated tree of a
+         same-script object from another serialized file
+         (:class:`EmbeddedTreeOracle`);
+      3. synthesized typetree — typetree-less payloads driven through the
          dump.cs field tables for the RESOLVED script class; resolution for
          those recovers the m_Script PPtr from the fixed raw MonoBehaviour
          header (:func:`monoscript_pptr_from_raw`) when the embedded read
          fails, so synthesis stays reachable for its target population
          (CR#3);
-      3. raw typed dump with `_raw.typetreeDecoded:false` + a CAUSE-DISTINCT
+      4. raw typed dump with `_raw.typetreeDecoded:false` + a CAUSE-DISTINCT
          reason (`m_Script pptr unreadable` / `m_Script pptr null` /
          `monoscript not in index` / `synthesis failed for <class>` / the
          wiring facts) — never one blanket string reading as a client fact.
@@ -718,7 +1298,31 @@ def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None,
                                "method": "embedded-typetree"}
         return payload, True, "embedded-typetree"
 
-    # Route 2: synthesized typetree over the dump.cs field tables.
+    # Route 2 (R11): borrowed embedded tree — the game's own typetree of a
+    # same-script object from another serialized file. Unity strips trees
+    # per FILE, not per build, so a few files hold payloads whose class has
+    # game-generated trees everywhere else; those are decoded with the real
+    # thing rather than a reconstruction.
+    last_error = residue_reason or "script class unresolved"
+    if tree_oracle is not None:
+        oracle_node = tree_oracle.get(obj, script_class)
+        if oracle_node is not None:
+            try:
+                data = obj.read_typetree(nodes=oracle_node, wrap=False,
+                                         check_read=True)
+                data.setdefault("_synthesis", {
+                    "method": "embedded-tree-oracle",
+                    "class": script_class or "?"})
+                if script_class:
+                    data["_scriptClass"] = script_class
+                data.setdefault("_decoded", {
+                    "typetreeDecoded": True, "method": "embedded-tree-oracle"})
+                return data, True, "embedded-tree-oracle"
+            except Exception as exc:  # noqa: BLE001 — fall through to synth
+                last_error = (f"oracle tree mismatch for {script_class}: "
+                              f"{type(exc).__name__}: {exc}")
+
+    # Route 3: synthesized typetree over the dump.cs field tables.
     # Every failure to reach synthesis carries its OWN cause-distinct reason
     # (CR#3/F4) — a wiring fact (`no dump.cs index`, `no monoscript index`)
     # never masquerades as a client fact, and an unresolved script is
