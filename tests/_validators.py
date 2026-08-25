@@ -62,6 +62,17 @@ COMPOSITION_POLICIES = (
     "mixed",
 )
 
+# Rev-5 evidence keys stage 4 writes into base-overlay-report.json
+# (tools/stage4_localisation.py — registry shape + what the base decode
+# skipped); testreviewer-003 G4 / arbiter-003 F8.
+BASE_OVERLAY_EVIDENCE_KEYS = (
+    "registryTerms",
+    "termStatusForTranslation",
+    "termStatusNotForTranslation",
+    "baseCellsSkippedEmpty",
+    "baseCellsSkippedAbsent",
+)
+
 # spec §3 stage 5 kind value ↔ filename map (9 kinds, pinned exactly)
 KIND_TO_FILE = {
     "item": "items.jsonl",
@@ -417,14 +428,24 @@ def validate_base_overlay_report(obj):
     ev = obj.get("evidence")
     if not isinstance(ev, dict) or not ev:
         _err(e, "evidence object with counts required")
-    else:
-        total = 0
-        for k, v in ev.items():
-            if not isinstance(v, int) or v < 0:
-                _err(e, f"evidence.{k} must be a non-negative count (got {v!r})")
-            total += v or 0
-        if total <= 0:
-            _err(e, "evidence counts are all zero — no observation recorded")
+        return e
+    total = 0
+    for k, v in ev.items():
+        if not isinstance(v, int) or v < 0:
+            _err(e, f"evidence.{k} must be a non-negative count (got {v!r})")
+        total += v or 0
+    if total <= 0:
+        _err(e, "evidence counts are all zero — no observation recorded")
+    # Revision 5 evidence keys the implementation actually emits
+    # (tools/stage4_localisation.py stamps them beside the classifier's own
+    # counts). A report missing any of them predates Rev 5 and can no longer
+    # prove WHAT it observed — required, not optional.
+    for k in BASE_OVERLAY_EVIDENCE_KEYS:
+        if k not in ev:
+            _err(e, f"evidence missing Revision-5 key {k!r} "
+                    "(stage 4 emits it; without it the observation is unproven)")
+        elif not isinstance(ev[k], int) or ev[k] < 0:
+            _err(e, f"evidence.{k} must be a non-negative count (got {ev[k]!r})")
     return e
 
 
