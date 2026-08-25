@@ -1297,7 +1297,8 @@ def run(game_root: Path, extracted_root: Path) -> int:
         else ("- exitCode: 2 (completed-with-ledger)" if not problems
               else f"- exitCode: 1 ({'; '.join(problems)})"),
         f"- R1: bundlesBridged={len(roster) - len(bridges.unreadable)} "
-        f"cabRows={sum(len(v.pids) for v in bridges.cabs.values())} "
+        f"cabRows={bridges.cab_row_count} "
+        f"cabObjects={sum(len(v.pids) for v in bridges.cabs.values())} "
         f"containerRows={len(bridges.container)} "
         f"fallbackVersionUsedBundles={len(bridges.fallback_bundles)} "
         f"containerAddressCollisions={bridges.container_collisions}",

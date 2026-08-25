@@ -156,6 +156,16 @@ def test_r1_bridges_cover_all_176_bundles(real_run):
         f"bundlesBridged {len(bridged)} != roster {len(want)}; first missing: {missing}")
     keys = [(r["bundle"], r["cab"]) for r in cab]
     assert keys == sorted(keys), "cab_index sort order violated"
+    # arbiter F8 (CR5): the run-section cabRows key must equal its artifact
+    # — serialized files, not summed objects; objects report as cabObjects
+    cabrows = ns.counter("cabRows")
+    assert cabrows is not None, "run section lost cabRows"
+    assert cabrows == len(cab), \
+        f"cabRows {cabrows} != cab_index.jsonl rows {len(cab)}"
+    cab_objects = ns.counter("cabObjects")
+    if cab_objects is not None:
+        assert cab_objects > cabrows, \
+            f"cabObjects {cab_objects} must exceed the file-row count {cabrows}"
     ckeys = [(r["bundle"], r["address"]) for r in cont]
     assert ckeys == sorted(ckeys), "container_index sort order violated"
     for row in cab[:200]:

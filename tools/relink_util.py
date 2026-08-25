@@ -315,6 +315,11 @@ class BridgeIndexes:
         self.fallback_bundles: list[str] = []
         self.container_collisions = 0
         self.unreadable: list[tuple[str, str]] = []
+        # rows emitted into bridges/cab_index.jsonl (one per serialized
+        # file) — the run-section `cabRows` key must equal THIS artifact,
+        # not the object total (arbiter F8/CR5); objects report separately
+        # as `cabObjects`
+        self.cab_row_count = 0
 
     def class_idx(self, cls: str) -> int:
         idx = self._class_idx.get(cls)
@@ -359,6 +364,7 @@ class BridgeIndexes:
                 "objects": [{"pathId": pid, "class": self.class_table[c]}
                             for pid, c in pairs],
                 "buildId": self.build_id})
+        self.cab_row_count += len(cab_rows)
         owners = self.bundle_cabs.setdefault(bundle_rel, [])
         owners.extend(cab.lower() for cab, _ in per_cab)
 
