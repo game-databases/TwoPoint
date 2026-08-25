@@ -4,7 +4,9 @@ Companion to `spec.md` + `toolchain.md`. Research basis:
 `docs/scout-report-001.mdx` §2/§4/§9 (verifyA 21/21 CONFIRMED) plus the
 2026-08-24 recounts by documentator-001 (scene tally, metadata version,
 DLC rosters — noted inline where they supersede scout figures). All
-figures measured on this host; nothing downloaded.
+figures measured on this host; the only downloads are the two kickoff
+corroboration pulls that landed 2026-08-25 under `data/sources/`
+(§"Queued external pulls" below).
 
 ## Client (primary source, in hand)
 
@@ -29,11 +31,22 @@ corpus is locally readable.
 
 ## Depot map (`appmanifest_1649080.acf`)
 
-| Depot | DLC appid | Size (B) | Manifest gid |
+| Depot | DLC appid → public name | Size (B) | Manifest gid |
 |---|---|---|---|
 | 1649081 (base) | — | 4,112,128,282 | 289369811377342695 |
-| 1907451 ("space") | 1907450 | 212,055,024 | 3622833373893779274 |
-| 1884561 ("ghost") | 1884560 | 370,022,362 | 6004916305044431883 |
+| 1907451 ("ghost") | 1907450 — "School Spirits" | 212,055,024 | 3622833373893779274 |
+| 1884561 ("space") | 1884560 — "Space Academy" | 370,022,362 | 6004916305044431883 |
+
+**Association CORRECTED 2026-08-25** against
+`data/sources/steam-appdetails-1649080.json` (an earlier draft paired
+these backwards): **appid 1884560 = "Space Academy"** → depot 1884561 →
+`DLCs/space/` (`dlc1_launchpadlevel`, `dlc1_moonbaselevel`,
+`dlc1_spaceportcitylevel`); **appid 1907450 = "School Spirits"** → depot
+1907451 → `DLCs/ghost/` (`dlc2_ghosts_optimised`). Steam's internal dir
+codenames do not track marketing names here — `space`/`ghost` stay as
+folder nicknames and as the frozen `contentAxis` enum values
+(`dlc-space`/`dlc-ghost`); only the appid/depot↔dir association text
+corrected.
 
 Shared Steamworks depot 228989 (standard redistributable). The two DLC
 depot sizes do not sum to the 556 MiB `DLCs/` dir on disk — disk shows
@@ -88,6 +101,14 @@ enum tag (`dlc-space`/`dlc-ghost`; spec.md's site-plane
 `dlc1-space`/`dlc2-ghost` map onto it) per row. No separate
 acquisition work exists: both DLCs are installed.
 
+Two further DLC exist beyond the install (appdetails 2026-08-25):
+**2312070 "Two Point Campus Soundtrack"** and **2195430 "Two Point
+Campus: Medical School"** — not owned, nothing on disk. Medical School
+is nonetheless catalog-KNOWN: the base catalog references
+`dlc-hospital-*` bundles 19× out-of-roster, so the catalog anticipates
+content this install can never satisfy. Acquiring either is an owner
+question (QUESTION-QUEUE #3, non-blocking).
+
 ### S3 — Native image + metadata (decompile inputs)
 
 `GameAssembly.dll` (297 MiB) + `global-metadata.dat` (~14 MiB,
@@ -130,21 +151,30 @@ NVIDIA Ansel capture (`AnselPlugin64`/`AnselSDK64`). Inventory +
 no-surface proof land in `extracted/protocol/` and the PROOF protocol
 section in a later piece; piece 1 fixes the directory contract only.
 
-## Queued external pulls (not pipeline stages)
+## Kickoff external pulls — DONE 2026-08-25 (not pipeline stages)
 
-One-shot corroboration calls at pack kickoff, outside `run_all`:
+One-shot corroboration calls at pack kickoff, outside `run_all`. Both
+fired 2026-08-25; raw JSON + MANIFEST rows are in `data/sources/`.
 
-1. **Steam `appdetails` (store-cc us)** — corroborates the 13-locale set
-   against the storefront row; settles whether an `es-419`/latam variant
-   exists beyond the client's single `spanish→es` bundle (verifyB carry
-   1.7); names DLC 1907450 / 1884560 publicly (the "Space Academy"
-   naming is INFERRED today).
-2. **Steam `ISteamNews/GetNewsForApp`** — characterizes remaining patch
-   cadence for the staleness story (verifyB carry 1.8; last observed
-   update 2025-12-19).
+1. **Steam `appdetails` (store-cc us)** — DONE (`steam-appdetails-1649080.json`).
+   - DLC public names settled: **1884560 = "Space Academy"**,
+     **1907450 = "School Spirits"**, plus two not-owned listings,
+     **2312070 = Soundtrack**, **2195430 = Medical School** (drives the
+     depot-map correction above).
+   - verifyB carry 1.7 RESOLVED: the storefront row has **no
+     `es-419`/latam entry** — no locale variant exists beyond the
+     client's set, and the client's single `spanish→es` bundle maps to
+     the storefront's "Spanish - Spain". Precision note: the storefront
+     `supported_languages` string names **11 of the client's 13 text
+     locales** (Japanese and Russian absent from the storefront row;
+     re-checked live against the endpoint 2026-08-25) — the client's 14
+     loc bundles remain the sole authority for locale capability.
+2. **Steam `ISteamNews/GetNewsForApp`** — DONE (`steam-news-1649080.json`);
+   latest items are 2026-08 store events, no patch-cadence signal →
+   verifyB carry 1.8 closed; last build 2025-12-19 stands.
 
-Neither blocks extraction; both write provenance rows into
-`data/sources/MANIFEST.md` when they fire.
+Neither blocked extraction; both wrote their provenance rows into
+`data/sources/MANIFEST.md` on firing.
 
 ## Provenance fields (per dataset, repo-only per AGENTS rule 3)
 

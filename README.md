@@ -4,8 +4,11 @@ Pack for **Two Point Campus** (Two Point Studios; Steam appid **1649080**;
 client buildid **20226581**, `version.txt` `10.3.169253+2024-12-06.1241`;
 Unity **2020.3.47f1**, IL2CPP, Windows x64). The client installs locally on
 this host (NE8K) at `A:\SteamLibrary\steamapps\common\Two Point Campus`
-(~4.37 GiB on disk; base depot 1649081 + two DLC depots 1907450 "space",
-1884560 "ghost"). Extraction runs here, in place — this machine holds the
+(~4.37 GiB on disk; base depot 1649081 + two DLC packs — appid 1884560
+"Space Academy" via depot 1884561, installed as `DLCs/space/`, and appid
+1907450 "School Spirits" via depot 1907451, installed as `DLCs/ghost/`;
+Steam's internal dir codenames don't track marketing names here).
+Extraction runs here, in place — this machine holds the
 data ([`_foundation/extraction-host.md](../_foundation/extraction-host.md)).
 
 The product is the Two Point Campus database site — entity database,

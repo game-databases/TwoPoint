@@ -19,9 +19,19 @@ identity:
   steam:
     apps:
       - { appid: 1649080, role: primary, lifecycle: live }   # buildid 20226581 = TargetBuildID (install at target)
-      - { appid: 1907450, role: dlc }    # depot 1907451 "space" (Space Academy naming INFERRED from public name)
-      - { appid: 1884560, role: dlc }    # depot 1884561 "ghost"
-    store-cc: us                    # appdetails queued at kickoff (locale corroboration + DLC public names)
+      - { appid: 1884560, role: dlc }    # depot 1884561 — "Space Academy" (public name VERIFIED-FROM-STOREFRONT
+                                         #   2026-08-25) → installed at DLCs/space/ (dlc1_* scenes)
+      - { appid: 1907450, role: dlc }    # depot 1907451 — "School Spirits" (VERIFIED-FROM-STOREFRONT 2026-08-25)
+                                         #   → installed at DLCs/ghost/ (dlc2_ghosts_optimised)
+      - { appid: 2312070, role: dlc, owned: no }   # "Two Point Campus Soundtrack" — storefront-listed, not installed
+      - { appid: 2195430, role: dlc, owned: no }   # "Medical School" — catalog-KNOWN (base catalog references
+                                                   #   dlc-hospital-* bundles out-of-roster) but not owned;
+                                                   #   acquisition is QUESTION-QUEUE #3 (non-blocking)
+    # Dir-codename note: Steam's internal dir codenames do NOT track marketing names here —
+    # DLCs/space/ carries Space Academy (1884560), DLCs/ghost/ carries School Spirits (1907450);
+    # the association is measured from bundle content, never from the codename.
+    store-cc: us                    # appdetails FIRED 2026-08-25 (locale corroboration + DLC public names;
+                                    #   raw at data/sources/steam-appdetails-1649080.json, MANIFEST row appended)
 
 locales:                          # §2.4 launch-blocking — VERIFIED-FROM-CLIENT 2026-08-24 (14 loc bundles on disk)
   official: [en, pt-BR, zh-Hans, zh-Hant, fr, de, it, ja, ko, pl, ru, es, tr]   # 13 text locales
@@ -105,8 +115,9 @@ tools:                            # details + scoring: tools-plan.md (≥5 score
 
 automation:
   update-trigger: manual          # finished single-player title; buildid-diff fires when run_all re-runs against a changed manifest
-  patch-cadence: dormant-observed # LastUpdated epoch 1766136803 = 2025-12-19; whether patches still ship checked via one
-                                  #   ISteamNews/GetNewsForApp pull at kickoff (queued, verifyB carry 1.8)
+  patch-cadence: dormant-observed # LastUpdated epoch 1766136803 = 2025-12-19; ISteamNews/GetNewsForApp pull FIRED
+                                  #   2026-08-25 (verifyB carry 1.8 closed): latest items are 2026-08 store events,
+                                  #   no patch-cadence signal — last build 2025-12-19 stands
   staleness-model: per-record     # buildId stamp on every emitted row
   watches: [appmanifest-buildid-change, engine-bump, dlc-release]
 
