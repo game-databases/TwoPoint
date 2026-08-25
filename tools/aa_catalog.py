@@ -8,13 +8,43 @@ Revision 4): PRIMARY = the TextAsset "catalog" JSON parsed directly;
 SECONDARY = a ContentCatalogData MonoBehaviour decoded through the
 dump.cs-synthesized typetree. This module parses the blobs themselves.
 
-Blob layouts are NOT guessed: they were reverse-engineered and validated
-2026-08-20 against two shipped catalogs — Disco Elysium (Unity 2020.3 /
-Addressables 1.x, same engine family as this client) and Zero Parades
-(AA 1.22.3) — with stated-count == parsed reconciliation
-(zero-parades/work/scripts/parse_aa_catalog.py). Self-validation here
-re-derives the same invariants on every run: bucket count == key-slot
-count, entry-blob byte length == 4 + 28·n, key-blob fully consumed.
+Blob layouts are NOT guessed. Round 8 (2026-08-25) re-derived them from the
+public Addressables serialization scheme and pinned them byte-exact against
+THIS client's real catalog (AA 1.21.10 TextAsset "catalog", see
+`.agents/catalog-blob-probe.json`):
+
+  every blob opens `<i32 count>` — NO version byte;
+  m_KeyDataString   `<i32 slotCount>` then per slot a 1-byte type tag:
+      0 ascii string    `<i32 byteLen>` + UTF-8 bytes
+      1 unicode string  `<i32 len>` + UTF-16-LE bytes
+      2 prime int       `<i32 value>`
+      3 Hash128         16 raw bytes (surfaced as 32 lowercase hex chars)
+      4 two-slot pair   `<i32 auxId>` + one 0x00 byte + `<i32 byteLen>` +
+                        UTF-8 bytes (occupies TWO slots)
+  m_BucketDataString `<i32 bucketCount>` then per bucket
+                     `<i32 dataOffset> <i32 itemCount> <itemCount×i32 entryIdx>`
+                     where dataOffset points at that bucket's key record
+                     inside m_KeyDataString (real blob: 4 → 73 → 144 → 217,
+                     exactly the int32-length key record boundaries);
+  m_EntryDataString  `<i32 entryCount>` then entryCount × 7×i32 fixed records
+                     (internalId, provider, dependencyKey, hashCode,
+                     dataOffset, primaryKey, resourceType indexes).
+
+String lengths are FIXED int32, measured not assumed: the real blob's first
+key reads len=0x00000040 with its ASCII content starting immediately after (a
+.NET BinaryWriter varint would put content one byte earlier, inside three NULs),
+and the bucket dataOffsets reconcile those exact record sizes.
+
+RECONCILIATION RULE (the round-8 bug): Σ per-bucket item counts is NOT
+len(entries). An entry is listed once per key that resolves to it — its
+primaryKey bucket PLUS every extra key sharing it (labels, two-slot hash
+pairs) — so memberships ≥ entries whenever multi-key entries exist. The real
+payload carries 81,146 memberships over 66,129 entries; demanding equality
+there was a false invariant (it would need a non-integer 2.27 overhead ints
+per bucket — impossible for any uniform layout). Hard gates stay structural:
+exact blob consumption, stated counts == parsed, buckets == key slots, and
+every item index in range; membership arithmetic is reported in the decoded
+model's `meta`, never silently dropped.
 """
 from __future__ import annotations
 
@@ -61,6 +91,11 @@ def parse_keys(blob: bytes) -> list[dict]:
                 break
             (ln,) = struct.unpack("<i", _take(r, 4, "type-4 key length"))
             entries.append(("t4", _take(r, ln, "type-4 key").decode("utf-8", "replace"), a))
+        elif t == 2:  # prime int key (AA kPrimeIntKeyCode)
+            (v,) = struct.unpack("<i", _take(r, 4, "prime-int key"))
+            entries.append(("int", v, None))
+        elif t == 3:  # Hash128 key (AA kHashKeyCode)
+            entries.append(("hash128", _take(r, 16, "Hash128 key").hex(), None))
         else:
             raise CatalogDecodeError(
                 f"unknown key type {t} at offset {r.tell() - 1} of m_KeyDataString")
@@ -154,13 +189,15 @@ def decode_catalog_payload(payload: dict) -> dict:
             f"{len(buckets)} buckets != {len(slots)} key slots")
 
     keys_out: list[dict] = []
-    entry_total = 0
+    membership_total = 0
+    referenced: set[int] = set()
     for i, slot in enumerate(slots):
         bucket_off, eidxs = buckets[i]
         rows = []
         for ei in eidxs:
             if not 0 <= ei < len(entries):
                 raise CatalogDecodeError(f"entry index {ei} out of range")
+            referenced.add(ei)
             iid, prov, dep, _hsh, _data, prim, rt = entries[ei]
             rows.append({
                 "internalId": internal_ids[iid] if 0 <= iid < len(internal_ids) else str(iid),
@@ -169,11 +206,17 @@ def decode_catalog_payload(payload: dict) -> dict:
                 "dependencyKey": slots[dep]["key"] if 0 <= dep < len(slots) else None,
                 "primaryKey": slots[prim]["key"] if 0 <= prim < len(slots) else None,
             })
-        entry_total += len(rows)
+        membership_total += len(rows)
         keys_out.append({
             "key": slot["key"], "kind": slot["kind"],
             "bucketOffset": bucket_off, "a": slot["a"], "entries": rows})
-    if entry_total != len(entries):
-        raise CatalogDecodeError(
-            f"bucket entry total {entry_total} != parsed entries {len(entries)}")
-    return {"keys": keys_out, "internalIds": internal_ids, "providerIds": provider_ids}
+    # Σ memberships vs entry count is reported, never enforced: multi-key
+    # entries (labels / two-slot hash pairs) legitimately appear under several
+    # buckets (real TPC payload: 81,146 memberships over 66,129 entries).
+    return {"keys": keys_out, "internalIds": internal_ids,
+            "providerIds": provider_ids,
+            "meta": {"keySlotCount": len(slots), "bucketCount": len(buckets),
+                     "entryCount": len(entries),
+                     "bucketMembershipTotal": membership_total,
+                     "distinctEntriesReferenced": len(referenced),
+                     "unreferencedEntryCount": len(entries) - len(referenced)}}

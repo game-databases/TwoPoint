@@ -96,7 +96,7 @@ def _decode_catalog_textasset(env) -> tuple[dict | None, str]:
                   + ("; ".join(reasons) if reasons else "none present"))
 
 
-def _find_catalog_monobehaviour(env, synth):
+def _find_catalog_monobehaviour(env, synth, primary_note: str | None = None):
     """SECONDARY/absent route (demoted by Revision 4): probe for a
     ContentCatalogData MonoBehaviour payload through the dump.cs-synthesized
     typetree. Reached only when the primary TextAsset route is missing or
@@ -130,7 +130,9 @@ def _find_catalog_monobehaviour(env, synth):
         "catalog.bundle decoded via NEITHER route: the primary TextAsset "
         '"catalog" is absent or malformed AND no decodable '
         "ContentCatalogData MonoBehaviour exists — the secondary typetree "
-        "route needs stage-1 dump.cs (decompiled/il2cppdumper/dump.cs)",
+        "route needs stage-1 dump.cs (decompiled/il2cppdumper/dump.cs)"
+        + (f" | primary-route candidate reasons: {primary_note}"
+           if primary_note else ""),
         exit_code=1)
 
 
@@ -230,7 +232,7 @@ def run(game_root: Path, extracted_root: Path) -> int:
               f"({primary_note}) — probing secondary MonoBehaviour/typetree "
               "route", file=sys.stderr)
         decoded = aa_catalog.decode_catalog_payload(
-            _find_catalog_monobehaviour(env, synth))
+            _find_catalog_monobehaviour(env, synth, primary_note=primary_note))
         decode_route = "monobehaviour-typetree(secondary)"
 
     # roster universe normalized once
@@ -299,6 +301,14 @@ def run(game_root: Path, extracted_root: Path) -> int:
         f"{len(referenced)} of {len(roster)} roster rows; "
         f"bundlesUnreferenced: {len(unreferenced)}",
     ]
+    stats = decoded.get("meta") or {}
+    if stats:
+        lines.append(
+            "- decodeStats: keySlots={keySlotCount}; buckets={bucketCount}; "
+            "entries={entryCount}; bucketMemberships={bucketMembershipTotal} "
+            "(multi-key entries put memberships above entries); "
+            "distinctEntriesReferenced={distinctEntriesReferenced}; "
+            "unreferencedEntries={unreferencedEntryCount}".format(**stats))
     lines += [f"- UNRESOLVED-REFERENCE: {u}" for u in sorted(unresolved)]
     log_util.append_run_section(extracted_root, "harvest-catalog", lines)
     print(f"[harvest-catalog] keys={len(keys_out)} route={decode_route} "

@@ -376,3 +376,205 @@ def test_absent_textasset_returns_none_and_secondary_refuses_loudly(monkeypatch)
         f"raise the stage failure, got {raised!r}")
     assert getattr(raised, "exit_code", 1) == 1, (
         f"secondary-route refusal must exit 1, got {raised!r}")
+
+
+# --- Round 8 regression: the REAL AA 1.21.10 blob shapes ---------------------------
+# Measured heads from the real client catalog (.agents/catalog-blob-probe.json):
+# key+bucket blobs share count 0x0000dd54 = 56660; entries declare 66129 with
+# byte length exactly 4 + 28·66129. Buckets carry 81,146 memberships over those
+# 66,129 entries — multi-key entries (labels / two-slot hash pairs) put
+# memberships ABOVE entries, which the pre-round-8 decoder rejected as fatal.
+
+REAL_PROBE_HEAD_HEX = {
+    "m_KeyDataString":
+        "54dd00000040000000646c632d67686f73742d6172745f6173736574735f616c6c5f"
+        "3666646664663537343662613364",
+    "m_BucketDataString":
+        "54dd0000040000000100000000000000490000000100000001000000900000000100"
+        "000002000000d900000001000000",
+    # Byte-exact from .agents/catalog-blob-probe.json (the parked patch quoted a
+    # 32-byte variant here that had lost one zero int32 and shifted
+    # entry[0].resourceType to 1 — corrected to the measured 48 bytes).
+    "m_EntryDataString":
+        "510201000000000000000000ffffffff00000000000000000000000000000000"
+        "0100000000000000ffffffff00000000",
+}
+KEY_SLOTS = 56660
+ENTRY_COUNT = 66129
+EXTRA_MEMBERSHIP_SLOTS = 24486   # slots 4..24489 carry a second (label-style) ref
+
+
+def _probe_ascii_key(length: int, seed: int) -> str:
+    alphabet = "abcdefghijklmnopqrstuvwxyz0123456789_"
+    base = f"k{seed:06d}-"
+    fill = "".join(alphabet[(seed + i) % len(alphabet)]
+                   for i in range(max(0, length - len(base))))
+    return (base + fill)[:length]
+
+
+def build_probe_shaped_blobs():
+    """Synthetic blobs reproducing the measured wire shapes AT THE MEASURED
+    SCALE: same counts (56660 slots/buckets, 66129 entries), same first key
+    spelling and 64-byte length ('dlc-ghost-art_assets_all_…'), same leading
+    bucket dataOffsets (4/73/144/217 = the int32-length key-record boundaries),
+    same entry[0] row (0,0,-1,0,0,0,0) — and the same 81146-vs-66129 membership
+    arithmetic that killed the old decoder."""
+    lens = {0: 64, 1: 66, 2: 68, 3: 69}
+    keys: dict[int, str] = {}
+    offs: dict[int, int] = {}
+    off = 4
+    for i in range(KEY_SLOTS):
+        ln = lens.get(i, 12 + (i * 7) % 31)
+        keys[i] = ("dlc-ghost-art_assets_all_6fdfdf5746ba3d" + "f" * 25
+                   if i == 0 else _probe_ascii_key(ln, i))
+        offs[i] = off
+        off += 5 + ln                       # type tag + int32 length + payload
+    kb = io.BytesIO()
+    kb.write(struct.pack("<i", KEY_SLOTS))
+    for i in range(KEY_SLOTS):
+        raw = keys[i].encode("ascii")
+        kb.write(b"\x00" + struct.pack("<i", len(raw)) + raw)
+
+    bb = io.BytesIO()
+    bb.write(struct.pack("<i", KEY_SLOTS))
+    memberships = 0
+    referenced: set[int] = set()
+    for i in range(KEY_SLOTS):
+        items = [i]
+        if 4 <= i < 4 + EXTRA_MEMBERSHIP_SLOTS:
+            items.append(ENTRY_COUNT - 1 - (i - 4))   # shared entry, in range
+        bb.write(struct.pack("<2i", offs[i], len(items)))
+        bb.write(struct.pack(f"<{len(items)}i", *items))
+        memberships += len(items)
+        referenced.update(items)
+    assert memberships == 81146, memberships     # the measured real number
+
+    eb = io.BytesIO()
+    eb.write(struct.pack("<i", ENTRY_COUNT))
+    for j in range(ENTRY_COUNT):
+        if j == 0:
+            row = (0, 0, -1, 0, 0, 0, 0)          # verbatim probe entry[0]
+        elif j == 1:
+            row = (1, 0, -1, 0, 0, 1 % KEY_SLOTS, 0)   # probe entry[1] head
+        else:
+            row = (0, 0, -1, 0, 0, j % KEY_SLOTS, 0)
+        eb.write(struct.pack("<7i", *row))
+    return kb.getvalue(), bb.getvalue(), eb.getvalue(), {
+        "memberships": memberships, "distinct": len(referenced)}
+
+
+def build_probe_shaped_payload():
+    kb, bb, eb, facts = build_probe_shaped_blobs()
+    payload = {
+        "m_LocatorId": "AddressablesMainContentCatalog",
+        "m_KeyDataString": _b64(kb),
+        "m_BucketDataString": _b64(bb),
+        "m_EntryDataString": _b64(eb),
+        "m_InternalIds": ["AA/StandaloneWindows64/regression-placeholder.bundle"],
+        "m_ProviderIds": ["UnityEngine.AddressableAssets.AssetBundleProvider"],
+        "m_resourceTypes": [
+            {"m_ClassName": "AssetBundleRequestOptions"},
+            {"m_ClassName": "TextureProvider"}],
+    }
+    return payload, facts
+
+
+def test_regression_real_head_shapes_decode_with_memberships_over_entries():
+    """THE round-8 killer: bucket item total 81146 > entry count 66129 (real
+    TPC numbers) must decode clean, byte-reproduce the measured heads, and
+    report the arithmetic in meta instead of raising CatalogDecodeError."""
+    aa = skip_if_none(load_any("aa_catalog.py"), "tools/aa_catalog.py")
+    payload, facts = build_probe_shaped_payload()
+    for field, head in REAL_PROBE_HEAD_HEX.items():
+        raw = base64.b64decode(payload[field])
+        assert raw[: len(head) // 2].hex() == head, (
+            f"synthetic {field} does not reproduce the measured head bytes")
+    decoded = aa.decode_catalog_payload(payload)
+    meta = decoded["meta"]
+    assert meta["bucketMembershipTotal"] == facts["memberships"] == 81146
+    assert meta["keySlotCount"] == KEY_SLOTS == meta["bucketCount"]
+    assert meta["entryCount"] == ENTRY_COUNT
+    assert meta["distinctEntriesReferenced"] == facts["distinct"]
+    assert meta["unreferencedEntryCount"] == ENTRY_COUNT - facts["distinct"]
+    first = decoded["keys"][0]
+    assert first["kind"] == "str" and first["bucketOffset"] == 4
+    assert first["key"].startswith("dlc-ghost-art_assets_all_")
+    row = first["entries"][0]
+    assert row["primaryKey"] == first["key"] and row["dependencyKey"] is None
+    assert row["resourceType"] == "AssetBundleRequestOptions"
+
+
+def test_regression_corrupt_blob_shapes_fail_loud_and_typed():
+    """A payload that genuinely does NOT parse dies loudly as
+    CatalogDecodeError naming the blob and offset — never silent, never a raw
+    struct.error escaping to the caller."""
+    aa = skip_if_none(load_any("aa_catalog.py"), "tools/aa_catalog.py")
+
+    def blobs(spec=(("alpha_one", "items-a_assets_all.bundle"),
+                    ("beta_two", "items-b_assets_all.bundle"))):
+        kb, bb, eb = io.BytesIO(), io.BytesIO(), io.BytesIO()
+        kb.write(struct.pack("<i", len(spec)))
+        bb.write(struct.pack("<i", len(spec)))
+        eb.write(struct.pack("<i", len(spec)))
+        ids = []
+        for i, (key, ref) in enumerate(spec):
+            raw = key.encode("utf-8")
+            kb.write(b"\x00" + struct.pack("<i", len(raw)) + raw)
+            bb.write(struct.pack("<2i", i, 1))
+            bb.write(struct.pack("<i", i))
+            eb.write(struct.pack("<7i", i, 0, -1, 0, 0, i, 0))
+            ids.append(ref)
+        return kb.getvalue(), bb.getvalue(), eb.getvalue(), ids
+
+    def payload_with(m_KeyDataString=None, m_BucketDataString=None,
+                     m_EntryDataString=None):
+        # kwargs carry the payload's own field names so rejects() can plant
+        # one corrupted blob per call site verbatim
+        k0, b0, e0, ids = blobs()
+        return {
+            "m_LocatorId": "AddressablesMainContentCatalog",
+            "m_KeyDataString": _b64(k0 if m_KeyDataString is None else m_KeyDataString),
+            "m_BucketDataString": _b64(b0 if m_BucketDataString is None else m_BucketDataString),
+            "m_EntryDataString": _b64(e0 if m_EntryDataString is None else m_EntryDataString),
+            "m_InternalIds": ids,
+            "m_ProviderIds": ["UnityEngine.AddressableAssets.AssetBundleProvider"],
+            "m_resourceTypes": [{"m_ClassName": "AssetBundleRequestOptions"}],
+        }
+
+    k0, b0, e0, _ = blobs()
+
+    def rejects(field, blob, frag):
+        with pytest.raises(aa.CatalogDecodeError, match=frag):
+            aa.decode_catalog_payload(payload_with(**{field: blob}))
+
+    rejects("m_KeyDataString", k0[:-3], "truncated")                    # cut mid-string
+    rejects("m_KeyDataString",                                          # unknown tag
+            struct.pack("<i", 1) + b"\x09" + struct.pack("<i", 2) + b"\x02\x03",
+            "unknown key type 9")
+    rejects("m_BucketDataString", b0 + b"\x00\x00\x00\x00", "residue")  # trailing junk
+    rejects("m_EntryDataString", e0[:-4], "entry blob length mismatch") # count vs len
+    rejects("m_BucketDataString",                                       # item OOB
+            struct.pack("<i", 2)
+            + struct.pack("<2i", 0, 1) + struct.pack("<i", 9999)
+            + struct.pack("<2i", 1, 1) + struct.pack("<i", 1),
+            "out of range")
+
+
+def test_regression_key_type_codes_int_and_hash128_resolve():
+    """AA key type codes beyond strings — 2 = prime int, 3 = Hash128 — were
+    fatal 'unknown key type' before round 8; values must round-trip into the
+    key slots and classify downstream as integer/guid/address."""
+    aa = skip_if_none(load_any("aa_catalog.py"), "tools/aa_catalog.py")
+    h128 = bytes(range(16))
+    kb = (struct.pack("<i", 3)
+          + b"\x02" + struct.pack("<i", 1234567)
+          + b"\x03" + h128
+          + b"\x00" + struct.pack("<i", 5) + b"hello")
+    slots = aa.parse_keys(kb)
+    assert [(s["kind"], s["key"]) for s in slots] == [
+        ("int", 1234567), ("hash128", h128.hex()), ("str", "hello")]
+    s2 = load_any("stage2_harvest_catalog.py")
+    if s2 is not None and hasattr(s2, "classify_key"):
+        assert s2.classify_key(1234567) == "integer"
+        assert s2.classify_key(h128.hex()) == "guid"
+        assert s2.classify_key("hello") == "address"
