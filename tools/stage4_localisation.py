@@ -161,10 +161,10 @@ def decode_i2_language_source(payload: dict, wanted_codes, rows: dict,
                 text = cell
             else:
                 evidence["cellsSkippedEmpty"] += 1
-        if key in rows:
-            evidence["duplicateKeysOverwritten"] += 1
         if text is None and drop_empty_cells:
             continue   # untranslated/absent cell — counted, never invented
+        if key in rows:
+            evidence["duplicateKeysOverwritten"] += 1   # a real overwrite below
         rows[key] = text or ""
         evidence["rowsEmitted"] += 1
     return True
@@ -291,17 +291,6 @@ def _looks_like_i2_source(payload: dict) -> bool:
         else payload
     return isinstance(src, dict) and isinstance(src.get("mTerms"), list) \
         and isinstance(src.get("mLanguages"), list)
-
-
-def _mono_script_class(assets_file) -> str | None:
-    try:
-        ms = {getattr(o, "path_id", None): o
-              for o in uu.iter_objects_sorted(assets_file)
-              if getattr(getattr(o, "type", None), "name", "")
-              == "MonoScript"}.get(None)
-        return None
-    except Exception:  # noqa: BLE001
-        return None
 
 
 def classify_composition(base_rows: dict[str, str], english_rows: dict[str, str]) -> dict:
