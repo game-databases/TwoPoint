@@ -48,6 +48,32 @@ def _safe(seg: str) -> str:
     return _UNSAFE_CHARS_RE.sub("_", seg)
 
 
+# ---------------------------------------------------------------------------
+# Externals tables (R11 G2 — scout piece-02 §6): every serialized file's
+# `externals` list (the standard Unity m_FileID → {path, guid, type} map)
+# as an ADDITIVE sidecar. Cross-file PPtr references (`m_FileID >= 1`)
+# resolve through it; the dump-row contract itself is unchanged except for
+# the additive `_sourceFile` marker on each MonoBehaviour payload.
+
+def externals_row(bundle_rel: str, cab: str, externals) -> dict:
+    """One sidecar row for one serialized file. `fileId` is the 1-based
+    index into the file's externals list — exactly what a PPtr's
+    `m_FileID` names (0 = same file, never listed). Pure function over
+    duck-typed FileIdentifier objects (path/guid/type)."""
+    entries = []
+    for i, ext in enumerate(externals or [], start=1):
+        guid = getattr(ext, "guid", None)
+        if isinstance(guid, (bytes, bytearray)):
+            guid = bytes(guid).hex()
+        entries.append({
+            "fileId": i,
+            "path": getattr(ext, "path", "") or "",
+            "guid": guid,
+            "type": int(getattr(ext, "type", 0) or 0),
+        })
+    return {"bundle": bundle_rel, "sourceFile": cab, "externals": entries}
+
+
 def _textasset_bytes(value) -> bytes:
     if isinstance(value, str):
         return value.encode("utf-8")
@@ -133,15 +159,18 @@ def run(game_root: Path, extracted_root: Path,
     # for MonoScript objects (the seeding dedup keeps fallback counts honest);
     # phase B exports against the finished table.
     script_index = uu.MonoScriptIndex()
+    tree_oracle = uu.EmbeddedTreeOracle(script_index)
     for row in roster:
         abspath_a = paths["root"] / row["relpath"]
         seeds.seed_if_needed(abspath_a, row["relpath"])
         try:
             env_a = UnityPy.load(str(abspath_a))
             script_index.index_environment(env_a, row["relpath"])
+            tree_oracle.capture(env_a)
             del env_a
         except Exception:  # noqa: BLE001 — phase B ledgers unreadable bundles
             continue
+    tree_oracle.finalize()
 
     # rerun convergence: the whole harvest plane is rebuilt from scratch
     harvest_dir = extracted_root / "harvest"
@@ -162,6 +191,7 @@ def run(game_root: Path, extracted_root: Path,
     manifest_rows: list[dict] = []
     catalogue_rows: list[dict] = []
     unreadable_rows: list[dict] = []
+    per_bundle_externals: list[list[dict]] = []
     censuses: list[dict] = []
     census_error_total = 0
     class_totals: dict[str, int] = {}
@@ -171,8 +201,9 @@ def run(game_root: Path, extracted_root: Path,
     # F4 acceptance: per-decode-route counts surface in the run section so a
     # 100%-raw run is visible as such (Rev 6 note-only binding sentence)
     mb_decoded_embedded = 0   # route 1 — the bundle's own typetree
-    mb_synthesized = 0        # route 2 — dump.cs synthesized typetree
-    mb_residue = 0            # route 3 — raw typed dumps (typetreeDecoded:false)
+    mb_synthesized = 0        # route 3 — dump.cs synthesized typetree
+    mb_borrowed = 0           # route 2 (R11) — borrowed embedded tree
+    mb_residue = 0            # route 4 — raw typed dumps (typetreeDecoded:false)
 
     for row in roster:
         rel = row["relpath"]
@@ -185,12 +216,19 @@ def run(game_root: Path, extracted_root: Path,
                   "fallbackVersionUsed": seeded}
 
         objects: list = []
+        obj_source_file: dict[int, str] = {}
+        bundle_externals: list[dict] = []   # R11 G2 sidecar rows
         try:
             env = UnityPy.load(str(abspath))
             # UnityPy.load is LAZY: a truncated/corrupt container can parse
             # at load time and only fail (or yield nothing) here.
             for f in uu.iter_environment_files(env):
-                objects.extend(uu.iter_objects_sorted(f))
+                cab = (getattr(f, "name", "") or "").lower()
+                bundle_externals.append(
+                    externals_row(rel, cab, getattr(f, "externals", None)))
+                for o in uu.iter_objects_sorted(f):
+                    objects.append(o)
+                    obj_source_file.setdefault(o.path_id, cab)
         except Exception as exc:  # noqa: BLE001 — ledgered incompleteness
             unreadable_rows.append({
                 "relpath": rel, "dirClass": row["dirClass"],
@@ -245,9 +283,17 @@ def run(game_root: Path, extracted_root: Path,
                         "bytes": len(raw)})
                 else:
                     payload, decoded, method = uu.decode_monobehaviour(
-                        obj, synth, script_index=script_index)
+                        obj, synth, script_index=script_index,
+                        tree_oracle=tree_oracle)
+                    # R11 G2: additive source-file marker so consumers can
+                    # join a dump's m_FileID against the right externals row
+                    # (underscore key — excluded from stub fields and
+                    # payload hashes downstream)
+                    payload["_sourceFile"] = obj_source_file.get(obj.path_id, "")
                     if method == "embedded-typetree":
                         mb_decoded_embedded += 1
+                    elif method == "embedded-tree-oracle":
+                        mb_borrowed += 1
                     elif decoded:
                         mb_synthesized += 1
                     else:
@@ -274,6 +320,7 @@ def run(game_root: Path, extracted_root: Path,
                     f"{type(exc).__name__}: {exc}")
 
         census_error_total += len(census["errors"])
+        per_bundle_externals.append(bundle_externals)
         for cls_name, n in census["objectsByClass"].items():
             class_totals[cls_name] = class_totals.get(cls_name, 0) + n
             if cls_name in tc.CARVE_OUT_CLASSES:
@@ -289,6 +336,11 @@ def run(game_root: Path, extracted_root: Path,
                          unreadable_rows)
     manifest_rows.sort(key=lambda r: r["outRelPath"])
     log_util.write_jsonl(harvest_dir / "export-manifest.jsonl", manifest_rows)
+    external_rows_all: list[dict] = []
+    for rows in per_bundle_externals:
+        external_rows_all.extend(rows)
+    external_rows_all.sort(key=lambda r: (r["bundle"], r["sourceFile"]))
+    log_util.write_jsonl(harvest_dir / "externals.jsonl", external_rows_all)
     catalogue_rows.sort(key=lambda r: (r["bundle"], r["pathId"]))
     log_util.write_jsonl(extracted_root / "media-catalogue.jsonl", catalogue_rows)
 
@@ -328,10 +380,15 @@ def run(game_root: Path, extracted_root: Path,
         f"catalogueRows: {len(catalogue_rows)}; objectErrors: "
         f"{census_error_total}; censusOnlyResidual: {residual}",
         f"- carvedClassCensus: {dict(sorted(carved_class_totals.items()))}",
+        f"- externalsTables: {len(external_rows_all)} serialized files across "
+        f"{len(per_bundle_externals)} readable bundles; totalExternalRefs "
+        f"{sum(len(r['externals']) for r in external_rows_all)} "
+        "(harvest/externals.jsonl — R11 G2 cross-file PPtr sidecar)",
         f"- monoScriptIndex: {script_index.stats()}; monobehaviourScriptClass: "
         f"resolved={mb_resolved} unresolved(generic)={mb_unresolved}; "
         f"decodeRoutes: embedded={mb_decoded_embedded} "
-        f"synthesis={mb_synthesized} residue={mb_residue}",
+        f"oracle={mb_borrowed} synthesis={mb_synthesized} residue={mb_residue}; "
+        f"embeddedTreeOracle: {tree_oracle.captured} script trees captured",
         f"- {seeds.run_section_note(len(roster))}",
     ]
     lines += [f"- PROBLEM: {p}" for p in problems]
@@ -341,8 +398,11 @@ def run(game_root: Path, extracted_root: Path,
           f"unreadable={len(unreadable_rows)} exports={len(manifest_rows)} "
           f"catalogue={len(catalogue_rows)} objectErrors={census_error_total} "
           f"fallbackVersioned={seeds.seeded_count} "
+          f"externalsFiles={len(external_rows_all)} "
+          f"externalsRefs={sum(len(r['externals']) for r in external_rows_all)} "
           f"mbScriptResolved={mb_resolved}/{mb_resolved + mb_unresolved} "
           f"decodeRoutes=embedded:{mb_decoded_embedded}"
+          f"/oracle:{mb_borrowed}"
           f"/synthesis:{mb_synthesized}/residue:{mb_residue}")
     for p in problems:
         print(f"[harvest-bundles] PROBLEM: {p}", file=sys.stderr)

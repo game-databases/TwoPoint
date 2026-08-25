@@ -334,3 +334,31 @@ changes land in it in the same commit that changes the entrypoint.
 - carvedClassCensus: {'AnimationClip': 7985, 'AudioClip': 5624, 'Font': 24, 'Mesh': 19249, 'Shader': 213, 'Sprite': 6789, 'SpriteAtlas': 47, 'Texture2D': 7977, 'VideoClip': 31}
 - monoScriptIndex: {'scriptsIndexed': 1140, 'bundlesWithScripts': 1, 'distinctEntries': 1140}; monobehaviourScriptClass: resolved=166704 unresolved(generic)=10; decodeRoutes: embedded=165982 synthesis=0 residue=732
 - fallbackVersionUsedBundles: 176/176 (FALLBACK_UNITY_VERSION source: identity.json unityVersion 2020.3.47f1)
+### 2026-08-25T12:12:48Z — harvest-bundles
+- exitCode: 0
+- unitypySource: venv-pip
+- bundlesAttempted: 176; unreadableBundles: 0
+- censusObjectsTotal: 2026658; exports: 167069; catalogueRows: 47939; objectErrors: 0; censusOnlyResidual: 1811650
+- carvedClassCensus: {'AnimationClip': 7985, 'AudioClip': 5624, 'Font': 24, 'Mesh': 19249, 'Shader': 213, 'Sprite': 6789, 'SpriteAtlas': 47, 'Texture2D': 7977, 'VideoClip': 31}
+- externalsTables: 222 serialized files across 176 readable bundles; totalExternalRefs 1781 (harvest/externals.jsonl — R11 G2 cross-file PPtr sidecar)
+- monoScriptIndex: {'scriptsIndexed': 1140, 'bundlesWithScripts': 1, 'distinctEntries': 1140}; monobehaviourScriptClass: resolved=166704 unresolved(generic)=10; decodeRoutes: embedded=165982 oracle=0 synthesis=688 residue=44; embeddedTreeOracle: 1127 script trees captured
+- fallbackVersionUsedBundles: 176/176 (FALLBACK_UNITY_VERSION source: identity.json unityVersion 2020.3.47f1)
+### 2026-08-25T12:13:37Z — emit-stub-datasets
+- exitCode: 0
+- stubRowsByKind: {"campus-level": 17, "config": 8430, "course": 69, "item": 3885, "metagame-node": 454, "room": 116, "staff": 3, "student-type": 54, "unlockable": 415}
+- identityPolicy: componentExcluded=151731; identifierLess=45 (ledgered+sampled); mergedDuplicates=26; disambiguatedDuplicates=17; admittedUnknown=344 (unverified chains)
+- scriptClassResolution: resolved=166704 generic/unresolved=10
+- absences: 2; unmappedClasses: 768
+- localeAvailabilityRows: 0 (distinctJoinedEntities: 0); regenerated this run; joinEvidence: {"conventionJoins": 0, "entitiesScanned": 13426, "hardJoins": 0, "payloadsResolved": 13426}
+- identifierByteMatch: checked=2128 mismatches=0
+- manifestStemContract: rows=167069 unparsed=0 mismatched=0
+- structuralInputs: ['assembly-index.json', 'class-hierarchy.jsonl', 'id-registries']
+### 2026-08-25T12:17:47Z — harvest-bundles
+- exitCode: 0
+- unitypySource: venv-pip
+- bundlesAttempted: 176; unreadableBundles: 0
+- censusObjectsTotal: 2026658; exports: 167069; catalogueRows: 47939; objectErrors: 0; censusOnlyResidual: 1811650
+- carvedClassCensus: {'AnimationClip': 7985, 'AudioClip': 5624, 'Font': 24, 'Mesh': 19249, 'Shader': 213, 'Sprite': 6789, 'SpriteAtlas': 47, 'Texture2D': 7977, 'VideoClip': 31}
+- externalsTables: 222 serialized files across 176 readable bundles; totalExternalRefs 1781 (harvest/externals.jsonl — R11 G2 cross-file PPtr sidecar)
+- monoScriptIndex: {'scriptsIndexed': 1140, 'bundlesWithScripts': 1, 'distinctEntries': 1140}; monobehaviourScriptClass: resolved=166704 unresolved(generic)=10; decodeRoutes: embedded=165982 oracle=0 synthesis=688 residue=44; embeddedTreeOracle: 1127 script trees captured
+- fallbackVersionUsedBundles: 176/176 (FALLBACK_UNITY_VERSION source: identity.json unityVersion 2020.3.47f1)
