@@ -528,6 +528,47 @@ def _simplify_external_path(path: str) -> str:
     return p.rsplit("/", 1)[-1].lower()
 
 
+# FIXED MonoBehaviour header layout over the raw object bytes (CR#3/F4):
+# m_GameObject PPtr (UInt32 m_FileID + SInt64 m_PathID = 12 B) ·
+# m_Enabled bool (1 B) aligned to the next multiple of 4 (+3 pad) ·
+# m_Script PPtr (12 B) → 28 bytes total. The endianness char is prepended
+# at unpack time from the owning serialized file's header.
+_MONO_RAW_HEADER_FMT = "IqB3xIq"
+_MONO_RAW_HEADER_LEN = struct.calcsize("<" + _MONO_RAW_HEADER_FMT)
+
+
+def monoscript_pptr_from_raw(obj) -> dict | None:
+    """Recover the `m_Script` PPtr `{m_FileID, m_PathID}` off a
+    MonoBehaviour's RAW bytes by parsing the fixed header layout above.
+
+    For typetree-less payloads the embedded read raises BEFORE `m_Script`
+    is reachable, which left route-2 synthesis unreachable for exactly its
+    target population (CR#3: 0 firings / all residues mislabeled as a
+    client fact). The recovered PPtr is fed into
+    :meth:`MonoScriptIndex.resolve` as a `head`-equivalent; resolve's
+    externals/cab logic handles the rest. None when the raw bytes are
+    missing/too short or unreadable. Endianness comes from the owning
+    serialized file's header, little-endian fallback (the Windows target
+    platform — every file on this client)."""
+    try:
+        raw = obj.get_raw_data()
+    except Exception:  # noqa: BLE001 — caller ledgers the cause
+        return None
+    if not isinstance(raw, (bytes, bytearray)) or len(raw) < _MONO_RAW_HEADER_LEN:
+        return None
+    af = getattr(obj, "assets_file", None)
+    endian = getattr(getattr(af, "header", None), "endian", "<")
+    if endian not in ("<", ">"):
+        endian = "<"
+    go_fid, go_pid, enabled, ms_fid, ms_pid = struct.unpack(
+        endian + _MONO_RAW_HEADER_FMT, raw[:_MONO_RAW_HEADER_LEN])
+    # layout discriminator: m_Enabled serializes as a 0/1 bool byte — any
+    # other value means these bytes are not the fixed MonoBehaviour header
+    if enabled > 1:
+        return None
+    return {"m_FileID": int(ms_fid), "m_PathID": int(ms_pid)}
+
+
 class MonoScriptIndex:
     """Cross-bundle MonoScript resolution table (Revision 6 fix lane).
 
@@ -624,8 +665,15 @@ def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None,
     where possible, `typetreeDecoded:false` marking only genuine residue):
       1. embedded typetree — UnityPy reads the tree the bundle itself ships;
       2. synthesized typetree — typetree-less payloads driven through the
-         dump.cs field tables for the RESOLVED script class;
-      3. raw typed dump with `_raw.typetreeDecoded:false` + the exact reason.
+         dump.cs field tables for the RESOLVED script class; resolution for
+         those recovers the m_Script PPtr from the fixed raw MonoBehaviour
+         header (:func:`monoscript_pptr_from_raw`) when the embedded read
+         fails, so synthesis stays reachable for its target population
+         (CR#3);
+      3. raw typed dump with `_raw.typetreeDecoded:false` + a CAUSE-DISTINCT
+         reason (`m_Script pptr unreadable` / `m_Script pptr null` /
+         `monoscript not in index` / `synthesis failed for <class>` / the
+         wiring facts) — never one blanket string reading as a client fact.
 
     The resolved script class rides along as `_scriptClass` on EVERY route
     where it is known (Rev 6: the class discriminator downstream must not
@@ -637,11 +685,29 @@ def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None,
     embedded_ok = isinstance(head, dict) and bool(head)
 
     script_class = None
-    if script_index is not None:
+    residue_reason: str | None = None
+    if script_index is None:
+        residue_reason = "no monoscript index provided"
+    else:
         script_class = script_index.resolve(
             obj, head if embedded_ok else None)
+        if script_class is None and not embedded_ok:
+            # CR#3/F4: typetree-less payload — recover the m_Script PPtr off
+            # the raw fixed header so resolution (and route-2 synthesis)
+            # fires for exactly the population it exists for.
+            ms_pptr = monoscript_pptr_from_raw(obj)
+            if ms_pptr is None:
+                residue_reason = "m_Script pptr unreadable"
+            elif int(ms_pptr.get("m_PathID", 0) or 0) == 0:
+                residue_reason = "m_Script pptr null (path_id 0)"
+            else:
+                residue_reason = "monoscript not in index"
+            script_class = script_index.resolve(obj, {"m_Script": ms_pptr})
     if script_class is None:
-        script_class = _script_class_name(obj)   # legacy best-effort
+        legacy = _script_class_name(obj)   # legacy best-effort
+        if legacy:
+            script_class = legacy
+            residue_reason = None
 
     # Route 1: embedded typetree — the bundle's own authoritative layout.
     if embedded_ok:
@@ -653,9 +719,14 @@ def decode_monobehaviour(obj, synth: TypetreeSynthesizer | None,
         return payload, True, "embedded-typetree"
 
     # Route 2: synthesized typetree over the dump.cs field tables.
-    last_error = ("no serialized typetree and no dump.cs index available"
-                  if synth is None else
-                  "no serialized typetree and script class unresolved")
+    # Every failure to reach synthesis carries its OWN cause-distinct reason
+    # (CR#3/F4) — a wiring fact (`no dump.cs index`, `no monoscript index`)
+    # never masquerades as a client fact, and an unresolved script is
+    # reported per cause instead of one blanket string.
+    if synth is None:
+        last_error = "no serialized typetree and no dump.cs index available"
+    else:
+        last_error = residue_reason or "script class unresolved"
     if synth is not None and script_class:
         try:
             nodes = synth.monobehaviour_nodes(script_class)

@@ -168,6 +168,11 @@ def run(game_root: Path, extracted_root: Path,
     carved_class_totals: dict[str, int] = {}
     mb_resolved = 0       # MonoBehaviours with a cross-bundle-resolved script
     mb_unresolved = 0     # m_Script PPtr unresolved → generic MonoBehaviour
+    # F4 acceptance: per-decode-route counts surface in the run section so a
+    # 100%-raw run is visible as such (Rev 6 note-only binding sentence)
+    mb_decoded_embedded = 0   # route 1 — the bundle's own typetree
+    mb_synthesized = 0        # route 2 — dump.cs synthesized typetree
+    mb_residue = 0            # route 3 — raw typed dumps (typetreeDecoded:false)
 
     for row in roster:
         rel = row["relpath"]
@@ -241,6 +246,12 @@ def run(game_root: Path, extracted_root: Path,
                 else:
                     payload, decoded, method = uu.decode_monobehaviour(
                         obj, synth, script_index=script_index)
+                    if method == "embedded-typetree":
+                        mb_decoded_embedded += 1
+                    elif decoded:
+                        mb_synthesized += 1
+                    else:
+                        mb_residue += 1
                     script_class = payload.get("_scriptClass") or "MonoBehaviour"
                     if script_class != "MonoBehaviour":
                         mb_resolved += 1
@@ -318,7 +329,9 @@ def run(game_root: Path, extracted_root: Path,
         f"{census_error_total}; censusOnlyResidual: {residual}",
         f"- carvedClassCensus: {dict(sorted(carved_class_totals.items()))}",
         f"- monoScriptIndex: {script_index.stats()}; monobehaviourScriptClass: "
-        f"resolved={mb_resolved} unresolved(generic)={mb_unresolved}",
+        f"resolved={mb_resolved} unresolved(generic)={mb_unresolved}; "
+        f"decodeRoutes: embedded={mb_decoded_embedded} "
+        f"synthesis={mb_synthesized} residue={mb_residue}",
         f"- {seeds.run_section_note(len(roster))}",
     ]
     lines += [f"- PROBLEM: {p}" for p in problems]
@@ -328,7 +341,9 @@ def run(game_root: Path, extracted_root: Path,
           f"unreadable={len(unreadable_rows)} exports={len(manifest_rows)} "
           f"catalogue={len(catalogue_rows)} objectErrors={census_error_total} "
           f"fallbackVersioned={seeds.seeded_count} "
-          f"mbScriptResolved={mb_resolved}/{mb_resolved + mb_unresolved}")
+          f"mbScriptResolved={mb_resolved}/{mb_resolved + mb_unresolved} "
+          f"decodeRoutes=embedded:{mb_decoded_embedded}"
+          f"/synthesis:{mb_synthesized}/residue:{mb_residue}")
     for p in problems:
         print(f"[harvest-bundles] PROBLEM: {p}", file=sys.stderr)
     if problems:
