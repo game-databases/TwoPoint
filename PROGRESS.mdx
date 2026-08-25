@@ -65,6 +65,21 @@ nothing work-blocking.
 
 ## Log
 
+- 2026-08-25: **R8 LANDED AND VERIFIED; real-corpus execution restarted.**
+  codefixer-007 applied the parked patch as `34b7320` (exactly
+  tools/aa_catalog.py + stage2_harvest_catalog.py + tests/test_stage2.py,
+  271+/16−). Two drift adaptations, both verified against the measured
+  probe artifact: fixture entry rows corrected to the REAL head bytes
+  (entry[0]=(0,0,0,-1,0,0,0) — the parked rows could never reproduce the
+  asserted head) and a latent kwargs bug in the parked test code fixed.
+  Orchestrator verification: commit scope exact · independent pytest
+  **92 passed / 7 skipped / 0 failed** · decoder hunks match patch intent
+  · measured-scale smoke reconciled (blob lengths byte-exact;
+  meta 56660/56660/66129/81146 CONFIRMED). Parked memory deleted by the
+  fixer with a lesson-learned note left in its place. **executor-003
+  seated** with full grants to drive `run_all.py` end-to-end on the real
+  client — expected: TextAsset catalog decodes (81,146 memberships over
+  66,129 entries), stages 3–5 complete the raw layers.
 - 2026-08-25: **Orchestrator relaunched after full stop.** Previous
   session went write/exec-sandboxed around fixer round 5 and was
   stopped; rounds 5–8 survived only as a parked memory patch. This
