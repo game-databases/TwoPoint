@@ -583,3 +583,208 @@ def build_tree(out: Path, stage: str, *, full_scale=False, metadata_version=27) 
     if order >= 5:
         build_locale_matrix_fixture(extracted)
     return out
+
+
+# --- TestFixer-006 lane: Rev 5+6 gap fixtures (testreviewer-003) -------------------
+# Tiny synthetic corpora for the Revision 5/6 contracts the shared trees above
+# never materialize: the stage-5 identity policy (duplicate-id merge across
+# axes / @contentHash8 disambiguation / component exclusion / id='' ledgering),
+# SIGNED path_ids in harvest stems + export-manifest rows, the REAL flat dump
+# shape (no "fields" wrapper), and a starved corpus that forces the checked=0
+# byte-match gate. Never real game bytes; every builder is deterministic.
+
+LARGE_NEG_PID = -1030583540197932202   # the measured Revision-6 spelling
+
+IDENTITY_DUPE_ID = "Bloom"             # the measured cross-bundle definition copy
+IDENTITY_AXES = ["base", "dlc-ghost", "dlc-space"]
+THEME_ID = "Theme_Night"               # same-bundle differing-payload pair
+
+# DefinitionGate chains beyond build_structural_fixture's base rows: a
+# MonoBehaviour-derived game component that must classify `component`.
+IDENTITY_HIERARCHY_EXTRAS = [
+    {"assembly": "TPS.Game", "namespace": "TPC.Components", "name": "RoomSensor",
+     "baseType": "UnityEngine.MonoBehaviour", "interfaces": [],
+     "methodCount": 1, "fieldCount": 2},
+]
+
+
+def flat_dump_obj(cls, fields):
+    """The REAL flat harvest-dump shape (Revision 6 amendment 3): fields are
+    NOT wrapped — {_raw,_scriptClass,m_Enabled,m_GameObject,m_Name,m_Script}."""
+    obj = {"_raw": "<synthetic flat dump>", "_scriptClass": cls,
+           "m_Enabled": 1, "m_GameObject": 0,
+           "m_Script": "pptr:{file:0,path:-1}"}
+    obj.update(fields)
+    return obj
+
+
+def _dump_file(path: Path, cls, fields, wrapped=True):
+    obj = mb_dump_obj(cls, fields) if wrapped else flat_dump_obj(cls, fields)
+    _write_text(path, json.dumps(obj, sort_keys=True, indent=2) + "\n")
+
+
+def build_stage5_upstream(extracted: Path, dumps, textassets=(),
+                          hierarchy_extras=()) -> Path:
+    """Stage-5 upstream root around a CUSTOM monobehaviour corpus.
+
+    dumps: (family, cls, stem, pathId, fields[, wrapped]) tuples;
+    textassets: (family, stem, pathId, text) tuples. Writes harvest/** +
+    export-manifest.jsonl plus the catalog/matrix/structural/identity
+    upstreams; structural gains hierarchy_extras rows (DefinitionGate chains).
+    """
+    extracted = Path(extracted)
+    harv = extracted / "harvest"
+    manifest = []
+    for spec in dumps:
+        family, cls, stem, pid, fields = spec[:5]
+        wrapped = spec[5] if len(spec) > 5 else True
+        rel = f"{family}/{cls}/{stem}_{pid}.json"
+        _dump_file(harv / "monobehaviours" / rel, cls, fields, wrapped)
+        manifest.append({"sourceBundle": f"{stem}.bundle", "pathId": pid,
+                         "class": cls, "bytes": 256,
+                         "outRelPath": f"harvest/monobehaviours/{rel}"})
+    for family, stem, pid, text in textassets:
+        rel = f"{family}/{stem}_{pid}.txt"
+        _write_text(harv / "textassets" / rel, text)
+        manifest.append({"sourceBundle": f"{stem}.bundle", "pathId": pid,
+                         "class": "TextAsset", "bytes": 32,
+                         "outRelPath": f"harvest/textassets/{rel}"})
+    write_jsonl(harv / "export-manifest.jsonl",
+                sorted(manifest, key=lambda r: r["outRelPath"]))
+    build_catalog_json(extracted)
+    build_locale_matrix_fixture(extracted)
+    build_structural_fixture(extracted)
+    if hierarchy_extras:
+        hier = extracted / "decompiled" / "structural" / "class-hierarchy.jsonl"
+        rows = [json.loads(line) for line in
+                hier.read_text(encoding="utf-8").splitlines() if line.strip()]
+        rows.extend(hierarchy_extras)
+        write_jsonl(hier, rows)
+    return extracted
+
+
+def identity_policy_dumps():
+    """The Revision-6 identity-policy corpus: every rule gets fixture dumps.
+
+    - component/engine/generic sweeps that must NEVER become entities;
+    - id='' shapes (absent, whitespace-only, bool-typed) -> ledger only;
+    - identical payloads of one id across base+dlc-space+dlc-ghost bundles
+      -> MERGE into one row with an axes provenance list;
+    - differing payloads of one id within ONE bundle -> @<contentHash8>;
+    - NEGATIVE signed path_ids surviving load -> emit.
+    """
+    bloom = {"id": IDENTITY_DUPE_ID, "tagline": "petal"}
+    return [
+        ("rooms", "RoomConfig", "rooms_assets_all", 201,
+         {"id": "room_main", "slots": 12, "titleLoc": "room_main_title"}),
+        # Rev 6 rule 1: components are census rows, never entity rows
+        ("rooms", "UnityEngine.Transform", "rooms_assets_all", 210,
+         {"m_GameObject": 88}),
+        ("rooms", "TPC.Components.RoomSensor", "rooms_assets_all", 211,
+         {"senseRadius": 3}),
+        ("items-general", "MonoBehaviour", "items-general_assets_all", 212,
+         {"m_GameObject": 7}),
+        # Rev 6 rule 2: identifier-less candidates -> ledger, never emitted
+        ("rooms", "RoomConfig", "rooms_assets_all", 220,
+         {"slots": 4, "capacity": 20}),
+        ("items-general", "ItemConfig", "items-general_assets_all", 221,
+         {"id": "   ", "price": 5}),
+        ("items-general", "ItemConfig", "items-general_assets_all", 222,
+         {"id": False, "price": 9}),
+        # Rev 6 rule 3a: equal payload hash across axes -> merge + axes list
+        ("configs", "GlobalConfig", "configs_assets_all", 801, dict(bloom)),
+        ("configs", "GlobalConfig", "dlc-space-configs_assets_all", 811,
+         dict(bloom)),
+        ("configs", "GlobalConfig", "dlc-ghost-configs_assets_all", 821,
+         dict(bloom)),
+        # Rev 6 rule 3b: differing payloads within one bundle -> @contentHash8
+        ("rooms", "RoomConfig", "rooms_assets_all", 230,
+         {"id": THEME_ID, "slots": 10}),
+        ("rooms", "RoomConfig", "rooms_assets_all", 231,
+         {"id": THEME_ID, "slots": 99}),
+        # Revision 6 amendment 2: negative signed path_ids end to end
+        ("rooms", "RoomConfig", "rooms_assets_all", LARGE_NEG_PID,
+         {"id": "room_signed_neg", "slots": 7}),
+        ("items-general", "ItemConfig", "items-general_assets_all",
+         -5000000000, {"id": "item_signed_neg", "price": 3}),
+    ]
+
+
+def build_identity_policy_corpus(extracted: Path) -> Path:
+    build_stage5_upstream(
+        Path(extracted), identity_policy_dumps(),
+        textassets=[
+            ("items-general", "items-general_assets_all", 90001, "alpha\n"),
+            ("items-general", "items-general_assets_all", -90002, "signed\n"),
+        ],
+        hierarchy_extras=IDENTITY_HIERARCHY_EXTRAS)
+    build_identity_fixture(Path(extracted))
+    return Path(extracted)
+
+
+FLAT_SHAPE_DUMPS = [
+    # the real flat shape; ids live in m_Name (ID_FIELD_PRIORITY tail)
+    ("items-general", "ItemConfig", "items-general_assets_all", 301,
+     {"m_Name": "item_flat_one"}, False),
+    ("rooms", "RoomConfig", "rooms_assets_all", 302,
+     {"m_Name": "room_flat_two"}, False),
+]
+
+
+def build_flat_shape_corpus(extracted: Path) -> Path:
+    """Flat-shaped dumps ONLY: if the reader ever required the fixture-style
+    `fields` wrapper again, these yield no identifiers and the run must fail
+    its own byte-match gate instead of passing silently."""
+    build_stage5_upstream(Path(extracted), FLAT_SHAPE_DUMPS)
+    build_identity_fixture(Path(extracted))
+    return Path(extracted)
+
+
+STARVED_DUMPS = [
+    ("rooms", "UnityEngine.Transform", "rooms_assets_all", 310,
+     {"m_GameObject": 1}),
+    ("rooms", "RoomConfig", "rooms_assets_all", 311, {"slots": 2}),
+    ("items-general", "ItemConfig", "items-general_assets_all", 312,
+     {"price": 1}),
+]
+
+
+def build_starved_corpus(extracted: Path) -> Path:
+    """Every dump excluded or identifier-less: zero emitted rows anywhere, so
+    the identifier byte-match checker validates NOTHING — the run must exit 1
+    on its own `checked=0` gate (Revision 6 amendment 3)."""
+    build_stage5_upstream(Path(extracted), STARVED_DUMPS)
+    build_identity_fixture(Path(extracted))
+    return Path(extracted)
+
+
+# --- I2 Localization payloads (stage 4, Revision 5) --------------------------------
+
+def i2_lang(name, code):
+    return {"Name": name, "Code": code}
+
+
+def i2_term(term, cells, status=1, description=""):
+    return {"Term": term, "TermStatus": status, "Description": description,
+            "TermType": 0, "Flags": [], "Languages": cells}
+
+
+def i2_language_source(languages, terms, wrap_msource=False):
+    """A LanguageSource payload; wrap_msource mimics the asset wrapper shape
+    (payload.mSource carrying the registry)."""
+    src = {"mLanguages": languages, "mTerms": terms,
+           "m_Name": "LanguageSource"}
+    return {"mSource": src, "m_Name": "I2LanguageSourceAsset"} \
+        if wrap_msource else src
+
+
+# mLanguages order deliberately differs from canonical BCP-47 order: `en`
+# sits at index 1, zh-CN at 3, pt-BR at 4 — the off-by-one trap the generic
+# pair-walking decoder died on (Revision 5).
+I2_REORDERED_LANGS = [
+    i2_lang("French", "fr"),
+    i2_lang("English", "en"),
+    i2_lang("German", "de"),
+    i2_lang("Chinese (Simplified)", "zh-cn"),
+    i2_lang("Portuguese (Brazil)", ""),   # Code empty -> Name fallback leg
+]

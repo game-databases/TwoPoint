@@ -578,3 +578,357 @@ def test_regression_key_type_codes_int_and_hash128_resolve():
         assert s2.classify_key(1234567) == "integer"
         assert s2.classify_key(h128.hex()) == "guid"
         assert s2.classify_key("hello") == "address"
+
+
+# --- TestFixer-006: Revision-5 key-space + file-form lane (G3/G5) -------------------
+# No fixture previously carried a decimal dependencyKey, a `_<32hex>` hash-
+# suffix spelling, or braces — deleting pass 2 or the hash-suffix ladder kept
+# all pre-existing tests green while catalog.json.dependencies[] degraded to [].
+
+HASH32 = "3053e16d24e0f8c9a1b2c3d4e5f60718"
+DECIMAL_SLOT_KEY = "-1064046067"   # the measured negative-named catalog key
+
+KEYSPACE_ROSTER = [
+    "TPC_Data/StreamingAssets/aa/StandaloneWindows64/rooms_assets_all.bundle",
+    "TPC_Data/StreamingAssets/aa/StandaloneWindows64/ui-art-mainmenu_assets_all.bundle",
+    "TPC_Data/StreamingAssets/aa/StandaloneWindows64/localisation_assets_localisation_french.bundle",
+]
+
+
+def _stage2_any():
+    return skip_if_none(load_any("stage2_harvest_catalog.py", "tpc_common.py"),
+                        "tools/stage2_harvest_catalog.py | tools/tpc_common.py")
+
+
+def test_hash_suffix_and_braced_reference_ladders():
+    """Reviewer G5: the strip ladder (`<name>_<32hex>` → `<name>`) and the two
+    braced spellings decide the measured dlc-hospital/dlc-preorder evidence
+    classes — dropping either converts real references into warnings or a
+    spurious exit 1."""
+    mod = _stage2_any()
+    normalize = skip_if_none(get_sym(mod, *MATCH_KEY_NAMES),
+                             "match-key normalizer")
+    # braced spellings: `{RSC}name…` strips the provider prefix;
+    # `{hash}.bundle` wraps the NAME itself and keeps its content
+    assert normalize("{RSC}dlc-hospital-ui.bundle") == "dlc-hospital-ui"
+    assert normalize(f"{{{HASH32}}}.bundle") == HASH32
+    assert normalize("Assets/{RSC}FRENCH.Bundle") == "french"
+    assert normalize("ROOMS_Assets_All.BUNDLE") == "rooms_assets_all"
+
+    strip = get_sym(mod, "strip_hash_suffix")
+    resolve = get_sym(mod, "resolve_file_form_reference")
+    norm_to_relpath = {normalize(r): r for r in KEYSPACE_ROSTER}
+    if strip is not None:
+        assert strip(f"ui-art-mainmenu_assets_all_{HASH32}") == \
+            "ui-art-mainmenu_assets_all"
+        assert strip("rooms_assets_all") is None
+        assert strip("name_" + "a" * 31) is None, \
+            "31 hex chars must NOT count as a hash suffix"
+        assert strip("name_" + "a" * 32) == "name"
+    else:
+        note_missing_symbol("strip_hash_suffix")
+    if resolve is not None:
+        kind, rel, _norm = resolve("rooms_assets_all.bundle", norm_to_relpath)
+        assert kind == "direct"
+        assert rel == norm_to_relpath["rooms_assets_all"]
+        kind2, rel2, _norm2 = resolve(
+            f"StandaloneWindows64/ui-art-mainmenu_assets_all_{HASH32}.bundle",
+            norm_to_relpath)
+        assert kind2 == "hash-suffix", (
+            f"hash-suffix ladder dead (got {kind2!r}): the measured "
+            f"`_<32hex>` reference class degrades to warnings or a spurious "
+            "exit 1")
+        assert rel2 == norm_to_relpath["ui-art-mainmenu_assets_all"]
+        kind3, rel3, norm3 = resolve("totally-absent_bundle.bundle",
+                                     norm_to_relpath)
+        assert kind3 is None and rel3 is None and norm3 == "totally-absent_bundle"
+    else:
+        note_missing_symbol("resolve_file_form_reference")
+
+
+def _kslot(key, entries):
+    return {"key": key, "kind": "str", "bucketOffset": 4, "a": None,
+            "entries": entries}
+
+
+def _kentry(internal_id=None, dependency_key=None):
+    return {"internalId": internal_id,
+            "provider": "UnityEngine.Addressables.AssetBundleProvider",
+            "resourceType": "AssetBundleRequestOptions",
+            "dependencyKey": dependency_key, "primaryKey": None}
+
+
+def test_decimal_dependency_keys_resolve_transitively_with_details():
+    """Reviewer G3: dependency keys live in KEY SPACE. A decimal string naming
+    ANOTHER slot's key resolves transitively; `dependencies[]` carries the
+    RESOLVED roster relpaths; pass-2 counters land only via `details=` —
+    which no call site exercised before this test."""
+    mod = _stage2_any()
+    map_fn = skip_if_none(get_sym(mod, *COVERAGE_NAMES), "mapping seam")
+    normalize = skip_if_none(get_sym(mod, *MATCH_KEY_NAMES),
+                             "match-key normalizer")
+    norm_to_relpath = {normalize(r): r for r in KEYSPACE_ROSTER}
+    ui_rel = norm_to_relpath["ui-art-mainmenu_assets_all"]
+    rooms_rel = norm_to_relpath["rooms_assets_all"]
+    french_rel = norm_to_relpath["localisation_assets_localisation_french"]
+
+    decoded = {"keys": [
+        _kslot("Rooms.Main", [_kentry(internal_id="rooms_assets_all.bundle")]),
+        _kslot(DECIMAL_SLOT_KEY,
+               [_kentry(internal_id=f"StandaloneWindows64/"
+                                     f"ui-art-mainmenu_assets_all_{HASH32}"
+                                     f".bundle")]),
+        _kslot("Menu.Dep", [_kentry(dependency_key=DECIMAL_SLOT_KEY)]),
+        _kslot("Deep.Chain", [_kentry(dependency_key=DECIMAL_SLOT_KEY)]),
+        _kslot("Self.Key",
+               [_kentry(internal_id="localisation_assets_localisation_french.bundle",
+                        dependency_key="Self.Key")]),
+    ]}
+    details: dict = {}
+    rows, unresolved = map_fn(decoded, norm_to_relpath, details)
+    assert unresolved == set(), f"dangling file-form refs: {sorted(unresolved)}"
+    by_key = {r["key"]: r for r in rows}
+    # transitive: dep-key → other slot → that slot's bundles, as RELPATHS
+    assert by_key["Menu.Dep"]["dependencies"] == [ui_rel]
+    assert by_key["Deep.Chain"]["dependencies"] == [ui_rel], (
+        "one-level key-index resolution must reach the referenced slot's bundle")
+    assert by_key["Rooms.Main"]["bundle"] == rooms_rel
+    assert by_key[DECIMAL_SLOT_KEY]["bundle"] == ui_rel, (
+        "the hash-suffixed internalId on the negative-named slot must match "
+        "via the strip ladder")
+    assert by_key["Self.Key"]["bundle"] == french_rel
+    # the raw decimal NEVER leaks into emitted dependencies/bundles
+    for row in rows:
+        blob = json.dumps(row, default=str)
+        assert DECIMAL_SLOT_KEY not in (row["bundle"] or ""), blob
+        assert all(DECIMAL_SLOT_KEY not in d for d in row["dependencies"])
+    # details ledger: resolutions counted, suffix mapping counted, no danglers
+    assert details.get("keySpaceResolutions", 0) >= 3, (
+        f"pass-2 hit counter dead: {details!r} (delete-pass-2 regression)")
+    assert details.get("hashSuffixMatches", 0) == 1
+    assert details.get("danglingDependencyKeys") == []
+    assert details.get("outOfRosterFileReferences") == []
+
+
+def test_dangling_decimal_keys_ledgered_not_unresolved():
+    """A decimal key naming NO known key-space slot is warning-ledger evidence
+    (`danglingDependencyKeys`), never an unresolved file-form reference and
+    never a silent drop."""
+    mod = _stage2_any()
+    map_fn = skip_if_none(get_sym(mod, *COVERAGE_NAMES), "mapping seam")
+    normalize = skip_if_none(get_sym(mod, *MATCH_KEY_NAMES),
+                             "match-key normalizer")
+    norm_to_relpath = {normalize(r): r for r in KEYSPACE_ROSTER}
+    decoded = {"keys": [
+        _kslot("Lonely.Slot", [_kentry(dependency_key="777777")]),
+        _kslot("777777", [_kentry()]),   # address-only slot: no file-form hits
+    ]}
+    details: dict = {}
+    rows, unresolved = map_fn(decoded, norm_to_relpath, details)
+    assert unresolved == set(), (
+        "key-space danglings are warning-class, not unresolved file forms")
+    danglers = details.get("danglingDependencyKeys")
+    assert danglers == ["777777"], f"ledger dead or wrong: {details!r}"
+    lonely = next(r for r in rows if r["key"] == "Lonely.Slot")
+    assert lonely["dependencies"] == [] and lonely["bundle"] is None
+
+
+def _topology_payload(spec):
+    """ContentCatalogData JSON with ARBITRARY key-space topology.
+    spec rows: (key, internalId_ref | None, dependencyKey_slot_index | None);
+    None internalIds become non-file-form asset addresses."""
+    n = len(spec)
+    kb, bb, eb = io.BytesIO(), io.BytesIO(), io.BytesIO()
+    kb.write(struct.pack("<i", n))
+    bb.write(struct.pack("<i", n))
+    eb.write(struct.pack("<i", n))
+    internal_ids, offs, off = [], [], 4
+    for i, (key, ref, dep_idx) in enumerate(spec):
+        raw = key.encode("utf-8")
+        kb.write(b"\x00" + struct.pack("<i", len(raw)) + raw)
+        offs.append(off)
+        off += 5 + len(raw)
+        bb.write(struct.pack("<2i", offs[i], 1))
+        bb.write(struct.pack("<i", i))
+        internal_ids.append(ref if ref is not None
+                            else f"Assets/Content/slot{i}")
+        eb.write(struct.pack("<7i", i, 0, -1 if dep_idx is None else dep_idx,
+                             0, 0, i, 0))
+    return {
+        "m_LocatorId": "AddressablesMainContentCatalog",
+        "m_KeyDataString": _b64(kb.getvalue()),
+        "m_BucketDataString": _b64(bb.getvalue()),
+        "m_EntryDataString": _b64(eb.getvalue()),
+        "m_InternalIds": internal_ids,
+        "m_ProviderIds": ["UnityEngine.Addressables.AssetBundleProvider"],
+        "m_resourceTypes": [{"m_ClassName": "AssetBundleRequestOptions"}],
+    }
+
+
+def _write_stage2_upstreams(ext: Path):
+    from _validators import write_jsonl
+    ext = Path(ext)
+    ext.mkdir(parents=True, exist_ok=True)
+    write_jsonl(ext / "bundle-roster.jsonl", roster_rows())
+    fx.build_identity_fixture(ext)
+    return ext
+
+
+HEALTHY_SPEC = [
+    ("Rooms.Main", "rooms_assets_all.bundle", None),
+    ("-1064046067",
+     f"StandaloneWindows64/ui_assets_all_{HASH32}.bundle", None),
+    ("Menu.Dep", None, 1),          # decimal key-space indirection
+    ("Deep.Chain", None, 1),        # transitively through the same slot
+    ("Self.Key", "unlockables_assets_all.bundle", 4),
+]
+
+WARN_SPEC = [
+    ("DLC.Hospital", "{RSC}dlc-hospital-ui.bundle", None),   # braced prefix
+    ("Absent.SelfIdx", "absent-selfindexed.bundle", None),   # self-indexed below
+    ("absent-selfindexed.bundle", "rooms_assets_all.bundle", None),
+    ("Dangler", None, 4),                                    # dangling decimal
+    ("888888", None, None),                                  # address-only slot
+]
+
+
+def _drive_stage2_run(monkeypatch, spec, ext, game_tree):
+    """tools/stage2_harvest_catalog.run() hostless: the catalog TextAsset is
+    the synthetic payload and UnityPy is stubbed at the stage module's uu
+    seam — the run-level gate/coverage contract becomes fixture-testable."""
+    mod = _stage2_mod()
+    payload = json.dumps(_topology_payload(spec)).encode()
+    env = _fake_env(_FakeObj("TextAsset",
+                             _FakeAsset("catalog", payload), path_id=700))
+    fake_uu = SimpleNamespace(
+        ensure_unitypy=lambda: (SimpleNamespace(load=lambda p: env),
+                                "fixture-stub"),
+        iter_environment_files=lambda e: list(e.files),
+        iter_objects_sorted=lambda f: list(f._objs))
+    monkeypatch.setattr(mod, "uu", fake_uu, raising=False)
+    from conftest import tree_game
+    rc = mod.run(Path(tree_game(game_tree)), Path(ext))
+    return rc, mod
+
+
+def _run_section_text(ext: Path, stage_id: str = "harvest-catalog") -> str:
+    import re as _re2
+    log_text = (Path(ext) / "EXTRACTION-LOG.md").read_text(
+        encoding="utf-8", errors="replace")
+    sections = [p for p in _re2.split(r"(?m)^#{1,3} ", log_text)
+                if p.splitlines()[:1] and stage_id in p.splitlines()[0].lower()]
+    assert sections, f"no {stage_id} run section written"
+    return sections[-1]
+
+
+def test_stage2_run_healthy_keyspace_end_to_end(fx_stage2, tmp_path,
+                                                monkeypatch):
+    """Full hostless stage-2 run over a key-space corpus: rc 0, resolved
+    relpaths in catalog.json.dependencies[], coverage reconciles, ledgers at
+    zero, counters stamped in the run section."""
+    ext = _write_stage2_upstreams(tmp_path / "ext")
+    rc, _mod = _drive_stage2_run(monkeypatch, HEALTHY_SPEC, ext, fx_stage2)
+    assert rc == 0, f"healthy key-space run failed rc={rc}"
+    cat = read_json(ext / "addressables" / "catalog.json")
+    errs = validate_catalog_json(cat)
+    assert not errs, errs
+    by_key = {row["key"]: row for row in cat["keys"]}
+    ui_rel = next(r["relpath"] for r in roster_rows()
+                  if Path(r["relpath"]).name == "ui_assets_all.bundle")
+    unlock_rel = next(r["relpath"] for r in roster_rows()
+                      if Path(r["relpath"]).name == "unlockables_assets_all.bundle")
+    assert by_key["Menu.Dep"]["dependencies"] == [ui_rel], (
+        f"the backbone join degraded: {by_key['Menu.Dep']!r} — pass 2 deleted?")
+    assert by_key["Deep.Chain"]["dependencies"] == [ui_rel]
+    assert by_key[DECIMAL_SLOT_KEY]["bundle"] == ui_rel
+    assert by_key["Rooms.Main"]["bundle"] == next(
+        r["relpath"] for r in roster_rows()
+        if Path(r["relpath"]).name == "rooms_assets_all.bundle")
+    assert by_key["Self.Key"]["bundle"] == unlock_rel
+    assert by_key["Self.Key"]["dependencies"] == [unlock_rel]
+
+    cov = read_json(ext / "addressables" / "catalog-coverage.json")
+    referenced = {b for k in cat["keys"]
+                  for b in ([k["bundle"]] if k["bundle"] else [])
+                  + k["dependencies"]}
+    errs = validate_coverage(cov, {r["relpath"] for r in roster_rows()},
+                             referenced)
+    assert not errs, errs
+    assert cov["keysTotal"] == len(HEALTHY_SPEC)
+    assert cov["distinctBundlesReferenced"] == 3
+    assert cov["danglingDependencyKeys"] == {"count": 0, "sample": []}
+
+    section = _run_section_text(ext)
+    import re as _re3
+    m = _re3.search(r"keySpaceResolutions:\s*(\d+)", section)
+    assert m and int(m.group(1)) >= 3, (
+        f"pass-2 resolution counter missing from the run section:\n{section}")
+    m = _re3.search(r"hashSuffixMatches:\s*(\d+)", section)
+    assert m and int(m.group(1)) == 1, section
+
+
+def test_stage2_gate_refuses_bare_file_form_miss_hostless(fx_stage2, tmp_path,
+                                                          monkeypatch):
+    """The NARROWED hard gate (Revision 5): a FILE-FORM reference matching
+    neither the direct nor the hash-suffix ladder, with no braced/self-index
+    evidence, exits 1 BEFORE any output write."""
+    ext = _write_stage2_upstreams(tmp_path / "ext")
+    with pytest.raises(Exception) as excinfo:
+        _drive_stage2_run(monkeypatch, [("Bad.Ref",
+                                         "totally-missing_bundle.bundle",
+                                         None)], ext, fx_stage2)
+    raised = excinfo.value
+    code = getattr(raised, "exit_code", None)
+    assert code == 1, (
+        f"bare file-form miss must raise exit_code=1, got {raised!r}")
+    text = str(raised)
+    assert "FILE-FORM" in text.upper() or "hash-suffix" in text.lower()
+    assert not (ext / "addressables" / "catalog.json").exists(), (
+        "gate fired AFTER output writes — partial finals escaped")
+
+
+def test_stage2_warn_ledgers_braced_selfindexed_and_dangling(
+        fx_stage2, tmp_path, monkeypatch):
+    """Evidence classes are honest absences, never fatal: braced provider
+    prefixes, self-indexed absent bundles, and dangling decimal keys all warn
+    into catalog-coverage.json while the run exits 0 — with the ledger blocks'
+    pinned {count, sample} schema."""
+    ext = _write_stage2_upstreams(tmp_path / "ext")
+    rc, _mod = _drive_stage2_run(monkeypatch, WARN_SPEC, ext, fx_stage2)
+    assert rc == 0, f"warn-only evidence classes must not fail the run: rc={rc}"
+    cov = read_json(ext / "addressables" / "catalog-coverage.json")
+
+    for block in ("danglingDependencyKeys", "outOfRosterFileReferences"):
+        entry = cov.get(block)
+        assert isinstance(entry, dict) and set(entry) >= {"count", "sample"}, (
+            f"coverage.{block} missing the pinned {{count, sample}} schema: "
+            f"{entry!r}")
+        assert isinstance(entry["count"], int) and entry["count"] >= 0
+        assert isinstance(entry["sample"], list)
+
+    danglers = cov["danglingDependencyKeys"]
+    assert danglers["count"] == 1 and danglers["sample"] == ["888888"], danglers
+
+    oor = cov["outOfRosterFileReferences"]
+    assert oor["count"] == 2, f"{oor!r} — braced/self-indexed misses must ledger"
+    refs = {row["reference"] for row in oor["sample"]}
+    assert "{RSC}dlc-hospital-ui.bundle" in refs, (
+        "braced provider-prefix reference missing from the warning ledger")
+    assert all({"normalized", "reference"} <= set(row) for row in oor["sample"])
+    normalized = {row["normalized"] for row in oor["sample"]}
+    assert "dlc-hospital-ui" in normalized
+    assert "absent-selfindexed" in normalized, (
+        "self-indexed absent bundle (catalog indexes it as its own key) must "
+        "land in the ledger, not the gate")
+
+    # every miss stayed OUT of the fatal path AND out of the resolved universe
+    cat = read_json(ext / "addressables" / "catalog.json")
+    flat_resolved = set()
+    for k in cat["keys"]:
+        for b in ([k["bundle"]] if k["bundle"] else []) + k["dependencies"]:
+            flat_resolved.add(Path(b).name.lower())
+    assert "dlc-hospital-ui.bundle" not in flat_resolved
+    rooms_rel = next(r["relpath"] for r in roster_rows()
+                     if Path(r["relpath"]).name == "rooms_assets_all.bundle")
+    by_key = {row["key"]: row for row in cat["keys"]}
+    assert by_key["absent-selfindexed.bundle"]["bundle"] == rooms_rel

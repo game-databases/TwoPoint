@@ -382,3 +382,357 @@ def test_double_run_byte_identical_declared_outputs(fx_stage5, tmp_path_factory)
     only1, only2, changed = diff_manifests(m1, m2)
     assert not (only1 or only2 or changed), (
         f"rerun not byte-identical: only_run1={only1} only_run2={only2} changed={changed}")
+
+
+# --- TestFixer-006: Revision 5+6 lane (testreviewer-003 G1/G2/G6/G7) ---------------
+# The shared trees above hold only positive singleton path_ids, wrapped dumps,
+# and unique ids — the entire Rev 6 identity policy was deletable with this
+# suite green. The corpora below materialize every policy shape synthetically.
+
+import re as _re  # noqa: E402
+
+from _fixturelib import (  # noqa: E402
+    IDENTITY_AXES, IDENTITY_DUPE_ID, LARGE_NEG_PID, THEME_ID,
+    build_flat_shape_corpus, build_identity_policy_corpus,
+    build_starved_corpus,
+)
+
+
+def _copy_corpus(src: Path, base: Path, name: str) -> Path:
+    import shutil
+    dst = Path(base) / name
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    return dst
+
+
+@pytest.fixture(scope="module")
+def identity_corpus(tmp_path_factory):
+    out = tmp_path_factory.mktemp("idpcorpus")
+    return build_identity_policy_corpus(out)
+
+
+@pytest.fixture(scope="module")
+def identity_run(identity_corpus, fx_stage5, tmp_path_factory):
+    """One hostless stage-5 run over a fresh copy of the identity corpus."""
+    ext = _copy_corpus(identity_corpus, tmp_path_factory.mktemp("idprun"), "ext")
+    return run_stage5(fx_stage5, ext), ext
+
+
+def test_identity_policy_run_completes_hostless(identity_run):
+    r, _ext = identity_run
+    assert r.returncode == 0, (
+        f"stage 5 must complete hostless on the Rev-6 identity corpus; "
+        f"rc={r.returncode}\nSTDOUT:{r.stdout}\nSTDERR:{r.stderr}")
+
+
+def _last_section(ext: Path, stage_id: str = STAGE) -> str:
+    log_text = (ext / "EXTRACTION-LOG.md").read_text(encoding="utf-8",
+                                                     errors="replace")
+    sections = [p for p in _re.split(r"(?m)^#{1,3} ", log_text)
+                if p.splitlines()[:1] and stage_id in p.splitlines()[0].lower()]
+    assert sections, f"no {stage_id} run section in EXTRACTION-LOG.md"
+    return sections[-1]
+
+
+def _count(section: str, token: str) -> int:
+    m = _re.search(_re.escape(token) + r"\s*=?\s*(\d+)", section)
+    assert m, f"counter {token!r} missing from run section:\n{section[-600:]}"
+    return int(m.group(1))
+
+
+def test_identity_policy_counters_counted_in_run_section(identity_run):
+    """Rev 6: 'applied before any row is emitted; every rule's decisions are
+    counted in the run section' — the four counters plus the byte-match and
+    signed-stem contract lines must reflect THIS corpus exactly."""
+    r, ext = identity_run
+    if r.returncode != 0:
+        pytest.skip("identity-policy run failed — counter legs vacuous")
+    section = _last_section(ext)
+    assert _count(section, "componentExcluded") == 3, section
+    assert _count(section, "identifierLess") == 3, section
+    assert _count(section, "mergedDuplicates") == 2, section
+    assert _count(section, "disambiguatedDuplicates") == 1, section
+    # signed-stem contract over the export-manifest universe (incl. negatives)
+    assert _count(section, "unparsed=") == 0, section
+    assert _count(section, "mismatched=") == 0, section
+    # byte-match gate ran against real dump shapes and validated something
+    checked = _count(section, "checked=")
+    assert checked >= 6, f"byte-match checked={checked}, corpus holds ≥6 rows"
+    assert _count(section, "mismatches=") == 0, section
+
+
+def test_component_exclusion_never_emits_entities(identity_run):
+    """Rev 6 rule 1: engine/primitive/component/generic dumps are census rows,
+    never entity rows — and land in the unmapped ledger with evidence."""
+    r, ext = identity_run
+    if r.returncode != 0:
+        pytest.skip("identity-policy run failed")
+    _stubs, _files, rows_by_file = load_outputs(ext)
+    banned = {"UnityEngine.Transform", "TPC.Components.RoomSensor",
+              "MonoBehaviour"}
+    for name, rows in rows_by_file.items():
+        for row in rows:
+            src_cls = (row.get("source") or {}).get("class")
+            assert src_cls not in banned, (
+                f"{name}: dump class {src_cls!r} became an entity row "
+                f"(id={row.get('id')!r}) — component exclusion deleted?")
+            assert not str(row.get("id", "")).startswith("UnityEngine."), \
+                f"{name}: engine-spelled id emitted: {row['id']!r}"
+    unmapped = rows_by_file.get("_unmapped-families.jsonl", [])
+    by_class = {u.get("class"): u for u in unmapped}
+    for cls in sorted(banned):
+        assert cls in by_class, (
+            f"excluded class {cls!r} missing from _unmapped-families.jsonl "
+            "(exclusion must be ledgered, never silent)")
+        assert by_class[cls].get("objectCount", 0) >= 1
+        assert by_class[cls].get("evidence"), f"{cls}: exclusion evidence text required"
+
+
+def test_empty_identifier_rows_ledgered_not_emitted(identity_run):
+    """Rev 6 rule 2: id='' shapes (absent / whitespace / bool-typed) land in
+    _absences.jsonl counted + sampled — never as stub rows."""
+    r, ext = identity_run
+    if r.returncode != 0:
+        pytest.skip("identity-policy run failed")
+    _stubs, _files, rows_by_file = load_outputs(ext)
+    absences = [a for a in rows_by_file.get("_absences.jsonl", [])
+                if a.get("absenceType") == "no-identifier"]
+    by_kind = {a["kind"]: a for a in absences}
+    assert by_kind.get("room", {}).get("count") == 1, (
+        f"room id-less sweep count wrong: {by_kind.get('room')}")
+    assert by_kind.get("item", {}).get("count") == 2, (
+        f"item id-less sweep counts (whitespace + bool) wrong: {by_kind.get('item')}")
+    for kind, agg in by_kind.items():
+        errs = validate_absence_row(agg, where=f"_absences[{kind}]: ")
+        assert not errs, errs
+        assert agg["scannedBundles"] and agg["scannedClasses"]
+        samples = agg.get("samples") or []
+        assert len(samples) == agg["count"], (
+            f"{kind}: samples must cover every id-less candidate at this scale")
+        for s in samples:
+            for k in ("bundle", "pathId", "class"):
+                assert k in s, f"{kind} sample missing {k!r}: {s}"
+    assert any(s["pathId"] == 220 for s in by_kind["room"]["samples"])
+    # nothing identifier-less leaked into any emitted stub file
+    for name, rows in rows_by_file.items():
+        for row in rows:
+            if name.startswith("_") or "id" not in row:
+                continue
+            assert isinstance(row["id"], str) and row["id"].strip(), (
+                f"{name}: whitespace/empty identifier emitted: {row['id']!r}")
+
+
+def test_equal_payload_duplicates_merge_one_row_with_axes(identity_run):
+    """Rev 6 rule 3a: identical-id rows with EQUAL payload hashes across
+    base+dlc-* bundles merge into ONE row whose axes[] names every
+    contributing content axis (the Bloom ×N measured shape)."""
+    from _validators import CONTENT_AXES, read_jsonl
+    r, ext = identity_run
+    if r.returncode != 0:
+        pytest.skip("identity-policy run failed")
+    rows = read_jsonl(ext / "stubs" / "configs.jsonl")
+    blooms = [row for row in rows if row["fields"].get("id") == IDENTITY_DUPE_ID]
+    assert len(blooms) == 1, (
+        f"expected ONE merged {IDENTITY_DUPE_ID!r} row, got {len(blooms)} — "
+        "the duplicate-policy block is dead again")
+    row = blooms[0]
+    assert sorted(row.get("axes") or []) == IDENTITY_AXES, (
+        f"axes provenance list must span every contributing axis "
+        f"({IDENTITY_AXES}), got {row.get('axes')!r}")
+    assert set(row["axes"]) <= set(CONTENT_AXES), (
+        f"axes vocabulary outside {CONTENT_AXES}: {row['axes']!r}")
+    assert row["fields"]["tagline"] == "petal", "merge kept the wrong payload"
+    assert row["source"]["bundle"] == "configs_assets_all.bundle"
+    assert row["source"]["pathId"] == 801
+
+
+def test_differing_payloads_disambiguate_preserving_verbatim_id(identity_run):
+    """Rev 6 rule 3b: identical-id rows with DIFFERING payloads stay DISTINCT
+    via `<id>@<contentHash8>`; the verbatim id survives inside fields.id."""
+    r, ext = identity_run
+    if r.returncode != 0:
+        pytest.skip("identity-policy run failed")
+    _stubs, _files, rows_by_file = load_outputs(ext)
+    themes = [row for row in rows_by_file.get("rooms.jsonl", [])
+              if str(row.get("fields", {}).get("id")) == THEME_ID
+              or str(row.get("id")).split("@")[0] == THEME_ID]
+    assert len(themes) == 2, (
+        f"differing-payload pair collapsed to {len(themes)} rows — "
+        "disambiguation deleted or over-merging")
+    bare = [t for t in themes if "@" not in str(t["id"])]
+    suffixed = [t for t in themes if "@" in str(t["id"])]
+    assert len(bare) == 1 and len(suffixed) == 1, (
+        f"exactly one bare + one @<hash8> row expected: {[t['id'] for t in themes]}")
+    sfx = suffixed[0]
+    import re as re2
+    assert re2.fullmatch(rf"{THEME_ID}@[0-9a-f]{{8}}", sfx["id"]), (
+        f"suffixed id {sfx['id']!r} is not <verbatim-id>@<8 lowercase hex>")
+    assert sfx["fields"].get("id") == THEME_ID, (
+        "disambiguated row lost the verbatim id inside fields (Principle one)")
+    assert bare[0]["fields"].get("slots") != sfx["fields"].get("slots")
+    assert {bare[0]["source"]["pathId"], sfx["source"]["pathId"]} == {230, 231}
+
+
+def test_post_policy_uniqueness_and_axes_presence_rule(identity_run):
+    """Rev 6 rule 4 + reviewer G7: uniqueness asserted post-policy per family;
+    axes vocabulary ⊆ CONTENT_AXES and present iff multi-contributor."""
+    from _validators import CONTENT_AXES
+    r, ext = identity_run
+    if r.returncode != 0:
+        pytest.skip("identity-policy run failed")
+    _stubs, files, rows_by_file = load_outputs(ext)
+    axes_carriers = []
+    for name in files:
+        if name.startswith("_"):
+            continue
+        rows = rows_by_file[name]
+        ids = [str(row["id"]) for row in rows]
+        assert len(set(ids)) == len(ids), (
+            f"post-policy uniqueness violated in {name}: duplicates "
+            f"{sorted({i for i in ids if ids.count(i) > 1})}")
+        for row in rows:
+            if "axes" in row:
+                axes_carriers.append((name, row))
+                assert set(row["axes"]) <= set(CONTENT_AXES), (
+                    f"{name}: axes vocabulary drift {row['axes']!r}")
+                assert row["axes"] == sorted(row["axes"])
+    # this corpus holds exactly one multi-contributor group (Bloom ×3 axes);
+    # every other row is a singleton or a single-member subgroup -> no axes
+    carriers = {(name, str(row["id"])) for name, row in axes_carriers}
+    bloom_carriers = {(n, str(r_["id"])) for n, r_ in axes_carriers
+                      if r_["fields"].get("id") == IDENTITY_DUPE_ID}
+    assert carriers == bloom_carriers and bloom_carriers, (
+        f"axes presence must track multi-contributor groups exactly; got "
+        f"{sorted(carriers)}")
+
+
+def test_parse_harvest_stem_accepts_signed_path_ids():
+    """Reviewer G2: reverting the stem regex to `_(\\d+)$` turned 60,582 real
+    rows into pathId=None — every signed spelling must parse."""
+    mod = load_tool("stage5_emit_stubs.py")
+    if mod is None:
+        pytest.skip("impl-missing: tools/stage5_emit_stubs.py")
+    parse = getattr(getattr(mod, "tc", mod), "parse_harvest_stem", None)
+    if parse is None:
+        pytest.skip("impl-missing: tc.parse_harvest_stem")
+    int64_floor = -9223372036854775808
+    cases = [
+        ("dlc-ghost-art_assets_all_-1030583540197932202",
+         ("dlc-ghost-art_assets_all", LARGE_NEG_PID)),
+        ("dlc-ghost-art_assets_all_-1030583540197932202.json",
+         ("dlc-ghost-art_assets_all", LARGE_NEG_PID)),
+        ("rooms_assets_all_-700.json", ("rooms_assets_all", -700)),
+        ("items-general_assets_all_-5000000000.txt",
+         ("items-general_assets_all", -5000000000)),
+        ("items-general_assets_all_101.json", ("items-general_assets_all", 101)),
+        ("scenes_scenes_config_level_databases_123.json",
+         ("scenes_scenes_config_level_databases", 123)),
+        ("monoscripts_bundle_name_7", ("monoscripts_bundle_name", 7)),
+        ("floor_case_-9223372036854775808", ("floor_case", int64_floor)),
+        ("trailing_sign_-5", ("trailing_sign", -5)),
+    ]
+    for stem, expected in cases:
+        assert parse(stem) == expected, (
+            f"parse_harvest_stem({stem!r}) = {parse(stem)!r}, expected {expected!r} "
+            "(signed-int64 stem contract, Rev 6 amendment 2)")
+    for stem in ("ui_art", "item_alpha_name", "no_pid_here.x", "lead_-12x",
+                 "minus_only_-"):
+        got = parse(stem)
+        assert got is None, f"parse_harvest_stem({stem!r}) must be None, got {got!r}"
+    # the measured negative spelling must survive the ROUND TRIP through the
+    # loader's restore step too (bundle stem + sign preserved, not truncated)
+    base, pid = parse(f"dlc-ghost-art_assets_all_{LARGE_NEG_PID}.json")
+    assert f"{base}_{pid}" == f"dlc-ghost-art_assets_all_{LARGE_NEG_PID}"
+
+
+def test_negative_pathids_survive_manifest_and_emit(identity_run):
+    """Round trip: export-manifest `{base, signed pid}` ↔ dump filename ↔
+    emitted `source.pathId < 0` — the pre-R10 defect was silent None-ing."""
+    r, ext = identity_run
+    if r.returncode != 0:
+        pytest.skip("identity-policy run failed")
+    mod = load_tool("stage5_emit_stubs.py")
+    if mod is None:
+        pytest.skip("impl-missing: tools/stage5_emit_stubs.py")
+    parse = getattr(getattr(mod, "tc", mod), "parse_harvest_stem", None)
+    assert parse is not None, "impl-missing: tc.parse_harvest_stem"
+    manifest = read_jsonl(ext / "harvest" / "export-manifest.jsonl")
+    signed_rows = [m for m in manifest if isinstance(m["pathId"], int)
+                   and m["pathId"] < 0]
+    assert len(signed_rows) >= 3, (
+        "fixture manifest must carry negative pathId rows (.json and .txt)")
+    for mrow in manifest:
+        parsed = parse(Path(mrow["outRelPath"]).name)
+        want_base = Path(mrow["sourceBundle"]).stem
+        assert parsed == (want_base, mrow["pathId"]), (
+            f"manifest stem contract broken: {mrow['outRelPath']!r} parsed "
+            f"{parsed!r}, want ({want_base!r}, {mrow['pathId']!r})")
+    _stubs, _files, rows_by_file = load_outputs(ext)
+    room_neg = [row for row in rows_by_file.get("rooms.jsonl", [])
+                if row["fields"].get("id") == "room_signed_neg"]
+    assert room_neg and room_neg[0]["source"]["pathId"] == LARGE_NEG_PID, (
+        "negative source.pathId did not survive load→emit (unsigned-parser "
+        "regression turns these into None)")
+    item_neg = [row for row in rows_by_file.get("items.jsonl", [])
+                if row["fields"].get("id") == "item_signed_neg"]
+    assert item_neg and item_neg[0]["source"]["pathId"] == -5000000000
+
+
+def test_flat_shape_dumps_emit_and_byte_match(fx_stage5, tmp_path_factory):
+    """Reviewer G6: the REAL harvest shape is FLAT (no `fields` wrapper). A
+    reader regression to wrapper-only would yield mass identifierLess and the
+    checked=0 gate — this leg must fail loudly if that ever ships."""
+    corpus = build_flat_shape_corpus(tmp_path_factory.mktemp("flatcorpus"))
+    ext = _copy_corpus(corpus, tmp_path_factory.mktemp("flatrun"), "ext")
+    r = run_stage5(fx_stage5, ext)
+    assert r.returncode == 0, (
+        f"flat-shape corpus must emit cleanly; rc={r.returncode}\n"
+        f"STDOUT:{r.stdout}\nSTDERR:{r.stderr}")
+    _stubs, _files, rows_by_file = load_outputs(ext)
+    flat_items = [row for row in rows_by_file.get("items.jsonl", [])
+                  if row["id"] == "item_flat_one"]
+    flat_rooms = [row for row in rows_by_file.get("rooms.jsonl", [])
+                  if row["id"] == "room_flat_two"]
+    assert flat_items and flat_items[0]["source"]["pathId"] == 301, (
+        "flat dump's m_Name identifier never became the emitted id")
+    assert flat_rooms and flat_rooms[0]["source"]["pathId"] == 302
+    section = _last_section(ext)
+    assert _count(section, "checked=") >= 2, section
+    assert _count(section, "mismatches=") == 0, (
+        "flat-shape byte-match mismatched — dual-shape read broken")
+
+
+def test_starved_corpus_fails_checked_zero_gate_loud(fx_stage5, tmp_path_factory):
+    """Revision 6 amendment 3: a run that validates NOTHING (checked=0) fails
+    its own gate instead of recording the zero — exit 1, named on stderr."""
+    corpus = build_starved_corpus(tmp_path_factory.mktemp("starvedcorpus"))
+    ext = _copy_corpus(corpus, tmp_path_factory.mktemp("starvedrun"), "ext")
+    r = run_stage5(fx_stage5, ext)
+    assert r.returncode == 1, (
+        f"a checked=0 run MUST exit 1, got rc={r.returncode}\n"
+        f"STDOUT:{r.stdout}\nSTDERR:{r.stderr}")
+    combined = r.stdout + r.stderr
+    assert "checked=0" in combined, (
+        f"exit-1 output must name the identifierByteMatch checked=0 gate: "
+        f"{combined[-400:]}")
+
+
+def test_identity_rerun_byte_identical(identity_corpus, fx_stage5,
+                                       tmp_path_factory):
+    """Merge/disambiguation decisions are deterministic: same corpus twice →
+    byte-identical stubs + relinks (suffix choice never depends on scan
+    filesystem order)."""
+    ext1 = _copy_corpus(identity_corpus, tmp_path_factory.mktemp("idir1"), "ext")
+    ext2 = _copy_corpus(identity_corpus, tmp_path_factory.mktemp("idir2"), "ext")
+    r1 = run_stage5(fx_stage5, ext1)
+    assert r1.returncode == 0, r1.stdout + r1.stderr
+    r2 = run_stage5(fx_stage5, ext2, "--force")
+    assert r2.returncode == 0, r2.stdout + r2.stderr
+    m1 = hash_tree(ext1 / "stubs") | hash_tree(ext1 / "relinks")
+    m2 = hash_tree(ext2 / "stubs") | hash_tree(ext2 / "relinks")
+    only1, only2, changed = diff_manifests(m1, m2)
+    assert not (only1 or only2 or changed), (
+        f"identity-policy rerun not byte-identical: only1={only1} "
+        f"only2={only2} changed={changed}")
