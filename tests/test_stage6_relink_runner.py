@@ -183,6 +183,26 @@ def test_exit_code_3_missing_game_root(fx_relink, tmp_path):
         f"{r.stdout}{r.stderr}")
 
 
+def test_exit_code_3_missing_upstream_artifact_names_it(fx_relink, tmp_path):
+    """Arbiter F9 (TR4): the §3 upstream pre-check refuses with exit 3 and
+    NAMES the removed artifact — the same refusal family as the missing
+    game root, exercised on a prepared tree with everything else present."""
+    _bb()
+    from conftest import seeded_extracted_root
+    ext = seeded_extracted_root(fx_relink, tmp_path / "e3up")
+    victim = ext / "harvest" / "externals.jsonl"
+    assert victim.exists()
+    victim.unlink()
+    r = run_pack([fx_relink, "--only", "relink"], extracted_root=ext,
+                 timeout=600)
+    combined = r.stdout + r.stderr
+    assert r.returncode == 3, (
+        f"a removed §3 upstream artifact must refuse with exit 3, got "
+        f"rc={r.returncode}\n{combined}")
+    assert "externals.jsonl" in combined, (
+        f"exit-3 refusal does not name the missing artifact:\n{combined[:800]}")
+
+
 def test_exit_code_1_corrupt_upstream_is_stage_failure(fx_relink, tmp_path_factory,
                                                        tmp_path):
     """A present-but-corrupt upstream artifact is a schema/validation FAILURE
