@@ -1039,6 +1039,37 @@ def test_r5_tooltip_script_hop_census_split(tmp_path):
     assert trow2["status"] == "documented-gap", trow2
     assert trow2["joins"] == [] and trow2["gapReason"], trow2
 
+def test_ac4_identifier_verbatim_over_pair_datasets(fx_relink, tmp_path_factory):
+    """Arbiter F6 (TR2; AC4): every emitted `<src>_<dst>.jsonl` dataset is
+    swept under the pinned sample policy — srcIds must be verbatim stub ids
+    (twins WITH their @hash8 suffix), dstIds confined to the AC4 exception
+    set (stubs / roster scene ids / container addresses / term keys)."""
+    _bb()
+    ext = seeded_extracted_root(fx_relink, tmp_path_factory.mktemp("ac4"))
+    r = _run_relink(fx_relink, ext)
+    assert r.returncode in (0, 2), r.stdout + r.stderr
+    errs = rl.ac4_pair_dataset_sweep(ext)
+    assert not errs, errs[:8]
+
+
+def test_ac4_sweep_bite(tmp_path):
+    """The F6 sweep has teeth: a foreign srcId and an unknown dstId each
+    fire their own violation on a synthetic tree."""
+    ext = tmp_path / "ext"
+    (ext / "stubs").mkdir(parents=True)
+    write_jsonl(ext / "stubs" / "rooms.jsonl",
+                [{"id": rl.ANCHOR_ROOM, "kind": "room"}])
+    rel = ext / "relinks"
+    rel.mkdir(parents=True)
+    write_jsonl(rel / "room_item.jsonl", [
+        {"srcId": rl.ANCHOR_ROOM, "dstId": "Item_Nowhere"},
+        {"srcId": "Room_Bogus", "dstId": rl.ANCHOR_ITEM},
+    ])
+    errs = rl.ac4_pair_dataset_sweep(ext)
+    assert any("srcId outside" in x for x in errs), errs
+    assert any("dstId outside" in x for x in errs), errs
+
+
 def test_r6_blackbox_competition_absent_floor_unmet_exit2(fx_relink, tmp_path_factory):
     """Absence routing (§R6 explicit): no committed competitor inputs can only
     lower the floor result — exit 2 + terminal ledger naming the unblock,

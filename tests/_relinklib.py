@@ -1302,6 +1302,83 @@ def validate_competitor_ledger_row(row, where=""):
     return e
 
 
+def ac4_pair_dataset_sweep(ext):
+    """Arbiter F6 (TR2; spec §8-R7/AC4): identifier preservation over every
+    emitted `<src>_<dst>.jsonl` pair dataset, under the pinned sample policy
+    (`identifier_sample_ids`: <=1000 -> all, else deterministic 500).
+
+    - srcId must be a verbatim stub id of ANY kind (twins carry their
+      @hash8 suffix — the emitted id space, never the bare form);
+    - dstId must land in the AC4 exception set: stub ids, roster scene ids
+      (either the roster relpath or its bundle-basename spelling),
+      container/catalog addresses, or registry term keys.
+
+    Returns a list of violation strings; empty means the sweep passed."""
+    from _validators import identifier_sample_ids
+
+    ext = Path(ext)
+    e: list[str] = []
+    stub_ids: set[str] = set()
+    stubs_dir = ext / "stubs"
+    if stubs_dir.is_dir():
+        for f in sorted(stubs_dir.glob("*.jsonl")):
+            if f.name.startswith("_"):
+                continue
+            for r in read_jsonl(f):
+                if isinstance(r.get("id"), str):
+                    stub_ids.add(r["id"])
+    scene_ids: set[str] = set()
+    roster = ext / "bundle-roster.jsonl"
+    if roster.is_file():
+        for r in read_jsonl(roster):
+            if r.get("sceneFlag", "none") != "none":
+                rel = str(r["relpath"])
+                scene_ids.add(rel)
+                scene_ids.add(Path(rel).name.removesuffix(".bundle"))
+                scene_ids.add(Path(rel).name)
+    addresses: set[str] = set()
+    cat = ext / "addressables" / "catalog.json"
+    if cat.is_file():
+        doc = json.loads(cat.read_text(encoding="utf-8"))
+        for k in doc.get("keys") or []:
+            if isinstance(k.get("address"), str):
+                addresses.add(k["address"])
+    cont_idx = ext / "relinks" / "bridges" / "container_index.jsonl"
+    if cont_idx.is_file():
+        for r in read_jsonl(cont_idx):
+            if isinstance(r.get("address"), str):
+                addresses.add(r["address"])
+    term_keys: set[str] = set()
+    reg = ext / "relinks" / "i2_term_registry.jsonl"
+    if reg.is_file():
+        for r in read_jsonl(reg):
+            if isinstance(r.get("termKey"), str):
+                term_keys.add(r["termKey"])
+    dst_allowed = stub_ids | scene_ids | addresses | term_keys
+
+    relinks = ext / "relinks"
+    if not relinks.is_dir():
+        return [f"ac4: {relinks} missing — nothing to sweep"]
+    for f in sorted(relinks.glob("*.jsonl")):
+        kind = classify_pair_filename(f.name)
+        if not kind or kind[0] == "INVALID" or kind[2]:
+            continue   # ledgers/reports/overlays are not client pair sets
+        rows = read_jsonl(f)
+        src_sample = identifier_sample_ids(
+            [str(r.get("srcId")) for r in rows])
+        bad_src = [s for s in src_sample if s not in stub_ids]
+        if bad_src:
+            e.append(f"{f.name}: srcId outside the stub id space (twins "
+                     f"keep their suffix): {bad_src[:5]}")
+        dst_sample = identifier_sample_ids(
+            [str(r.get("dstId")) for r in rows])
+        bad_dst = [d for d in dst_sample if d not in dst_allowed]
+        if bad_dst:
+            e.append(f"{f.name}: dstId outside the AC4 exception set "
+                     f"(stubs/scene/container/registry): {bad_dst[:5]}")
+    return e
+
+
 def floor_gate(dispositions_by_source):
     """Bar-3 floor (DR-2026-08-17-relink, arbiter F4b): MET iff >=3 distinct
     sourceIds each carry >=1 confirms-hard / adds-derived disposition —

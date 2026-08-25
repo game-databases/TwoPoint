@@ -326,6 +326,14 @@ def test_r2_scene_edges_resolve_against_roster_ids(real_run):
 
 # --- R3 ------------------------------------------------------------------------------
 
+def test_ac4_identifier_verbatim_on_real_pair_datasets(real_run):
+    """Arbiter F6 on real bytes: every emitted pair dataset sweeps clean —
+    srcIds verbatim stub ids, dstIds within the AC4 exception set."""
+    ns = real_run.ok()
+    errs = rl.ac4_pair_dataset_sweep(ns.ext)
+    assert not errs, errs[:8]
+
+
 def test_r3_guid_report_arithmetic_and_campus_level_modeled(real_run):
     ns = real_run.ok()
     report = read_json(ns.ext / "relinks" / "guid_bridge_report.json")
