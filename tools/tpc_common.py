@@ -392,6 +392,41 @@ def normalize_ref(ref: str) -> str:
     return s
 
 
+# Revision 5 hash-suffix match mapping: catalog references may spell a roster
+# bundle with a trailing `_<32-hex>` content hash the on-disk filename does
+# not carry (measured real forms:
+#   ui-art-mainmenu_assets_all_3053e16d….bundle,
+#   localisation_assets_localisationturkish_5e018e92….bundle).
+# Applied to the NORMALIZED key (post-`normalize_ref`, so case-folded and
+# extension-stripped); stripping reuses the normal match key.
+_HASH_SUFFIX_RE = re.compile(r"^(.+)_[0-9a-f]{32}$", re.IGNORECASE)
+
+
+def strip_hash_suffix(norm_key: str) -> str | None:
+    """`<name>_<32-hex>` → `<name>`, else None. Input must already be a
+    normalized match key (`normalize_ref` output)."""
+    m = _HASH_SUFFIX_RE.match(norm_key or "")
+    return m.group(1) if m else None
+
+
+def resolve_file_form_reference(ref: str, norm_to_relpath: dict[str, str],
+                                ) -> tuple[str | None, str | None, str]:
+    """FILE-FORM reference resolution ladder (Revision 5): normalize the raw
+    spelling, then match a roster relpath directly, then via hash-suffix
+    stripping. Returns (match_kind, relpath, normalized_key) where
+    match_kind is 'direct' | 'hash-suffix' | None."""
+    norm = normalize_ref(ref)
+    rel = norm_to_relpath.get(norm)
+    if rel is not None:
+        return "direct", rel, norm
+    stripped = strip_hash_suffix(norm)
+    if stripped is not None:
+        rel = norm_to_relpath.get(stripped)
+        if rel is not None:
+            return "hash-suffix", rel, norm
+    return None, None, norm
+
+
 # ---------------------------------------------------------------------------
 # Roster IO
 

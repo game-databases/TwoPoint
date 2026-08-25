@@ -12,6 +12,24 @@ blobs `m_KeyDataString` / `m_BucketDataString` / `m_EntryDataString`; the
 JSON is parsed directly and tools/aa_catalog.py decodes the three blobs.
 The MonoBehaviour/typetree route is the SECONDARY/absent path, probed only
 when the TextAsset is missing or malformed — never the primary.
+
+Revision 5 (measured client reality): dependency keys live in KEY SPACE —
+Addressables serializes them as CRC-style decimal STRINGS naming other
+catalog keys (a slot literally named `-1064046067` exists), so resolving
+string dependencyKeys against the file roster was a category error.
+`map_catalog_keys` therefore resolves in TWO PASSES: each slot's own
+FILE-FORM references first (`internalId`/`dependencyKey` strings ending
+`.bundle`, matched directly or after stripping a trailing `_<32-hex>` hash
+suffix the on-disk filename does not carry), then the remaining string
+dependencyKeys through the key-name → bundle-set index built over ALL slots
+(one level suffices — every decimal key resolves transitively on the real
+payload). The hard gate NARROWS to FILE-FORM references matching neither
+ladder and lacking external-content evidence; everything else is
+warning-ledger in catalog-coverage.json: `danglingDependencyKeys`
+(key-space deps naming no known key) and `outOfRosterFileReferences`
+(references to bundles absent from this install — measured: 19 distinct,
+uninstalled optional DLC `dlc-hospital-*` / `dlc-preorder-*`). Coverage
+still reconciles at 176/176 roster bundles referenced.
 """
 from __future__ import annotations
 
@@ -136,52 +154,96 @@ def _find_catalog_monobehaviour(env, synth, primary_note: str | None = None):
         exit_code=1)
 
 
-def _bundle_reference(entry_row: dict) -> str | None:
-    dep = entry_row.get("dependencyKey")
-    if isinstance(dep, str) and dep.lower().endswith(".bundle"):
-        return dep
-    iid = entry_row.get("internalId") or ""
-    if iid.lower().endswith(".bundle"):
-        return iid
-    return None
+def _is_file_form(value) -> bool:
+    """FILE-FORM reference (Revision 5): a string spelling a bundle file,
+    i.e. ending `.bundle` case-insensitively."""
+    return isinstance(value, str) and value.lower().endswith(".bundle")
 
 
-def map_catalog_keys(decoded: dict, norm_to_relpath: dict[str, str]) -> tuple[list[dict], set[str]]:
-    """Pure mapping layer: decoded catalog model → sorted key rows +
-    set of normalized references that failed to resolve into the roster."""
+def map_catalog_keys(decoded: dict, norm_to_relpath: dict[str, str],
+                     details: dict | None = None) -> tuple[list[dict], set[str]]:
+    """Pure mapping layer (Revision 5 two-pass resolution): decoded catalog
+    model → sorted key rows + set of normalized FILE-FORM references that
+    matched neither a roster relpath directly nor via hash-suffix stripping.
+
+    Pass 1 resolves every slot's own FILE-FORM references (`internalId` /
+    `dependencyKey` strings ending `.bundle`) through the match ladder and
+    builds the `key-name → bundle-set` index over ALL slots. Pass 2 resolves
+    the remaining string `dependencyKey`s — Addressables serializes those as
+    CRC-style decimal strings naming OTHER CATALOG KEYS, so resolving them
+    against the file roster was a category error — through the key index
+    (one level is sufficient, measured on the real payload: every decimal
+    key resolves transitively).
+
+    `details`, when a dict is supplied, receives the warning-ledger evidence:
+    `danglingDependencyKeys` (sorted distinct key-space deps matching no
+    known key), `outOfRosterFileReferences` ({normalized, reference} rows for
+    file-form misses), `keySpaceResolutions` (entry-level hit count), and
+    `hashSuffixMatches` (references resolved by the strip mapping).
+    """
     keys_out: list[dict] = []
     unresolved: set[str] = set()
+    dangling: set[str] = set()
+    out_of_roster: dict[str, str] = {}   # normalized key -> raw spelling
+    key_space_hits = 0
+    hash_suffix_hits = 0
 
-    def resolve(ref: str) -> str | None:
-        norm = tc.normalize_ref(ref)
-        rel = norm_to_relpath.get(norm)
-        if rel is None:
-            unresolved.add(norm)
-            return None
-        return rel
+    def record_miss(raw_ref: str, norm: str) -> None:
+        unresolved.add(norm)
+        out_of_roster.setdefault(norm, raw_ref)
 
+    # ---- pass 1: each slot's own FILE-FORM references -----------------------
+    slot_bundles: dict[int, set[str]] = {}
+    for slot in decoded["keys"]:
+        bundles: set[str] = set()
+        for entry in slot["entries"]:
+            for cand in (entry.get("internalId"), entry.get("dependencyKey")):
+                if not _is_file_form(cand):
+                    continue
+                kind, rel, norm = tc.resolve_file_form_reference(
+                    cand, norm_to_relpath)
+                if kind == "direct":
+                    bundles.add(rel)
+                elif kind == "hash-suffix":
+                    bundles.add(rel)
+                    hash_suffix_hits += 1
+                else:
+                    record_miss(cand, norm)
+        slot_bundles[id(slot)] = bundles
+
+    # key-name → bundle-set index over ALL slots (string keys only — the
+    # key-space dependency population is strings by construction)
+    key_index: dict[str, set[str]] = {}
     for slot in decoded["keys"]:
         key = slot["key"]
-        bundles: set[str] = set()
+        if not isinstance(key, str) or not key:
+            continue
+        hits = slot_bundles[id(slot)]
+        if hits:
+            key_index.setdefault(key, set()).update(hits)
+
+    # ---- pass 2: key-space dependencyKeys resolve through the index ---------
+    for slot in decoded["keys"]:
+        key = slot["key"]
+        bundles = set(slot_bundles[id(slot)])
         deps: set[str] = set()
         providers: set[str] = set()
         address = None
         for entry in slot["entries"]:
             providers.add(entry["provider"].rsplit(".", 1)[-1])
-            ref = _bundle_reference(entry)
-            if ref is not None:
-                rel = resolve(ref)
-                if rel:
-                    bundles.add(rel)
-                continue
-            # non-bundle entry → its internalId is the addressable location
-            if address is None and entry.get("internalId"):
-                address = entry["internalId"]
+            iid = entry.get("internalId")
+            if not _is_file_form(iid):
+                # non-bundle entry → its internalId is the addressable location
+                if address is None and isinstance(iid, str) and iid:
+                    address = iid
             dep_key = entry.get("dependencyKey")
-            if isinstance(dep_key, str):
-                rel = resolve(dep_key)
-                if rel:
-                    deps.add(rel)
+            if isinstance(dep_key, str) and not _is_file_form(dep_key):
+                resolved = key_index.get(dep_key)
+                if resolved:
+                    deps |= resolved
+                    key_space_hits += 1
+                else:
+                    dangling.add(dep_key)
         if len(bundles) == 1:
             bundle_out = next(iter(bundles))
         elif bundles:
@@ -199,6 +261,13 @@ def map_catalog_keys(decoded: dict, norm_to_relpath: dict[str, str]) -> tuple[li
         })
     keys_out.sort(key=lambda r: json.dumps(r["key"], ensure_ascii=False,
                                            sort_keys=True))
+    if details is not None:
+        details["danglingDependencyKeys"] = sorted(dangling)
+        details["outOfRosterFileReferences"] = [
+            {"normalized": norm, "reference": out_of_roster[norm]}
+            for norm in sorted(out_of_roster)]
+        details["keySpaceResolutions"] = key_space_hits
+        details["hashSuffixMatches"] = hash_suffix_hits
     return keys_out, unresolved
 
 
@@ -240,14 +309,32 @@ def run(game_root: Path, extracted_root: Path) -> int:
     for row in roster:
         norm_to_relpath[tc.normalize_ref(row["relpath"])] = row["relpath"]
 
-    keys_out, unresolved = map_catalog_keys(decoded, norm_to_relpath)
+    details: dict = {}
+    keys_out, unresolved = map_catalog_keys(decoded, norm_to_relpath, details)
 
-    # MATCH KEY hard gate BEFORE any output write (no partial finals):
-    # every normalized reference must resolve into the roster.
-    if unresolved:
-        sample = ", ".join(sorted(unresolved)[:8])
+    # NARROWED FILE-FORM hard gate (Revision 5) BEFORE any output write (no
+    # partial finals): exit 1 ONLY when a FILE-FORM reference matches neither
+    # a roster relpath directly nor via hash-suffix stripping AND carries no
+    # external-content evidence. Evidence classes are honest absences,
+    # never fatal (measured on this install: 19 distinct references to
+    # uninstalled optional DLC `dlc-hospital-*` / `dlc-preorder-*`, spelled
+    # either under a braced RuntimeDLCPath* provider prefix or as catalog
+    # keys of their own) — they land in the warning ledger below.
+    catalog_key_norms = {
+        tc.normalize_ref(slot["key"]) for slot in decoded["keys"]
+        if isinstance(slot["key"], str)}
+    gate_failures = []
+    for miss in details["outOfRosterFileReferences"]:
+        if re.search(r"\{[^}]*\}", miss["reference"]):
+            continue   # braced provider/scheme prefix → remote-delivery content
+        if miss["normalized"] in catalog_key_norms:
+            continue   # the catalog indexes the absent bundle itself
+        gate_failures.append(miss)
+    if gate_failures:
+        sample = ", ".join(m["reference"] for m in gate_failures[:8])
         raise tc.StageError(
-            f"{len(unresolved)} catalog reference(s) outside the roster "
+            f"{len(gate_failures)} FILE-FORM catalog reference(s) resolve "
+            f"neither to a roster relpath nor via hash-suffix stripping "
             f"(match key = case-folded basename after prefix stripping); "
             f"first few: {sample}", exit_code=1)
     if not keys_out:
@@ -286,10 +373,17 @@ def run(game_root: Path, extracted_root: Path) -> int:
     })
     log_util.write_json(out_dir / "settings.snapshot.json", {
         "verbatim": raw_settings, "parsed": settings_parsed})
+    danglers = details["danglingDependencyKeys"]
+    out_of_roster = details["outOfRosterFileReferences"]
     coverage = {
         "keysTotal": len(keys_out),
         "distinctBundlesReferenced": len(referenced),
         "bundlesUnreferenced": unreferenced,
+        # Revision 5 warning ledgers — honest absences, never fatal
+        "danglingDependencyKeys": {
+            "count": len(danglers), "sample": danglers[:20]},
+        "outOfRosterFileReferences": {
+            "count": len(out_of_roster), "sample": out_of_roster[:20]},
     }
     log_util.write_json(out_dir / "catalog-coverage.json", coverage)
 
@@ -300,6 +394,15 @@ def run(game_root: Path, extracted_root: Path) -> int:
         f"- keysTotal: {len(keys_out)}; distinctBundlesReferenced: "
         f"{len(referenced)} of {len(roster)} roster rows; "
         f"bundlesUnreferenced: {len(unreferenced)}",
+        f"- keySpaceResolutions: {details['keySpaceResolutions']} "
+        f"(dependencyKey strings resolved through the key-name index); "
+        f"hashSuffixMatches: {details['hashSuffixMatches']} "
+        f"(file-form references resolved after stripping `_<32-hex>`)",
+        f"- danglingDependencyKeys: {len(danglers)} "
+        f"(warning ledger, sample: {danglers[:8]})",
+        f"- outOfRosterFileReferences: {len(out_of_roster)} "
+        "(warning ledger — references to bundles absent from this install; "
+        "never fatal)",
     ]
     stats = decoded.get("meta") or {}
     if stats:
@@ -309,11 +412,17 @@ def run(game_root: Path, extracted_root: Path) -> int:
             "(multi-key entries put memberships above entries); "
             "distinctEntriesReferenced={distinctEntriesReferenced}; "
             "unreferencedEntries={unreferencedEntryCount}".format(**stats))
-    lines += [f"- UNRESOLVED-REFERENCE: {u}" for u in sorted(unresolved)]
+    lines += [f"- OUT-OF-ROSTER-REFERENCE: {m['reference']}"
+              for m in out_of_roster[:20]]
+    if len(out_of_roster) > 20:
+        lines.append(f"- OUT-OF-ROSTER-REFERENCE: …and "
+                     f"{len(out_of_roster) - 20} more (bounded ledger)")
     log_util.append_run_section(extracted_root, "harvest-catalog", lines)
     print(f"[harvest-catalog] keys={len(keys_out)} route={decode_route} "
           f"bundles_referenced={len(referenced)}/{len(roster)} "
-          f"unreferenced={len(unreferenced)}")
+          f"unreferenced={len(unreferenced)} "
+          f"dangling_keyspace_deps={len(danglers)} "
+          f"out_of_roster_refs={len(out_of_roster)}")
     return 0
 
 
