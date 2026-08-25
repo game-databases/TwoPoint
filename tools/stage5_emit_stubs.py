@@ -138,7 +138,11 @@ class DefinitionGate:
         while cur and cur not in seen:
             seen.add(cur)
             last = cur.rsplit(".", 1)[-1]
-            if "ScriptableObject" in last:
+            # CR#4: EXACT terminal-name match — only the engine base itself
+            # (…ScriptableObject). A substring test classified any class
+            # merely CONTAINING ScriptableObject in its name before the
+            # chain was ever consulted.
+            if last == "ScriptableObject":
                 return "definition"
             if last == "MonoBehaviour" and cur.startswith("UnityEngine."):
                 return "component"
@@ -149,8 +153,20 @@ class DefinitionGate:
         return "unknown"
 
 
+UNKNOWN_ADMISSION_EVIDENCE = (
+    "unverified base chain — class absent from the hierarchy or the chain "
+    "is broken; admitted as a definition candidate, counted as "
+    "admittedUnknown")
+
+
 def gate_candidate(cls: str | None, gate: DefinitionGate) -> tuple[bool, str]:
-    """(is_entity_candidate, evidence) for one dump's resolved class."""
+    """(is_entity_candidate, evidence) for one dump's resolved class.
+
+    An ADMITTED candidate carries evidence `""` only when its base chain is
+    VERIFIED (`definition`); a truthy evidence string on an admission marks
+    an UNKNOWN-chain admission (CR#4) — the caller counts it under its own
+    counter instead of leaving it indistinguishable from verified
+    definitions."""
     if not cls or cls == GENERIC_SCRIPT_CLASS:
         return False, ("unresolved-generic dump (m_Script never resolved) — "
                        "census row, not an entity")
@@ -165,7 +181,7 @@ def gate_candidate(cls: str | None, gate: DefinitionGate) -> tuple[bool, str]:
                        "chain) — never an entity")
     if verdict == "definition":
         return True, ""
-    return True, ""
+    return True, UNKNOWN_ADMISSION_EVIDENCE
 
 
 # ---------------------------------------------------------------------------
@@ -520,7 +536,8 @@ def run(game_root: Path, extracted_root: Path) -> int:
     id_absences: dict[str, dict] = {}
     payload_index: dict = {}
     counters = {"componentExcluded": 0, "mergedDuplicates": 0,
-                "disambiguatedDuplicates": 0, "identifierLess": 0}
+                "disambiguatedDuplicates": 0, "identifierLess": 0,
+                "admittedUnknown": 0}
     unparsed_stems = 0
     resolved_classes = 0
     generic_classes = 0
@@ -549,6 +566,12 @@ def run(game_root: Path, extracted_root: Path) -> int:
                 entry["bundles"].append(bundle)
             entry["objectCount"] += 1
             continue
+        if why_not:
+            # CR#4: verified-definition admissions carry empty evidence; a
+            # truthy evidence string on an ADMISSION marks an unknown-chain
+            # admission — its own counter (Rev 6 "every decision counted"),
+            # never folded into the verified population.
+            counters["admittedUnknown"] += 1
 
         fields_block = payload_fields(payload)
         kind, inferred, method = assign_kind(cls, family, fields_block)
@@ -766,7 +789,8 @@ def run(game_root: Path, extracted_root: Path) -> int:
         f"- identityPolicy: componentExcluded={counters['componentExcluded']}; "
         f"identifierLess={counters['identifierLess']} (ledgered+sampled); "
         f"mergedDuplicates={counters['mergedDuplicates']}; "
-        f"disambiguatedDuplicates={counters['disambiguatedDuplicates']}",
+        f"disambiguatedDuplicates={counters['disambiguatedDuplicates']}; "
+        f"admittedUnknown={counters['admittedUnknown']} (unverified chains)",
         f"- scriptClassResolution: resolved={resolved_classes} "
         f"generic/unresolved={generic_classes}",
         f"- absences: {len(absences)}; unmappedClasses: {len(unmapped_rows)}",
