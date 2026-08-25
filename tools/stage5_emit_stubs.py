@@ -744,6 +744,14 @@ def run(game_root: Path, extracted_root: Path) -> int:
         # Revision 6 amendment 3: a checked=0 run fails its own gate
         problems.append("identifierByteMatch checked=0 — the verifier "
                         "validated nothing against real dump shapes")
+    if mismatched:
+        # CR#1/Rev 6 amendment 3: the byte-match guard must FIRE — the
+        # acceptance is ALL ids byte-matching, tied to the exit code exactly
+        # like the stem-contract gate above (a "source dump not found" row
+        # counts as a mismatch too: unresolvable provenance is a failure).
+        # Examples stay in the run section below; this line fails the stage.
+        problems.append(f"identifierByteMatch violated: mismatches="
+                        f"{mismatched} of checked={checked}")
 
     distinct_entities = len({(r["kind"], str(r["id"])) for r in availability})
     lines = [
