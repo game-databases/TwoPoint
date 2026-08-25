@@ -207,6 +207,12 @@ def test_stage3_fallback_version_usage_recorded(tmp_path):
     ext = tmp_path / "ext"
     r = run_pack([str(game), "--only", "harvest-bundles"],
                  extracted_root=ext, timeout=6 * 3600)
+    if r.returncode == 1:
+        # arbiter-003 F10 / TR-G8: a stage that RAN and failed is a failure,
+        # never rendered as a skip — skip stays honest for environment
+        # gating only (rc==3 gate refusal / absent game dir).
+        pytest.fail("client-gated-heavy: harvest-bundles ran and exited 1:\n"
+                    f"{(r.stdout + r.stderr)[-300:]}")
     if r.returncode not in (0, 2):  # 2 = completed-with-ledger is fine here
         pytest.skip(f"client-gated-heavy: harvest rc={r.returncode}: "
                     f"{(r.stdout + r.stderr)[-300:]}")
@@ -250,6 +256,12 @@ def test_stage4_locale_files_and_stage5_availability(tmp_path):
     ext = tmp_path / "ext"
     # one full pass materializes every upstream output in the same tree
     r = run_pack([str(game)], extracted_root=ext, timeout=6 * 3600)
+    if r.returncode == 1:
+        # arbiter-003 F10 / TR-G8: a pipeline stage that RAN and failed is a
+        # failure, never rendered as a skip — skip stays honest for
+        # environment gating only (rc==3 gate refusal / absent game dir).
+        pytest.fail("client-gated-heavy: pipeline ran and exited 1:\n"
+                    f"{(r.stdout + r.stderr)[-300:]}")
     if r.returncode not in (0, 2):
         pytest.skip(f"client-gated-heavy: pipeline run failed rc={r.returncode}: "
                     f"{(r.stdout + r.stderr)[-300:]}")
@@ -292,6 +304,12 @@ def test_stage3_census_reconciliation_math_on_real_outputs(tmp_path):
     ext_root = tmp_path / "ext"
     r = run_pack([str(game), "--only", "harvest-bundles"],
                  extracted_root=ext_root, timeout=6 * 3600)
+    if r.returncode == 1:
+        # arbiter-003 F10 / TR-G8: a stage that RAN and failed is a failure,
+        # never rendered as a skip — skip stays honest for environment
+        # gating only (rc==3 gate refusal / absent game dir).
+        pytest.fail("client-gated-heavy: harvest-bundles ran and exited 1:\n"
+                    f"{(r.stdout + r.stderr)[-300:]}")
     if r.returncode not in (0, 2):  # 2 = completed-with-ledger is fine here
         pytest.skip(f"client-gated-heavy: harvest rc={r.returncode}: "
                     f"{(r.stdout + r.stderr)[-300:]}")
