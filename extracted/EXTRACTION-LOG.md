@@ -326,3 +326,11 @@ changes land in it in the same commit that changes the entrypoint.
 - OUT-OF-ROSTER-REFERENCE: {TPS.Core.Addressables.AddressablesManager.RuntimeDLCPathPreOrder}/dlc-preorder-items_assets_all.bundle
 - OUT-OF-ROSTER-REFERENCE: {TPS.Core.Addressables.AddressablesManager.RuntimeDLCPathPreOrder}/dlc-preorder-ui_assets_all.bundle
 - OUT-OF-ROSTER-REFERENCE: dlc-preorder-ui_assets_all_9f85177de2431cd0824a7462406341e6.bundle
+### 2026-08-25T09:26:42Z — harvest-bundles
+- exitCode: 0
+- unitypySource: venv-pip
+- bundlesAttempted: 176; unreadableBundles: 0
+- censusObjectsTotal: 2026658; exports: 167069; catalogueRows: 47939; objectErrors: 0; censusOnlyResidual: 1811650
+- carvedClassCensus: {'AnimationClip': 7985, 'AudioClip': 5624, 'Font': 24, 'Mesh': 19249, 'Shader': 213, 'Sprite': 6789, 'SpriteAtlas': 47, 'Texture2D': 7977, 'VideoClip': 31}
+- monoScriptIndex: {'scriptsIndexed': 1140, 'bundlesWithScripts': 1, 'distinctEntries': 1140}; monobehaviourScriptClass: resolved=166704 unresolved(generic)=10; decodeRoutes: embedded=165982 synthesis=0 residue=732
+- fallbackVersionUsedBundles: 176/176 (FALLBACK_UNITY_VERSION source: identity.json unityVersion 2020.3.47f1)
