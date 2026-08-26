@@ -20,3 +20,7 @@ extracted/**
 
 # fixture trees also get built at pack root by probe runs
 .fixture-trees/
+
+# orchestrator probe scratch (transient)
+/_proof_*
+/_scout2_*
