@@ -13,13 +13,26 @@ orchestrator ruling
 [`../rulings/orchestrator-piece03-scope.mdx`](../rulings/orchestrator-piece03-scope.mdx)
 (R1–R5). Where a number here conflicts with scout prose, **this file
 wins**; where this file is silent, **revision-2 report values win**.
-The disputed numerics (plot-label keys 139-not-136, unlockables 60,
-door-reachability fields absent from FloorArea dumps 80/80, the
-71/71-vs-13/71 validator id-space sweep) are resolved in favor of the
-scout's on-disk re-measurements as dual-stated in revision 2 — verifier
-variants are **not** reintroduced anywhere in this contract; the one
-genuinely open sweep divergence is carried as an explicit ledger row
-(M5), not silently settled.
+Fact-fidelity posture, stated per figure (audited against the r1→r2
+diff by [reviewer-piece03-r1](../reviews/reviewer-piece03-spec-r1.mdx)):
+on-disk revision 2 genuinely dual-states exactly TWO disputes — the
+FloorArea door-reachability check (80/80 dumps absent, "narrower than
+the verification note claimed") and the validator id-space sweep
+(71/71 RoomType-family vs the verifier's 13/71 integer sweep, both
+quoted; reconciled at run time per M5). It does NOT dual-state the
+other two: §9 still carries "139 keys match `plot`" and §2 still
+carries "unlockables | 60" as single statements, while verifyA 9.4 /
+2.10 hold explicit REFUTED verdicts measuring **136** / **52**. This
+spec therefore re-measured both itself (labeled spec-side probes,
+2026-08-26, method below) and adopts the VERIFIER values into its
+meta-record — **136** distinct registry termKeys match `plot`
+(case-insensitive == case-sensitive == 136, over all 15,675 registry
+rows), and unlockables spatial rows are **52** (14 GraphRect + 38
+IgnoreRotation, zero overlap, over all 415 rows). Neither figure feeds
+any contract below; they are recorded so no later reader inherits the
+unreconciled pair. All other load-bearing figures trace to revision 2
+exactly (reviewer audit table), and every seed in §2/M-subsections is
+declared measured-with-drift, never a silent constant.
 
 ---
 
@@ -88,7 +101,7 @@ wins — never a silent stale constant (piece-2 §2 precedent).
 |---|---|---|
 | F1 | Scenario dumps | **51** `TPC.LevelScenarioV2` JSONs at `harvest/monobehaviours/**/TPC.LevelScenarioV2/` — source-bundle split `configs_assets_all` 43 · `configs-levels-prefabs` 1 · `dlc-space-configs` 4 · `dlc-ghost-configs` 3 (bundle identity embedded in each filename, signed pathIds); on-disk sizes 914 B – 78.06 MB [S §3; A 3.1] |
 | F2 | Placed-item census | **23,004** total = 22,878 room `ItemRecords` + 86 `ArrivalItemRecords` + 7 `NonAreaItemRecords` + 25 `NavPlotWaypointRecords` + **8 `PlotActivationItemRecords`** [S §3; B A5] |
-| F3 | Other record families | **1,031** `PlotRecords` · **5,188** `RoomRecords` · **20** `StudentRecords` · **32** `StaffGenerationRecord.StaffRecords`; landscape tile maps spanning **2×2 … 432×216 cells over 4,070 plot layers** [S §3 headline] |
+| F3 | Other record families | **1,031** `PlotRecords` · **5,188** `RoomRecords` · **20** `StudentRecords` · **32** `StaffGenerationRecord.StaffRecords`; landscape tile maps: scout "2×2 … 432×216 cells over **4,070** plot layers" [S §3] vs verifiers "**4,082** TerrainMaps" incl. a 0×0 minimum [A 3.5; B #9]. Spec-side re-probe (2026-08-26, all 51 dumps walked) settles it: **4,082** layers, nonzero dims min (2,2), largest single map 432×216 (MoonBase — scout's max holds per-map), widest single 532×68, tallest single 212×356, **twelve 0-dim maps** — run-time measurement wins over every seed here |
 | F4 | LevelConfig layer | **28** `TPC.LevelConfig` dumps (`configs-levels-prefabs` 13 · `configs_assets_all` 9 · `dlc-space-configs` 4 · `dlc-ghost-configs` 2), 133 top-level keys each; `WorldBounds` extent (200,16,200) on **27**, blank template `Level` (128,10,128) with PlotCount 0 and NO `_ScenarioV2` GUID; `SpawnPoint` (−66,0,−24) on **26 of 28** — deviants: blank template x=−68, one PartyLevel variant y≈2.0865 [S §4; A 4.2/4.3] |
 | F5 | PlotCount generations | levels-prefabs generation: Tutorial 5 · Knight 7 · Mitton 9 · Gastronomy 10 · Magic 7 · PerformingArts 7 · Archaeology 7 · Robotics 10 · Sports 6 · Spy 10 · Party 5 · Final 1 (**base sum 84**); DLC LaunchPad 11 · MoonBase 15 · SpaceportCity 18 · Ghosts 15 ×2 twins; `configs_assets_all` generation disagrees ONLY for Robotics (10→5) and Spy (10→5); Party reads 5 in both [S §4; A 4.4; B #12] |
 | F6 | Scenario↔PlotCount divergence | LaunchPad **18** scenario plot records vs PlotCount 11; Mitton **38** vs 9 — records likely include unbuilt/merge variants (G10) [S §12 G10; B A5] |
@@ -96,13 +109,13 @@ wins — never a silent stale constant (piece-2 §2 precedent).
 | F8 | Join contract | Index `GameItem{,Lite,Variation}Definition` exports (**3,779 entries, 7 bundles**), resolve scenario item `Definition` PPtrs same-file: **22,210 / 22,996 = 96.58%**; residue **786**: LaunchPad 464 · Ghosts_Remix_V2 110 · Ghosts 69 · SpaceportCity 65 · MoonBase 46 · Wanted 14 · Landscaping_Level 6 · FreePlay_BuiltUp 6 · Unused_Ghosts_Remix 3 · Super_Built_Up 2 · JoTestLevel 1; **771 of 786 cross-file** (`m_FileID ≥ 1`, covered by `harvest/externals.jsonl`), **15 same-file misses** needing a wider definition-class set [S §3; A 3.7; B A2/#6] |
 | F9 | Corroboration rule | Join key is the PPtr `(m_FileID, m_PathID)` — **authoritative**. `_id` corroborates: equals the referencing `DefinitionID` on **22,200 of 22,210** resolved records; the **10 mismatches are Lite/Variation twin definitions** sharing one PPtr target. `_id` is NEVER the join key [S §3; B #7] |
 | F10 | Worked sample chain | pathId `522383310774550334` → dump `Item_Door_Building_Moonbase_Main`, `_id` −572923782 = the ItemRecord's `DefinitionID`; room WorldPosition x −152 + item LocalPosition x 17 ⇒ world −135 inside the room's tiles [S §3; A 3.8/3.9; B A2] |
-| F11 | Doors ship three ways | `TPC.ItemValidator_Door` **×54** dumped instances, ALL with populated `_entranceToRooms[]`/`_exitToRooms[]` — **71 distinct int refs** (sample `[-39494005, -1741033445]`) plus the validator's own `_id`; ×37 `AutomaticSlidingDoorsComponent` dumps; runtime ECS `ECDoor`/`ECDoorLogic(Automatic)`/`EDBDoorLink {Entity; float3 Position}` (dump.cs 859636, positions NOT shipped as data); **1,261 scenario door-item placements across 55 kinds** (`Item_Door_Wooden` ×232, `Item_Door_Internal` ×129) render directly on maps; door-reachability fields sit on all 1,654 placement-block GameItemDefinitions and do **NOT** appear on FloorAreaDefinition dumps (checked 80/80) [S §6, §11 V3; A 6.4; B A1a/#8] |
+| F11 | Doors ship three ways | `TPC.ItemValidator_Door` **×54** dumped instances, ALL with populated `_entranceToRooms[]`/`_exitToRooms[]` — **71 distinct int refs** (sample `[-39494005, -1741033445]`) plus the validator's own `_id`; ×37 `AutomaticSlidingDoorsComponent` dumps; runtime ECS `ECDoor`/`ECDoorLogic(Automatic)`/`EDBDoorLink {Entity; float3 Position}` (dump.cs 859636, positions NOT shipped as data); **1,261 scenario door-item placements across 55 kinds** (scout; verifier counted ~1,260–1,310 across **56** kinds [B A1a] — reconcile at run time via `extraKindSpellings[]`, M5) (`Item_Door_Wooden` ×232, `Item_Door_Internal` ×129) render directly on maps; door-reachability fields sit on all 1,654 placement-block GameItemDefinitions and do **NOT** appear on FloorAreaDefinition dumps (checked 80/80) [S §6, §11 V3; A 6.4; B A1a/#8] |
 | F12 | Validator id-space | The 71 refs have **zero intersection** with the 78 room-definition and 539 floor-area `_id`s and land fully in the `TPC.RoomType`(50)/`TPC.RoomTypeBuilding`(21) dump `_id` space — door validators gate by room TYPE, not room instance; the verification round's narrower integer sweep reported best match **13/71** — the two sweeps are reconciled at implementation time (M5 ledger), adjacency stays DERIVED-ONLY until then (G8) [S §6, §12 G8] |
 | F13 | Named plots | **12** of 1,031 plots carry `UsePlotDisplayName=1` + localized `DisplayName` termIDs (MoonBase "Rocket Pad 9", termID −1610423369); the rest read generic "Plot N" (G11) [S §12 G11; B A5/#19]. Spec-drafting probe: the 12 MoonBase rows SHARE one termID (−1610423369) — carry verbatim per row, resolve per row, never dedupe away |
 | F14 | Terrain decode inputs | `LandscapeRecord {AttributeMap, LandscapeObjectMap, TerrainMap}` rides each `PlotLayerRecords[]` entry beside `PlotLayerFlags` + `RoomRecordID`; `TerrainMap` = `{_width, _height, _saveData[]}` row-major ints (observed values 0/16/20 patterns; semantics unread, G7); `TPC.LandscapeBrushDatabase` ships ×3 dumps (base/dlc-space/dlc-ghost) whose `_definitions[]` are PPtrs into `TPC.LandscapeBrushDefinition` ×170 dumps carrying `_id`, `ToolType`, `Cost`, `DisplayName`, `HasNoTerrain`, `Deprecated` (spec-drafting on-disk probe 2026-08-26; re-measure at run time) |
 | F15 | Stub-layer negatives | Zero stub rows carry a world position (position-named leaves are rules/UI, none a coordinate triple) [A 2.1]; `ScriptableObjectWithID._id` absent from all 13,443 stub rows (G3) [B A1d]; `States.GraphRect.*` is GOOSE graph-editor UI pixels — excluded from anything map-shaped [S §2/§7] |
 | F16 | Scene layer absent | `Transform`/`GameObject` census-counted (125,382 Transforms across 26 scene bundles), NEVER dumped; zero engine-class rows in the export manifest (G1) [A 5.7; B A1c]. Consequence per ruling R2: G1 stays OUT of this stage (deferred; see §6) |
-| F17 | Imagery namespaces | Catalog: 56,331 addresses scanned, **0 minimap/radar-tile addresses** (client ships no map layer to extract); MetaMap/Metamap namespaces **1,140** addresses under case-insensitive `metamap` substring vs **1,094** under the probe's original case-sensitive `/MetaMap/|/Metamap/` predicate (both stated; selection rules are LOAD-BEARING and not yet reproducible from prose — M7 makes them reproducible); 117 loading-screen images; `imagelevel` strict-prefix 42 / full family 66; media-catalogue cross-check: environment-metamap 73 Texture2D, ui-level 49 Texture2D + 55 Sprites; `bytesEstimate` is a container footprint, NOT decoded size (G9, owner-gated) [S §10; A 10.1–10.5; B A1b/#20/#21] |
+| F17 | Imagery namespaces | Catalog: 56,331 addresses scanned, **0 minimap/radar-tile addresses** (client ships no map layer to extract); MetaMap/Metamap namespaces **1,140** addresses under case-insensitive `metamap` substring vs **1,094** under the case-sensitive `/MetaMap/|/Metamap/` predicate — spec-side re-probe (2026-08-26, current catalog) REPRODUCES both exactly (verifyA's snapshot measured exact-case at 909 [A 10.2]; divergence annotated DRIFT-expected in M7); 117 loading-screen images; `imagelevel` strict-prefix 42 / full family 66 (both reproduced by the pinned patterns in M7); the scout's "125 level image/icon/screenshot" remains UNREPRODUCED [A 10.4; B #21] — M7 pins a pattern whose fresh count is 66 and carries 125 as an annotated unreproduced claim; media-catalogue cross-check: environment-metamap 73 Texture2D, ui-level 49 Texture2D + 55 Sprites; `bytesEstimate` is a container footprint, NOT decoded size (G9, owner-gated) [S §10; A 10.1–10.5; B A1b/#20/#21] |
 | F18 | Locale label surface | `relinks/i2_term_registry.jsonl` 15,675 IDs → 15,672 keys (bidirectional diff vs locale-matrix == 0); label buckets `Levels/*` 934, `Rooms/*` 484, `Items/*` 1,983, `Courses/*` 932; entity-granular relation is `entity_locale.jsonl` [S §9; A 9.1/9.2] |
 
 **Spec-drafting structural probes (on-disk, 2026-08-26 — reproducible,
@@ -200,6 +213,10 @@ reconcile with a `DRIFT:` warning line on movement; an UNPARSEABLE
 declaration is exit 1 (loud — every downstream unit statement depends
 on it, silence would be a silent lie).
 
+Every JSON block in this file is an **illustrative shape, not
+normative data**: every leaf is re-measured at run time; only key SETS,
+enums, sort orders, and identity tuples are contract.
+
 **Output:** `extracted/maps/coordinate_law.json` —
 
 ```json
@@ -211,10 +228,14 @@ on it, silence would be a silent lie).
                       "values": {"None": -1, "Invalid": 0, "Default": 1,
                                   "Unbuildable": 2, "NoNavigation": 3}},
  "worldBounds": [{"levelName": "<m_Name>", "center": {"x": 0.0, "y": 0.0, "z": 0.0},
-                   "extent": {"x": 200.0, "y": 16.0, "z": 200.0}}],
+                   "extent": {"x": 200.0, "y": 16.0, "z": 200.0},
+                   "source": {"bundle": "<roster bundle>.bundle",
+                               "pathId": <signed int64>}}],
  "spawnPoints": [{"levelName": "<m_Name>",
                    "value": {"x": -66.0, "y": 0.0, "z": -24.0},
-                   "variant": false}],
+                   "variant": false,
+                   "source": {"bundle": "<roster bundle>.bundle",
+                               "pathId": <signed int64>}}],
  "projection": {"law": "map_px = (world_xz - campus_min) * scale",
                  "frame": "single shared world frame per campus",
                  "cellsPerWorldUnit": 0.5},
@@ -227,11 +248,45 @@ Rules:
   + blank template (128,10,128)); `spawnPoints` carries all 28 with
   `variant:true` marking the TWO deviants (blank template x=−68;
   PartyLevel variant y≈2.0865) — deviants are DATA rows, never errors.
+- Every positional row carries `source{bundle, pathId}` pointing at its
+  `TPC.LevelConfig` dump (AC5's provenance complement applies to this
+  artifact too).
 - One box ⇒ 400×400 m footprint, ±32 m vertical, = 200×200 cells at
   CellSize 2 — the derivation is stated in `projection`, computed from
   the parsed constants, never pasted.
+- **`maps/loadassets_read.json`** (F5 evidence artifact, emitted by THIS
+  sub-pass — named producer: CodeWriter implements it; the arbiter
+  consumes it as the R4/G6 PlotCount-generation round input):
+
+```json
+{"subject": "TPC.LevelConfig.LoadAssets",
+ "declaration": {"dumpCsLine": 994902,
+                  "typeDefIndex": 18952,
+                  "shape": "compiler-generated iterator state machine "
+                           "<LoadAssets>d__32 : IEnumerator<object>",
+                  "rvas": ["0x8DAE40", "0xAEF70"],
+                  "methodBodyAvailable": false,
+                  "note": "il2cppdumper emits declarations, not bodies"},
+ "readStatus": "resolved | inconclusive-from-dumpcs",
+ "instantiatedGeneration": "<levels-prefabs | configs-assets-all | null>",
+ "evidence": [],
+ "unblock": "decompile the d__32 MoveNext body (Ghidra/IDA pass over "
+            "GameAssembly.dll at the recorded RVA) or instrument via a "
+            "runtime probe; either is OUTSIDE stage maps",
+ "buildId": 20226581}
+```
+
+  The spec-drafting code-read already established what dump.cs CAN say:
+  the method exists ONLY as the `d__32` iterator declaration (line
+  994902) — no body, so "which generation instantiates" is NOT
+  conclusively readable from the decompiled tree today. The emitter
+  records that state honestly (`inconclusive-from-dumpcs` is a legal,
+  expected first-run value) instead of manufacturing a verdict.
+  FALLBACK while inconclusive: no `canonical` flag anywhere; both
+  generations ride `variantOf` (the ruling's documented preference
+  stays pending real evidence).
 - Run-section keys: `gridConstParsed / gridDrift / boundsRows=28 /
-  spawnRows=28 / spawnVariants=2`.
+  spawnRows=28 / spawnVariants=2 / loadassetsReadStatus`.
 
 ### M2 — Scenario emission (the G2 close)
 
@@ -267,11 +322,20 @@ its source bundle per the piece-1 family rule) + `buildId` +
  "buildId": 20226581}
 ```
 
-- `generation` ∈ `levels-prefabs | configs-assets-all`;
-  `variantOf` links a configs-assets-all row to its levels-prefabs twin
-  WHEN the pair shares `levelId` and agrees on PlotCount; DISAGREEMENT
-  (Robotics, Spy — F5) keeps BOTH rows, `variantOf` naming the twin,
-  neither deleted, neither overwritten. Canonical-generation PINNING is
+- `generation` is DERIVED from the source bundle family and its
+  vocabulary is CLOSED to the four measured config families:
+  `levels-prefabs | configs-assets-all | dlc-space-configs |
+  dlc-ghost-configs` (F4's split: 13 / 9 / 4 / 2 — all 28 rows
+  representable; the validator rejects any value outside the four, and
+  a fifth family appearing in a future axis is a DRIFT line + schema
+  revision, never an invented value). `variantOf` links twin rows that
+  share `levelId` across generations: the base pairs
+  (configs-assets-all ↔ levels-prefabs) AND the DLC pair (the Ghosts
+  15×2 twins across dlc-space-configs-era and dlc-ghost-configs
+  dumps); agreement on PlotCount is NOT required for the link —
+  DISAGREEMENT (Robotics, Spy — F5) keeps BOTH rows with `variantOf`
+  naming the twin, neither deleted, neither overwritten.
+  Canonical-generation PINNING is
   deferred to the arbiter with code-read evidence (R4/G6) — this schema
   makes that decision a one-field change (`canonical: true`), not a
   migration.
@@ -297,7 +361,7 @@ asserted per row (F2 decomposition).
  "plotUniqueId": 15,
  "persistentName": "Plot 15",
  "definitionId": -1165162262,
- "definitionPathId": null,
+ "definitionPptr": {"fileId": 0, "pathId": null},
  "bounds": {"center": {"x": -141.0, "y": -0.00016784668, "z": -92.0},
              "extent": {"x": 15.0, "y": 0.0, "z": 28.0}},
  "locked": 0, "initiallyBuilt": 0, "buildCost": 55000,
@@ -305,6 +369,8 @@ asserted per row (F2 decomposition).
  "usePlotDisplayName": 0,
  "displayNameTermId": null,
  "tileTypes": {"width": 15, "height": 28},
+ "tilesRef": {"artifact": "plots_tiletypes.jsonl",
+               "key": ["<scenarioName>", "<plotUniqueId>"]},
  "layerCount": 4,
  "plotActivationCount": 0,
  "source": {"bundle": "dlc-space-configs_assets_all.bundle",
@@ -313,10 +379,13 @@ asserted per row (F2 decomposition).
 ```
 
 - `bounds` is WORLD-space centre/extent, verbatim [S §3/§7].
-- `tileTypes` carries DIMS here; the bitmap itself lives in
-  `landscape_maps.jsonl`/`landscape_layers.jsonl` (M4) keyed by
-  `(scenarioName, plotUniqueId)` — one home per payload, no
-  duplication.
+- `definitionPptr` carries the plot's own `Definition` PPtr verbatim
+  (P2) — joinable later to FloorArea/PlotDefinition dumps exactly as
+  placements are; never dropped in favor of the numeric id alone.
+- `tileTypes` carries DIMS here; the TileTypes bitmap has its OWN home:
+  `plots_tiletypes.jsonl` keyed `(scenarioName, plotUniqueId)` (below).
+  The LandscapeRecord maps live separately in M4 — three distinct
+  payload families, one home each.
 - Identity `(scenarioName, plotUniqueId)` asserted UNIQUE; a measured
   collision demotes BOTH colliding rows to composite ids
   `<plotUniqueId>@r<recordIndex>` (additive-suffix precedent, piece-1
@@ -331,8 +400,10 @@ asserted per row (F2 decomposition).
  "anchor": {"x": 2, "y": 2},
  "worldPosition": {"x": -152.0, "y": -0.00016784668, "z": -116.0},
  "definitionId": -690496154,
- "definitionPathId": null,
+ "definitionPptr": {"fileId": 0, "pathId": null},
  "tiles": {"width": 9, "height": 20},
+ "tilesRef": {"artifact": "rooms_tiles.jsonl",
+               "key": ["<scenarioName>", "<uniqueId>"]},
  "plotLayer": 3,
  "childRoomRecordIds": [],
  "itemCount": 0,
@@ -343,10 +414,24 @@ asserted per row (F2 decomposition).
 - `anchor` is GRID CELLS; `worldPosition` is WORLD units — position of
   the room's tile-grid origin [S §7]. Both verbatim; the cell↔world
   law (×0.5) lives in `coordinate_law.json`, not in mutated values.
-- `tiles` carries dims; the occupancy bitmap rides `landscape_maps`
-  sidecars keyed `(scenarioName, uniqueId)` (M4).
+- `definitionPptr` carries the room's own `Definition` PPtr verbatim
+  (P3), same rule as plots.
+- `tiles` carries DIMS here; the occupancy bitmap has its OWN home:
+  `rooms_tiles.jsonl` keyed `(scenarioName, uniqueId)` (below) — NOT a
+  landscape artifact (distinct payload family per P6; reviewer F3).
 - Identity `(scenarioName, uniqueId)` asserted unique (same composite
   fallback as plots). Sort: `(scenarioName, uniqueId, recordIndex)`.
+
+**`rooms_tiles.jsonl`** — 5,188 rows, the room occupancy bitmaps'
+OWN home (reviewer F3): `{scenarioName, uniqueId,
+tiles: {_width, _height, _saveData[] verbatim row-major}, source,
+buildId}` — one row per `rooms.jsonl` row, same sort. Values verbatim
+(observed 0/1); no re-encoding, no packing.
+
+**`plots_tiletypes.jsonl`** — 1,031 rows, the plot TileTypes bitmaps'
+own home: `{scenarioName, plotUniqueId,
+tileTypes: {_width, _height, _saveData[] verbatim row-major}, source,
+buildId}` — one row per `plots.jsonl` row, same sort.
 
 **`item_placements.jsonl`** — 23,004 rows, ALL FIVE record families in
 ONE file (the planner consumes placements, not file seams):
@@ -385,8 +470,20 @@ ONE file (the planner consumes placements, not file seams):
   `{"world": {"x","y","z"}, "method": "roomWorldPlusLocal"}` — allowed
   ONLY for `room`-family rows, only when the owning room resolved, and
   it is EXCLUDED from dedup identity; verbatim fields remain the truth.
-- Identity `(scenarioName, recordFamily, owningRoomId, itemIndex)`
-  asserted unique. Sort by that tuple.
+- Identity is pinned PER FAMILY (reviewer F7 — `itemIndex` restarts
+  inside every per-record array, so one global key would collide):
+  - `room`: `(scenarioName, recordFamily, owningRoomId, itemIndex)`
+    (owning rooms are unique per scenario by the rooms identity rule);
+  - `plotActivation`: `(scenarioName, recordFamily, plotUniqueId,
+    itemIndex)` — activation arrays ride `PlotRecords[i]` (P2), so
+    `plotUniqueId` is part of the key;
+  - `arrival | nonArea | waypoint`: `(scenarioName, recordFamily,
+    itemIndex)` (one array per scenario).
+  Uniqueness asserted under the family's own key; a measured collision
+  demotes BOTH rows to composite ids with an additive `@r<index>`
+  suffix + `_absences.jsonl` row (never a silent merge). Global SORT
+  tuple: `(scenarioName, recordFamily, owningRoomId, plotUniqueId,
+  itemIndex)`, nulls sort first — total order over all families.
 - `resolution` is filled by M3; on first write it carries
   `{"status": "pending"}` and M3 rewrites the file once (single final
   state on disk — intermediate states never persist, temp+rename).
@@ -404,8 +501,8 @@ qualifications, qualificationLevels, rank, source, buildId}`. Sort
 `(scenarioName, staffIndex)`.
 
 Run-section keys: `scenariosRead=51 / plotRows / roomRows /
-placementRows / studentRows / staffRows / identityCollisions /
-axisCounts:{…}`.
+roomTilesRows / plotTileTypesRows / placementRows / studentRows /
+staffRows / identityCollisions / axisCounts:{…}`.
 
 ### M3 — Definition resolution (PPtr-authoritative join)
 
@@ -426,15 +523,23 @@ as an EMITTED FACT (never prose).
 2. **Resolution ladder** per placement `definitionPptr`:
    a. same-file index hit → `status:"resolved"`,
       `method:"pptr-export-index"`;
-   b. `fileId ≥ 1` → `externals.jsonl` → `cab_index.jsonl` →
-      `(bundle, pathId)` → index → `method:"pptr-externals-cab"`
-      (bridge consumption READ-ONLY; 771 of the 786 residue expected
-      here, F8);
+   b. `fileId ≥ 1` → `externals.jsonl` (bundle → fileId → CAB) →
+      `cab_index.jsonl` (CAB → candidate bundles + their serialized
+      files) → resolve THROUGH THE CAB to `(dstBundle, dstCab,
+      dstPathId)` → index → `method:"pptr-externals-cab"`. The CAB leg
+      is MANDATORY — piece-2 R2's rule inherited verbatim: Unity
+      pathIds are per-serialized-file and bundles carry several (222
+      files across 176 bundles), so `(bundle, pathId)` alone
+      under-determines a target; resolution evidence therefore carries
+      `extFileId` + `dstCab` beside the bundle/pathId pair (bridge
+      consumption READ-ONLY; 771 of the 786 residue expected here, F8);
    c. miss → `status:"unresolved"` + a row in
       `maps/_unresolved_placements.jsonl`
-      `{scenarioName, recordFamily, identity tuple, fileId, pathId,
-        reason, buildId}` sorted by the identity tuple — gapped
-      resolution is data, never silence.
+      `{scenarioName, recordFamily, identity tuple, extFileId, dstCab,
+        pathId, reason, buildId}` sorted by the identity tuple — the
+      same extFileId/dstCab debug evidence piece-2 carries, so a miss
+      is attributable to its exact serialized file — gapped resolution
+      is data, never silence.
 3. **Corroboration (never the key):** for each resolved placement,
    compare the target dump's `_id` to the record's `DefinitionID`:
    `corroboration` ∈ `match | twin-mismatch | absent`. Seed
@@ -470,7 +575,8 @@ corroborationTwinMismatch`.
 
 ### M4 — Landscape / terrain layer
 
-**`landscape_layers.jsonl`** — 4,070 rows (seed; drift wins), one per
+**`landscape_layers.jsonl`** — 4,082 rows (spec-side re-probe seed;
+scout said 4,070, verifiers 4,082 — F3; drift wins), one per
 `PlotLayerRecords[]` entry across all plots: `{scenarioName,
 plotUniqueId, layerIndex, plotLayerFlags, roomRecordId (nullable),
 dims:{terrain:[w,h], object:[w,h], attribute:[w,h]},
@@ -479,13 +585,18 @@ source, buildId}` — histograms are deterministic summaries (sorted
 keys), letting consumers profile a layer without opening payloads.
 Sort `(scenarioName, plotUniqueId, layerIndex)`.
 
-**`landscape_maps.jsonl`** — the SAME 4,070 layers with the three maps
-VERBATIM: `{scenarioName, plotUniqueId, layerIndex, terrainMap:
-{_width,_height,_saveData[]}, landscapeObjectMap: {…}, attributeMap:
-{…verbatim struct array…}, buildId}` — row-major order as shipped, no
-re-encoding, no packing. Big rows are accepted: this is the substrate
-(Principle zero); the layers file is the cheap index over it. Sort
-identical to the layers file (the pair is join-clean).
+**`landscape_maps.jsonl`** — the SAME 4,082 measured layers (seed;
+scout said 4,070 — F3 dual-state) with the three `LandscapeRecord`
+maps VERBATIM and NOTHING ELSE: `{scenarioName, plotUniqueId,
+layerIndex, terrainMap: {_width,_height,_saveData[]},
+landscapeObjectMap: {…}, attributeMap: {…verbatim struct array…},
+buildId}`. This file holds ONLY the per-layer LandscapeRecord payloads
+— room `Tiles` live in `rooms_tiles.jsonl`, plot `TileTypes` in
+`plots_tiletypes.jsonl` (M2; distinct payload families, one home each).
+Row-major order as shipped, no re-encoding, no packing. Big rows are
+accepted: this is the substrate (Principle zero); the layers file is
+the cheap index over it. Sort identical to the layers file (the pair is
+join-clean).
 
 **Terrain value-semantics decode (G7) — scoped sub-stage:**
 `tools/maps_util.py` correlates `TerrainMap._saveData` int values
@@ -528,7 +639,9 @@ that gates everything downstream.
 `{validatorId (_id verbatim), entranceToRooms[] verbatim,
 exitToRooms[] verbatim, allowEntranceInAnyBuilding,
 allowEntranceInAnyRoom, allowExitToAnyBuilding, allowExitToAnyRoom,
-invalidEntranceMessage, invalidExitMessage, invalidMessage,
+OPTIONAL: invalidEntranceMessage, invalidExitMessage, invalidMessage
+(present on probed dumps but not proven universal — emitted when
+present, omitted without failure otherwise),
 catalogAddress (resolved via the validator asset's own GUID → catalog,
 where resolvable), source, buildId}`. Sort `(validatorId)`. Anchor row:
 the MoonBase validator resolving to
@@ -542,7 +655,9 @@ for every placement whose RESOLVED `definitionName` matches the pinned
 predicate `^Item_Door_` (any additional door-kind spelling discovered
 — e.g. `Variation_Door_Building_*` — lands in `extraKindSpellings[]`
 inside `door_id_space.json` instead of silently widening the
-predicate). Census seeds: **1,261 placements / 55 kinds** — reconcile
+predicate). Census seeds: **1,261 placements / 55 kinds** (scout;
+verifier ~56 kinds [B A1a] — extra spellings route to
+`extraKindSpellings[]`, never a silent predicate widening) — reconcile
 with `DRIFT:`. Sort by the identity tuple.
 
 **`door_id_space.json`** — THE ledger row (G8):
@@ -558,7 +673,9 @@ with `DRIFT:`. Sort by the identity tuple.
                      "bestMatch": 13}},
  "reconciliation": "agreed | divergent",
  "slidingDoorComponents": 37,
- "instanceLinks": 0,
+ "instanceLinks": {"measured": 0, "note": "seed expected 0 — links "
+                    "validator refs to rooms.jsonl uniqueIds; drift-"
+                    "checked like every seed, never a constant"},
  "adjacencyStatus": "DERIVED-ONLY",
  "verdict": "validators gate by room TYPE; room-instance door graph "
             "unresolved pending id-space decode + G1 transforms",
@@ -572,12 +689,31 @@ with `DRIFT:`. Sort by the identity tuple.
   dumps carrying integer `_id`; the artifact records both results and
   whether they agree. `reconciliation:"divergent"` is the expected
   first-run state — divergence is DATA here, not a bug to smooth over.
-- **HARD GATE:** until `reconciliation:"agreed"` AND
-  `instanceLinks > 0`, NO artifact in this stage (or any consumer
-  built on it) may emit a door→room-instance edge. Room-to-room
-  adjacency stays tile-bitmap-contact DERIVED work for consumers; the
-  type-gating edges above are the only door relations shipped, marked
-  `inferred:true, method:"roomtype-id-space"` wherever they surface.
+- **HARD GATE (validator-ref → room-instance edges only):** until
+  `door_id_space.json.reconciliation == "agreed"` AND the MEASURED
+  `instanceLinks > 0`, no artifact may join a validator id/ref
+  (`validatorId`, `entranceToRooms[]`, `exitToRooms[]`) to a
+  `rooms.jsonl` `uniqueId` in ONE relation row. Scope is precise: this
+  gates VALIDATOR-REF GATING edges only — it explicitly does NOT touch
+  placement containment (`door_placement_index.jsonl`'s `owningRoomId`
+  column records which room a placed door sits in, is required data,
+  and stays). ENFORCEMENT IS IN-STAGE, not test-side:
+  `stage7_maps.py`'s emission path runs the assertion before every row
+  write across ALL M2–M7 emitters — any row matching the detection
+  rule below while the gate is closed aborts the sub-pass with exit 1
+  naming the offending emitter and row. The detection rule (pinned
+  mechanically, so AC11's check and the in-stage assertion are the
+  SAME rule): an emitted row contains both (a) any field whose value
+  or name references a validator ref from `door_validators.jsonl`
+  (`validatorId`, `entranceToRooms`, `exitToRooms`, `entranceRef`,
+  `exitRef`) and (b) a room-instance reference (`owningRoomUniqueId`,
+  `roomUniqueId`, or a value resolving against the `rooms.jsonl`
+  uniqueId set of the same scenario) — EXCEPT where the reference is
+  placement containment via `owningRoomId` on a placement-family row.
+  Room-to-room adjacency stays tile-bitmap-contact DERIVED work for
+  consumers; the type-gating annotation above is the only door
+  relation shipped, marked `inferred:true,
+  method:"roomtype-id-space"` wherever it surfaces.
 - Run-section keys: `validatorsEmitted=54 / validatorRefs=71 /
   doorPlacements / doorKinds / slidingDoorComponents=37 /
   reconciliation`.
@@ -619,25 +755,31 @@ ANY pinned predicate, PLUS the predicate census as data:
  "buildId": 20226581}
 ```
 
-plus a `meta` head row (or companion `maps/imagery_predicates.json` —
-pick ONE form, pinned: companion file) recording EACH predicate string
-VERBATIM beside its freshly computed count on THIS run's catalog:
+plus a companion `maps/imagery_predicates.json` (the pinned form — one
+file, not a head-row convention) carrying EVERY predicate as a literal
+machine-checkable pattern beside its freshly computed count on THIS
+run's catalog. ALL SEVEN are pinned here verbatim; a predicate without
+a literal pattern in this table is a spec defect, not an
+implementation choice. Counts below were MEASURED by spec-side probe
+on the current catalog (56,331 addresses, 2026-08-26):
 
-| Predicate (pinned spelling) | Seed count |
-|---|---|
-| `metamap-case-sensitive`: `/MetaMap/\|/Metamap/` | 1,094 |
-| `metamap-case-insensitive`: `metamap` substring | 1,140 |
-| `loadingscreen-images` | 117 |
-| `imagelevel-strict-prefix` | 42 |
-| `imagelevel-family` | 66 |
-| `level-image-icon-screenshot` | 125 |
-| `minimap-any-spelling` (`minimap\|mini-map\|mini_map\|compass\|worldmap`) | **0** |
+| id | Pinned pattern (literal, applied to each catalog address) | Fresh seed | Notes |
+|---|---|---|---|
+| `metamap-case-sensitive` | substring `/MetaMap/` OR `/Metamap/` (exact case) | **1,094** | reproduces scout exactly on this tree; verifyA's snapshot measured **909** [A 10.2] — divergence annotated, DRIFT-expected |
+| `metamap-case-insensitive` | casefold substring `metamap` | **1,140** | matches A 10.2 |
+| `loadingscreen-images` | casefold substring `loadingscreen` | **117** | matches S §10 / A 10.3; secondary projection recorded when image-extension-suffixed (`png/tga/jpg/jpeg`, casefold): 101 |
+| `imagelevel-strict-prefix` | exact-case substring `UI_Sandbox_T_imageLevel_` | **42** | reproduces A 10.4 strict prefix |
+| `imagelevel-family` | casefold substring `imagelevel` | **66** | reproduces A 10.4 family |
+| `level-image-icon-screenshot` | casefold regex `level.*(image\|icon\|screenshot)` | **66** | scout's **125** UNREPRODUCED [A 10.4; B #21]; fresh count ships with that annotation — never silently replaces |
+| `minimap-any-spelling` | casefold substring any of `minimap, mini-map, mini_map, compass, worldmap` | **0** | negative result preserved as first-class data [A 10.1; B A1b] |
 
 - The predicates ARE load-bearing: verification could not reproduce the
   scout's selections from prose (F17), so the artifact ships the exact
   patterns + their counts TOGETHER, making every future recount
-  reproducible. The zero-minimap negative result is PRESERVED as a
-  first-class row — it is the finding that keeps paths A/B dead.
+  reproducible — including where the fresh count disagrees with a
+  historical figure (both travel in the file; DRIFT lines name them).
+  The zero-minimap negative result is PRESERVED as a first-class row —
+  it is the finding that keeps paths A/B dead.
 - Rows sorted by `address`. `mediaCatalogueClasses` cross-references
   `media-catalogue.jsonl` rows for the same bundle/address where
   present (environment-metamap 73 Texture2D et al., F17).
@@ -674,15 +816,18 @@ extracted/
 ├── EXTRACTION-LOG.md               # += maps run sections (append-only)
 ├── maps/                           # stage `maps` SOLE writer (was .gitkeep placeholder)
 │   ├── coordinate_law.json         # M1: parsed constants + bounds + spawns + projection law
-│   ├── levels.jsonl                # M2: 28 LevelConfig rows
+│   ├── loadassets_read.json        # M1: R4/G6 evidence artifact (named producer; honest inconclusive state legal)
+│   ├── levels.jsonl                # M2: 28 LevelConfig rows (4-generation closed enum)
 │   ├── scenarios.jsonl             # M2: 51 scenario header rows
 │   ├── plots.jsonl                 # M2: 1,031 plot rows (world-space bounds)
+│   ├── plots_tiletypes.jsonl       # M2: 1,031 TileTypes bitmaps verbatim
 │   ├── rooms.jsonl                 # M2: 5,188 room rows (anchors + world positions)
+│   ├── rooms_tiles.jsonl           # M2: 5,188 Tiles occupancy bitmaps verbatim
 │   ├── item_placements.jsonl       # M2: 23,004 rows across 5 record families
 │   ├── students.jsonl              # M2: 20 scenario-placed students
 │   ├── staff_records.jsonl         # M2: 32 StaffGenerationRecord.StaffRecords
-│   ├── landscape_layers.jsonl      # M4: 4,070 index rows (dims + histograms)
-│   ├── landscape_maps.jsonl        # M4: same 4,070 layers, maps verbatim
+│   ├── landscape_layers.jsonl      # M4: 4,082 index rows (dims + histograms)
+│   ├── landscape_maps.jsonl        # M4: same 4,082 layers, LandscapeRecord maps verbatim
 │   ├── terrain_decode.json         # M4: value-semantics decode (decoded|partial|blocked)
 │   ├── door_validators.jsonl       # M5: 54 validators verbatim
 │   ├── door_placement_index.jsonl  # M5: 1,261-placement projection (no coord dup)
@@ -722,11 +867,13 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
    | `scenarios.jsonl` | 51 |
    | `plots.jsonl` | 1,031 |
    | `rooms.jsonl` | 5,188 |
+   | `rooms_tiles.jsonl` == `rooms.jsonl` row count | 5,188 |
+   | `plots_tiletypes.jsonl` == `plots.jsonl` row count | 1,031 |
    | `item_placements.jsonl` | 23,004 (= 22,878 + 86 + 7 + 25 + 8) |
    | `students.jsonl` / `staff_records.jsonl` | 20 / 32 |
-   | `landscape_layers.jsonl` == `landscape_maps.jsonl` | 4,070; dims min 2×2, max 432×216 |
+   | `landscape_layers.jsonl` == `landscape_maps.jsonl` | 4,082 (re-probe seed); nonzero dims min (2,2), largest single map 432×216, twelve 0-dim maps DECLARED (a 0-dim row is data, not a violation) |
    | `door_validators.jsonl` | 54 |
-   | `door_placement_index.jsonl` | 1,261 rows / 55 kinds |
+   | `door_placement_index.jsonl` | 1,261 rows / 55 kinds (verifier ~56 — F8; extras ledger) |
    | `named_plots.jsonl` | 12 |
 
 3. **Coordinate law:** `coordinate_law.json.grid.cellSize == 2.0` AND
@@ -783,9 +930,14 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
     proves it); grep-fail any hardcoded campus/DLC/level-name literal
     in `tools/stage7_maps.py` + `tools/maps_util.py`.
 11. **Door hard gate:** while `door_id_space.reconciliation !=
-    "agreed"`, a grep over ALL emitted `extracted/maps/**` finds ZERO
-    rows asserting a door→room-instance relation (the type-gating
-    annotation and the placement pins are the only door rows).
+    "agreed"` OR measured `instanceLinks == 0`, the M5 detection rule
+    (pinned verbatim in M5 — validator-ref field + room-instance
+    reference in one relation row, placement containment excepted)
+    holds for EVERY emitted row; the check runs twice: as the STAGE'S
+    OWN pre-write assertion (exit 1 on violation, emitter named) and
+    as this post-hoc audit over `extracted/maps/**` using the same
+    rule. The type-gating annotation and the placement pins are the
+    only door rows.
 
 ---
 
@@ -826,7 +978,7 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
 
 | Question | Resolution route |
 |---|---|
-| Canonical PlotCount generation when Robotics/Spy variants disagree (G6/R4) | **Arbiter**, with the required code-read evidence (`LevelConfig.LoadAssets` — which generation instantiates at runtime); orchestrator preference: pin the buildId-20226581-shipping generation, keep the other as `variantOf` history. Schema already carries both rows — the ruling flips one field |
+| Canonical PlotCount generation when Robotics/Spy variants disagree (G6/R4) | **Arbiter**, consuming `maps/loadassets_read.json` as its round input — NAMED PRODUCER: CodeWriter implements the M1 emitter; the spec-drafting read already fixed what dump.cs can say (`<LoadAssets>d__32` iterator declaration only, line 994902, no method body), so first-run state is honestly `inconclusive-from-dumpcs`; a conclusive body-read (Ghidra/IDA over GameAssembly.dll at RVA 0x8DAE40) is OUTSIDE stage maps and routes to the orchestrator. FALLBACK while inconclusive: no canonical flag anywhere — both generations ride `variantOf`, matching the orchestrator preference to pin only on real evidence |
 | Reference frame of non-room item families (`arrival`/`nonArea`/`waypoint`/`plotActivation` LocalPosition space) | Implementation verifies against plot bounds during M3 (OQ2); if unprovable, rows stay verbatim-only + `_absences.jsonl` row — never guessed |
 | Door id-space sweep divergence (71/71 RoomType-family vs 13/71 best-match) | M5 re-runs BOTH sweeps mechanically and records agreement status; if still divergent after one reconciliation pass, route to arbiter with both methodologies quoted |
 | Whether scenario geometry ships as a viewer-facing layer or stays planner substrate | SETTLED by ruling R1: both, additively — no further decision needed |
@@ -839,33 +991,50 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
 - Fixture tree: `tests/build_fixture_tree.py --stage maps` materializes
   the §3 upstream set — TWO tiny scenario dumps (one carrying
   plot/room/item/student/staff/waypoint records including a
-  cross-file PPtr + an `_id`-mismatch twin; one near-empty), a
-  LevelConfig PAIR (normal + blank-template `Level`), TWO door
-  validator dumps, one brush database + two brush definitions, minimal
-  `catalog.json`, `export-manifest.jsonl`, `externals.jsonl`, bridge
-  indexes, `i2_term_registry.jsonl`, `bundle-roster.jsonl`,
-  `identity.json`, and a `dump.cs` SLICE containing the `GridCoord`
-  const block + `EPlotTileType`.
+  cross-file PPtr + an `_id`-mismatch twin AND **two plots each
+  carrying a PlotActivationItemRecords array** — the F7 collision
+  case; one near-empty), THREE LevelConfig dumps covering three of the
+  four generation families (levels-prefabs, configs-assets-all,
+  dlc-ghost-configs incl. a twin pair) so the closed enum is exercised
+  beyond base, TWO door validator dumps, one brush database + two
+  brush definitions, minimal `catalog.json`, `export-manifest.jsonl`,
+  `externals.jsonl`, bridge indexes, `i2_term_registry.jsonl`,
+  `bundle-roster.jsonl`, `identity.json`, and a `dump.cs` SLICE
+  containing the `GridCoord` const block + `EPlotTileType` + a
+  `<LoadAssets>d__NN` iterator declaration (no body) for the
+  loadassets_read emitter leg.
 - M1: constant parser over the slice (happy + DRIFT + unparseable →
   exit-1 fixture); bounds/spawn variant classification (28-row
-  synthetic with the two deviants).
-- M2: per-family schema validators (EXACT key sets; enums frozen);
-  identity-uniqueness + composite-`@r` fallback; record-family count
-  decomposition assertion; float round-trip stability
-  (`-0.00016784668`); `derived`-block gating (rejected on non-room
-  families); `_levelRecord` vs top-level payload dispatch (P1).
+  synthetic with the two deviants) incl. per-row `source` provenance;
+  loadassets_read emitter (declaration found, body absent →
+  `inconclusive-from-dumpcs` is emitted, never a verdict).
+- M2: per-family schema validators (EXACT key sets; enums frozen —
+  levels generation validated against ALL FOUR family values and a
+  fifth value REJECTED); identity-uniqueness PER FAMILY incl. the
+  two-plots-with-activation-arrays fixture colliding under any global
+  key but passing under the pinned per-family key; composite-`@r`
+  fallback; record-family count decomposition assertion; float
+  round-trip stability (`-0.00016784668`); `derived`-block gating
+  (rejected on non-room families); `_levelRecord` vs top-level payload
+  dispatch (P1); rooms_tiles / plots_tiletypes emitters (row-count
+  equality with their parent files, verbatim `_saveData`, same sort).
 - M3: index build incl. signed-pathId stems; resolution ladder
-  (same-file hit / externals→cab hit / miss→ledger); class-widening
-  sweep (a residual PPtr resolving ONLY via a widened class);
-  corroboration classifier (match / twin-mismatch / absent);
-  `join_report` arithmetic exactness on fixtures.
+  (same-file hit / externals→cab hit WITH `extFileId`+`dstCab` carried
+  / miss→ledger carrying the same fields); class-widening sweep (a
+  residual PPtr resolving ONLY via a widened class); corroboration
+  classifier (match / twin-mismatch / absent); `join_report`
+  arithmetic exactness on fixtures.
 - M4: layers/maps pairing (row-count equality, sort identity);
   histogram determinism; decode-status machine (proven→partial→blocked
   transitions; blocked emits `unblock`).
-- M5: validator emitter verbatim; predicate-driven placement
-  projection (no coordinate duplication by construction);
-  id-space dual-sweep recorder; HARD-GATE grep fixture (a would-be
-  door→instance row FAILS while gate closed).
+- M5: validator emitter verbatim (message fields optional — a dump
+  without them validates); predicate-driven placement projection
+  (no coordinate duplication by construction); id-space dual-sweep
+  recorder; HARD-GATE IN-STAGE fixture — the emitter path itself
+  refuses a synthetic gated row (validator ref + room uniqueId in one
+  relation) with exit 1 while `instanceLinks.measured == 0`, and
+  ACCEPTS it once the ledger reads agreed + links > 0; placement
+  containment rows (`owningRoomId`) pass in BOTH states.
 - M6: named-plot emitter incl. shared-termID rows; registry-hit and
   miss paths (miss → absence row, never drop).
 - M7: predicate counter over a synthetic catalog (counts exact per
@@ -883,18 +1052,25 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
 install):**
 
 - Row-count table of AC2 holds on the real tree (±DRIFT).
+- **levels↔scenario GUID chain:** ≥27 of 28 `scenarioGuid`s resolve to
+  catalog addresses; every resolved row's `campaignPart` equals the
+  `Part*` path segment of its resolved address; the blank-template row
+  carries null guid/address/part (reviewer F13 — a broken resolver
+  cannot ship green).
 - AC3/AC4 chains verbatim: CellSize parse, spawn deviants, MoonBase
   placement chain, LaunchPad-464 residue head, corroboration split.
-- `landscape_layers` == `landscape_maps` row count == 4,07X fresh
-  measurement; dims extremes 2×2 and 432×216 present.
+- `landscape_layers` == `landscape_maps` row count == fresh
+  measurement; extremes present per F3 (largest single map 432×216;
+  widest 532; tallest 356-height map; twelve 0-dim rows).
 - `door_validators` contains the Moonbase_To_Exterior anchor with its
   catalog address; `door_placement_index` census within DRIFT of
   1,261/55; `door_id_space` carries BOTH sweep results.
 - `named_plots` 12 rows resolve through the real registry (termID
   −1610423369 → non-empty Term key).
-- Imagery predicate counts reproduce F17's pairs on the real catalog
-  (1,094/1,140/117/42/66/125/0 ±DRIFT) with the zero-minimap row
-  intact.
+- Imagery predicate counts reproduce the pinned patterns' fresh seeds
+  on the real catalog (1,094 / 1,140 / 117 / 42 / 66 / 66 / 0 ±DRIFT)
+  with the zero-minimap row intact and the scout's unreproduced 125
+  carried as annotation, never as a count.
 - Idempotence: `--only maps` double-run hash-equal on the real tree.
 
 ---
@@ -903,6 +1079,57 @@ install):**
 
 | Rev | Date | Status | Grounding |
 |---|---|---|---|
-| **1** | 2026-08-26 | Initial registration — pending Reviewer → Arbiter pass (no build entry until arbiter approval, promptForDB PrepareTask step 5) | Scout report piece-03 **rev 2** (M1–M5 corrections applied); verifyA PASS-WITH-CORRECTIONS; verifyB PASS-WITH-CORRECTIONS; orchestrator ruling R1–R5 (2026-08-26); format template per piece-01 (Rev 7 state) + piece-02; on-disk structural probes P1–P6 re-verifiable at run time |
+| **2** | 2026-08-26 | Applies ALL reviewer-piece03-r1 findings (F1–F13) — pending Arbiter pass (no build entry until arbiter approval, promptForDB PrepareTask step 5) | Same fact base as Rev 1 PLUS fresh labeled spec-side probes (2026-08-26): plot termKeys 136; unlockables 52 (14+38 disjoint); landscape layers 4,082 incl. twelve 0-dim maps, per-map extremes; all seven imagery predicates measured on the current catalog; LoadAssets read = iterator declaration only |
+| **1** | 2026-08-26 | Superseded by Rev 2 | Scout report piece-03 **rev 2** (M1–M5 corrections applied); verifyA PASS-WITH-CORRECTIONS; verifyB PASS-WITH-CORRECTIONS; orchestrator ruling R1–R5 (2026-08-26); format template per piece-01 (Rev 7 state) + piece-02; on-disk structural probes P1–P6 re-verifiable at run time |
+
+**Rev 2 change list (finding → change):**
+
+- **F1 (CRITICAL):** preamble rewritten per-figure — states what r2
+  actually dual-states (FloorArea 80/80; 71/71-vs-13/71) and what it
+  does not (139/60 single-stated against verifyA REFUTED verdicts);
+  adopts verifier values 136/52 into the meta-record on the strength
+  of this spec's own re-measures, explicitly marked as feeding no
+  contract below.
+- **F8:** divergent seeds dual-stated AT their F-lines: terrain layers
+  (4,070 S / 4,082 A+B / 4,082 re-probe + per-map extremes + twelve
+  0-dim maps), door kinds (55 S / ~56 B) routed through
+  `extraKindSpellings[]`.
+- **F2:** `levels.jsonl` generation enum closed over ALL FOUR measured
+  config families (13/9/4/2); `variantOf` defined for base pairs AND
+  the Ghosts ×2 DLC twins.
+- **F3:** bitmaps given real homes — new `rooms_tiles.jsonl`
+  (5,188 rows) + `plots_tiletypes.jsonl` (1,031 rows); landscape_maps
+  scoped to LandscapeRecord payloads only; cross-refs, §4 layout,
+  AC2, and §8 legs updated.
+- **F4:** all seven imagery predicates pinned as literal patterns with
+  fresh counts measured on the current catalog (1,094 exact-case now
+  REPRODUCES; scout's unreproduced 125 carried as annotated claim
+  beside the pinned pattern's 66).
+- **F5:** R4/G6 evidence attached as an emitted artifact —
+  `maps/loadassets_read.json`, named producer (CodeWriter implements,
+  arbiter consumes), honest `inconclusive-from-dumpcs` first-run state
+  grounded in the actual dump.cs read (iterator declaration only),
+  documented fallback (no canonical flag until evidence).
+- **F6:** HARD GATE enforced IN-STAGE (pre-write assertion, exit 1,
+  emitter named) with ONE mechanically pinned detection rule shared by
+  stage and audit; `instanceLinks` declared a measured drift-checked
+  seed; gate scoped to validator-ref→room-instance edges, placement
+  containment (`owningRoomId`) explicitly preserved.
+- **F7:** placement identity keyed PER FAMILY (plotActivation gains
+  `plotUniqueId`); global sort tuple with nulls-first ordering;
+  collision fixture added.
+- **F9:** `coordinate_law.json` bounds/spawn rows carry
+  `source{bundle, pathId}`.
+- **F10:** cross-file resolution inherits piece-2's CAB discipline —
+  resolve through the CAB, carry `extFileId`/`dstCab` in evidence AND
+  unresolved-ledger rows.
+- **F11:** every JSON example stamped illustrative/non-normative;
+  door-validator message fields marked optional; scenario root keys /
+  layerCount / bundle spellings remain re-measured-at-runtime leaves.
+- **F12:** plots and rooms emit `definitionPptr {fileId, pathId}`
+  verbatim like placements do.
+- **F13:** client-gated leg added for the levels↔scenario GUID chain
+  (≥27/28 resolve; campaignPart == Part* segment; blank-template
+  nulls).
 
 §END
