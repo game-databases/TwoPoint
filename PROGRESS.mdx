@@ -43,6 +43,25 @@ data; extraction runs in place).
 | E | Visual critic loop vs references + e2e smoother waves | gated behind D |
 | F | FRAMEWORK §8 launch gates + site-ready verification | last |
 
+## Execution waves (parallelization plan)
+
+Owner directive 2026-08-26: the TODO board (56 points) doubles as the
+master plan; every wave names what launches **together** so subagent
+utilization stays maxed. Dependencies are wired on the session board
+(`blockedBy`); this table is the durable copy. Rule of thumb: whenever a
+lane waits on an owner ruling or a provider quota, spin up the next
+unblocked lane instead of idling.
+
+| Wave | Tasks | Parallelism notes |
+|---|---|---|
+| **W-now** | #56 resume 429-parked scouts · #33 `.pytest_tmp` guard fixer · #34 logic-layer scout | three independent lanes, disjoint files — launch together |
+| **W-C-tail** | #10 contract pinning ∥ #35 media pipeline ∥ #36 locale coverage proof ∥ #38 search corpus | four-way batch, no shared outputs; **#11 PROOF.md runs LAST** — it consumes all four |
+| **W-D-foundation** | #12 PrepareTask pass 2 → (#13 design tokens ∥ #39 site scaffold) → #14 shadcn library | pass 2 gates the pair; tokens & scaffold touch disjoint trees → parallel; #14 needs #13 |
+| **W-D-build** | #40 home/hub ∥ #41 entity templates ∥ #42 compare ∥ #43 calculators ∥ #16 owned map ∥ #23 search UI ∥ #25 planner | up to **7 parallel build lanes**; each piece still goes through the full Scout→…→Arbiter pipeline |
+| **W-D-polish** | #44 imagegen ∥ #45 a11y ∥ #46 perf budget ∥ #47 OG cards ∥ #48 provenance ∥ #49 mobile ∥ #24 guides/news ∥ #17 SEO/AEO ∥ #18 builder polish ∥ #22 i18n UI | cross-cutting ten-lane band once build lanes land their skeletons |
+| **W-E** | #19 e2e smoother ∥ #50 side-by-side critic wave ∥ #51 browser matrix | verification trio in parallel; critics see the RUNNING site |
+| **W-F** | #52 deploy pipeline ∥ #53 content QA (13 locales) → #21 launch gates | gates consume both lanes' outputs |
+
 ## Agent roster
 
 | Agent | Role piece | State |
