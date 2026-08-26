@@ -93,7 +93,7 @@ text anywhere — §4). Presence across locales, measured per key:
 
 | # locales holding the key | keys |
 |---:|---:|
-| 13 (all) | 15,369 (98.11%) |
+| 13 (all) | 15,369 (**98.10%** of the union; 98.07% on the 15,672-key registry universe) |
 | 12 | 46 |
 | 11 | 27 |
 | 10 | 1 |
@@ -132,13 +132,16 @@ Quirks worth recording:
   (e.g. `UI/Frontend/SetScreenBoundry`, `Advisor/Advisor_Student_Dropout_Warning_Title`).
 - A 15-key cluster exists only as `en`+`ko`
   (`Meta/CareerGoals/*` — club/career-goal strings).
-- **Partial translation inside a single locale**: Russian carries 297
-  `Items/*_Name` values byte-identical to English while other locales
-  translate them (e.g. `Items/Library/Reception_Giant_Name` =
-  “Giant Library Reception” in both en and ru; de/fr/it differ).
-  Conversely, of 905 `Items/*_Name` keys, **zero** are identical-to-en in
-  every locale — item display names are genuinely translated corpus.
-  Presence ≠ quality; coverage stats must count cells, and
+- **Untranslated inside a single locale**: Russian carries **301**
+  `Items/*_Name` values byte-identical to English; of those, **297**
+  differ from English in de — i.e. other locales translate them, so this
+  is genuinely untranslated ru text, NOT proper-noun identity (all 301
+  byte-equal their Latin-script English strings — zero Cyrillic; e.g.
+  `Items/Library/Reception_Giant_Name` = “Giant Library Reception” in
+  both en and ru while de/fr/it differ). Conversely, of 905
+  `Items/*_Name` keys, **zero** are identical-to-en in every locale that
+  holds them — item display names are genuinely translated corpus
+  overall. Presence ≠ quality; coverage stats must count cells, and
   identical-to-pivot rows should be surfaced separately (§8 G6).
 
 ### §2.2 Entity-granular plane — the 9 stub kinds
@@ -169,7 +172,8 @@ Per-locale coverage of *joined* entities (any-term present / all-terms
 present / first-name-term identical-to-en), computed across all 13
 locales × 9 kinds; representative rows:
 
-- **config** (3,178 ents): any 99.0% / full 98.0% in every non-en locale;
+- **config** (3,178 ents): any 99.0% / full 98.0% across non-en locales
+  except ja at 98.8% / 97.8%;
   name==en ranges 7.35% (zh) – 30.95% (ru), 18.39% (ja).
 - **item** (2,035): any/full 100.0% everywhere except **ja 99.2%** and
   ru 99.2%; name==en ≤1.4% except ja 10.96% and ru 23.03%.
@@ -187,10 +191,14 @@ locales × 9 kinds; representative rows:
 **Which kinds/kernels are english-only even inside the client** (honest
 holes, measured):
 
-1. `campus-level` — all 17 rows carry plain English `Name` literals
+1. `campus-level` — 13 of 17 rows carry plain English `Name` literals
    (“All buildings”, “Blank Level”, “Test Level”, “Mark’s Test
-   Scenario”, …) and no LocalisedString reference. Genuinely
-   english-only in the client.
+   Scenario”, …); the four without any `Name` field are
+   `Config_UniversityLevel`, `Config_UniversityLevel_Puzzle_Remix`,
+   `Config_UniversityLevel_ZeroMoney_Remix`,
+   `LevelScenarioV2_FreePlay_City`. Zero LocalisedString references and
+   zero localized twins anywhere in the corpus — genuinely english-only
+   in the client.
 2. `unlockable` — 372 of 415 rows have no term join; 41 of those carry
    non-empty plain English `Name` literals (“Cupid Relationship”, “Idle”);
    only 3 of those literals coincidentally equal some EN term text.
@@ -231,7 +239,7 @@ holes, measured):
   key resolves in the registry.
 - Orphans direction A: **9,148 registry rows (9,146 distinct keys) are
   never referenced by any stub entity** — the free game-text corpus:
-  `UI` 1,688, `ArchetypeNames` 1,535, `Names` 908, `VO` 901, `Levels`
+  `UI` 1,686, `ArchetypeNames` 1,535, `Names` 908, `VO` 901, `Levels`
   773, `SubGoals` 516, `Challenge` 477, `FlavourTraits` 400, … These are
   advisor lines, tannoy/radio VO, objectives, challenge text — usable by
   guides/news/tools, outside entity pages.
@@ -279,17 +287,23 @@ Measured facts:
    TextAssets decoding to ~15.4k rows with only 215–301 empty cells
    skipped per locale (en just 7). Untranslated cells are *absent or
    empty*, never filled with another language inside the bundle.
-4. **Client runtime fallback is not provable at the data layer.**
-   Method bodies don’t survive Il2CppDumper (declarations only);
-   `dump.cs` confirms the I2.Loc runtime surface exists
-   (`LanguageSource`, `LanguageSourceData`, `LanguageSourceAsset`,
-   `LocalizationReader`, `LocalizationManager` incl.
-   `LoadLanguageAsync`/`SetLanguageAndCodeAsync`, `Localize`
-   MonoBehaviour) but contains no `GetTermTranslation` /
-   `FallbackLanguage` symbol to quote. What the data does prove: keys
-   missing from a locale’s bundle demonstrably render in-game in that
-   language, so resolution happens through a runtime mechanism outside
-   these tables. We do **not** assert its exact order.
+4. **Client fallback machinery exists and is quotable; only its ORDER
+   stays unprovable.** `dump.cs` declares the I2.Loc fallback API
+   verbatim: `LanguageSourceData.TryGetFallbackTranslation(TermData,
+   out string Translation, int langIndex, string
+   overrideSpecialization, bool skipDisabled)` (~L546887),
+   `LoadLanguageData(int languageIndex, string langData, …, bool
+   useFallback, …)` (~L546872), and `LocalizationManager` static
+   `GetTranslation(Term|TermID, …)` / `TryGetTranslation(…)` (~L547700+),
+   beside the runtime classes (`LanguageSource`, `LanguageSourceData`,
+   `LanguageSourceAsset`, `LocalizationReader`, `LocalizationManager`
+   with `LoadLanguageAsync`/`SetLanguageAndCodeAsync`, `Localize`
+   MonoBehaviour). Declarations carry no bodies, so the fallback ORDER —
+   which language wins when the requested cell is empty — remains
+   unproven at the data layer. What the data does prove: keys missing
+   from a locale’s bundle demonstrably render in-game in that language,
+   so resolution runs through exactly this declared fallback path. We do
+   not assert its priority order.
 5. **Our artifacts preserve whatever the client does**, because of the
    skip-empty discipline: no locale table ever borrows another locale’s
    text, and the matrix records absence truthfully. The site-side
@@ -314,8 +328,9 @@ Measured inventory of both sides:
 - 15,666-key string corpus, 52 top-level namespaces; entity-visible text
   flows through 10,964 hard `entity_locale` edges onto 5,850 entities.
 - Game-UI namespaces reusable as game-faithful labels on our pages:
-  `UI` (2,214 keys — only 533 referenced by entities; 1,688 free),
-  `Input` (164), `UI_Settings` source (187), `General` (143). The
+  `UI` (2,218 registry keys — 532 referenced by entities; 1,686 free;
+  2,214 of them carry text in the emitted tables), `Input` (164),
+  `UI_Settings` source (187), `General` (143). The
   piece-2 UI-link census additionally found **11,312 `I2.Localize`
   bindings** routing game-prefab text lookups to terms
   (`ui_link_coverage.jsonl` R5 census) — the game’s own UI is fully
@@ -397,7 +412,7 @@ carries) maps cleanly onto that shape.
 | # | Proof target | Verdict | Grounds |
 |---|---|---|---|
 | V1 | “Properly translates game data into EACH locale the client provides” is provable | **FEASIBLE — provable today** | 13/13 locales measured; key-plane 98.12–99.99% per locale with holes enumerable per key; entity-plane 98–100% on joined entities; every residual cell traceable to an artifact |
-| V2 | Page-per-locale × 13 for entity kinds | **FEASIBLE** | 13,443 stub rows × 13 locales is a bounded static build; internal kernels (`Item_Editor`, `Unused_Item`, variations ≈ 1,300 item rows) should be excluded from page universe by an IA ruling (§8 Q3) |
+| V2 | Page-per-locale × 13 for entity kinds | **FEASIBLE** | 13,443 stub rows × 13 locales is a bounded static build; internal kernels should be excluded from page universe by an IA ruling (§8 Q3) — item-kernel named sum ≈ 1,438 rows (713 `Item_Editor*` + 231 `Unused_Item*` + 141 `Item_LS*` + 134 `A_LS_*` + 219 `Variation_*`) |
 | V3 | Cross-locale link rows + per-locale sitemaps per §5.4 | **FEASIBLE after one derivation pass** | inputs complete (`entity_locale` + tables); `locale_availability.jsonl` must be regenerated from them or the spec amended (G1) |
 | V4 | Course display names localized | **FEASIBLE via inferred convention layer, NOT via current hard join** | 0 name-role terms on courses; candidate keys measured to exist (`Courses/Courses/Archaeology_Name`, `Courses/DLC_Space/Astronaut_Name`, `Marketing/Courses/*`, `Meta/CareerChallenges/Course_*_Name`) — multi-pattern, must emit `inferred: true` + method (G2) |
 | V5 | English-only kernels handled honestly | **FEASIBLE — data already supports it** | campus-levels (17) and most unlockables carry English literals in-client; ship as locale-neutral data with `untranslated-in-client` marking; never fabricate translations |
@@ -417,12 +432,18 @@ carries) maps cleanly onto that shape.
   the proof artifact — or record a pack-spec amendment naming
   `entity_locale.jsonl` as authoritative (piece-2 §R4 precedent).
 - **G2** Course display-name join missing (0 name-role terms on all 69
-  course rows; 28 courses lack any term). Unblock: derived/inferred
-  convention join over the measured key families
-  (`Courses/Courses/*_Name`, `Courses/DLC_Space/*_Name`,
-  `Courses/DLC_ChallengeMode/*_Name`, `Marketing/Courses/*_Name`,
-  `Meta/CareerChallenges/Course_*_Name`), emitted `inferred: true` with
-  method; unresolved courses stay ledgered.
+  course rows; 28 courses lack any term). A pure id-suffix convention is
+  PROVEN INSUFFICIENT: naive id-stem matching resolves **0/69** — real
+  spellings diverge (`Course_Clowns`→`Clown_Name`,
+  `Course_SpySchool*`→`SpySchool_Name`,
+  `Course_PerformingArts`→`Music_Name`, `Course_Magic`→`Wizardry_Name`).
+  Unblock: a MEASURED alias table (course id → term key), seeded from the
+  marketing-campaign hard joins that already supply most base-course
+  aliases (`Marketing/Courses/<alias>_Name`), emitted `inferred: true`
+  with method; unresolved courses stay ledgered. Piece-08 ledgers the
+  same hole for search with the same lever (best convention there
+  resolves 12/28) — one alias input closes both consumers
+  ([scout-report-piece-08-search.mdx §G2](scout-report-piece-08-search.mdx)).
 - **G3** `registryMisses = 5`. Unblock: 3 closed by mapping `_dev`
   strings to `Code/<dev>` keys (verified present); 2 remain
   (`WantsMessage` on unused personal-goal items) — ledger or extend the

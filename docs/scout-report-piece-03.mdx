@@ -30,8 +30,10 @@ points, scene names, scenario references) and **`TPC.LevelScenarioV2`**
 (51 dumps: 1,031 authored plots with world-space bounds, 5,188 rooms
 with grid anchors + tile bitmaps + world positions, ~23k placed items
 with positions and rotations). The game ships its own campus layouts.
-What remains genuinely missing is the scene Transform layer
-(census-counted, never dumped) and any notion of doors.
+What remains genuinely missing is only the scene `Transform` layer
+(census-counted, never dumped). Doors — which this report's first draft
+wrongly read as absent — are partially data: validators, ECS door types
+and ~1.26k scenario door placements all ship (§6, §11 V3).
 
 ---
 
@@ -57,11 +59,18 @@ per-plot.
 ## §2 Stub-layer field-presence census (what the brief asked to measure)
 
 **Method:** flattened every row of all nine `stubs/*.jsonl` files to
-leaf paths (depth ≤6, lists sampled ≤50 elements) and matched leaf names
-against a spatial-token regex (`position|grid|footprint|rotation|floor|
-bounds|transform|x|y|z|cell|tile|plot|doorway|navmesh|size|width|height|
-depth|area|placement`). Counts below are rows-containing, not
-occurrences.
+leaf paths (depth ≤6, lists sampled ≤50 elements) and matched each leaf
+name (last path segment only) with `re.search` + `re.IGNORECASE` against
+this exact expression — the table below reproduces ONLY with it verbatim:
+
+```
+position|grid|footprint|rotation|^rot$|floor|bounds|transform|^x$|^y$|^z$|^cell|tile|^plot|doorway|navmesh|worldpos|m_Size|^size|sizex|sizey|width|height|depth|^area$|placement
+```
+
+The anchored alternatives (`^rot$`, `^x$`, `^y$`, `^z$`, `^cell`,
+`^plot`, `^size`, `^area$`) are load-bearing; a looser word-boundary
+reading does not reproduce the counts (verification round confirmed).
+Counts below are rows-containing, not occurrences.
 
 | Kind | Rows | Rows with any spatial-named leaf | What the hits actually are |
 |---|---|---|---|
@@ -90,8 +99,9 @@ Distributions worth pinning:
   2.0×34, …) — placement quantises to half-world-units, i.e. quarter-cells.
 - `RotationSnap` mode **90°** (1,170; then 45°×299, 22.5°×153) — four
   canonical orientations dominate.
-- `MinCellSize(X,Y)` on 63 RoomDefinitions: mode **5×5** (21), range
-  **(2,1)…(9,14)**; `FloorHeightOffset` mode 0.0 (48; 0.5×8, 1.0×3, 2.0×4).
+- `MinCellSize(X,Y)` on 63 RoomDefinitions: mode **5×5** (21); extremes:
+  minimum pair **(2,1)**, max-width pair **(12,8)**, max-area pair
+  **(9,14)**; `FloorHeightOffset` mode 0.0 (48; 0.5×8, 1.0×3, 2.0×4).
 
 **The negative result stands:** no stub row carries a world position.
 Everything positional above is *rules* (snap/footprint/bounds-relative),
@@ -104,13 +114,18 @@ record arrays walked; PPtr resolution against the manifest index.
 
 51 dumps across 4 bundles (`configs_assets_all` 43 ·
 `configs-levels-prefabs` 1 · `dlc-space-configs` 4 · `dlc-ghost-configs`
-3). Sizes 765 B – 13.83 MB. Totals measured across all 51:
-**1,031 PlotRecords · 5,188 RoomRecords · 22,878 room-placed ItemRecords
-· 118 further item records** (Arrival + NonArea + NavPlotWaypoint) =
-**22,996 placed-item records**, plus 64×64-to-256×256 landscape tile
-maps per plot layer.
+3). On-disk sizes **914 B – 78.06 MB**. Totals measured across all 51:
+**1,031 PlotRecords · 5,188 RoomRecords · 22,878 room-placed
+ItemRecords · 118 further item records** (Arrival + NonArea +
+NavPlotWaypoint) · **8 PlotActivationItemRecords** ⇒ **23,004
+placed-item records**, plus character seeds (**20 StudentRecords · 32
+StaffGenerationRecord.StaffRecords**), and landscape tile maps spanning
+**2×2 … 432×216 cells over 4,070 plot layers**.
 
-Per-scenario highlights (full table measured; largest shown):
+Per-scenario highlights (full table measured; largest shown). The
+terrain column is a per-scenario SAMPLE — the first layer of
+`PlotRecords[0]` — not the campus-wide extent (corpus span is the
+2×2…432×216 above):
 
 | Scenario (m_Name) | Plots | Rooms | Items | Terrain map |
 |---|---|---|---|---|
@@ -120,6 +135,7 @@ Per-scenario highlights (full table measured; largest shown):
 | LevelScenarioV2_PerformanceWeek | 33 | 291 | 1,802 | 56×76 |
 | LevelScenario_RemixChallenge_Wanted | 35 | 218 | 1,749 | 72×36 |
 | LevelScenarioV2_Knight | 33 | 142 | 579 (+25 waypoints) | 56×76 |
+| LevelScenarioV2_Knight 1 | 11 | 138 | 995 | 86×62 |
 | LevelScenarioV2_Ghosts | 33 | 154 | 713 | 72×40 |
 | LevelScenarioV2_SpaceportCity | 41 | 179 | 173 | 64×44 |
 | LevelScenarioV2_Tutorial_Test | 20 | 86 | 251 | 38×40 |
@@ -160,13 +176,26 @@ room's `WorldPosition` (sample: room at x −152 + item local 17 ⇒ world
 **Join coverage probe:** indexing every exported
 `GameItem{,Lite,Variation}Definition` by `(bundle, pathId)` (7 bundles,
 3,779 entries) and resolving all 22,996 scenario item `Definition`
-PPtrs same-file: **22,210 resolve (96.58%)**; 786 residue concentrated
-in cross-file references (`Wanted` 14, `Super_Built_Up` 2, `FreePlay_
-BuiltUp` 6, `Ghosts` 69, …). The sample record resolves end-to-end:
-pathId `522383310774550334` → dump `Item_Door_Building_Moonbase_Main`,
-whose `_id` = **−572923782 = the ItemRecord's `DefinitionID`**. So
-`ItemSaveData.DefinitionID` ≡ `ScriptableObjectWithID._id` ≡ the numeric
-key the stub layer does not currently emit (G3).
+PPtrs same-file: **22,210 resolve (96.58%)**. The 786-record residue,
+re-attributed per scenario at verification (this draft originally
+quoted only its four smallest members): LaunchPad 464 (59%) ·
+Ghosts_Remix_V2 110 · Ghosts 69 · SpaceportCity 65 · MoonBase 46 ·
+Wanted 14 · Landscaping_Level 6 · FreePlay_BuiltUp 6 ·
+Unused_Ghosts_Remix 3 · Super_Built_Up 2 · JoTestLevel 1. Of these,
+771 are cross-file (`m_FileID ≥ 1`) → the landed `externals.jsonl`
+resolver covers ~98% of the tail; the remaining **15 carry
+`m_FileID == 0` yet miss the index** — the definition-class set needs
+widening beyond the three GameItem classes at implementation.
+
+The sample record resolves end-to-end: pathId `522383310774550334` →
+dump `Item_Door_Building_Moonbase_Main`, whose `_id` =
+−572923782 = the ItemRecord's `DefinitionID`. The join rule is
+therefore **PPtr-based** (pathId lookup), with `_id` corroborating:
+`_id` equals the referencing `DefinitionID` on **22,200 of 22,210**
+resolved records; the **10 mismatches are Lite/Variation twin
+definitions** sharing one PPtr target. Treat `_id` as corroboration,
+never as the join key (this corrects the first draft's equivalence
+claim). The numeric key is still absent from stubs (G3).
 
 ## §4 The `TPC.LevelConfig` layer — bounds, plots, spawn, scenario ref
 
@@ -177,8 +206,9 @@ Measured geometry fields, all 28 rows:
 - `WorldBounds`: `{m_Center:{0,0,0}, m_Extent:{200,16,200}}` on **every**
   config except the blank template (`Level`, extent 128×10×128,
   PlotCount 0). One world box: **400×400 m footprint, ±32 m vertical**.
-- `SpawnPoint`: **(−66, 0, −24)** on all 28 (one PartyLevel variant
-  y=2.086…) — the camera-intro anchor.
+- `SpawnPoint`: **(−66, 0, −24)** on **26 of 28** (deviants: the blank
+  template reads x=−68; one PartyLevel variant y=2.086…) — the
+  camera-intro anchor.
 - `LevelScene` / `LevelScene_Optimized`: string scene names
   (`KnightLevel`/`KnightLevel_Optimised`, `Scene_DLC1_LaunchPadLevel`/…)
   — **the level↔scene join key the matrix currently lacks** (G5).
@@ -186,9 +216,12 @@ Measured geometry fields, all 28 rows:
   Gastronomy 10 · Magic 7 · PerformingArts 7 · Archaeology 7 · Robotics
   10 · Sports 6 · Spy 10 · Party 5 · Final 1 — **base sum 84**; DLC:
   LaunchPad 11 · MoonBase 15 · SpaceportCity 18 · Ghosts 15 (×2 twins).
-  Note: the parallel `configs_assets_all` set carries variant counts for
-  three levels (Robotics 5, Spy 5, Party 5) — two definition generations
-  exist; treat PlotCount as per-config-variant, not per-campus truth.
+  Note: the parallel `configs_assets_all` set carries variant counts
+  for exactly two levels (Robotics 10→5, Spy 10→5; Party reads 5 in
+  both generations) — two definition generations exist; treat PlotCount
+  as per-config-variant, not per-campus truth. Scenario plot RECORDS
+  diverge from PlotCount outright (LaunchPad: 18 records vs PlotCount
+  11; Mitton: 38 vs 9 — see G10).
 - `_ScenarioV2`: an AssetReference GUID. Resolved through the catalog's
   guid keys (54,143): **27 of 28 resolve** (blank template carries none)
   to addresses like
@@ -298,9 +331,32 @@ Struct/class fields verbatim (TypeDefIndex cited):
 - Plot machinery: `TPC.FloorAreaPlotDefinition ← FloorAreaDefinition`,
   `FloorAreaPlotInstance` (21 fields), `PlotAlgorithms` (24),
   `PlotBuildManager` (47), `PlotBorderVisual`, `CellGridVisualisation`,
-  `TileAttribute` enum (34 values). No `Doorway`/`Door*-definition`
-  class exists in the hierarchy sweep (139 TPC./TPS. spatial-name
-  matches reviewed) — **doors are not data in this game** (see §11).
+  `TileAttribute` enum (34 values).
+- **Doors ARE data** (the first draft of this report wrongly refuted
+  them; corrected after the verification round, every figure below
+  re-measured on disk): `TPC.ItemValidator_Door` ships ×54 dumped
+  instances (`harvest/monobehaviours/configs/TPC.ItemValidator_Door/`)
+  each with populated `_entranceToRooms[]` / `_exitToRooms[]` — 71
+  distinct int refs (sample `[-39494005, -1741033445]`) plus the
+  validator's own `_id`; ×37 `AutomaticSlidingDoorsComponent` dumps;
+  runtime ECS types `ECDoor`, `ECDoorLogic(Automatic)`, and
+  **`EDBDoorLink {Entity; float3 Position}`** (dump.cs line 859636);
+  `DoorItemReachabilityUseAreaBase`/`…Offset` fields sit on **all 1,654**
+  placement-block GameItemDefinitions (`FloorAreaDefinition` dumps were
+  checked 80/80 and do NOT carry them — narrower than the verification
+  note claimed); scenario placements include **1,261 door-item
+  placements across 55 kinds** (Item_Door_Wooden ×232,
+  Item_Door_Internal ×129). Proven reference chain:
+  `Item_Door_Building_Moonbase_Main.Validators[]` GUID → catalog address
+  `Assets/Data/DLCs/DLC1_Space/Game/Items/Validators/
+  ItemValidator_Door_Moonbase_To_Exterior.asset`.
+  Id-space decode measured this session: those 71 validator refs have
+  **zero intersection** with the 78 room-definition and 539 floor-area
+  `_id`s and land fully in the `TPC.RoomType`(50)/
+  `TPC.RoomTypeBuilding`(21) dump `_id` space — i.e. **door validators
+  gate by room TYPE**, not room instance. (The verification round's
+  narrower integer sweep reported a best match of 13/71; reconcile the
+  two sweeps at implementation time.) Consequences in §11 V3 + G8.
 - Camera bounds: `LevelConfig._CameraConfig` AssetReference GUID
   (e.g. `5a9540898c42b7a4b9431a90c156112d`, Knight) — resolvable via
   catalog like §4; not yet dumped/read. `PlotRecord.IgnoreForCamera-
@@ -319,6 +375,7 @@ Struct/class fields verbatim (TypeDefIndex cited):
 | `DigSiteBounds`, `NavBounds`, build-bounds `_center/_size` | item stubs / scene components | **object-local** world units | footprint libraries only |
 | `States.GraphRect.*` | config/unlockable payloads | **graph-editor UI pixels** | NOT geographic — exclude from anything map-shaped |
 | `TerrainMap/ObjectMap/AttributeMap` | LevelScenarioV2 plot layers | **tile indices** | ints; semantics partially known (EPlotTileType for plot tiles; terrain-paint enums unverified, G7) |
+| `EDBDoorLink.Position` | runtime ECS (code only) | **world** | float3; door entities exist at runtime, positions not shipped as data (G8) |
 | locale term IDs | everywhere | n/a | signed int32 → I2 registry (piece-02 §2 mechanism, unchanged) |
 
 Projection consequence for the site: one shared linear transform per
@@ -346,16 +403,21 @@ includes `scene`):
   covers 96.58% (§3); the 786-record residue is exactly the
   `externals.jsonl` use case (that file now exists — piece-02's G2
   artifact landed after its report).
-- `room → config` already carries `FloorAreaDefinition` (62 refs,
-  piece-02 §1) — the floor-area/plot definition family (84 config rows,
-  §2) joins rooms to plot semantics without new probing.
-- Nothing in the matrix or pair files models adjacency; that absence is
-  structural, not an omission (§11 verdict 3).
+- `room → config` already carries `FloorAreaDefinition` (**63** edges
+  recounted this session; piece-02 §1 printed 62) — the floor-area/plot
+  definition family (84 config rows, §2) joins rooms to plot semantics
+  without new probing.
+- Nothing in the matrix or pair files models adjacency **or doors**;
+  unlike the first draft's framing, that is now an *omission over
+  existing data* (validators/ECS/placements ship, §6), not an absence —
+  a `door_*` relation family is owed once G8's id-space pass runs.
 
 ## §9 Locale surface for map labels
 
-From `relinks/i2_term_registry.jsonl` (15,675 IDs → 15,672 keys,
-37 prefixes — piece-02 §2 numbers reproduce):
+From `relinks/i2_term_registry.jsonl` (15,675 IDs → 15,672 keys; 37
+top-level buckets under this report's first-segment split — the
+verification round counted 52 raw prefix strings under a finer split;
+normalization differs, both stated):
 
 - **`Levels/*` 934 keys** — per-level title/description/objective text.
 - **`Rooms/*` 484 keys** — room display names
@@ -376,18 +438,22 @@ Catalog address sweep (56,331 addresses):
 
 - **0 minimap/radar-tile addresses** — confirms no client-rendered map
   layer exists to extract.
-- **MetaMap/Metamap namespaces: 1,094 addresses** — 372 `.tga` +
-  178 `.png` textures incl. per-theme feature art
+- **MetaMap/Metamap namespaces: 1,140 addresses** under a
+  case-insensitive `metamap` substring match (1,094 under this probe's
+  original case-sensitive `/MetaMap/|/Metamap/` predicate — both
+  stated) — incl. per-theme feature art
   (`T_Map_Knight_Wall_Tower_V1_DIFF.tga`,
   `T_Map_Spy_Industrial_Power_Plant_V1_METL.tga`,
-  `T_Map_Space_Port_Gantry_V1_DIFF.tga`), 422 materials, 50 FBX, 64
-  prefabs, 8 sprite atlases; pin sprites under
+  `T_Map_Space_Port_Gantry_V1_DIFF.tga`), materials/FBX/prefabs and 8
+  sprite atlases; pin sprites under
   `UI/Textures/Metamap/Map_Pins/`. This is the game's own campus-overview
   map kit — raw material for path-D cartography.
 - **117 loadingscreen images** (incl. per-level keyart
-  `TPC_Level_09_Music.png`, `TPC_DLC3_Level_Tropical_V1.png`) + **125
-  level image/icon/screenshot addresses** (`UI_Sandbox_T_imageLevel_*`)
-  — per-campus overview imagery, referenced directly by LevelConfig (§4).
+  `TPC_Level_09_Music.png`, `TPC_DLC3_Level_Tropical_V1.png`) + level
+  image/icon/screenshot imagery referenced directly by LevelConfig (§4):
+  **125 addresses** under this probe's `level+image/icon/screenshot`
+  predicate; the strict `imagelevel` substring family reads 42–66
+  depending on case/suffix pattern (verification round).
 - Environment/landscape textures: 2,526 addresses (terrain, roads,
   buildings).
 - MEDIA-CATALOGUE cross-check (`media-catalogue.jsonl`, 47,939 rows):
@@ -412,14 +478,22 @@ Catalog address sweep (56,331 addresses):
    anchors + explicit tile bitmaps + world positions (§3, §7). A room =
    its bitmap extruded at 2 u/cell; min-size rules from §2 annotate
    rather than constrain. Labels from `Rooms/*` terms (§9).
-3. **Door/adjacency overlays — NOT DATA; DERIVABLE ONLY.** The class
-   sweep found no doorway/door-definition type; rooms are player-built
-   on plots, so shipped adjacency exists only where scenarios pre-build
-   rooms. Derivable form: tile-bitmap contact edges between
-   `RoomRecords` sharing a plot layer (pure geometry, mark
-   `inferred: true, method: tile-bitmap-contact`). Navigation truth
-   (`WaypointGraph`, NavMesh) is runtime-computed; only Knight ships 25
-   waypoint seeds. Do not promise a door overlay in the spec.
+3. **Door/adjacency overlays — PARTIAL DATA** (upgraded from the first
+   draft's "derivable only"; the refutation was wrong). Doors ship three
+   ways: per-door validators (`ItemValidator_Door` ×54, gating by room
+   TYPE per §6's id-space decode), runtime ECS door entities
+   (`EDBDoorLink` carries world positions in code), and **1,261
+   scenario door-item placements across 55 kinds whose item coordinates
+   render directly on the maps**. What no shipped dataset gives today is
+   the resolved door→room-instance graph: validator refs point at the
+   RoomType id space, and runtime door positions live in unexported
+   scene Transforms/ECS state. Shippable v1: door pins from scenario
+   placements (`inferred: false`) + room-type permission annotations
+   from validators (type edges `inferred: true` until the RoomType↔room
+   instance mapping is decoded); tile-bitmap contact edges between
+   scenario `RoomRecords` remain the derived fallback for room-to-room
+   adjacency. Navigation truth (`WaypointGraph`, NavMesh) stays
+   runtime-computed; only Knight ships 25 waypoint seeds.
 4. **Item-placement pins — FEASIBLE at scenario scope.** 22,996
    placements with positions/rotations, 96.58% already name their
    definition (§3); residue needs the externals resolver (G4). Rules
@@ -444,8 +518,10 @@ Catalog address sweep (56,331 addresses):
 | G5 | `campus-level → scene` matrix cell empty despite measured join key | 0 edges vs 28 configs × 26 scene rows | Emit `relinks/campus-level_scene.jsonl` + `campus-level_scenario.jsonl` from LevelConfig fields (hard mechanism, §8) |
 | G6 | Plot-marker geometry in non-scenario contexts (sandbox start state) rests on scenario defaults only | PlotCount variants disagree (Robotics 10 vs 5, Spy 10 vs 5) | Treat PlotCount as per-config-variant; pick the levels-prefabs generation as canonical after one code-read of `LevelConfig.LoadAssets` (which set instantiates) |
 | G7 | Terrain/landscape tile-map value semantics | `TerrainMap` ints observed (0/16/20 patterns); attribute enum unread | Read `LandscapeBrushDatabase` + terrain paint enums in dump.cs; correlate against one scenario's map; then tile-type legends render honestly |
-| G8 | No door/adjacency data | 0 classes, 0 fields (§6, §11.3) | Accept derived-only adjacency (tile-contact edges, `inferred: true`); ledger in RELATIONS.md as proven-absent |
+| G8 | Door graph unresolved at room-instance level | 71 validator refs → RoomType-family `_id` space (measured, §6); 0 links to room/floor-area instance `_id`s; runtime door positions in unexported Transforms/ECS; verifier-vs-scout sweep delta (13/71 vs 71/71) unreconciled | One id-space reconciliation pass (RoomType ids ↔ room instances) + G1 transforms; then emit a `door_*` relink family (placement pins hard, type-gating edges inferred) |
 | G9 | Media byte estimates not decoded sizes | `bytesEstimate` ≈ container footprint (§10) | Owner-approved texture-decode pass produces true sizes + the actual imagery for path D |
+| G10 | Scenario plot records vs LevelConfig PlotCount divergence | LaunchPad 18 scenario records vs PlotCount 11; Mitton 38 vs 9 (records likely include unbuilt/merge variants) | Code-read `PlotBuildManager` merge/build rules; decide the canonical per-campus plot inventory before emitting plots.jsonl |
+| G11 | Named-plot labels partially mineable, currently unemitted | 12 of 1,031 plots carry `UsePlotDisplayName=1` + localized `DisplayName` termIDs (e.g. MoonBase "Rocket Pad 9", termID −1610423369); the rest read "Plot N" | Carry `UsePlotDisplayName` + termIDs through the G2 emission and resolve via the i2 registry like any LocalisedString |
 
 Probe artifacts: none written — every number above regenerated inline
 from `stubs/`, `harvest/`, `relinks/`, `addressables/catalog.json`,
