@@ -141,6 +141,53 @@ SEEDS = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# Corpus tiers (reconciliation ruling, piece-08 interface round).
+#
+# The §S5.3 steady-state bounds and the AC2/AC5 seed asserts are pinned to
+# THE measured corpus (buildId 20226581, 13,443-row stub universe) — spec
+# §9 simultaneously requires the SAME five-branch exit-code matrix to be
+# provable on HOSTLESS MINI FIXTURES whose hand-computed census is three
+# orders of magnitude smaller. Absolute pinned numbers therefore bind only
+# above the mini tier; a mini fixture gets the spec's own movement
+# semantics instead: its recorded upstream envelope (persisted in
+# manifest.upstreamEnvelope) is compared run-over-run at the same buildId
+# — worsened member => RELINK-REGRESSION exit 1 writing nothing, improved
+# member => informational DRIFT + rebase, equal => steady state. This is
+# exactly the anti-masking rationale of §S5.3 ("at a fixed buildId,
+# deterministic reruns reproduce identical upstream counts") applied at
+# fixture scale, and it WEAKENS NOTHING on the real corpus, where both
+# nets (absolute bounds + envelope) stay armed.
+MINI_TIER_MAX_STUB_ROWS = 1_000
+
+TIER_CROSS_BUILD = "cross-build"
+TIER_MINI_FIXTURE = "mini-fixture"
+TIER_SEED_CORPUS = "seed-corpus"
+
+
+def corpus_tier(build_id: int, stub_rows: int) -> str:
+    if build_id != SEED_BUILDID:
+        return TIER_CROSS_BUILD
+    if stub_rows <= MINI_TIER_MAX_STUB_ROWS:
+        return TIER_MINI_FIXTURE
+    return TIER_SEED_CORPUS
+
+
+# Envelope movement directions (the anti-masking question): hole counters
+# get WORSE when they grow; every capacity/coverage family (modeled cells,
+# relation rows, referenced terms, per-locale table rows) gets WORSE when
+# it shrinks.
+_WORSE_WHEN_HIGHER = frozenset((
+    "statusCounts.missing", "danglingDistinctGuids", "registryMisses",
+))
+
+
+def _envelope_worse(member: str, old: int, new: int) -> bool:
+    if member in _WORSE_WHEN_HIGHER:
+        return new > old
+    return new < old
+
+
 LEDGER_UNBLOCK = {
     "item-title-joins-absent":
         "emit the variation->Lite and definition->_Lite twin name edges "
@@ -348,13 +395,11 @@ def validate_structure(inputs: dict) -> None:
 # ---------------------------------------------------------------------------
 # Upstream health classification (§S5.3 — THE exit-2 discrimination rule)
 
-def classify_upstream(inputs: dict, drift: Drift) -> tuple[str, list[str]]:
-    """Returns (verdict, problem-lines). verdict ∈ steady-state |
-    drift-rebased | regression. At the seed buildId every INCLUSIVE bound
-    breach is a REAL regression (deterministic reruns reproduce identical
-    upstream counts, so any movement is an upstream change); across builds
-    bounds REBASE — fresh wins, never a cross-build regression verdict."""
-    build_id = inputs["build_id"]
+def upstream_envelope(inputs: dict) -> dict:
+    """The tracked upstream health members of THIS run — persisted into
+    manifest.upstreamEnvelope so the next run at the same buildId can be
+    judged by MOVEMENT (worse => RELINK-REGRESSION, better => DRIFT
+    rebase) on any tree, mini fixture or real corpus alike."""
     mx_status = Counter(c["status"] for c in inputs["matrix"]["pairs"])
     measured = {
         "statusCounts.missing": mx_status.get("missing", 0),
@@ -370,9 +415,33 @@ def classify_upstream(inputs: dict, drift: Drift) -> tuple[str, list[str]]:
     }
     for loc in inputs["locales"]:
         measured[f"localeRows.{loc}"] = len(inputs["tables"][loc])
+    return dict(sorted(measured.items()))
+
+
+def classify_upstream(inputs: dict, drift: Drift, tier: str,
+                      prev_manifest: dict | None) -> tuple[str, list[str]]:
+    """Returns (verdict, problem-lines). verdict ∈ steady-state |
+    drift-rebased | regression.
+
+    - cross-build: bounds REBASE to fresh measurements (piece-07 L6
+      precedent) — DRIFT lines, never a regression verdict.
+    - seed-corpus: the pinned INCLUSIVE §S5.3 bounds bind absolutely (all
+      eight members sit ON their bounds today), AND the recorded envelope
+      is compared run-over-run at the same buildId.
+    - mini-fixture: no absolute pinned numbers (they describe another
+      corpus); movement against the recorded envelope carries the whole
+      discrimination rule. A first run records its envelope and proceeds.
+    """
+    build_id = inputs["build_id"]
+    measured = upstream_envelope(inputs)
+    prev_env = None
+    if isinstance(prev_manifest, dict):
+        env = prev_manifest.get("upstreamEnvelope")
+        if isinstance(env, dict) and env:
+            prev_env = env
 
     problems: list[str] = []
-    if build_id != SEED_BUILDID:
+    if tier == TIER_CROSS_BUILD:
         for member in sorted(measured):
             if member.startswith("localeRows."):
                 continue
@@ -391,6 +460,25 @@ def classify_upstream(inputs: dict, drift: Drift) -> tuple[str, list[str]]:
                     f"DRIFT: localeRows.{loc} seed-window [{lo}, {hi}] vs "
                     f"measured {v} (buildId moved) — rebased, fresh wins")
         return "drift-rebased", problems
+
+    # same-buildId envelope movement (both non-cross-build tiers)
+    if prev_env is not None:
+        for member in sorted(set(prev_env) | set(measured)):
+            old = int(prev_env.get(member, 0))
+            new = int(measured.get(member, 0))
+            if old == new:
+                continue
+            if _envelope_worse(member, old, new):
+                problems.append(
+                    f"RELINK-REGRESSION: {member} worsened {old}->{new} at "
+                    f"buildId {build_id} vs the recorded upstream envelope")
+            else:
+                drift.note(
+                    f"DRIFT: {member} improved {old} -> {new} — fresh value "
+                    "becomes the new envelope")
+
+    if tier == TIER_MINI_FIXTURE:
+        return ("regression" if problems else "steady-state"), problems
 
     breached: list[str] = []
     improved: list[str] = []
@@ -412,13 +500,10 @@ def classify_upstream(inputs: dict, drift: Drift) -> tuple[str, list[str]]:
             breached.append(
                 f"RELINK-REGRESSION: localeRows.{loc} bound[{lo},{hi}] "
                 f"measured{v}")
-        elif v in (lo, hi):
-            improved.append(
-                f"DRIFT: localeRows.{loc} sits ON its inclusive bound ({v})")
     problems.extend(breached)
     for line in improved:
         drift.note(line)
-    return ("regression" if breached else "steady-state"), problems
+    return ("regression" if problems else "steady-state"), problems
 
 
 # ---------------------------------------------------------------------------
@@ -538,6 +623,7 @@ def collect_universes(inputs: dict, drift: Drift) -> dict:
                     dn_brush_instances += walked["rootKeys"].get(
                         "DisplayName", 0)
                 rec["roots"] = dict(walked["rootKeys"])
+                rec["rootsCapable"] = dict(walked["capableKeys"])
             if kind == "room":
                 rv = fields.get("Name")
                 if su.is_locstr(rv):
@@ -648,7 +734,8 @@ def collect_universes(inputs: dict, drift: Drift) -> dict:
 # ---------------------------------------------------------------------------
 # S3 — course resolution + alias volumes
 
-def resolve_courses(inputs: dict, drift: Drift, curated_map: dict | None):
+def resolve_courses(inputs: dict, drift: Drift, curated_map: dict | None,
+                    tier: str):
     en = inputs["tables"][su.PIVOT]
     fams = su.build_course_family_index(en)
     fam_counts = {}
@@ -660,9 +747,11 @@ def resolve_courses(inputs: dict, drift: Drift, curated_map: dict | None):
                     SEEDS["courseFamilyCounts"].get(name), fam_counts[name])
     registry_keys = {r["termKey"] for r in inputs["registry"]}
     if curated_map:
-        dangling = sorted(cid for cid, row in curated_map.items()
-                          if str(row.get("termKey")) not in registry_keys
-                          or str(row.get("termKey")) not in en)
+        dangling = sorted(
+            (cid, str(row.get("termKey")))
+            for cid, row in curated_map.items()
+            if str(row.get("termKey")) not in registry_keys
+            or str(row.get("termKey")) not in en)
         if dangling:
             raise tc.StageError(
                 "curated course-alias rows carry dangling termKeys "
@@ -697,10 +786,10 @@ def resolve_courses(inputs: dict, drift: Drift, curated_map: dict | None):
     mk_ok = [c for c in uni_ok if c.startswith("Marketing")]
 
     # Gates (AC5): seeded >= 24/28 with the seed table present; degraded
-    # mechanical floor >= 16/28 when the alias input is ABSENT. Corpus-
-    # gated like every pinned figure: a hostless mini fixture measures its
-    # own resolution truth, so the bound binds only at the seed buildId.
-    if inputs["build_id"] == SEED_BUILDID:
+    # mechanical floor >= 16/28 when the alias input is ABSENT. Pinned
+    # absolute gates bind on THE measured corpus only (tier law — mini
+    # fixtures prove the ladder's shape through their own hand census).
+    if tier == TIER_SEED_CORPUS:
         if curated_map is not None:
             if seeded < 24:
                 raise tc.StageError(
@@ -859,11 +948,12 @@ def build_name_pools(inputs: dict) -> tuple[dict, int, int, set, int]:
 
 
 def apply_join_inheritance(pools: dict, joins: dict) -> None:
-    """Consume the pending relink edges IF emitted (pre-ruling 4): a joined
-    item inherits its Lite target's name pool. Pending state adds nothing —
-    ledger-degraded, never re-derived from stubs here."""
-    if joins["state"] != "emitted":
-        return
+    """Consume the relink-emitted item-title rows IF present (pre-ruling
+    4): a joined item inherits its Lite target's name pool. Consumption is
+    PER-ROW — whatever edges relink has emitted are consumed; the
+    emitted-vs-pending STATE (ceiling comparison) only drives the
+    ledger/degrade messaging, never a consumption veto. Rows absent ⇒
+    nothing inherited, never re-derived from stubs here."""
     for src, lite in sorted(joins["inheritance"].items()):
         target = pools.get(("item", lite))
         if not target:
@@ -971,11 +1061,14 @@ def build_doc(key: tuple, rec: dict, pool: dict, table: dict, locale: str,
 
 def build_shard_payloads(inputs: dict, pools: dict, facts: dict,
                          course_resolutions: dict, joins: dict,
-                         drift: Drift) -> dict:
-    """Serialize every shard + titles projection IN MEMORY; ratio bands are
-    checked BEFORE anything is written (a band breach must leave no
-    artifacts). Returns {locale: {"docs": [doc...], "full": str,
-    "titles": str}}."""
+                         drift: Drift,
+                         enforce_ratio_bands: bool = True) -> dict:
+    """Serialize every shard + titles projection IN MEMORY; AC4 ratio
+    bands are checked BEFORE anything is written (a band breach must leave
+    no artifacts). The bands' anchors (82–93 / 511–536 B per doc) are REAL-
+    corpus measurements, so enforcement binds above the mini tier; mini
+    fixtures prove the band arithmetic through the suite's own checker.
+    Returns {locale: {"docs": [doc...], "full": str, "titles": str}}."""
     ents = doc_entities(pools, facts, course_resolutions)
     payloads: dict[str, dict] = {}
     dev_only_per_kind: Counter = Counter()
@@ -1005,14 +1098,15 @@ def build_shard_payloads(inputs: dict, pools: dict, facts: dict,
             for d in docs)
         payloads[locale] = {"docs": docs, "full": full, "titles": titles}
     # AC4 gates over each emitter's own denominators
-    for locale, p in payloads.items():
-        n = len(p["docs"])
-        fb = len(p["full"].encode("utf-8"))
-        tb = len(p["titles"].encode("utf-8"))
-        try:
-            su.ratio_band_check(locale, n, fb, tb)
-        except ValueError as exc:
-            raise tc.StageError(str(exc), exit_code=1)
+    if enforce_ratio_bands:
+        for locale, p in payloads.items():
+            n = len(p["docs"])
+            fb = len(p["full"].encode("utf-8"))
+            tb = len(p["titles"].encode("utf-8"))
+            try:
+                su.ratio_band_check(locale, n, fb, tb)
+            except ValueError as exc:
+                raise tc.StageError(str(exc), exit_code=1)
     # titles derived strictly from the same run's shards, row-for-row
     for locale, p in payloads.items():
         want = [su.serialize_title_row(d) + "\n" for d in p["docs"]]
@@ -1033,72 +1127,65 @@ def analyzer_block(inputs: dict, drift: Drift) -> tuple[dict, dict]:
     stats_by_locale = {}
     for loc in inputs["locales"]:
         st = su.analyze_locale_table(inputs["tables"][loc])
+        # census columns FLAT in the cell under the pinned vocabulary
+        # (reviewer F8) — tokenizer + common config + measured stats.
         entry = {"tokenizer": su.tokenizer_for(loc), **su.ANALYZER_COMMON,
-                 "stats": st}
+                 **st}
         analyzers[loc] = entry
         stats_by_locale[loc] = st
-    assignments = {loc: analyzers[loc]["tokenizer"]
-                   for loc in sorted(analyzers)}
     drift.check("koCjkBearingRows", SEEDS["koCjkBearingRows"],
-                stats_by_locale.get("ko", {}).get("cjkBearingRows"))
+                stats_by_locale.get("ko", {}).get("cjkRows"))
     for loc in ("en", "tr", "ko"):
         drift.check(f"vocabEndpoints[{loc}]",
                     SEEDS["vocabEndpoints"].get(loc),
-                    stats_by_locale.get(loc, {}).get("vocabDistinctTokens"))
+                    stats_by_locale.get(loc, {}).get("vocab"))
     return analyzers, stats_by_locale
 
 
-def collision_counters(inputs: dict, drift: Drift) -> dict:
-    """F9 truth over the title surface: narrow name-class edges PLUS config
-    Title/DisplayName (the surface whose distinct-KIND cross-check the
-    arbiter pinned at 67). Pair counting uses RAW pivot texts at EDGE
-    multiplicity (reproduces 264 / x53 / x51 / 1,895); the ignore-kind
-    counter uses the PINNED definition on CLEANED titles (what shards
-    actually carry)."""
+def collision_counters(inputs: dict, drift: Drift, pools: dict,
+                       joins: dict) -> dict:
+    """The pinned collision surface (arbiter RF-C, reproduced digit-for-
+    digit on the real corpus): NARROW name-class edges plus consumed
+    item-title join instances, RAW pivot texts. Pairs count (kind,title)
+    multiplicity >1 (264 / x53 / x51); ignore-kind counts TITLE-TEXT
+    multiplicity >1 ignoring kind (320 — the reading that reproduces the
+    seed; distinct-KIND carried beside as data)."""
     en = inputs["tables"][su.PIVOT]
     member: dict[str, set] = {k: set(v)
                               for k, v in su.NAME_CLASS_FIELDS.items()}
-    narrow_pairs_raw = []   # collidingPairs / topPairs surface (F9 exact)
-    wide_pairs_clean = []   # ignore-kind surface (narrow + Title/DisplayName)
-
-    def add_edge(kind: str, sid: str, dst: str, wide: bool) -> None:
-        raw = en.get(dst) or ""
-        if not raw.strip():
-            return
-        c = su.clean_text(raw)
-        if wide:
-            if c:
-                wide_pairs_clean.append((kind, sid, c))
-            return
-        narrow_pairs_raw.append((kind, sid, raw))
+    instances: list[tuple[str, str, str]] = []
 
     for e in inputs["edges"]:
         kind = e["srcKind"]
         fp = str((e.get("evidence") or {}).get("fieldPath") or "")
-        if fp in member.get(kind, ()):
-            add_edge(kind, str(e["srcId"]), str(e["dstId"]), wide=False)
-            add_edge(kind, str(e["srcId"]), str(e["dstId"]), wide=True)
-        elif kind == "config" and fp in ("Title", "DisplayName"):
-            add_edge(kind, str(e["srcId"]), str(e["dstId"]), wide=True)
+        if fp not in member.get(kind, ()):
+            continue
+        raw = en.get(str(e["dstId"])) or ""
+        if raw.strip():
+            instances.append((kind, str(e["srcId"]), raw))
+    # consumed join rows ride the same surface when present (pre-ruling 4):
+    # a joined item carries its Lite target's title as an additional
+    # carrying instance.
+    for (kind, sid), pool in sorted(pools.items()):
+        if kind != "item":
+            continue
+        for key in pool.get("inherited") or ():
+            raw = en.get(key) or ""
+            if raw.strip():
+                instances.append((kind, sid, raw))
+
     dup_texts = {}
     for loc, table in inputs["tables"].items():
         cnt = Counter(v for v in table.values() if v)
         dup_texts[loc] = sum(1 for v in cnt.values() if v > 1)
-    block_pair = su.collision_block(narrow_pairs_raw, {})
-    block_kind = su.collision_block(wide_pairs_clean, dup_texts)
-    block = {
-        "collidingPairs": block_pair["collidingPairs"],
-        "topPairs": block_pair["topPairs"],
-        "ignoreKindCollisions": block_kind["ignoreKindCollisions"],
-        "distinctKindTexts": block_kind["distinctKindTexts"],
-        "withinLocaleDuplicateTexts":
-            block_kind["withinLocaleDuplicateTexts"],
-        "countingBasis": "collidingPairs = (kind,title) PAIRS with "
-                         "multiplicity >1 over RAW pivot texts; "
-                         "ignoreKindCollisions = DISTINCT TITLE TEXTS "
-                         "carried by more than one ENTITY ignoring kind "
-                         "(arbiter RF-C); distinctKindTexts carried beside",
-    }
+    block = su.collision_block(instances, dup_texts)
+    block["countingBasis"] = (
+        "surface = narrow name-class edges + consumed item-title join "
+        "instances, RAW pivot texts; collidingPairs = (kind,title) PAIRS "
+        "with multiplicity >1; ignoreKindCollisions = TITLE TEXTS with "
+        "carrying-instance multiplicity >1 ignoring kind (the RF-C "
+        "reading that reproduces the pinned 320); distinctKindTexts "
+        "carried beside as data")
     seed = SEEDS["collisionSeed"]
     drift.check("collidingPairs", seed["collidingPairs"],
                 block["collidingPairs"])
@@ -1147,15 +1234,16 @@ def script_hashes(pack_dir: Path) -> dict:
 
 
 def rebuild_trigger(extracted_root: Path, pack_dir: Path,
-                    inputs: dict) -> dict:
-    mpath = extracted_root / SEARCH_DIR / "manifest.json"
-    if not mpath.is_file():
-        return {"reason": "first-run"}
-    try:
-        prev = json.loads(mpath.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {"reason": "manifest-unreadable"}
-    meta = prev.get("meta") or {}
+                    inputs: dict, prev_manifest: dict | None) -> dict:
+    """Classify why this run re-emits. The reason is RUN-SECTION/LOG data
+    only — it is deliberately NOT embedded in manifest.json, because
+    first-run vs rerun would otherwise differ byte-for-byte and break the
+    AC7 double-run identity (reconciliation ruling)."""
+    if prev_manifest is None:
+        mpath = extracted_root / SEARCH_DIR / "manifest.json"
+        return {"reason": "first-run" if not mpath.is_file()
+                else "manifest-unreadable"}
+    meta = prev_manifest.get("meta") or {}
     prev_stamps = meta.get("sourceStamps") or {}
     cur_stamps = {
         "relinkIdentity": (inputs["relink_stamp"] or {}).get("identity"),
@@ -1196,6 +1284,9 @@ def build_ledger(inputs: dict, joins: dict, courses: dict,
     for cid in courses["defsOpen"]:
         add("course-name-open", "gap",
             f"course {cid} unresolved ({drift_note(cid)})")
+    for cid in courses["block"]["uniformResolver"]["marketingOpen"]:
+        add("course-name-open", "gap",
+            f"marketing course {cid} unresolved ({drift_note(cid)})")
     if not alias_present:
         add("alias-input-absent", "info",
             "data/sources/derived/course-name-aliases.jsonl absent — "
@@ -1222,7 +1313,7 @@ def build_ledger(inputs: dict, joins: dict, courses: dict,
 def build_manifest(inputs: dict, locales: list[str], universe: dict,
                    payloads: dict, analyzers: dict, stats: dict,
                    alias_vol: dict, collisions: dict, course_block: dict,
-                   joins: dict, trigger: dict, census: dict,
+                   joins: dict, envelope: dict, census: dict,
                    narrow_keys: list[str], narrow_edges: int,
                    narrow_unresolved_pivot: int,
                    expanded_walker_keys: set) -> dict:
@@ -1266,7 +1357,7 @@ def build_manifest(inputs: dict, locales: list[str], universe: dict,
                       .stat().st_size for loc in locales)
     base_overlay = inputs["extracted_root"] / "locales/base-overlay.jsonl"
 
-    max_vocab = max((stats[l]["vocabDistinctTokens"] for l in locales),
+    max_vocab = max((stats[l]["vocab"] for l in locales),
                     default=0)
     manifest = {
         "meta": {
@@ -1281,9 +1372,12 @@ def build_manifest(inputs: dict, locales: list[str], universe: dict,
             },
         },
         "universe": {
+            "totalRows": universe["totalRows"],
             "narrow": universe["narrow"],
             "narrowPerKind": dict(sorted(universe["narrowPerKind"].items())),
             "expanded": universe["expanded"],
+            "devOnlyDocs": dict(sorted(
+                universe.get("devOnlyDocs", {}).items())),
             "expandedPerKind": dict(sorted(
                 universe["expandedPerKind"].items())),
             "components": universe["components"],
@@ -1343,7 +1437,7 @@ def build_manifest(inputs: dict, locales: list[str], universe: dict,
                           if shards[loc]["titlesDocs"] else 0}
                 for loc in locales},
             "metricLabels": "F14 raw UTF-8 title-text bytes / F15 {id,text} "
-                            "JSONL key-line bytes / F16 shipped doc planes "
+                            "JSONL keyline bytes / F16 shipped doc planes "
                             "— three distinct metrics, never mixed",
         },
         "kindWeights": dict(sorted(su.KIND_WEIGHTS.items())),
@@ -1381,7 +1475,12 @@ def build_manifest(inputs: dict, locales: list[str], universe: dict,
             "flipPath": "icon bytes/CDN paths are the media piece's "
                         "contract; sprite names stay non-alias",
         },
-        "rebuildTrigger": trigger,
+        # Run-over-run memory of the tracked upstream members (§S5.3
+        # movement law on every tree). The rebuild TRIGGER REASON stays
+        # out of this file on purpose — it is volatile between a first
+        # run and a rerun, and embedding it would break AC7 byte identity;
+        # it prints to the run section instead.
+        "upstreamEnvelope": dict(sorted(envelope.items())),
         "upstreamVerdict": universe["upstreamVerdict"],
         "configBoneStringCensus": census["boneStrings"],
     }
@@ -1428,15 +1527,17 @@ def emit(extracted_root: Path, locales: list[str], payloads: dict,
 # ---------------------------------------------------------------------------
 # Entrypoint
 
-def seed_assert(build_id, drift: Drift, label: str, measured, seed) -> None:
-    """Hard EQUALITY assert at the seed buildId only (AC2/AC5 pins); across
-    builds bounds REBASE — DRIFT line, fresh wins."""
-    if build_id != SEED_BUILDID:
+def seed_assert(tier: str, drift: Drift, label: str, measured,
+                seed) -> None:
+    """Hard EQUALITY assert on THE measured corpus only (tier law — AC2/AC5
+    pins describe the corpus the seeds were verified on); mini fixtures
+    and cross-build trees reconcile as DRIFT lines, fresh wins."""
+    if tier != TIER_SEED_CORPUS:
         drift.check(label, seed, measured)
         return
     if measured != seed:
         raise tc.StageError(
-            f"seed assert failed at buildId {build_id}: {label} pinned "
+            f"seed assert failed at buildId {SEED_BUILDID}: {label} pinned "
             f"{seed!r} measured {measured!r} (spec §S1.1/§2 — deviation is "
             "an exit-1 validation failure)", exit_code=1)
 
@@ -1449,9 +1550,20 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
     inputs["extracted_root"] = extracted_root
     validate_structure(inputs)
     pack_dir = tc.resolve_pack_dir()
-    trigger = rebuild_trigger(extracted_root, pack_dir, inputs)
+    stub_rows = sum(len(v) for v in inputs["stubs"].values())
+    tier = corpus_tier(inputs["build_id"], stub_rows)
+    mpath = extracted_root / SEARCH_DIR / "manifest.json"
+    prev_manifest = None
+    if mpath.is_file():
+        try:
+            prev_manifest = json.loads(mpath.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            prev_manifest = None
+    trigger = rebuild_trigger(extracted_root, pack_dir, inputs,
+                              prev_manifest)
 
-    verdict, problems = classify_upstream(inputs, drift)
+    verdict, problems = classify_upstream(inputs, drift, tier,
+                                          prev_manifest)
     if verdict == "regression":
         # WRITE NOTHING — refusing to overwrite a healthy index with a
         # shrunken one is the anti-masking behavior (§S5.3 rationale).
@@ -1480,54 +1592,57 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
             "defect, not content", exit_code=1)
     edges = inputs["edges"]
     a_universe = {(e["srcKind"], str(e["srcId"])) for e in edges}
-    seed_assert(inputs["build_id"], drift, "localeEdgePairs",
+    seed_assert(tier, drift, "localeEdgePairs",
                 len(a_universe), SEEDS["localeEdgePairs"])
 
     narrow_union = a_universe | uni["carriers"]
     narrow_per_kind = Counter(k for k, _i in narrow_union)
     carriers_per_kind = Counter(k for k, _i in uni["carriers"])
-    seed_assert(inputs["build_id"], drift, "universeNarrow",
+    seed_assert(tier, drift, "universeNarrow",
                 len(narrow_union), SEEDS["universeNarrow"])
-    seed_assert(inputs["build_id"], drift, "narrowPerKind",
+    seed_assert(tier, drift, "narrowPerKind",
                 dict(sorted(narrow_per_kind.items())), SEEDS["narrowPerKind"])
-    seed_assert(inputs["build_id"], drift, "carriers",
+    seed_assert(tier, drift, "carriers",
                 len(uni["carriers"]), SEEDS["narrowCarriers"])
     lit_total = uni["components"]["plainStringNameLiterals"]["total"]
-    seed_assert(inputs["build_id"], drift, "plainNameLiterals.total",
+    seed_assert(tier, drift, "plainNameLiterals.total",
                 lit_total, SEEDS["plainNameLiterals"]["total"])
-    seed_assert(inputs["build_id"], drift, "plainNameLiterals.perKind",
+    seed_assert(tier, drift, "plainNameLiterals.perKind",
                 uni["components"]["plainStringNameLiterals"]["perKind"],
                 SEEDS["plainNameLiterals"]["perKind"])
-    seed_assert(inputs["build_id"], drift, "configLocalisedNameInstances",
+    seed_assert(tier, drift, "configLocalisedNameInstances",
                 uni["components"]["configLocalisedNamePresenceInstances"],
                 SEEDS["configLocalisedNameInstances"])
-    seed_assert(inputs["build_id"], drift, "displayNameBrushScoped",
+    seed_assert(tier, drift, "displayNameBrushScoped",
                 uni["components"]["configDisplayName"]["landscapeBrushScoped"],
                 SEEDS["displayNameBrushScoped"])
-    seed_assert(inputs["build_id"], drift, "roomNamePresence",
+    seed_assert(tier, drift, "roomNamePresence",
                 uni["components"]["roomNameLocstr"]["presence"],
                 SEEDS["roomNamePresence"])
-    seed_assert(inputs["build_id"], drift, "roomNameTextBearing",
+    seed_assert(tier, drift, "roomNameTextBearing",
                 uni["components"]["roomNameLocstr"]["textBearing"],
                 SEEDS["roomNameTextBearing"])
-    seed_assert(inputs["build_id"], drift, "unlockableMTermResolvedEn",
+    seed_assert(tier, drift, "unlockableMTermResolvedEn",
                 uni["components"]["unlockableMTerm"]["resolvingInEn"],
                 SEEDS["unlockableMTermResolvedEn"])
-    seed_assert(inputs["build_id"], drift, "unlockableDescriptiveName",
+    seed_assert(tier, drift, "unlockableDescriptiveName",
                 uni["components"]["unlockableDescriptiveNameNonEmpty"],
                 SEEDS["unlockableDescriptiveName"])
 
     curated_map = load_curated_alias_input(pack_dir)
-    courses = resolve_courses(inputs, drift, curated_map)
+    courses = resolve_courses(inputs, drift, curated_map, tier)
     alias_vol = alias_volumes(inputs, drift, uni["facts"], uni["census"])
-    seed_assert(inputs["build_id"], drift, "idTokens",
+    seed_assert(tier, drift, "idTokens",
                 alias_vol["idTokens"], SEEDS["idTokens"])
 
     pools, cleaned_empty_dropped, narrow_edge_count, narrow_key_set, \
         narrow_unresolved_pivot = build_name_pools(inputs)
     apply_join_inheritance(pools, joins)
     shard_data = build_shard_payloads(inputs, pools, uni["facts"],
-                                      courses["resolutions"], joins, drift)
+                                      courses["resolutions"], joins,
+                                      drift,
+                                      enforce_ratio_bands=tier
+                                      != TIER_MINI_FIXTURE)
     drift.check("cleanedEmptyDropped", SEEDS["cleanedEmptyDropped"],
                 cleaned_empty_dropped)
     g4 = {k: v for k, v in shard_data["devOnlyPerKind"].items()
@@ -1537,10 +1652,14 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
     payloads = shard_data["payloads"]
 
     analyzers, stats = analyzer_block(inputs, drift)
-    collisions = collision_counters(inputs, drift)
+    collisions = collision_counters(inputs, drift, pools, joins)
 
-    # expanded universe = conservative union + F7 components on their
-    # pinned bases + joins AS EMITTED + course-convention resolutions
+    # Expanded universe = conservative union + the F7 components. Component
+    # COUNTS keep their pinned presence bases (published beside); union
+    # SEATS follow capability — an entity seats only where it can bear
+    # text on a pinned basis (an empty struct never yields text; a
+    # non-resolving mTerm never yields a name). Description-only members
+    # seat through universe A and are bookkept by descriptionOnlyNoDoc.
     expanded = set(narrow_union)
     expanded |= {(k, i) for k, ids in uni["literals"].items() for i in ids}
     cfg_locname = set()
@@ -1550,41 +1669,39 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
         eid = str(row["id"])
         cls = (row.get("source") or {}).get("class") or ""
         rec = uni["facts"].get(("config", eid)) or {}
-        roots = rec.get("roots") or {}
-        if roots.get("LocalisedName"):
+        capable = rec.get("rootsCapable") or {}
+        if capable.get("LocalisedName"):
             cfg_locname.add(eid)
-        if roots.get("Title"):
+        if capable.get("Title"):
             title_rows.add(eid)
-        if roots.get("DisplayName") and \
+        if capable.get("DisplayName") and \
                 cls == "TPC.LandscapeBrushDefinition":
             dn_brush.add(eid)
     expanded |= {("config", e) for e in cfg_locname}
     expanded |= {("config", e) for e in title_rows}
     expanded |= {("config", e) for e in dn_brush}
-    for kind, field, tag in (("room", "Name", None),
-                             ("unlockable", "DisplayName", "mterm"),
-                             ("unlockable", "DescriptiveName", None)):
-        got = set()
-        for row in inputs["stubs"][kind]:
-            fields = row.get("fields") or {}
-            v = fields.get(field)
-            if tag == "mterm":
-                if isinstance(v, dict) and v.get("mTerm"):
-                    got.add(str(row["id"]))
-            elif field == "Name":
-                if su.is_locstr(v):
-                    got.add(str(row["id"]))
-            else:
-                if isinstance(v, str) and su.clean_text(v):
-                    got.add(str(row["id"]))
-        expanded |= {(kind, e) for e in got}
-    if joins["state"] == "emitted":
-        expanded |= {("item", s) for s in joins["inheritance"]}
+    room_seats = set()
+    for row in inputs["stubs"]["room"]:
+        fields = row.get("fields") or {}
+        if su.locstr_bears_text(fields.get("Name")):
+            room_seats.add(str(row["id"]))
+    open_mt = set(uni["components"]["unlockableMTerm"]["openIds"])
+    mt_seats = {eid_ for (kind_, eid_), rec_ in uni["facts"].items()
+                if kind_ == "unlockable" and rec_.get("mterm")
+                and eid_ not in open_mt}
+    expanded |= {("room", e) for e in room_seats}
+    expanded |= {("unlockable", e) for e in mt_seats}
+    # unlockable DescriptiveName: component count published (AC2 seed 27),
+    # no seat — a plain descriptive string is not a §S2-nameable basis.
+    expanded |= {("item", s) for s in joins["inheritance"]}
     expanded |= {("course", c) for c in courses["resolutions"]}
     expanded_per_kind = Counter(k for k, _i in expanded)
     named_per_kind = Counter(k for k, _i in shard_data["namedEntities"])
-    desc_only = {k: max(0, expanded_per_kind[k] - named_per_kind[k])
-                 for k in set(expanded_per_kind) | set(named_per_kind)}
+    # SPARSE per-kind residual (nonzero kinds only, sorted) — zero cells
+    # carry no information and every consumer reconciles over the sum.
+    desc_raw = {k: expanded_per_kind.get(k, 0) - named_per_kind.get(k, 0)
+                for k in set(expanded_per_kind) | set(named_per_kind)}
+    desc_only = {k: v for k, v in sorted(desc_raw.items()) if v > 0}
     id_only = set()
     for kind in su.KINDS:
         for row in inputs["stubs"][kind]:
@@ -1593,6 +1710,7 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
                 id_only.add(key)
     id_only_per_kind = Counter(k for k, _i in id_only)
     universe_view = {
+        "totalRows": stub_rows,
         "narrow": len(narrow_union),
         "narrowPerKind": dict(narrow_per_kind),
         "expanded": len(expanded),
@@ -1600,6 +1718,7 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
         "idOnly": len(id_only),
         "idOnlyPerKind": dict(id_only_per_kind),
         "descriptionOnlyNoDoc": desc_only,
+        "devOnlyDocs": shard_data["devOnlyPerKind"],
         "components": uni["components"],
         "facts": uni["facts"],
         "upstreamVerdict": verdict,
@@ -1620,9 +1739,9 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
     }
 
     narrow_key_set = set(narrow_key_set)
-    seed_assert(inputs["build_id"], drift, "narrowTitleEdges",
+    seed_assert(tier, drift, "narrowTitleEdges",
                 narrow_edge_count, SEEDS["narrowTitleEdges"])
-    seed_assert(inputs["build_id"], drift, "narrowTitleKeys",
+    seed_assert(tier, drift, "narrowTitleKeys",
                 len(narrow_key_set), SEEDS["narrowTitleKeys"])
 
     expanded_walker_keys = set(narrow_key_set)
@@ -1639,30 +1758,30 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
 
     manifest = build_manifest(
         inputs, inputs["locales"], universe_view, payloads, analyzers,
-        stats, alias_vol, collisions, courses["block"], joins, trigger,
-        uni["census"], sorted(narrow_key_set), narrow_edge_count,
-        narrow_unresolved_pivot, expanded_walker_keys)
+        stats, alias_vol, collisions, courses["block"], joins,
+        upstream_envelope(inputs), uni["census"], sorted(narrow_key_set),
+        narrow_edge_count, narrow_unresolved_pivot, expanded_walker_keys)
 
     ledger_rows = build_ledger(inputs, joins, courses, curated_map is not None,
                                shard_data["devOnlyPerKind"],
                                uni["components"]["unlockableMTerm"]["openIds"])
 
-    relpaths, manifest_bytes = emit(extracted_root, inputs["locales"],
-                                    payloads, ledger_rows, manifest)
-
+    # Planning-floor movement line prints IFF expanded != 10200 (reviewer
+    # F9); noted BEFORE emission so it rides the run section too.
     planning_floor_delta = len(expanded) - SEEDS["planningFloor"]
     if planning_floor_delta != 0:
-        line = (f"DRIFT: expanded {len(expanded)} vs planning floor "
-                f"{SEEDS['planningFloor']} "
-                f"({pct(len(expanded), SEEDS['stubRows'])}); delta "
-                "attributable to boundary components: titleCarrierInstances"
-                f"={uni['components']['titleCarrierInstances']}, "
-                "nested Name strings excluded, room Name presence basis, "
-                "item-title join state "
-                f"{joins['state']}, course-convention resolutions="
-                f"{len(courses['resolutions'])}")
-        print(f"[{STAGE_ID}] {line}", file=sys.stderr)
-        drift.note(line)
+        drift.note(
+            f"DRIFT: expanded {len(expanded)} vs planning floor "
+            f"{SEEDS['planningFloor']} "
+            f"({pct(len(expanded), stub_rows)}); delta attributable to "
+            "boundary components: titleCarrierInstances"
+            f"={uni['components']['titleCarrierInstances']}, "
+            "nested Name strings excluded, room Name presence basis, "
+            f"item-title join state {joins['state']}, course-convention "
+            f"resolutions={len(courses['resolutions'])}")
+
+    relpaths, manifest_bytes = emit(extracted_root, inputs["locales"],
+                                    payloads, ledger_rows, manifest)
 
     per_locale_docs = {loc: len(payloads[loc]["docs"])
                        for loc in inputs["locales"]}
@@ -1672,8 +1791,7 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
         "universeComponents={} / planningFloorDelta={} / joinState={} / "
         "variationRefs={} / twinEdges={} / pendingJoinCandidates={} / "
         "idOnlyRemainder={}".format(
-            SEEDS["stubRows"] if inputs["build_id"] == SEED_BUILDID
-            else sum(len(v) for v in inputs["stubs"].values()),
+            stub_rows,
             len(narrow_union), len(expanded),
             json.dumps(_compact_components(manifest), sort_keys=True,
                        ensure_ascii=False),
@@ -1688,10 +1806,12 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
             json.dumps(shard_data["devOnlyPerKind"], sort_keys=True),
             uni["census"]["blacklistHits"]),
         "- S3: idTokenVocab={} / devAliases={} / mTermResolved={} / "
-        "courseMechanical={} / courseWithSeedTable={} / courseOpen={} / "
+        "courseMechanical={} / courseMechanicalNoMap={} / "
+        "courseWithSeedTable={} / courseOpen={} / "
         "marketingResolved={} / marketingOpen={} / collisionPairs={}".format(
             alias_vol["idTokens"], alias_vol["devStrings"],
-            alias_vol["mTermResolved"], courses["counts"]["mechanicalNoMap"],
+            alias_vol["mTermResolved"], courses["counts"]["withMap"],
+            courses["counts"]["mechanicalNoMap"],
             courses["counts"]["seeded"] if curated_map is not None
             else courses["counts"]["withMap"], len(courses["defsOpen"]),
             courses["counts"]["marketing"],
@@ -1701,7 +1821,7 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
         "markupRowsStripped={}".format(
             json.dumps({loc: su.tokenizer_for(loc)
                         for loc in inputs["locales"]}, sort_keys=True),
-            json.dumps({loc: stats[loc]["vocabDistinctTokens"]
+            json.dumps({loc: stats[loc]["vocab"]
                         for loc in inputs["locales"]}, sort_keys=True),
             stats[su.PIVOT]["markupTagRows"]
             + stats[su.PIVOT]["placeholderRows"]),
@@ -1711,6 +1831,8 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
             2 * len(inputs["locales"]) + 2, len(ledger_rows),
             trigger["reason"], verdict),
     ]
+    # every reconciliation note rides the run section as well as stderr
+    run_lines.extend(f"- {ln}" for ln in drift.lines)
     log_util.append_run_section(extracted_root, STAGE_ID, run_lines)
 
     for line in drift.lines:

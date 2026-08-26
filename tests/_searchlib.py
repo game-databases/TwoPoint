@@ -67,11 +67,13 @@ silently):
                         GEM_Hunter — the single planted pair)
   devStrings           7 ROWS (I1 localized+dev, C16, I10, I12, I13,
                         S2, U6)
-  collisions           collidingPairs 3 · top [(config,"Lab Work",5),
+  collisions           collidingPairs 4 · top [(config,"Lab Work",5),
                         (config,"Specialist Book Report",4)] ·
-                        ignoreKindCollisions 4 (Lab Work, Specialist
+                        ignoreKindCollisions 5 (Lab Work, Specialist
                         Book Report, Grand Library across room+item,
-                        Construction Blocks Set across lite+variation) ·
+                        Construction Blocks Set across lite+variation,
+                        "{BLADE}" across lite edge + full join instance —
+                        RAW-surface basis, arbiter RF-C) ·
                         withinLocaleDuplicateTexts {de 2, en 3, ja 0,
                         ko 2, zh-Hans 2, each extra 2}
   course ladder        9 TPC.CourseDefinition + 4 Marketing; mechanical 6
@@ -384,8 +386,8 @@ ENTITIES = [
     # --- staff -----------------------------------------------------------
     ("staff", "Staff_Professor_Row", "TPC.StaffDefinition",
      {"LocalisedName": _ls(TERM_IDS["Staff/Professor/Name"], ""),
-      "Ranks": [{"TitleM": _ls(TERM_IDS["Staff/Ranks/Senior_M"], ""),
-                 "TitleF": _ls(TERM_IDS["Staff/Ranks/Senior_F"], "")}]}),
+      "Ranks": [{"TitleMale": _ls(TERM_IDS["Staff/Ranks/Senior_M"], ""),
+                 "TitleFemale": _ls(TERM_IDS["Staff/Ranks/Senior_F"], "")}]}),
     # --- room ------------------------------------------------------------
     ("room", "Room_Library_Main", "TPC.RoomDefinition",
      {"NameWhenBuilt": _ls(TERM_IDS["Rooms/Rooms/Room_Library_Name"], ""),
@@ -543,8 +545,12 @@ TRAP_PATHS = {  # the single-field misreading (reviewer F3 trap figure)
 
 
 def walk_ls(fields, prefix=""):
-    """Yield (dottedPath, payload) for every LocalisedString struct:
-    dicts recurse (LS-shaped terminate), lists recurse with indices."""
+    """Yield (dottedPath, payload) for every LocalisedString struct.
+
+    Path dialect matches the REAL relink emitter: array membership is
+    marked with a bare ``[]`` and carries NO index ("Ranks[].TitleMale",
+    "FlavourDescriptions[]") — piece-2's entity_locale fieldPaths never
+    enumerate positions."""
     if isinstance(fields, dict):
         if "_termID" in fields and "_dev" in fields:
             yield prefix.lstrip("."), fields
@@ -552,8 +558,8 @@ def walk_ls(fields, prefix=""):
         for name in sorted(fields):
             yield from walk_ls(fields[name], f"{prefix}.{name}")
     elif isinstance(fields, list):
-        for i, item in enumerate(fields):
-            yield from walk_ls(item, f"{prefix}.{i:08d}")
+        for item in fields:
+            yield from walk_ls(item, f"{prefix}[]")
 
 
 def mterm_refs(fields):
@@ -858,16 +864,31 @@ class SearchOracle:
         return bad
 
     def collisions(self):
-        res = self.name_resolution(PIVOT)
-        pair_mult = {}
-        text_entities = {}
-        for (kind, eid), (_basis, _key, text) in res.items():
-            pair_mult[(kind, text)] = pair_mult.get((kind, text), 0) + 1
-            text_entities.setdefault(text, set()).add(eid)
+        """PINNED collision surface (arbiter RF-C): NARROW name-class
+        edges plus consumed join-title instances over RAW pivot texts.
+        Pairs count (kind,title) multiplicity; ignoreKind counts TITLE
+        TEXT multiplicity ignoring kind — the reading that reproduces the
+        real seeds 264 / 320 (a docs-surface reading would measure 575 /
+        613 there and is NOT the pinned basis)."""
+        tbl = self.table(PIVOT)
+        narrow_top = {k: set(v) for k, v in NARROW_PATHS.items()}
+        instances = []
+        for kind, eid, path, tid, key in self.edges():
+            if path.split(".")[0] in narrow_top.get(kind, set()):
+                raw = tbl.get(key)
+                if raw and raw.strip():
+                    instances.append((kind, eid, raw))
+        for src, key in JOIN_TITLE_SOURCES.items():
+            raw = tbl.get(key)
+            if raw and raw.strip():
+                instances.append(("item", src, raw))
+        pair_mult, text_mult = {}, {}
+        for kind, _eid, raw in instances:
+            pair_mult[(kind, raw)] = pair_mult.get((kind, raw), 0) + 1
+            text_mult[raw] = text_mult.get(raw, 0) + 1
         colliding = {kv: v for kv, v in pair_mult.items() if v > 1}
         top = sorted(colliding.items(), key=lambda kv: (-kv[1], kv[0]))
-        ignore_kind = sum(1 for ents in text_entities.values()
-                          if len(ents) > 1)
+        ignore_kind = sum(1 for v in text_mult.values() if v > 1)
         dup_texts = {}
         for loc in ALL_LOCALES:
             seen = {}
@@ -878,13 +899,16 @@ class SearchOracle:
 
     # -- analyzers -----------------------------------------------------------
     def vocab(self, loc):
-        """Distinct word-char-run tokens, tokenize-then-lowercase GLOBAL
-        (unicode \\w runs — Hangul/CJK tokens count, mirroring scout §3)."""
+        """Distinct word-char-run tokens over RAW table text,
+        tokenize-then-lowercase GLOBAL (the PINNED F8 detector: \\w+ runs
+        with no pre-cleaning — the only basis reproducing the verifier-
+        confirmed endpoints en 11,897 / tr 23,445 / ko 28,594; markup and
+        placeholder rows are counted separately as markupTagRows /
+        placeholderRows, never stripped before tokenizing)."""
         tokens = set()
         for text in self.table(loc).values():
-            for run in re.split(r"\W+", TAG_RE.sub("", text), flags=re.UNICODE):
-                if run:
-                    tokens.add(run.lower())
+            for run in re.findall(r"\w+", text, flags=re.UNICODE):
+                tokens.add(run.lower())
         return tokens
 
     def cjk_rows(self, loc):

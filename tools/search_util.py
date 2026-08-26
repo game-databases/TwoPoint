@@ -115,6 +115,21 @@ def _tail_after(prefixes, suffix):
     return tail
 
 
+def _tail_marketing():
+    """Marketing/Courses[/Minor]/[Long_]<X>_Name — the [Long_] segment is
+    optional decoration per the pinned family grammar (spec §S3.2), so the
+    family tail is <X> with a leading `Long_` stripped; `Minor/` paths are
+    already handled by the final-segment split."""
+    inner = _tail_after(("Marketing/Courses/",), "_Name")
+
+    def tail(key):
+        s = inner(key)
+        if s.startswith("Long_"):
+            s = s[len("Long_"):]
+        return s
+    return tail
+
+
 COURSE_FAMILIES = (
     ("qualification",
      lambda k: k.startswith("Characters/")
@@ -129,7 +144,7 @@ COURSE_FAMILIES = (
      _tail_after((), "_Name")),
     ("marketing-courses",
      lambda k: k.startswith("Marketing/Courses/") and k.endswith("_Name"),
-     _tail_after(("Marketing/Courses/",), "_Name")),
+     _tail_marketing()),
     ("research-courses",
      lambda k: k.startswith("Research/Courses/") and k.endswith("_Name"),
      _tail_after(("Research/Courses/",), "_Name")),
@@ -225,6 +240,12 @@ def walk_stub_fields(fields):
                       a LocalisedString struct, at ANY nesting depth
                       (presence basis — the arbiter RF-B reproduction of
                       552/730/193 counts key occurrences at any depth);
+      capableKeys     same keying, counting only TEXT-CAPABLE structs
+                      (`_termID != 0`, or `_termID == 0` with non-empty
+                      `_dev`). Component COUNTS publish the presence basis;
+                      expanded-union SEATS use capability (an empty struct
+                      can never yield text, so it holds no seat and no
+                      descriptionOnlyNoDoc entry);
       boneStrings     count of string leaves under a blacklisted segment
                       (F12 census — measured garbage mass, never indexed);
       blacklistHits   count of LocalisedString structs found UNDER a
@@ -232,12 +253,15 @@ def walk_stub_fields(fields):
                       defect content — must stay 0 after caller filtering).
     """
     root_keys: Counter = Counter()
+    capable_keys: Counter = Counter()
     bone_strings = 0
     blacklist_hits = 0
 
-    def note(key: str, path: str) -> None:
+    def note(key: str, path: str, node: dict) -> None:
         nonlocal blacklist_hits
         root_keys[key] += 1
+        if locstr_bears_text(node):
+            capable_keys[key] += 1
         if path_is_blacklisted(path):
             blacklist_hits += 1
 
@@ -246,12 +270,12 @@ def walk_stub_fields(fields):
         hold, path, node = stack.pop()
         if isinstance(node, dict):
             if is_locstr(node) and hold:
-                note(hold, path)
+                note(hold, path, node)
                 continue
             for key, val in node.items():
                 npath = f"{path}.{key}" if path else str(key)
                 if isinstance(val, dict) and is_locstr(val):
-                    note(key, npath)
+                    note(key, npath, val)
                 elif isinstance(val, (dict, list)):
                     stack.append((key, npath, val))
                 elif isinstance(val, str) and path_is_blacklisted(npath):
@@ -259,12 +283,13 @@ def walk_stub_fields(fields):
         elif isinstance(node, list):
             for item in node:
                 if isinstance(item, dict) and is_locstr(item) and hold:
-                    note(hold, path)
+                    note(hold, path, item)
                 elif isinstance(item, (dict, list)):
                     stack.append((hold, path + "[]", item))
                 elif isinstance(item, str) and path_is_blacklisted(path):
                     bone_strings += 1
-    return {"rootKeys": root_keys, "boneStrings": bone_strings,
+    return {"rootKeys": root_keys, "capableKeys": capable_keys,
+            "boneStrings": bone_strings,
             "blacklistHits": blacklist_hits}
 
 
@@ -361,13 +386,9 @@ def resolve_course(course_id: str, family_index, use_token_map: bool = True,
     """First-hit-wins resolution: families in priority order; within a
     family, candidate forms in construction order (direct tail > plural
     fold > last segment > token map). Curated rows close the residue AFTER
-    mechanics (they are authored for exactly that residue; validation of
-    every row is the stage's job regardless). Returns
-    {termKey, method, form?} or None."""
-    if curated and course_id in curated:
-        row = curated[course_id]
-        return {"termKey": str(row["termKey"]),
-                "method": str(row.get("method") or "curated")}
+    mechanics (spec §S3.2: they are authored for exactly the mechanical
+    residue; validation of every row is the stage's job regardless).
+    Returns {termKey, method, form?} or None."""
     forms = course_candidates(course_id)
     if use_token_map:
         forms = apply_token_map(forms)
@@ -380,6 +401,10 @@ def resolve_course(course_id: str, family_index, use_token_map: bool = True,
                           "last-segment": "last-segment",
                           "token-map": "token-map"}[tag]
                 return {"termKey": hit, "method": method, "form": form}
+    if curated and course_id in curated:
+        row = curated[course_id]
+        return {"termKey": str(row["termKey"]),
+                "method": str(row.get("method") or "curated")}
     return None
 
 
@@ -418,12 +443,15 @@ def analyze_locale_table(table: dict[str, str]) -> dict:
     rows = len(counts)
     avg = round(sum(counts) / rows, 2) if rows else 0.0
     med = median(counts) if rows else 0
+    # Column names are the PINNED census vocabulary (reviewer F8: two
+    # implementers must emit identical manifest.analyzers cells) — flat,
+    # top-level, no nested dialect.
     return {
         "rows": rows,
-        "vocabDistinctTokens": len(vocab),
+        "vocab": len(vocab),
         "medianTokensPerRow": med,
         "avgTokensPerRow": avg,
-        "cjkBearingRows": cjk_rows,
+        "cjkRows": cjk_rows,
         "noWhitespaceRows": no_ws_rows,
         "markupTagRows": tag_rows,
         "placeholderRows": ph_rows,
@@ -441,26 +469,30 @@ def tokenizer_for(locale: str) -> str:
 # S3.4 — collision counters
 
 def collision_block(resolved_pairs, within_locale_dup_texts: dict) -> dict:
-    """resolved_pairs: iterable of (srcKind, srcId, cleanedEnTitle) over the
-    title surface (narrow name-class edges + config Title/DisplayName).
+    """resolved_pairs: iterable of (srcKind, srcId, RAW pivot title) over
+    the PINNED collision surface — narrow name-class edges plus consumed
+    item-title join instances (arbiter RF-C basis; reconciles the seed
+    block digit-for-digit on the real corpus: pairs 264 / x53 / x51 /
+    ignoreKind 320).
 
-      collidingPairs      (kind,title) PAIRS with multiplicity > 1 (raw-
-                          truth many-to-many; arbiter RF-C basis);
+      collidingPairs      (kind,title) PAIRS with multiplicity > 1;
       topPairs            highest-multiplicity pairs;
-      ignoreKindCollisions DISTINCT TITLE TEXTS carried by more than one
-                          ENTITY ignoring kind (the distinct-KIND reading is
-                          carried beside as `distinctKindTexts`);
+      ignoreKindCollisions TITLE TEXTS carried by more than one carrying
+                          INSTANCE ignoring kind (instance multiplicity —
+                          the reading that reproduces the pinned 320; the
+                          distinct-KIND alternative is carried beside as
+                          `distinctKindTexts`);
       withinLocaleDuplicateTexts  texts mapping to >1 KEY per full locale
                           table.
     """
     pair_counts: Counter = Counter()
-    by_text: dict[str, set] = {}
+    text_counts: Counter = Counter()
     kinds_by_text: dict[str, set] = {}
     for kind, sid, title in resolved_pairs:
         if not title:
             continue
         pair_counts[(kind, title)] += 1
-        by_text.setdefault(title, set()).add((kind, sid))
+        text_counts[title] += 1
         kinds_by_text.setdefault(title, set()).add(kind)
     colliding = {k: v for k, v in pair_counts.items() if v > 1}
     top = sorted(colliding.items(), key=lambda kv: (-kv[1], kv[0]))[:10]
@@ -468,7 +500,7 @@ def collision_block(resolved_pairs, within_locale_dup_texts: dict) -> dict:
         "collidingPairs": len(colliding),
         "topPairs": [{"kind": k, "title": t, "count": c}
                      for (k, t), c in top],
-        "ignoreKindCollisions": sum(1 for v in by_text.values() if len(v) > 1),
+        "ignoreKindCollisions": sum(1 for v in text_counts.values() if v > 1),
         "distinctKindTexts": sum(1 for v in kinds_by_text.values()
                                  if len(v) > 1),
         "withinLocaleDuplicateTexts": dict(sorted(
