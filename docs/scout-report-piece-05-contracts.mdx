@@ -73,8 +73,18 @@ not sampled, except where marked sample-based.
 
 | Artifact | Rows/size | Schema (measured) |
 |---|---|---|
-| `extracted/identity.json` | 14 keys | `{appid, buildId, targetBuildId, versionString, unityVersion, metadataVersion, dumper, addressablesVersion, settingsHash, languageSetting, expectedBundles{aa,dlc-space,dlc-ghost}, localeBundleCount, sceneCounts{4}}` |
+| `extracted/identity.json` | 13 top-level keys | `{appid, buildId, targetBuildId, versionString, unityVersion, metadataVersion, dumper, addressablesVersion, settingsHash, languageSetting, expectedBundles{aa,dlc-space,dlc-ghost}, localeBundleCount, sceneCounts{4}}` |
 | `extracted/bundle-roster.jsonl` | **176 rows** | exactly `{buildId, bytes, dirClass, localeFlag, relpath, sceneFlag}` — one keyset on 100% of rows |
+
+### Stage 1 — decompile
+
+| Artifact | Measured |
+|---|---|
+| `decompiled/il2cppdumper/DummyDll/*.dll` | **101 dummy images** (multi-image gate; no `Assembly-CSharp.dll` by design on this client) |
+| `decompiled/il2cppdumper/{dump.cs, il2cpp.h, script.json, stringliteral.json}` | Il2CppDumper artifacts kept verbatim — note `il2cpp.h` ships on disk though piece-01 §4 does not name it |
+| `decompiled/structural/assembly-index.json` | `{assemblies:[148 × {assembly, status}]}` with statuses `dummy-present` / `dummy-absent(stripped)` + a second entry stamping `{buildId, hierarchyRowCount: 20037, hierarchyCountMethod: "pure-python ECMA-335 metadata reader over DummyDll/*.dll", hierarchySource: "dummydll-typedef-enumeration"}` — the hierarchy-equality evidence lives IN the artifact, a good pin precedent |
+| `decompiled/structural/class-hierarchy.jsonl` | **20,037 rows**, one per type |
+| `decompiled/structural/id-registries/` | **1,792 JSON files** (rows like `{"name":"PLUGIN_DLL","value":"AnselPlugin64"}`); EXTRACTION-LOG's `registryCount: 1900` counts covered classes, not files — another units-should-be-inline case |
 
 Roster domains (measured): `dirClass` base 158 · dlc-space 10 ·
 dlc-ghost 8; `sceneFlag` none 150 · `.unity` 25 · `seasonal-scenes` 1
@@ -100,7 +110,7 @@ addressable key with its owning bundle and internal address",
   guid-kind always carries an address — for guid rows the `address`
   IS the container address and bundle resolution happens through
   `bridges/container_index.jsonl`).
-- `dependencies[]`: **3,939,716 total edges**; 12,700 rows carry zero.
+- `dependencies[]`: **3,939,716 total edges**; 11,491 rows carry none.
 - **`key` is NOT unique**: 56,660 rows, 56,659 distinct values —
   `f952c082cb03451daed3ee968ac6c63e` appears twice (byte-identical
   rows, legal Addressables duplicate registration). Any consumer doing
@@ -129,7 +139,7 @@ dlc-ghost 1,666.
 |---|---|---|
 | `locales/{en,pt-BR,zh-Hans,zh-Hant,fr,de,it,ja,ko,pl,ru,es,tr}.jsonl` | see §4 table | exactly `{id, text}` on 100% of rows in all 13 files |
 | `locales/base-overlay.jsonl` | **15,672 rows** | same `{id,text}` contract; **text is `""` on 15,672/15,672 rows** — the base bundle is a KEY REGISTRY, not a translation table (consumers must not render it) |
-| `locales/base-overlay-report.json` | 1 object | `compositionPolicy:"mixed"` (enum of 4) + 17 evidence counters |
+| `locales/base-overlay-report.json` | 1 object | `compositionPolicy:"mixed"` (enum of 4) + 15 evidence counters |
 | `locales/locale-matrix.json` | **15,672 keys** | `{keys:{<locKey>:{baseOverlay:bool, locales:[BCP-47 codes]}}, meta:{buildId, includesBaseKeys:true, locales:[13]}}` |
 
 Per-locale row counts (wc-equivalent, measured): en 15,665 · pt-BR
@@ -139,14 +149,22 @@ Per-locale row counts (wc-equivalent, measured): en 15,665 · pt-BR
 208–295 en keys; only zh-Hans, zh-Hant, ja each carry **1** key en
 lacks.
 
-**Measured log↔artifact defect:** the last `localisation` run section
-(EXTRACTION-LOG 2026-08-25T03:13Z) reports per-locale `rows` exactly
-**+5 above the file line counts on all 13 locales** (e.g. de 15,450
-logged vs 15,445 on disk; en 15,670 vs 15,665), and
-`localeRowsEmittedTotal` **200,977 vs 200,912 measured** (−65 = 13×5).
-The run-section counter does not reconcile to its own artifact by any
-documented rule — a contract invariant ("counter == artifact line
-count") would catch this today. See §10 G1.
+**Counter units in the localisation run section (NOT a data defect —
+adjudicated 2026-08-26):** the logged per-locale `rows` sit exactly
+**+5 above the file line counts on all 13 locales**
+(`localeRowsEmittedTotal` 200,977 vs 200,912 file lines) because the
+two numbers use DIFFERENT units that the same run section carries side
+by side: logged `rows` are **emission events including duplicate-key
+overwrites**, while each file emits one line per DISTINCT key. The
+arithmetic closes: logged `rows` == 15,677 terms walked − skippedEmpty,
+exactly, per locale; the +5/locale is the duplicate-key overwrite
+population, which is computed at emission time
+(`duplicateKeysOverwritten`, `tools/stage4_localisation.py`) but never
+printed or persisted — that missing bridge is the whole discrepancy.
+Pin-stage items: **(a)** persist + print `duplicateKeysOverwritten` so
+the units reconcile on paper, **(b)** document counter units inline
+next to each run-section key. A naive `rows == wc -l` invariant would
+ITSELF be the bug here (see §10 G1).
 
 ### Stage 5 — stubs
 
@@ -208,7 +226,8 @@ Measured per-family facts:
 | `entity_locale.jsonl` | **10,964 rows** | pair-schema with `dstKind:"locale-term"` throughout; `evidence{dev, fieldPath, locales[], termId}`; 903 distinct fieldPaths (top: Name 1,880 · Description 1,869 · LocalisedName 1,625 · FlavourDescriptions[] 1,268) |
 | `locale_term_entity.jsonl` | **6,526 rows** | `{buildId, locales, termKey, usages[]}`; Σ usages = **10,964 == entity_locale rows** (reverse index reconciles exactly) |
 | `entity_asset_guid.jsonl` | **15,630 rows** | pair-schema with `dstKind:"asset"`; `resolvedVia` single value `"catalog-guid+container-index"`; 4,447 distinct addresses |
-| `guid_bridge_report.json` | 1 object | `{guidRefsTotal 20170, distinctGuids 5584, resolvedToAddress 16110, resolvedToStub 3747, danglingDistinctGuids 1137, resolveRateAddress 0.79871, resolveRateStub 0.18577, buildId}` |
+| `guid_bridge_report.json` | 1 object | `{guidRefsTotal 20170, distinctGuids 5584, resolvedToAddress 16110, resolvedToStub 3747, danglingDistinctGuids 1137, resolveRateAddress 0.79871, resolveRateStub 0.18577, buildId}` — counters count REFERENCES not rows and replay bit-exact (§3); the ref unit itself is documented only in code (§10 G3) |
+| `locale_join_report.json` | 1 object | `{instancesTotal 20070, sentinelZero 9101, registryHits 10964, registryMisses 5, coverageOnNonEmpty 0.99954, matrixKeyDiff 0, perKindHits{8 kinds}, unresolvedIds[5 × {termId, sampleRefs}], codeRefTerms{note, auditPath}, buildId}` — **carries an exit-2-contributing ledger inline** (`registryMisses: 5`) |
 | `_dangling_guids.jsonl` | **1,137 rows** | `{assetGuid, buildId, sampleRefs[≤5], unblock, verdict}`; verdict `unresolved-open` on all (declared enum has 4 values — 3 never exercised); sampleRefs cap respected |
 | `_unresolved_pptrs.jsonl` | **2,391 rows** | `{srcKind,srcId,fieldPath,extFileId,extPath,m_PathID,reason,buildId}`; reason enum measured at exactly 2 values: "pathId exists in the resolved file but is not an emitted stub entity" 2,284 + "same-file pathId … bundle carries no scene flag" 107 |
 | `ui_link_coverage.jsonl` | **344 rows** | `{surfaceId, uiClass, exportedCount, definitionClasses[], impliedFamilies[], status, joins[], gapReason, unblock, buildId}` (+`genericContainerClasses` on exactly 1 row — the tooltip generic-container case); **mapped-schema 9 / documented-gap 335** |
@@ -227,7 +246,9 @@ off-vocabulary evidence keys anywhere.
 `extracted/maps/` and `extracted/logic/` are **empty** (`.gitkeep`
 only) — their contracts get pinned by the maps/logic pieces; reserve
 the node names now (§8). `extracted/protocol/` holds the piece-1
-README placeholder only.
+README placeholder only, and `extracted/VALIDATION-REPORT.md` +
+`extracted/PROOF.md` are tracked pointer placeholders by design
+(piece-1) awaiting the PROOF piece's mechanical derivation.
 
 ---
 
@@ -263,9 +284,9 @@ Cross-family join checks (full scans, not samples):
 | media-catalogue rows ↔ carved census per class | 9 classes | exact equality on every class |
 | stub `source.bundle` basename ⊆ roster basenames | 11 bundles | **0 orphans** |
 | export-manifest `sourceBundle` ⊆ roster basenames | 114 bundles | **0 orphans** |
-| `entity_asset_guid.dstId` → container_index `address` | 15,630 rows | **5 rows reference an address ABSENT from container_index** — live join defect (§10 G2) |
-| `guid_bridge_report` counters ↔ emitted artifacts | arithmetic | **NOT derivable**: report `resolvedToAddress 16,110` vs 15,630 emitted asset rows; `resolvedToStub 3,747` vs 3,746 assetguid pair rows (§10 G3) |
-| localisation run-section `rows` ↔ file line counts | 13 locales | **−5 per locale, −65 total** (§10 G1) |
+| `entity_asset_guid.dstId` → container_index `address` | 15,630 rows | **9 rows over 5 distinct addresses uncontained** — all `config` srcs → `Assets/Data/DLCs/DLC3_Hospital/*` addresses whose catalog entries carry `bundle:null`: UNINSTALLED-DLC coverage (same family as the 19 out-of-roster references already ledgered), NOT snapshot skew. Per piece-02 §R3 `dstId` is catalog-address-verbatim, so this is not an id-closure break; the residual gap is that address-terminal uncontained rows get NO ledger row today (§10 G2) |
+| `guid_bridge_report` counters ↔ emitted artifacts | arithmetic | **RECOMPUTABLE** — full replay reproduces all seven fields bit-exact (20,170 / 5,584 / 16,110 / 3,747 / 1,137; rates 0.7987109568666336 / 0.1857709469509172) plus universes (15,630 asset rows with identical membership; 3,746 pair rows). Counters count REFERENCES not rows: `resolvedToStub` − assetguid pair rows = exactly one collapsed dedup tuple (`Item_Union_Stage_Floor → ItemValidator_SinglePlace` via `Validators[]`). Real gap: the ref unit is documented only in code (§10 G3) |
+| localisation run-section `rows` ↔ file line counts | 13 locales | **units differ, not a defect**: logged rows are emission events incl. duplicate-key overwrites; files emit one line per distinct key (+5/locale, −65 total) — pin item is persisting `duplicateKeysOverwritten` so the units close on paper (§10 G1) |
 
 Special dstKind id spaces (contract exists, data state noted):
 `scene` resolves against the 26 roster scene rows — but
@@ -274,7 +295,8 @@ exists yet** (the branch is unexercised on this corpus);
 `asset` against container_index; `locale-term` against the registry.
 
 Where two families disagree about the same entity — the honest list:
-(a) the 5 dangling-address rows above; (b) the seeded-vs-measured
+(a) the 9 uncontained DLC-address rows above (explained coverage, but
+silent); (b) the seeded-vs-measured
 disagreements already settled by DRIFT lines (GUID bridge seed;
 campus-level→metagame-node carrier kinding); (c) the
 `competitor_applied` ledger shape vs its spec. No other
@@ -354,7 +376,7 @@ changes while requiring counter-level reconciliation to survive them.
 | #38 search corpus | stubs (ids, names) + locale tables + `entity_locale` | locale `{id,text}` shape; registry↔matrix diff==0; slug-null reality |
 | #36 locale coverage proof | `locale-matrix.json` + per-locale files + `base-overlay-report` | `includesBaseKeys`; BCP-47 set equality; empty-text semantics |
 | #35 media pipeline / owner picks | `MEDIA-CATALOGUE.md` + `media-catalogue.jsonl` | class enum; `contentAxis`; bytesEstimate non-null |
-| #11 PROOF.md | ALL ledgers: `_dangling_guids`, `_unresolved_pptrs`, `competitor_applied` terminal row, `catalog-coverage`, census reconciliation | ledger row shapes; exit-2 ledger-contributor enumeration; counter↔artifact equalities (§3) — PROOF cannot reconcile if the §10 defects stand |
+| #11 PROOF.md | ALL ledgers: `_dangling_guids`, `_unresolved_pptrs`, `competitor_applied` terminal row, `catalog-coverage`, census reconciliation | ledger row shapes; exit-2 ledger-contributor enumeration; unit-correct counter reconciliation (§3 + §10 G1/G3 lessons) — PROOF cannot reconcile if the §10 defects stand |
 | Phase D site (pages, builder, calculators, map) | everything above | needs: display names via `entity_locale`→locales (slug is dead), Kudosh prices (`item.fields.Kudosh/Cost`), requirement chains (`course→config→room/item` cells), research tree (`metagame_node_config` + diagonal), tooltip joins (bar-2 map) |
 | future patch-diff (update tripwire) | stamp hashes + buildId stamps | per-output SHA-256 in `.stage-stamps` is the diff baseline |
 
@@ -437,10 +459,13 @@ inside stage 2 where it is already parsed, or stream-check with jq).
    media-catalogue rows == carved census per class; registry↔matrix
    diff == 0; reverse usages == entity_locale rows; catalog-coverage
    `keysTotal` == catalog rows; roster rows == enumerated bundles.
-3. Counter↔artifact equality for every EXTRACTION-LOG run-section
-   counter that names an emitted file (`rows` == wc-l, `stubRowsByKind`
-   == per-file counts, `edgesEmitted` == pair rows, …). This pin finds
-   **G1 today** (−5/locale).
+3. Counter↔artifact reconciliation for every EXTRACTION-LOG run-section
+   counter that names an emitted file (`stubRowsByKind` == per-file
+   counts, `edgesEmitted` == pair rows, …) — compared IN UNITS, never
+   raw equality: the localisation `rows` case (§2 stage 4, §10 G1)
+   proves a naive `counter == wc -l` pin would itself be the bug
+   wherever emission-event units apply. Prerequisite pin: persist
+   `duplicateKeysOverwritten`.
 4. Structural rules: mapped-schema XOR documented-gap with
    gapReason+unblock on gaps; unblock REQUIRED on every partial/missing
    matrix cell; sampleRefs ≤5; sentinel `_termID==0` excluded from
@@ -456,12 +481,16 @@ small):
 
 1. Id-resolution closure: pair srcId/dstId ⊆ stub ids (twins with
    suffix); `locale-term` ⊆ registry; `scene` ⊆ roster scene ids;
-   `asset` ⊆ container_index addresses. Finds **G2** (5 dangling
-   addresses) today.
-2. Report derivability: every emitted report's counters must be
-   recomputable from sibling artifacts by a documented formula —
-   either fix the formula or demote the field to "instrumentation,
-   not contract". Finds **G3** today.
+   `asset` ⊆ container_index addresses EXCEPT the pinned
+   uninstalled-DLC carve-out (catalog entries with `bundle:null`, cf.
+   the 19 out-of-roster references) — which must land in a LEDGER ROW
+   instead of bare silent rows. Finds **G2**'s real gap (no ledger row
+   for address-terminal uncontained edges) today.
+2. Report derivability: every emitted report's counters must carry
+   their UNIT DEFINITIONS inside the artifact and be replay-reproducible.
+   `guid_bridge_report.json` already replays bit-exact (§3) but defines
+   its reference-unit nowhere but source — the pin item is emitting the
+   definitions, not fixing arithmetic (**G3**).
 3. Bundle-name closure: every `*.bundle` reference in any artifact
    (stub `source.bundle`, export-manifest `sourceBundle`, pair
    evidence bundles, catalog `bundle`) resolves to a roster `relpath`
@@ -493,8 +522,8 @@ states the documented halves. The datasets themselves stay local-only.
 |---|---|---|
 | FEASIBLE-CHEAP | All schema-pins (A1–A5) | every family's keyset is already uniform (measured single-keyset files); validators are pure-python scans of < 60 MB each except catalog |
 | FEASIBLE-CHEAP | Invariant-pins B1/B2/B4 | full scans measured in seconds this session; all green today except catalog key (pin as exception) |
-| FEASIBLE, HIGH VALUE | B3 counter↔artifact pins | catches G1 immediately; requires reading only EXTRACTION-LOG + line counts |
-| FEASIBLE, HIGH VALUE | C1 id-closure pins | 0-miss today except 5 rows — turning that 5 into a red gate forces the bridge fix before site build |
+| FEASIBLE, CARE REQUIRED | B3 counter↔artifact pins | must compare UNITS, not raw equality — the localisation case (§10 G1) proves a naive `rows == wc -l` pin would itself be the bug; prerequisite is persisting `duplicateKeysOverwritten` |
+| FEASIBLE, HIGH VALUE | C1 id-closure pins | 0-miss except the 9-row uninstalled-DLC carve-out; turning that silent termination into ledger rows is the red gate before site build |
 | FEASIBLE-AT-EMIT-TIME | catalog.json checks | 397 MB — do not re-parse per check; assert inside stage 2 post-parse, persist a checksummed mini-report (the pattern `catalog-coverage.json` already uses) |
 | DEFER (owner-routed) | competitor floor flip | structurally blocked on inputs, not on contracts — the terminal ledger row already names the alias-input lever; a pin can only keep the floor state HONEST (verify `sourcesApplied` matches dispositions) |
 | DEFER (own pieces) | `maps/`, `logic/`, protocol-section contracts | directories empty today; reserve node names + path contracts in the pin doc so later pieces inherit, don't invent |
@@ -507,24 +536,39 @@ states the documented halves. The datasets themselves stay local-only.
 **Gaps (measured this session; each is a candidate the pin stage
 should turn red-then-green):**
 
-- **G1 — localisation run-section counter ≠ artifact.** Logged
-  per-locale `rows` exceed on-disk line counts by exactly 5 on all 13
-  locales (totals 200,977 vs 200,912). Either the counter or the file
-  is off by a systematic 5 keys; house rule says the artifact wins and
-  the doc gets corrected, but nobody has noticed because no invariant
-  compares them. Artifact: EXTRACTION-LOG `2026-08-25T03:13:17Z` vs
-  `wc -l extracted/locales/*.jsonl`.
-- **G2 — 5 `entity_asset_guid` rows point at addresses absent from
-  `container_index`** (both stamped by the same relink run). Either
-  the GUID bridge emits from a slightly different index snapshot than
-  the container pass, or the report/artifact disagree about
-  termination. Files: `relinks/entity_asset_guid.jsonl` vs
-  `relinks/bridges/container_index.jsonl`.
-- **G3 — `guid_bridge_report.json` counters are not recomputable from
-  emitted artifacts** (`resolvedToAddress` 16,110 vs 15,630 emitted
-  asset rows; `resolvedToStub` 3,747 vs 3,746 assetguid pair rows).
-  Consumers cannot audit the resolve-rate facts they are told to
-  trust.
+- **G1 — localisation counter units are implicit (RETRACTED as a
+  defect; reframed per adjudication 2026-08-26).** My original "+5
+  drift" reading was wrong: logged per-locale `rows` are EMISSION
+  EVENTS including duplicate-key overwrites; files emit one line per
+  DISTINCT key; both units sit side by side in the same run section
+  (`rowsLogged == 15,677 termsWalked − skippedEmpty` holds exactly;
+  delta +5/locale exact, totals 200,977 vs 200,912). The data is
+  sound. The real pin items: **persist + print**
+  `duplicateKeysOverwritten` (computed in
+  `tools/stage4_localisation.py`, never printed or persisted) and
+  **document counter units inline** beside each run-section key —
+  otherwise every future reader re-derives this confusion, and a naive
+  `rows == wc-l` invariant would itself be the bug.
+- **G2 — address-terminal GUID edges terminate silently when the
+  address is uncontained.** Measured: **9 rows over 5 distinct
+  addresses** in `entity_asset_guid.jsonl`, all `config` sources →
+  `Assets/Data/DLCs/DLC3_Hospital/*` whose catalog entries carry
+  `bundle:null`. Mechanism is UNINSTALLED-DLC coverage (the Medical
+  School family, consistent with the 19 out-of-roster references
+  already ledgered), not snapshot skew; and since piece-02 §R3 makes
+  `dstId` catalog-address-verbatim, this is not an id-closure break.
+  Residual defect: those rows get no ledger row. Pin item: route
+  uncontained address terminations into a named ledger row (or the
+  existing warning-ledger lane) instead of bare emission.
+- **G3 — `guid_bridge_report.json`'s reference unit lives only in
+  code (DOWNGRADED from "not derivable").** Full replay reproduces all
+  seven fields bit-exact plus universes (§3): 20,170 / 5,584 / 16,110 /
+  3,747 / 1,137 and rates 0.7987109568666336 / 0.1857709469509172.
+  Counters count REFERENCES not rows; `resolvedToStub` − pair rows =
+  exactly one collapsed dedup tuple (`Item_Union_Stage_Floor →
+  ItemValidator_SinglePlace` via `Validators[]`). Actionable pin:
+  emit the counter definitions into the report artifact itself so
+  consumers can interpret resolve rates without reading source.
 - **G4 — the spec'd per-term availability projection is empty in
   data**: `i2_term_registry.locales[]`, `entity_locale.evidence.locales[]`,
   `locale_term_entity.locales[]` are `[]` on 100% of rows although
@@ -554,9 +598,10 @@ should turn red-then-green):**
 
 **Open questions (routed, none blocking the pin work):**
 
-1. Which side of G1 is truth — the counter or the file? (Owner rule
-   "fresh/measured wins" suggests the file; the fix is a one-line
-   counter correction routed to a fixer, discovered BY the pin.)
+1. Where should `duplicateKeysOverwritten` surface — printed into the
+   localisation run section only, or also persisted into
+   `base-overlay-report.json.evidence`? Either closes G1's unit gap;
+   routing to a small fixer once the pin stage lands.
 2. Slug policy: `slug` is 100% null by design — confirm the site
    layer owns slug generation and the contract stays `slug:null`
    allowed (adjacent to QUESTION-QUEUE standing items).
@@ -579,7 +624,10 @@ catalog out-of-roster exit-1 (01:35:11Z, softened to warning ledger in
 Rev 5) → C3; GUID-seed and campus-level-carrier DRIFT lines → B2
 arithmetic pins with seeds-as-reconciliation-only; R2-attribution
 `chargedRefs=0` and bar-3 `sourcesApplied=0` honesty rows → B5 ledger
-presence pins. G1/G2/G3/G4 are NEW instances of the same disease:
-nobody compares artifact A to artifact B unless a pin does.
+presence pins. Of today's gaps, G2/G4/G5 are new instances of the same
+disease (nobody compares artifact A to artifact B unless a pin does),
+while G1/G3 show the subtler failure mode the pin stage must also
+cover: the number is RIGHT and its unit or derivation is undocumented,
+so every honest reader re-introduces the "defect".
 
 §END
