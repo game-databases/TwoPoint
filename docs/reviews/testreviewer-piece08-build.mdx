@@ -1,0 +1,262 @@
+# TestReviewer — piece-08 build round (stage 12 `search-corpus` suite)
+
+**Seat:** testreviewer-piece08-build · **Date:** 2026-08-26.
+**Subject:** [`tests/test_stage12_search_corpus.py`](../../tests/test_stage12_search_corpus.py)
++ [`tests/_searchlib.py`](../../tests/_searchlib.py) at HEAD
+(`bf13cc6` blind drop + `c8b4999` interface reconciliation), reviewed
+against [`docs/specs/piece-08-search-corpus.mdx`](../specs/piece-08-search-corpus.mdx)
+**Revision 3**, [`docs/rulings/arbiter-piece08-spec.mdx`](../rulings/arbiter-piece08-spec.mdx)
+(RF-A/RF-B/RF-C), and the implementation the suite must bite
+([`tools/stage12_search_corpus.py`](../../tools/stage12_search_corpus.py) +
+[`tools/search_util.py`](../../tools/search_util.py)). This seat writes
+only this file; nothing committed.
+
+**Method.** Full reads of spec (to `§END`), ruling (to sentinel), suite,
+fixture oracle, and both impl modules; history diff `bf13cc6..c8b4999`
+for assertion-strength movement; independent from-scratch recomputation
+of the fixture hand census (own walks, not `SearchOracle`); on-disk
+re-read of the real-corpus `extracted/search/manifest.json`; two live
+deletion-shape probes driven through `run_all.py --only search-corpus`
+over scratch copies of the committed corpus; full suite executed twice
+(hostless subset, then all seven client-gated legs) with basetemp
+`D:/tpc_pytmp/tr08`.
+
+---
+
+## 1. Run tally (executed by this seat)
+
+| Slice | Result |
+|---|---|
+| Hostless (`-m "not client_gated"`, basetemp `D:/tpc_pytmp/tr08`) | **60 passed / 1 skipped / 0 red** in 37.8 s |
+| Client-gated (`-m client_gated`, real corpus, tag `tr08`) | **7 passed** in 97.8 s |
+| Combined | **67 passed / 1 loud env-skip / 0 red** |
+
+The single skip is `test_A_make_list_equivalent` — "environment: no make
+binary on PATH", reason printed in the summary. That matches the
+reconciliation commit's claimed tally digit-for-digit. The seven gated
+legs ran against the committed corpus (buildId 20226581) via selective
+scratch copies under `D:/tpc_pytmp/tw08/tr08/`, hostless, and reproduced
+the steady-state verdict **exit 2** with the stated ledger set.
+
+## 2. AC coverage — all ten mechanical ACs have would-fail legs
+
+| AC | Failing-if-regressed legs |
+|---|---|
+| **AC1** entrypoint | `test_A_registry_entry_script_and_canonical_order` (registration, script rel, exact dep pin, canonical order over every registered predecessor, LAST-among-today's-set — conditional wording honored, no absolute count); `test_A_list_shows_order_and_script`; `test_A_only_isolation_on_fixture_tree`; `test_A_builder_cli_materializes_upstream_set` (upstream set materialized, >256 KiB file ⇒ real bytes rode along); `test_A_make_list_equivalent` (env-gated) |
+| **AC2** universe | `test_C_narrow_union_exact_with_per_kind` (41 + oracle per-kind + run-section `universeNarrow=41`/`stubRows=67`); `test_C_trap_reading_discriminates_suite_side`; `test_C_expanded_dual_floor_and_idOnly_law` (56/11, planningFloor {10200, 75.9%}, DRIFT-print law); `test_C_ac2_identity_law_artifact_derived` (expanded == distinctDocs + ΣdescriptionOnlyNoDoc, artifact-derived); `test_C_expanded_components_on_pinned_bases`; `test_C_titleCarrier_instances_move_without_verdict_flip` (RF-B teeth: 2→4 tracks, run still completes); `test_N_real_universe_exact_figures` (7,178 + nine cells + 1,456-decomposition + 552/170-scoped/49+48/55+53/27 + tci>0-as-data + join ceilings) |
+| **AC3** shards | `test_D_shard_file_set_character_exact` (13+13 route-coded names, shardFiles=26); `test_D_doc_schema_exact_keys_and_enums` (exact key sets, enums, slug null, weight==kindWeights, sort, alias sort); `test_D_per_locale_doc_counts_and_purity` (membership == oracle per locale incl. clause-4/unresolved-in-L semantics, titles row-for-row); `test_D_dev_and_literal_names_ship_en_only` (pivot-fill ban both directions); `test_D_visibility_roster_applied` (11-name roster verbatim + null-name emits nothing); `test_D_cleaning_tags_placeholders_empty_drop`; `test_D_descriptions_resolved_edges_only_never_dev_prose`; `test_N_real_shards_ac3_ac4` |
+| **AC4** ratio bands | `test_D_ratio_bands_over_emitter_denominators` (60–120 / 380–650 over each shard's own D,B for every locale + Σ law); `test_K_band_checker_has_teeth` (checker self-test, both breach sides); impl-side gate exercised on the real corpus in `test_N_real_shards_ac3_ac4` |
+| **AC5** alias layer | `test_E_id_token_vocabulary_lowercase_rule` (RF-A: 105 + provenance-pair consistency + planted fold pair); `test_E_id_token_aliases_are_lowercase_split_runs` (per-doc rule, ≥20 docs); `test_E_dev_string_alias_attaches_only_when_localized_name_exists`; `test_E_name_variant_aliases_F_M_and_ranks`; `test_E_mterm_is_name_basis_not_alias` (+2 unresolved ledgered, no doc anywhere); `test_E_collision_block_equals_fixture_seeds`; `test_E_curated_dangling_termKey_fails_exit1` (bad data louder, artifacts unwritten); `test_F_*` ladder/gates/degraded/join-consumption; `test_N_real_alias_and_collision_seeds` (3,166 + 264/×53/×51/320/dup-texts + input-state-aware course gates + marketing 41 covered) |
+| **AC6** tokenization | `test_G_analyzer_table_frozen_assignments` (13-entry equality, ko→whitespace contractual, common config flags); `test_G_vocab_census_matches_oracle`; `test_G_hangul_inclusive_detector_ko_whitespace` (ko cjkRows 7 / zh-Hans noWs 6 / ja 7); `test_G_typo_budget_block`; cleaning bitten impl-side via `test_D_cleaning_…` + `cleanedEmptyDropped=1`; real endpoints in `test_N_real_analyzers_and_typo_budget` (en 11,897 / ko 28,594 / max==28,594) |
+| **AC7** determinism | `test_I_double_run_byte_identical` (hashes.json + full search/ snapshot + no `.tmp` residue); `test_I_twin_root_byte_identical` (stamps ride along as inputs — correct twin semantics); `test_N_real_double_run_idempotent`; `test_H_manifest_carries_no_timestamps` |
+| **AC8** exit-2 discrimination | `test_J_steady_rerun_at_bound_has_no_false_positive` (inclusive brackets); `test_J_dangling_guid_increase…` / `test_J_entity_locale_decrement…` / `test_J_locale_table_decrement…` (worse ⇒ exit 1 + member named + **snapshot proves write-nothing**); `test_J_improved_member_drifts_and_rebases`; `test_J_buildid_bump_is_drift_never_regression`; `test_J_matrix_structural_break_is_exit1` ×2; exit-3 family `test_B_missing_required_input_exits3_naming_it` / `…relink_stamp_exitCode_not_in_0_2…` (with the exit-2-not-a-refusal control) / `…localisation_stamp_exitCode_1…` / `test_B_missing_relink_stamp_exits3` / `test_B_no_partial_writes_before_gate`; `test_N_real_exit2_steady_state_and_envelope` (all five branches on the real corpus, incl. anti-masking snapshots) |
+| **AC9** manifest | `test_H_manifest_blocks_present` (every §S5.1 block, sourceStamps == consumed stamps, kindWeights table, narrow triple 22/15, three metric labels); `test_H_sha256_agreement_and_hashes_self_exclusion` (self-exclusion, phantom/missing coverage, digest agreement, sorted); `test_H_ledger_codes_shape_and_states` (pinned codes only, severity enum, sort by (code,detail), aliased-vs-absent state difference, mt-unresolved==2, ledgerRows counter); `test_H_dev_only_docs_reported_per_kind`; `test_H_run_section_all_pass_counters` (every pinned S1–S5 token) |
+| **AC10** carve-out/scope | `test_N_real_write_scope_and_carveout` (before/after snapshot of everything outside the allowed write set + media-extension grep inside search/); `test_B_no_partial_writes_before_gate` at fixture level |
+
+No AC lacks a would-fail leg. Trap-arithmetic teeth (reviewer-F3
+single-field misreading) are present twice: suite-side discrimination
+(`test_C_trap_reading_discriminates_suite_side` — delta is exactly the
+four dev-only F/M carriers) and impl-side (`narrow==41` assert whose
+message names the 37 misreading). Envelope movement is proven **both
+directions**: worse ⇒ exit 1 writing nothing (three fixture members +
+two real-corpus members, snapshots compared), improved/buildId-bump ⇒
+DRIFT rebase never regression (J5/J6 + real branch (e)).
+
+## 3. Deletability probes (mandated four)
+
+1. **Exit-2 discrimination envelope** — split verdict.
+   - The *movement* net (`manifest.upstreamEnvelope` + worse/improved
+     classification) HAS failing legs: delete it and J2/J3/J4/N(c)/(d)
+     collapse to rc 0/2 and J5/J6/(e) lose their DRIFT lines.
+   - The *pinned absolute inclusive-bound* net (§S5.3 seed bounds,
+     `SEEDS["bounds"]` evaluated at `TIER_SEED_CORPUS`) has **ZERO
+     failing legs** → finding **M1** below.
+2. **RF-A lowercase id-token rule** — deleting the lowercasing flips the
+   fixture vocabulary 105→106 and kills the planted fold pair ⇒
+   `test_E_id_token_vocabulary_lowercase_rule`,
+   `test_E_id_token_aliases_are_lowercase_split_runs`, and real-leg
+   `assert av["idTokens"] == 3166` all fail. Teeth confirmed.
+3. **Analyzer table** — deleting the frozen assignment fails
+   `test_G_analyzer_table_frozen_assignments` (set equality + ko
+   whitespace contractual), the census-cell legs, and the real endpoints
+   leg. Teeth confirmed.
+4. **Alias curated-seed closure** — dropping curated resolution demotes
+   KnightSchool_LordBlaggard/PerformingArts to open ⇒
+   `test_F_resolution_ladder_methods_and_targets` (curated method +
+   termKey target), `test_F_seeded_gate_open_set_and_marketing`
+   (seeded ≥ 8), and `test_D_per_locale_doc_counts_and_purity`
+   (curated courses vanish from non-en shards riding the all-group) all
+   fail; `test_E_curated_dangling_termKey_fails_exit1` independently
+   pins the validation edge. Teeth confirmed.
+
+## 4. Fixture honesty — independent recomputation (≥8 spot-checks, all exact)
+
+Recomputed from `_searchlib` entity/key definitions with this seat's own
+walks (not the suite's oracle): stubRows 67 · universe A 30 · narrow
+**41** / trap **37** with delta exactly {Item_Sorcerer_Forms,
+Item_Amazoness_Form, Unlock_Female_Development, Student_Type_Developer} ·
+plain literals {config 1, unlockable 1, campus-level 5} · config
+LocalisedName presence 1 · titleCarrierInstances 2 · DisplayName scoped
+2 / all-class 3 · room Name presence 2 / text-bearing 1 · mTerm 3 rows /
+1 resolving · DescriptiveName 1 · id tokens **105/106/1** · dev-string
+rows **7** · collidingPairs **4**, top [(config,"Lab Work",×5),
+(config,"Specialist Book Report",×4)], ignoreKindCollisions **5** ·
+within-locale dup texts {de 2, en 3, ja 0, ko 2, zh-Hans 2} ·
+titleKeySets narrow **22 edges / 15 keys**.
+
+The re-based `{BLADE}` pins verify end-to-end: `Items/Sword/Sword_Name`
+is the single cleaned-empty KEY (en drops Item_Sword_Lite and inherited
+Item_Sword_Full; de "Klinge" survives in both), and "{BLADE}" IS counted
+as the fourth raw colliding pair / fifth ignore-kind text across the
+Lite edge + join instance — exactly the RF-C reproduction basis the
+reconciliation pinned, and the same basis reproduces the real seeds
+digit-for-digit (on-disk manifest re-read: pairs 264 · ×53 Lab Work ·
+×51 Specialist Book Report · ignoreKind 320 · dup texts en 1,570 /
+zh-Hans 1,668 / ko 1,702 / tr 1,625 · narrow triple 2,993/2,059/100% ·
+aliasVolumes 3,166/3,224/58 · vocab 11,897/28,594/23,445 · ko cjkRows
+15,213).
+
+**Floor 2,800 second net — honest.** Measured non-en shards on disk:
+2,993–3,012 docs across all twelve; 2,800 sits above the plateau with
+≥ 6.4 % collapse headroom while the spec's literal ≥ 4,500 is
+unsatisfiable under the Rev-2 name-required/pivot-only membership pins
+(the F16 prototype it descends from predates those pins). en floor
+[5,000, 6,500] contains the measured 5,832. See finding m5 for the
+traceability debt this leaves in the spec text itself.
+
+## 5. Skip hygiene + assertion-strength history
+
+Skips: five sites, all environment-gated with explicit reasons (no make
+binary; make timeout/failure; missing real-corpus inputs listed by name;
+no legal ≥1 GiB scratch root). No unconditional skips, no xfail, no
+silent degrade — the blind-pair RED posture (`require_completed`)
+survived reconciliation intact.
+
+Strength movement across `bf13cc6 → c8b4999` (≥5 legs):
+
+| Leg | Pre | Post | Assessment |
+|---|---|---|---|
+| `test_E_collision_block_equals_fixture_seeds` | `top == PIN_TOP_PAIRS` (exact full list) | `top[:2] == PIN_TOP_PAIRS` | weakened (m6) — defensible, spec pins only the top two |
+| `test_N_real_shards_ac3_ac4` non-en floor | `>= 4500` | `>= 2800` | weakened threshold, arithmetically forced by Rev-2 pins (verified §4) |
+| `test_F_resolution_ladder_methods_and_targets` | method column ignored | per-course method map asserted vs expectations | **strengthened** |
+| `test_F_degraded_mode_without_alias_input` | regex `=\s*6` (could match 60) | `=\s*6\b` | **strengthened** (bug fix) |
+| `test_I_twin_root_byte_identical` | twin excluded `.stage-stamps` | stamps ride along (they are consumed inputs feeding sourceStamps) | corrected — old form compared runs over different upstream sets |
+| `test_J_steady_rerun_at_bound…` | rerun flipped alias-input state | rerun restores baseline input state | corrected (input flip ≠ rerun) |
+| oracle `vocab()` | tags stripped pre-tokenize | raw `\w+` tokenize-then-lowercase (pinned F8 basis) | re-based with impl; fixture vocab now oracle-relative (see Notes) |
+
+Net: two weakenings, both justified and compensated by the additions;
+three strengthenings/corrections. No leg lost its would-fail property.
+
+## 6. Live probes (this seat, scratch copies of the committed corpus)
+
+Through `run_all.py --only search-corpus` with `TPC_EXTRACTED_ROOT`:
+
+- Pristine first run → **rc 2**, search/ emitted, ledger set as stated.
+- First run over a tree with `danglingDistinctGuids` bumped to 1,138
+  (NO prior manifest, hence no recorded envelope) → **rc 1**,
+  `RELINK-REGRESSION: danglingDistinctGuids bound<=1137 measured1138`,
+  search/ absent — the §S5.3 absolute-bound net is live and formats its
+  verdict exactly as specified.
+- Same mutation AFTER a completed baseline → rc 1 via the envelope net.
+
+These probes demonstrate the un-tested detection mode works; they do
+not substitute for a suite leg (finding M1).
+
+---
+
+## 7. Findings
+
+### CRITICAL — none
+
+### MAJOR
+
+**M1 — The §S5.3 pinned absolute inclusive-bound net has no failing
+leg; every proven breach rides the envelope duplicate.**
+`classify_upstream`'s `TIER_SEED_CORPUS` bound loop (impl lines ~483–506)
+is the spec's primary mechanism ("Steady-state bounds (pinned seeds …)
+Any bound breach at the SAME buildId = REAL regression"), but:
+
+- every real-corpus breach leg (`test_N_real_exit2_steady_state_and_
+  envelope` branches (c)/(d)) establishes a completed baseline first, so
+  a recorded envelope exists and catches the mutation even if the bound
+  loop were deleted;
+- every fixture breach leg (J2/J3/J4) runs at `TIER_MINI_FIXTURE`,
+  where the bounds do not bind by the tier law;
+- deletion experiment: removing the bound loop changes no test verdict.
+
+The untested mode is a bound breach on a FIRST run over a tree — fresh
+checkout, CI runner, restored snapshot — precisely the anti-masking
+scenario §S5.3 exists for. Probe-verified live (§6), but unproven by the
+suite, which per this round's mandate ("any block without a failing leg")
+is a MAJOR gap.
+
+**T1 (required):** add one first-run breach leg — fresh real-upstream
+scratch copy, mutate ONE tracked member (e.g. `danglingDistinctGuids =
+1138`, or drop one `entity_locale` row) BEFORE any run, then assert
+rc == 1 + `RELINK-REGRESSION:` naming the member + `search/` absent.
+(Analogous mini-tier leg cannot exercise this path — it must ride the
+real-corpus fixture family.)
+
+### MINOR (advisory)
+
+- **m1 — J7 lacks the write-nothing pairing.** Both structural-break
+  mutators assert rc 1 only; every other exit-1 leg in this suite also
+  proves artifacts unwritten. One `snapshot_search` comparison closes it.
+- **m2 — Whitelist-guard trip leg missing (§9 S1).** "whitelist guard
+  trips on a planted bone-string field" is covered only in its weaker
+  reading (`bonesIndexed == 0` census + banned-string leak scan). No leg
+  plants a LocalisedString UNDER a blacklisted container to prove the
+  exit-1 trip; deleting the impl's guard raise changes no verdict.
+- **m3 — Script-hash stamp invalidation untested (§9 S5).** The
+  rebuild-trigger's `script-hash-changed` branch is asserted only as a
+  run-section token (`test_H_run_section_all_pass_counters`); no leg
+  perturbs a hashed dep and observes re-emission.
+- **m4 — Interrupted-run convergence asserted weakly.** Only "no
+  `*.tmp` left after a clean double run"; no mid-write interruption leg
+  (temp+rename discipline is otherwise load-bearing for AC7).
+- **m5 — Reconciliation deltas to the contract are unrecorded outside
+  code comments and the commit message.** Spec Rev 3 §9 still carries
+  the literal `>= 4,500` non-en floor (unsatisfiable under Rev-2
+  membership pins — measured plateau 2,993–3,012), the collision-surface
+  basis ruling, the tier-law scoping of seed asserts/bounds, and the
+  AC7 trigger-reason relocation exist only inline. A successor seat
+  reading Rev 3 + arbiter ruling alone meets a contradicted number.
+  Route: one revision line (or a reconciler-notes file under docs/)
+  recording the four adjudications.
+- **m6 — `topPairs` assertion narrowed during reconciliation** (exact
+  list → top-two). Consistent with what the spec actually pins, recorded
+  here so the strength movement is visible.
+
+### Notes (non-blocking observations)
+
+- Hostless legs never snapshot outside-search writes on a SUCCESSFUL
+  run; `test_N_real_write_scope_and_carveout` covers it whenever the
+  corpus is present.
+- Post-reconciliation the fixture vocab census is oracle-relative (impl
+  and oracle could co-drift on a wrong basis); hand pins remain for
+  `cjkRows`/`noWhitespaceRows` and every other gated quantity, and the
+  real-corpus endpoints are hard-pinned, so exposure is fixture-local.
+- `sl.alias_input` transiently materializes the PACK-level curated input
+  (`data/sources/derived/course-name-aliases.jsonl`) during aliased runs
+  and removes it after — inherent to the pack-relative optional-input
+  contract, but a known race surface for concurrent sessions on this
+  shared worktree.
+- Commit hygiene wrinkle only: the blind suite landed inside `bf13cc6`
+  whose message titles stage-7 triage fixes; the reconciliation commit
+  `c8b4999` documents the adjudications properly.
+
+---
+
+## 8. Verdict
+
+Suite quality is high: ten-for-ten AC coverage with real would-fail
+legs, a proven two-directional envelope movement law, honest fixtures
+whose hand census survives independent recomputation to the digit, real
+seeds reproduced on-disk, and a clean 67/1/0 run on this machine. One
+mandated deletability probe fails — the §S5.3 absolute-bound net is
+deletable without a red test — which per this round's rubric blocks
+approve until T1 lands. The six minors are advisory and do not gate.
+
+Gap count: **1 MAJOR (T1) + 6 MINOR (advisory)**.
+
+**GAPS-REQUIRED**
