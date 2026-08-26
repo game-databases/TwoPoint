@@ -1,0 +1,282 @@
+# Verify B — adversarial pass — scout-report-piece-04
+
+**Verifier:** verifyB (adversarial seat; hunts overclaims, silent assumptions,
+and negatives asserted without sufficient search; judges, does not fix;
+spawned no subagents). **Date:** 2026-08-26.
+**Subject:** `TwoPoint/docs/scout-report-piece-04.mdx`, read to its
+`END OF` sentinel. **Requirement set:** repo-root `AGENTS.md` in full;
+`promptForDB.md` evidence discipline. All re-measurement below was done
+this session directly against the landed `extracted/` tree (buildId
+20226581) with python/jq-style probes; every probe method named inline.
+No binary images read into context.
+
+---
+
+## Attack log
+
+### Surface 1 — the "not-data-driven" list (§4): can any formula be refuted into data?
+
+For each of the nine entries I searched harder than the scout:
+`dump.cs` declarations + field offsets, the stub corpora (all 9 kinds),
+and harvest raws, hunting serialized carriers (component proxies,
+ScriptableObjects, curve payloads) that would move an entry from
+"native" to "data".
+
+1.1 **Entry (6) XP→EGrade boundaries — BROKEN.** The scout's G4 says
+"no numeric cuts found … computed natively … site must not invent them".
+A complete numeric cut-off table exists in config data:
+`Config_UISprite` (`configs-app_assets_all.bundle`, class
+`TPC.UI.UISpriteConfig`) carries `Grades[]` with 9 entries, each
+`{Threshold float, Enum EGrade, DisplayName, icons}` (struct verified at
+dump.cs `UISpriteConfig.Grade`). Measured thresholds, joined by the
+`Enum` field to `EGrade`: NA −1 · F 0 · D 40 · C 50 · CC 60 · B 70 ·
+BB 75 · A 80 · AA 90. Consumed by `UISpriteConfig.Grade
+GetGrade(float score)` / `GetGradeDisplayName(float score)`. The scout's
+search stopped at `Config_Campus` curves and `CourseAssessmentScoring`
+(whose six fields I did confirm verbatim at dump.cs 818247) and missed
+the app-config sprite table. Residual honesty: what remains genuinely
+native is the XP→score normalization *feeding* this table (that the game
+passes an assessment score through these cuts is inference from the
+consumer signature, not proven from data alone) — but G4's absolute
+negative "no numeric cut-offs found / mapping native" is false as
+written, and the site MAY present these bands as client data with
+provenance instead of being licensed to show nothing.
+
+1.2 **Entry (7) base attribute decay rates — BROKEN (see Surface 2).**
+
+1.3 **Entry (2) "≥8 static `CalculateRoomScore` methods" — count wrong.**
+Exhaustive declaration grep over `dump.cs` finds exactly **7**
+(ExtraTuition, Idle-private, MedicalCare, MedicalConsultation,
+PastoralCare, PatientTreatment, StaffBreak-private). The variant list is
+right; the number is not.
+
+1.4 **Entries (1)(3)(4)(5)(8)(9) — SURVIVED.** Satisfaction aggregation:
+weights/curves live in `Student/StaffSatisfactionSettings` (verified
+field-by-field) with nothing beyond them; interpolation-rate fields are
+data but the combine/clamp has no carrier. Environment kernel:
+`EnvironmentRatingCalculator` signature-only (dump.cs 820844);
+falloff/attenuation greps hit only audio (`FalloffType`) — no falloff
+curve carrier anywhere in stubs or raws. Prestige accumulation inputs
+(`Prestige` float, `ItemPowerDiminishingReturnsCurve`,
+`RoomItemPrestigeMultiplierCurve`, `RoomCustomisationPrestige`) all
+verified present; combination has no carrier. Applicant mix:
+`ApplicantBreakdown` is a private runtime class (_base/_courseRating/
+_universityRating/_bonus/_tuitionFee/_marketing/_multiplier +
+NumApplicants), serialized nowhere — "runtime struct" confirmed.
+Timetable solver: `TimetableScheduler` present, constraints-only in
+data. Rent: both `CalculateRentPerYear` overloads signature-only under
+`StudentUtils` (817454). No hidden data carrier found for any of these.
+
+### Surface 2 — the G3 negative ("zero config carriers for base need-decay")
+
+Grepped ALL stub kinds plus every harvest monobehaviour family for
+decay/drain/rate-shaped field names (`decay|drain|deplete|…|
+changeovertime|persecond`), then widened to raw substring sweeps.
+
+2.1 **The negative is false.** `ECPCharacterAttributes`
+(TPS.Game, `IComponentProxy`, dump.cs 856956) serializes ten
+`AttributeDefinition` fields (`_energy…_sober`; struct at 804778 =
+`{Disabled, MinInitialValue, MaxInitialValue, ChangeOverTime}`). It is
+landed on **all three** `TPC.StaffDefinition` rows in
+`stubs/staff.jsonl` with explicit per-attribute rates: energy/food/
+drink/hygiene/social/toilet **−0.05**, fun/happiness/health/sober **0**,
+plus initial min/max ranges (e.g. happiness 80–100). The runtime twin
+`AttributeValue..ctor(AttributeDefinition)` (804850+) proves the
+authored value seeds the ECS component — the scout's candidate-source
+list ("GOOSE graphs, status effects, hardcoded Burst init") omits the
+actual mechanism, which is ordinary serialized authoring data.
+
+2.2 **Students partially covered too.** Both harvested
+`TPC.StudentDefinition` raws carry `ECPStudent` (dump.cs 858320) with
+`_clubNeed` −0.1, `_relationship` −0.2, `_selfStudy` −0.2 (+ initial
+ranges). What I could **not** find is a student-side carrier for the
+core 11-attribute set (no `ECPCharacterAttributes` outside the three
+staff rows anywhere in harvest; student prefabs were not harvested).
+So the corrected picture is: staff decay fully data-recoverable today;
+student core-attribute decay still unlocated — a much narrower gap than
+"11 attributes, zero carriers found".
+
+2.3 Corroborating carriers the scout did flag correctly: clubs'
+`ClubNeedChangeOverTime` and minable-meteor `_decay.ChangeOverTime`
+(items) both exist in stubs.
+
+### Surface 3 — G4 boundary placement
+
+Covered by 1.1: the boundary is drawn at the wrong place. Cut-offs do
+hide in config — just not in `Config_Campus` or the scoring struct the
+scout searched; they sit in the app-bundle `UISpriteConfig`. The
+"site labels grade bands qualitatively" license must be withdrawn.
+
+### Surface 4 — economy completeness
+
+4.1 **Taxonomy SURVIVED with two corrections.** `BudgetType` measures
+**28** named values (TuitionFees=0 … PatientTreatmentIncome=27); the
+report says "27 categories" while itself listing 28 names.
+`ProfitType {TuitionFees, Rent, Bonus}` and `ExpenseType {Wages,
+Loans}` exact; every `FinanceManager.Summary` column the report names
+exists (incl. CheesyBonus, MonthlyAllowance, OtherIn/Out).
+`Config_FinanceManager` values exact (150000/−150000/−300000/1.0/1.0/1/0);
+a full field-by-field diff confirms
+`Config_FinanceManager_Level_Archaeology` differs **only** in
+InitialBalance 80000 (+m_Name); 30 FinanceManager-class rows exact.
+
+4.2 **The decisive Kudosh negative SURVIVED.** No Kudosh member in the
+full 28-value BudgetType; `MetagameLevelState.TotalKudosh` int at
+exactly dump.cs 881087; `RewardKudoshDefinition{_amount,_displayInHUD}`;
+`KudoshConsumableRewardConfig` = 6 stub rows; `GameMod_Kudosh`,
+Earn/Spend/UnlockKudoshItem sub-goals, `RemixChallengeOption_Kudosh`,
+`KudoshEarn:UI`/`KudoshSpend:UI` literals all present.
+
+4.3 **Sinks enumeration incomplete (omission, not error):**
+`LandscapeBrushDefinition` also implements `IKudoshUnlockable` (third
+implementer besides items and rooms); `GameItemUpgradeDefinition.Cost`
+is a data-driven money sink (e.g. Alien_Refiner V2 10000 / V3 30000)
+never named in §3; **course points** (InitialCoursePoints /
+PointsPerUniversityLevel / StartPointsCost) are a spendable resource
+treated only implicitly via §2 fields, never listed in the §3 currency
+taxonomy. Research-point costs verified exactly (Bookshelf_Robotics 250,
+Computer_Digital 500, Computer_Super 500, Course_Computer 1200) — but
+note costs live on the **209** full `ResearchProjectDefinition` rows
+only; the 241 `_Lite` twins carry none, so §7's "450 project rows w/
+costs landed" overstates (450 rows landed; 209 with costs).
+
+### Surface 5 — join-key contract traced end-to-end
+
+5.1 **course→course edge WORKS.** From `stubs/configs.jsonl`:
+`CareerChallenge_Course_Archaeology_V1` carries the exact quoted typed
+block `{"data":{"_course":{"m_FileID":2,"m_PathID":-7906850020505022578},
+…},"type":{"asm":"TPS.Game","class":"PrerequisiteHasCourseUnlocked",
+"ns":"TPC"}}`. `harvest/externals.jsonl` keys on the full bundle path
+(stubs store the basename — resolver must normalize);
+`TPC_Data/…/configs-metagame_assets_all.bundle` fileId 2 →
+`archive:/CAB-7c07bcb2…`. PathId −7906850020505022578 resolves uniquely
+across all stubs to `Course_Archaeology_Lite`
+(`configs-common_assets_all.bundle`, `TPC.CourseLiteDefinition`) —
+semantically exact (Archaeology challenge ↔ Archaeology course). The
+scout's "single unblock turns 50 prerequisites into edges" claim is
+conservative: the resolution is demonstrably mechanical.
+
+5.2 **item→environment contribution WORKS.** `Item_Cafeteria_Prop_Burger`
+references block: `{"_attribute":1,"_value":0.8,"_radiusInCells":2.0,
+"_startApplyingLevel":0.0,"_maintenanceMultiplier":0.0,"type":{…
+"RoomModifier_EnvironmentAttribute"}}`; class fields match dump.cs
+exactly; `EnvironmentAttributeMap.Attribute{Temperature=0,
+Attractiveness=1, Hygiene=2}` matches; runtime twin
+`EnvironmentAttributeMap.ItemValues{RadiusInCells, Value}` confirmed.
+
+### Surface 6 — provenance audit (~20 numbers re-measured)
+
+All exact unless noted: stubs 13,443 total across 9 kinds with every
+per-kind figure right (8430/3885/415/454/116/69/54/17/3); dump.cs
+43,935,690 B and **20,031 type declarations** (loose-modifier recount =
+20,031 exactly); TPC 4,752 / TPS.Core.GOOSE 126 / TPS.Core 110
+(class-hierarchy join); DummyDll **101** assemblies; script.json
+154,493,341 B and stringliteral.json 2,233,838 B byte-exact;
+class-hierarchy 20,037 rows; id-registries 1,792 files; externals 222
+rows; matrix meta buildId 20226581, 24 modeled / 3 partial / 73 missing
+of 100 cells. Line-anchor citations spot-checked at ±0:
+CourseDefinition 818333, TermDefinition 840145, CourseModuleDefinition
+818962, CourseAssessmentScoring 818247, CourseLevel 818260, EGrade
+854784, StudentDefinition 817438, abstract Prerequisite 929626,
+ESActionSatisfyNeedsScore 762006, StaffBreakUtils CalculateBreakNeed
+PostfixBurstDelegate 839040, TotalKudosh 881087. Config_Campus §4 table
+re-measured value-for-value (teaching 0.6/0.75/1.25/0.30; XP ×2/×2;
+energy −0.1; ClubsCurve .5/10; RelationshipCurve 2/20; DormitoryBeds 2.5;
+stable band ±0.25; interp 0.05; SalaryCurve .75–1.25; CareerSmoothTime 3;
+prestige L1 5pts/×1 … L5 45pts/×8/.1/×1.75/.85, 15 levels; hygiene
+25/−0.5(+75/−1.0); caps 150/200/300; ability 0.5/1.5; goals 90/180/5;
+HUD .25/.25/80/90/20; diminishing-returns curve minX1/maxX10/maxY0.1) —
+all correct. Attrition twins {20/15/10,120}/{20/15/10,240},
+StudentFailPercent 10, advisor threshold 20.0 — correct. Module chain:
+319 rows, RoomType PPtr 319/319, Qualification PPtr 319/319,
+GradeMoneyRewards 319/319, sample ClassSize 8/Duration 2/XPMultiplier
+1.0 — correct. Prerequisite census: 977 `Prerequisites` occurrences,
+HasCourseUnlocked ×50, UniversityLevel ×43, Stars ×26, HasRoomUnlocked
+×18, DaysPassed ×17 — all exact. Typed SerializeReference census
+3,330 configs / 1,787 items / 130 unlockables — exact. Courses ladder
+Levels[10] 20→65 step 5 / boost 10→55 / hiring 1→10 / training 3→10;
+CoursesConfig-class rows 36; nested per-course override objects carry
+all nine quoted fields — correct. Cross-citations honest: piece-02's
+79.7% GUID resolve rate and unlockable→item 38 both real;
+`unlockable_unlockable.jsonl` = 139 hard pptr-same-file rows with the
+quoted field paths.
+
+### Surface 7 — silent scope cuts vs the five surfaces
+
+7.1 **InteractionDefinition family omitted.** 630 stub rows (largest
+config class after CharacterModule) carry `CharacterModifiers`,
+`CharacterStatusEffect*`, `FinanceModifier`, cooldowns — the concrete
+needs-satisfaction data layer piece-02 had already tied to "need
+satisfaction chains" (`InteractionDefinition (668, half undecoded)`).
+An inventory claiming the needs/AI surface should name it; §5 never
+does and no gap entry covers the omission.
+
+7.2 **Smaller unnamed families:** item upgrades as an economy sink
+(4.3), career-goal/challenge-objective scoring (CareerGoalDefinition 68
++ CareerGoalObjectiveDefinition 204 + Challenge_Objective 236) sitting
+between the courses and AI surfaces without a line either way. Not
+PASS-breaking — the surfaces as scoped are covered — but the §8 ledger
+presents itself as exhaustive of gaps and these aren't in it.
+
+7.3 **GradeMoneyRewards framing inverted in emphasis.** Re-measured:
+313 of 319 modules carry all-zero rewards; only 6 have payouts (e.g.
+CheeseAlien CheeseRoom F 9000 → AA 17000). The report treats zeros as a
+DLC-sample quirk needing a base-game check; zeros are the norm, so the
+hedge deserves promotion to a headline caveat, not a parenthesis.
+
+---
+
+## Verdict table
+
+| # | Claim attacked | Verdict |
+|---|---|---|
+| 1 | Corpus-state numbers (§ preamble): 13,443 stubs/9 kinds, 20,031 types, 42 MB, 101 assemblies, script/stringliteral bytes, 20,037 hierarchy, 1,792 registries, 222 externals, matrix 24/3/73 | **SURVIVED** (all exact) |
+| 2 | §1 "no method bodies anywhere; constants not serialized live only in GameAssembly.dll (297 MiB, outside extracted/)" | **SURVIVED** |
+| 3 | §1 Burst-opacity claims (ESActionSatisfyNeedsScore caches, CalculateBreakNeed/SimpleCurveEvaluator burst delegates) | **SURVIVED** (anchors verified at cited lines) |
+| 4 | §2 course economics fields + first-row ladder | **SURVIVED** |
+| 5 | §2 module chain 319/319 ×3 + sample | **SURVIVED** |
+| 6 | §2 prerequisite system: 24 concrete types, payload shape, census 977/×50/×43/×26/×18/×17 | **SURVIVED** (subclass names sloppily shortened: actual classes are `ChallengePrerequisite*`; count right) |
+| 7 | §2 attrition settings + events "Timeline.Events.Expelled/.ExpelledFail" | **BROKEN(detail)** — events exist but in namespace `TPC.CharacterEvents.Student`, not Timeline.Events; settings values exact |
+| 8 | §2 CoursesConfig 36 rows + overrides | **SURVIVED** |
+| 9 | §3 money taxonomy "27 BudgetTypes" | **BROKEN(detail)** — enum has 28 named values; report's own list names 28 |
+| 10 | §3 Kudosh-is-separate negative + carriers | **SURVIVED** (misses third `IKudoshUnlockable` implementer `LandscapeBrushDefinition` — omission noted) |
+| 11 | §3 research costs + 209+241+4=454 census | **SURVIVED**; §7's "450 project rows w/ costs" **BROKEN(detail)** — only 209 full definitions carry costs |
+| 12 | §3 typed-block counts 3,330/1,787/130 | **SURVIVED** (exact) |
+| 13 | §4 Config_Campus master table (all rows) | **SURVIVED** |
+| 14 | §4 RelationshipsConfig fields | **SURVIVED** |
+| 15 | §4 environment surface (modifier fields, attribute map, ItemValues, kernel-native) | **SURVIVED** |
+| 16 | §4 entry (6)/G4 "XP→grade cut-offs computed natively; no numeric cuts in data" | **BROKEN(evidence)** — `Config_UISprite.Grades[9]` thresholds NA−1/F0/D40/C50/CC60/B70/BB75/A80/AA90, keyed by `Enum:EGrade`, consumed by `GetGrade(float)` |
+| 17 | §4 entry (7)/G3/G8 "base decay rates: zero config carriers, ChangeOverTime runtime-set" | **BROKEN(evidence)** — `ECPCharacterAttributes` on all 3 staff rows (landed in stubs) carries per-attribute ChangeOverTime −0.05/0 + init ranges; `ECPStudent` adds clubNeed/selfStudy/relationship rates; student core-11 carrier genuinely unfound (narrow residual) |
+| 18 | §4 entry (2) "≥8 static CalculateRoomScore methods" | **BROKEN(detail)** — exactly 7 |
+| 19 | §4 entries (1)(3)(4)(5)(8)(9) native-only | **SURVIVED** |
+| 20 | §5 needs/status-effect/graph/event/trait structures | **SURVIVED** (all shapes verified incl. SaveData{Score,RoomID}, Timeline.EStage{Break,Running}) |
+| 21 | §6 join-key contract | **SURVIVED** — both traces resolve end-to-end; basename-vs-fullpath keying noted as resolver requirement |
+| 22 | §7 "Needs decay simulation impossible-from-corpus-as-is" | **BROKEN(as scoped)** — staff half is reconstructable today from landed stubs |
+| 23 | G6 unlock-tree reasoning | **SURVIVED** (139 behavior edges ≠ shop tree; assembly ingredients all present) |
+| 24 | G7 LevelScenarioV2 (48×4 thin stubs; decoded raws w/ BuildCost 100/1000, Days 10.0, RoomRecords[21]) | **SURVIVED** substantively; "248 KB sample" size unverifiable/wrong (measured file ≈ 1.26 MB; PR len 7 + RR len 21 + cited values exact) |
+| 25 | Scope coverage of courses/economy/formulas/needs/AI | **SURVIVED with logged omissions** — InteractionDefinition family (630), upgrade-cost sink, career-goal/objective scoring unnamed |
+
+---
+
+## Overall verdict
+
+**PASS-WITH-CORRECTIONS.** The report's positive measurements are
+exceptionally clean — every headline number, config value, enum, and
+line anchor I attacked reproduced exactly, and the join-key contract
+works end-to-end on first trace. But two of its load-bearing NEGATIVES
+fail under a harder search, and both license site-facing behavior:
+G4's "site must not invent grade cut-offs" is moot because the
+cut-offs are client data (`Config_UISprite.Grades[]`), and G3's "zero
+decay-rate carriers" is false because staff base rates are already
+landed in `stubs/staff.jsonl` via `ECPCharacterAttributes` (with
+`ECPStudent` covering club/relationship/self-study decay; only the
+student core-11 carrier remains genuinely unfound). Corrections owed
+before the report drives implementation: rewrite G3/G4 around the
+measured carriers, fix the four numeric/name details (CalculateRoomScore
+7 not ≥8; BudgetType 28 not 27; EStaffStat 31 constants not "23-stat";
+Expelled events are `TPC.CharacterEvents.Student`), restate §7's
+research-costs row as 209-with-costs-of-450, promote the
+GradeMoneyRewards-zeros caveat, and add the InteractionDefinition /
+upgrade-sink / course-points omissions to the gap ledger.
+
+END OF verifyB-scout-piece04
