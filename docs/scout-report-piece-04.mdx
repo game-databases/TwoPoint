@@ -6,7 +6,9 @@ commits. Every number below was measured on the landed `extracted/` tree
 (buildId 20226581) during this session; probe method stated per claim.
 Session note: the first run of this scout died to a provider 429 after
 the §2 economics probes; this file is the complete deliverable, re-grounded
-on disk afterwards (no partial report existed).
+on disk afterwards (no partial report existed). **r2 (same day):** both
+verifiers returned PASS-WITH-CORRECTIONS; corrections M1–M10 applied in
+place, each re-measured on disk before landing here.
 
 Inputs read in full first: repo-root `AGENTS.md`,
 `_foundation/decision-register.md`, `_foundation/extraction-doctrine.md`,
@@ -82,7 +84,12 @@ struct (~818247), `CourseLevel` (~818260), `EGrade` (~854784),
   (`WeightedArchetype{Weight, Archetype}`). First `courses.jsonl` row
   carries all of it serialized: `Levels[10]` = PointsCost 20→65 step 5,
   ApplicantsBoost 10→55 step 5, HiringTeacherSkillLevelMax 1→10,
-  TrainingTeacherSkillLevelMax 3→10.
+  TrainingTeacherSkillLevelMax 3→10. Composition note: only **28/69**
+  course rows are full `TPC.CourseDefinition` — 41 are
+  `TPC.MarketingCourseDefinition`; and the stub emitter dropped
+  `_assessmentScoring`/`_studentArchetypes` from ALL 69 stub rows even
+  though the raw harvest JSONs carry them (0/69 stubs vs 28/28 sampled
+  harvest dumps) — a stub-emitter gap feeding the G7 ingest decision.
 - **Year/term/grade ladder** — `NumYears` derives from `Levels[]`;
   `TermDefinition{Weight, PassGrade, Modules[]}` with
   `TermModuleClass{ModuleID, Definition}`; grades enum
@@ -90,10 +97,16 @@ struct (~818247), `CourseLevel` (~818260), `EGrade` (~854784),
 - **Assessment scoring inputs** — `CourseAssessmentScoring{
   BonusPointsPerLevel, ExpectedAverageXPPerSecond, PowerFactor,
   UseTimeFactors, TimeInMedicalConsultationFactor, TimeOnCourseFactor}`
-  serializes per course. These are the *inputs* of the XP→grade curve;
-  the curve application itself is native (see §7).
+  serializes per course. The score→**grade** mapping is ALSO data:
+  `Config_UISprite.Grades[9]` (configs-app_assets_all.bundle) serializes
+  per-grade `Threshold`s keyed to EGrade — NA −1 / F 0 / D 40 / C 50 /
+  CC 60 / B 70 / BB 75 / A 80 / AA 90 — consumed by
+  `UISpriteConfig.GetGrade(float score)` / `.GetGrade(EGrade)` (dump.cs
+  ~1000712). Only the XP-accumulation→score normalization feeding that
+  table remains native (see §7).
 - **The course→room requirement chain is fully landed.** All **319**
-  `TPC.CourseModuleDefinition` stub rows (id shape `Module_*`) carry
+  `TPC.CourseModuleDefinition` stub rows (ids: `Module_*` ×312 +
+  `Unused_Module_*` ×7 — prefix joins must include both) carry
   `RoomType` PPtr 319/319, `Qualification` PPtr 319/319,
   `GradeMoneyRewards{AA..F ints}` 319/319, plus `ClassSize`, `Duration`,
   `XPMultiplier`, per-role GOOSE graphs (`GraphStudent/GraphTeacher/
@@ -111,11 +124,13 @@ struct (~818247), `CourseLevel` (~818260), `EGrade` (~854784),
   HasItemInLevel, HasCourseAtLevel, DaysSinceEventRun, HasUnlockable,
   ChallengeHasRoom, ChallengeHasRoomUnlocked, ChallengeAcademicScore.
   Payload shape (measured on `CareerChallenge_Course_Archaeology_V1`,
-  class `TPC.CareerChallengeDefinition`):
+  class `TPC.CareerChallengeDefinition`; 67 CareerChallengeDefinition
+  rows total of which the `CareerChallenge_Course_*` prefix = 17):
   `"data": {"_course": {"m_FileID": 2, "m_PathID": …}, "_visibleOnHUD": 0},
   "type": {"asm":"TPS.Game","class":"PrerequisiteHasCourseUnlocked",
-  "ns":"TPC"}`. Census in configs.jsonl: 977 `Prerequisites` field
-  occurrences; PrerequisiteHasCourseUnlocked ×50, ×43 UniversityLevel,
+  "ns":"TPC"}`. Census in configs.jsonl: 977 substring hits for
+  `Prerequisite` (= **675** exact `Prerequisites` field-key occurrences);
+  PrerequisiteHasCourseUnlocked ×50, ×43 UniversityLevel,
   ×26 Stars, ×18 HasRoomUnlocked, ×17 DaysPassed, plus smaller counts —
   **course→course unlock edges exist in data**, but their `_course`
   targets are cross-file PPtrs (`m_FileID: 2`) → resolution blocked on
@@ -124,7 +139,7 @@ struct (~818247), `CourseLevel` (~818260), `EGrade` (~854784),
   20.0, ThresholdChangeOfMind: 15.0, ThresholdUrgent: 10.0,
   CountdownTimer: 120.0}` (seconds); `StudentFailPercent = 10`;
   resignation twin `{20/15/10, CountdownTimer 240}`; game events
-  `Timeline.Events.Expelled` / `.ExpelledFail`;
+  `TPC.CharacterEvents.Student.Expelled` / `.ExpelledFail`;
   `RelationshipEndEffects{Graduated[], Failed[], DroppedOut[], Expelled[]}`
   status-effect hooks; advisor trigger
   `AdvisorTrigger_StudentsUnhappyTuitionFees` with threshold
@@ -141,8 +156,10 @@ struct (~818247), `CourseLevel` (~818260), `EGrade` (~854784),
 - **Student level curve** — `StudentDefinition{MinXP, MaxXP, PerLevelXP,
   BaseLevelXP, InterestUnlockThresholds[]}`.
 
-**Join keys:** course ids `Course_*` (69 rows); modules `Module_*` (319);
-career challenges `CareerChallenge_Course_*` (67 rows mention the class);
+**Join keys:** course ids `Course_*` (69 rows = 28 full definitions + 41
+marketing variants); modules `Module_*`/`Unused_Module_*` (312 + 7);
+career challenges: 67 `CareerChallengeDefinition` rows total, of which
+prefix `CareerChallenge_Course_*` = 17;
 prerequisite `_course` PPtrs resolve against course pathIds once
 cross-file edges land.
 
@@ -150,7 +167,8 @@ cross-file edges land.
 
 - **Ledger taxonomy is code-fixed, amounts are runtime/data:**
   `FinanceManager.ProfitType {TuitionFees, Rent, Bonus}`,
-  `.ExpenseType {Wages, Loans}`, `.BudgetType` = 27 categories
+  `.ExpenseType {Wages, Loans}`, `.BudgetType` = **28 categories**
+  (`TuitionFees=0 … PatientTreatmentIncome=27`:
   (TuitionFees, Rent, Bonus, Allowance, BudgetRefund, ResearchIncome,
   Objectives, ItemsIncome, EventsIncome, LoanReceived, Wages,
   LoansExpense, Training, ResearchExpense, Marketing, RecruitmentFees,
@@ -171,23 +189,35 @@ cross-file edges land.
   finding: there is NO Kudosh category in `BudgetType`. Balance owner =
   `MetagameLevelState.TotalKudosh` (int, dump.cs ~881087). Sources are
   reward objects: `RewardKudoshDefinition{_amount, _displayInHUD}`;
-  sinks are `IKudoshUnlockable` prices: both `GameItemDefinition` and
-  `RoomDefinition` implement it; `CourseDefinition.KudoshCost` measured
-  above. Supporting classes: `KudoshConsumableRewardConfig` (6 rows),
+  sinks are `IKudoshUnlockable` prices — **three** implementers measured:
+  `GameItemDefinition`, `RoomDefinition`, and `LandscapeBrushDefinition`;
+  plus item-upgrade purchases (`GameItemUpgradeDefinition.Cost` int,
+  alongside Points/Prestige/MaintenanceMultiplier — a money sink AND its
+  prestige/training effects, all serialized) and
+  `CourseDefinition.KudoshCost`. Course points (`StartPointsCost`,
+  `Levels[].PointsCost`, `CoursesConfig.InitialCoursePoints`,
+  `PointsPerUniversityLevel`) are never named a currency in code but act
+  as one — model as a spendable resource distinct from money and Kudosh.
+  Supporting classes: `KudoshConsumableRewardConfig` (6 rows),
   `GameMod_Kudosh`, `SubGoal_EarnKudosh/SpendKudosh/UnlockKudoshItem`,
   `RemixChallengeOption_Kudosh`; telemetry literals `KudoshEarn:UI`,
   `KudoshSpend:UI`.
 - **Research-point costs are data-driven:** `ResearchProjectDefinition.
-  ResearchPoints` int. Measured costs: Bookshelf_Robotics 250,
-  Computer_Digital 500, Computer_Super 500, Course_Computer 1200.
-  metagame-nodes kind = 454 rows: ResearchProjectDefinition ×209 +
-  ResearchProjectLiteDefinition ×241 + 4 database containers.
+  ResearchPoints` int — rides ONLY on the 209 full definition rows (the
+  241 `_Lite` twins carry none); domain {100…3000} over exactly
+  9 distinct values {100, 200, 250, 300, 500, 600, 1200, 2500, 3000}.
+  Measured samples: Bookshelf_Robotics 250, Computer_Digital 500,
+  Computer_Super 500, Course_Computer 1200. metagame-nodes kind = 454
+  rows: ResearchProjectDefinition ×209 + ResearchProjectLiteDefinition
+  ×241 + 4 database containers.
   Generation counters: `EStaffStat.ResearchPoints = 8`,
-  `.ResearchPointsThisYear = 9` (full 23-stat enum at dump.cs ~816985);
-  `CampusConfig.TutorialResearchMultiplier`.
+  `.ResearchPointsThisYear = 9` (full 31-member enum, `None=0 …
+  GhostsCaptured=30`, dump.cs ~816985); `CampusConfig.
+  TutorialResearchMultiplier`.
 - **Grade payouts:** `GradeMoneyRewards{AA,A,BB,B,CC,C,D,F}` ints per
-  module (sample DLC module carried zeros — check base-game modules when
-  emitting). Rent income has a named calculator
+  module — zeros are the NORM (313/319 modules pay nothing; exactly 6
+  carry non-zero payouts), not a DLC quirk. Rent income has a named
+  calculator
   `StudentUtils.CalculateRentPerYear(Entity/in ECStudent, in
   ECAccommodation)` — body native.
 - **Unlock-tree reality check:** `relinks/unlockable_unlockable.jsonl`
@@ -248,14 +278,17 @@ runtime map keeps `ItemValues{RadiusInCells, Value}` per placed item;
 **Formulas NOT data-driven (never present invented numbers as client
 truth):** (1) satisfaction aggregation (weights + curve inputs above are
 data; sum order, normalization and clamps are native); (2) per-action
-`CalculateRoomScore` overloads — ≥8 static methods incl. medical/
-pastoral/treatment/extra-tuition variants (native, mostly Burst);
-(3) environment rating kernel (radius integration/falloff); (4) prestige
-point accumulation (inputs all data: item `Prestige` float @0xC8, both
-curves; combination native); (5) applicant generation & intake mix
-(`ApplicantBreakdown` runtime struct; boost inputs data); (6) XP→EGrade
-boundary mapping (inputs data via CourseAssessmentScoring; mapping
-native); (7) base attribute decay rates (§5); (8) timetable solver
+`CalculateRoomScore` overloads — exactly **7** static methods
+(extra-tuition, idle, medical-care, medical-consultation, pastoral-care,
+patient-treatment, staff-break; native, mostly Burst); (3) environment
+rating kernel (radius integration/falloff); (4) prestige point
+accumulation (inputs all data: item `Prestige` float @0xC8, both curves;
+combination native); (5) applicant generation & intake mix
+(`ApplicantBreakdown` runtime struct; boost inputs data); (6) XP→score
+normalization feeding the grade table — the score→grade cut-offs ARE
+data (`Config_UISprite.Grades[9]`, §2), only this normalization stays
+native; (7) student core-11 attribute decay carrier (staff-side decay IS
+data, §5/G3); (8) timetable solver
 (constraints data; algorithm `TimetableScheduler` native); (9)
 `CalculateRentPerYear` body.
 
@@ -266,9 +299,15 @@ native); (7) base attribute decay rates (§5); (8) timetable solver
   Health=8, Sober=9, Fun=10}` — 11 attributes; ECS component
   `ECCharacterAttributes` (`Max = 11`, static `Needs[]` subset) with one
   `AttributeValue{Disabled, ChangeOverTime, Value, LastValue}` each.
-  **No config payload was found carrying base decay rates** —
-  `ChangeOverTime` is runtime-set (candidate sources: GOOSE graphs,
-  status effects, or hardcoded Burst init) → G3.
+  **Decay carriers EXIST on the staff side (r2):** the typed block on
+  every StaffDefinition stub row carries per-attribute definitions with
+  measured values — drink/energy/food/hygiene/social/toilet
+  `ChangeOverTime −0.05/s`, fun/happiness/health/sober `0.0`, each with
+  `MinInitialValue`/`MaxInitialValue` init ranges (90–100 typical,
+  sober pinned 0). `ECPStudent` blocks on StudentDefinition raws add
+  clubNeed −0.1 / relationship −0.2 / selfStudy −0.2 per second.
+  **Residual gap:** the STUDENT core-11-attribute decay carrier remains
+  unfound → G3.
 - **Attribute→status-effect mapping is data:**
   `CharacterAttributeStatusEffectsDefinition{Attributes[]{Attribute,
   StatusEffectRange[{Min, Max, StatusEffect}]}, LowHealthThreshold,
@@ -282,7 +321,9 @@ native); (7) base attribute decay rates (§5); (8) timetable solver
 - **Behavior graphs:** `TPS.Core.GOOSE.GraphDefinition{_versionHash, Name,
   GraphType, StartStateID, States[], Variables[] (IGraphVar
   SerializeReference), Transitions[]}` — graph topology serialized where
-  dumps decoded; action semantics native. `ActionSatisfyNeeds{_aiGraph}`
+  dumps decoded; action semantics native. The interaction /
+  needs-satisfaction DATA layer is the `InteractionDefinition` family —
+  630 stub rows (absent from r1's census). `ActionSatisfyNeeds{_aiGraph}`
   + `ESActionSatisfyNeedsStart/Update/End/Score` systems; save shape
   `ActionSatisfyNeeds.SaveData{Score, RoomID}`.
 - **Schedules:** `Timeline` calendar system (Period/Day/Month/Year,
@@ -325,16 +366,16 @@ rows) but no pathId-level resolver yet — that single unblock turns the
 | Surface | Verdict | Basis |
 |---|---|---|
 | Course licensing/tuition/level costs | **Full reconstruction** | all constants serialized + landed (courses.jsonl, CoursesConfig) |
-| Research point costs + project list | **Full reconstruction** | 450 project rows w/ costs landed |
+| Research point costs + project list | **Full reconstruction** | costs ride on the 209 full definition rows (domain 100–3000, 9 values); 241 lite twins carry none |
 | Module→room/qualification/class-size chain | **Full reconstruction** | 319/319 rows complete |
-| Grade ladder & payout tables | **Full** (ladder+tables) / **partial** (XP→grade boundaries authored-assumption) | EGrade + PassGrade + GradeMoneyRewards data; boundary fn native |
+| Grade ladder & payout tables | **Full** (ladder + numeric cut-offs + payout tables) / **partial** (XP→score normalization authored-assumption) | EGrade + PassGrade + `Config_UISprite.Grades` thresholds + GradeMoneyRewards data; normalization native |
 | Dropout/resignation triggers | **Full** (thresholds) / **partial** (upstream satisfaction aggregation) | settings landed; aggregation native |
 | Kudosh sources/sinks graph | **Partial + derived** — buildable as inferred dataset | rewards/prices data-driven; unified tree must be assembled (G6) |
-| Money ledger model | **Full taxonomy / partial dynamics** | 27 BudgetTypes + configs; transaction rules native |
+| Money ledger model | **Full taxonomy / partial dynamics** | 28 BudgetTypes + configs; transaction rules native |
 | Happiness/satisfaction simulator | **Partial + authored-assumptions** | weights/curves landed; combine+clamp native |
 | Room prestige ladder | **Full ladder / partial accumulation** | 15 levels + curves data; points roll-up native |
 | Environment score maps | **Partial** | item value/radius data; kernel native |
-| Needs decay simulation | **Impossible-from-corpus-as-is** for base rates | no config carrier found (G3); native pass would settle it |
+| Needs decay simulation | **Partial** — staff side measured in data, student core-11 carrier unfound | staff per-attribute rates serialized (−0.05/s set); student core decay runtime-set (G3) |
 | AI behavior replay | **Structural only** | graph topology data; action semantics native/Burst |
 | Timetable/schedule display logic | **Partial** | period/event params data; solver native |
 
@@ -344,11 +385,11 @@ rows) but no pathId-level resolver yet — that single unblock turns the
 |---|---|---|---|---|
 | G1 | No IL2CPP method bodies; computed formulas opaque | all of §7 "partial/native" rows | IL2CPP+AOT; dump = signatures only | Native pass over `GameAssembly.dll` guided by `script.json` addresses + stringliteral anchors (client still installed at `A:\SteamLibrary\steamapps\common\Two Point Campus`); or runtime memory probes on NE8K |
 | G2 | Cross-file PPtr targets unresolved — includes the 50 `PrerequisiteHasCourseUnlocked._course` edges | 23,250 refs (piece-02); externals table NOW present (222 rows) | resolver needs fileId→CAB→pathId index | Extend relink resolver to join `harvest/externals.jsonl`; then re-run pair pass unchanged |
-| G3 | Base attribute decay rates absent from configs | 11 attributes, zero carriers found | `AttributeValue.ChangeOverTime` runtime-set | Native probe (G1) or save-state diffing across time intervals |
-| G4 | XP→grade boundary mapping not in data | 8-grade ladder, no numeric cuts found | computed natively via CourseAssessmentScoring | G1; until then site labels grade bands qualitatively, never invented cut-offs |
+| G3 | Student core-11 attribute decay carrier unfound — NARROWED from r1 (staff side RESOLVED) | staff decay measured in data: per-attribute definitions on all 3 StaffDefinition rows — drink/energy/food/hygiene/social/toilet −0.05/s, fun/happiness/health/sober 0.0, init ranges 90–100; `ECPStudent` adds clubNeed −0.1 / relationship −0.2 / selfStudy −0.2 | student core-11 decay still runtime-set | Native probe (G1) or save-state diffing across time intervals |
+| G4 | ~~XP→grade boundaries not in data~~ REFUTED by r2 — cut-offs ARE data | `Config_UISprite.Grades[9]` thresholds NA −1 / F 0 / D 40 / C 50 / CC 60 / B 70 / BB 75 / A 80 / AA 90, consumed by `UISpriteConfig.GetGrade(float score)` | residual: only the XP→score normalization feeding that table is unproven/native | G1 for that single step; publish the threshold table as measured |
 | G5 | Applicant/intake composition | `ApplicantBreakdown` runtime-only | generated natively from boost inputs | G1; boost *inputs* already published |
 | G6 | Unified unlock-tree dataset not yet derived | 139 behavior-graph edges ≠ shop tree | derivation unbuilt, not impossible | New emit pass joining InitiallyAvailable + KudoshCost + RequiredUnlockChallengeCount + prerequisites + DB_Items_* monthly drops |
-| G7 | LevelScenarioV2 thinness in stubs | 48 stub rows × 4 generic fields; harvest raws FULLY decoded (248 KB sample: PlotRecords[7] w/ BuildCost 100/1000 + BuildDurationDays 10.0, RoomRecords[21]) | stub emitter didn't ingest scenario bodies | Point ingest at `harvest/monobehaviours/configs*/TPC.LevelScenarioV2/*.json` (`_decoded.typetreeDecoded: true`) |
+| G7 | LevelScenarioV2 thinness in stubs (+ sibling course-stub drop) | 48 scenario stub rows × 4 generic fields vs harvest raws FULLY decoded (≈1.26 MB sample: PlotRecords[7] w/ BuildCost 100/1000 + BuildDurationDays 10.0, RoomRecords[21]); separately, course stubs dropped `_assessmentScoring`/`_studentArchetypes` (0/69 stubs vs present in raw harvest JSONs) | stub emitter didn't ingest rich bodies | Point ingest at `harvest/monobehaviours/configs*/TPC.LevelScenarioV2/*.json` (`_decoded.typetreeDecoded: true`) and re-ingest courses from their harvest dumps |
 | G8 | Burst kernels doubly opaque | needs/room-score/curve-eval delegates | compiled to native vector code, no IL even theoretically | Only dynamic analysis (runtime tracing) can go beyond G1 |
 
 END OF scout-report-piece-04.mdx
