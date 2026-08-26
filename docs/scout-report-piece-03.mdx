@@ -1,0 +1,473 @@
+# Scout piece 03 — derived map geometry inventory
+
+**Agent:** scout-piece-03 · **Date:** 2026-08-26 · **Scope:**
+intelligence only — no implementation, no edits outside this file, no
+commits. Every number below was measured on the landed `extracted/`
+tree (buildId 20226581) during this session; probe method stated per
+claim. Brief note: the brief's working filename for this report was
+`scout-report-piece-03-map.mdx`; the orchestrator's resume directive
+named this file — it is the same deliverable.
+
+Inputs read in full first: repo-root `AGENTS.md`,
+`_foundation/extraction-doctrine.md`, `_foundation/decision-register.md`,
+pack `spec.md`, `README.md`, `data-acquisition.md`, `toolchain.md`,
+`docs/scout-report-001.mdx`, `docs/scout-report-piece-02.mdx`.
+
+Corpus state at probe time: `stubs/` 13,443 rows across 9 kinds;
+`harvest/export-manifest.jsonl` 167,069 exported MonoBehaviour dumps
+(1,129 distinct script classes) **plus** component-class exports
+(`UnityEngine.UI.Image`, `TMPro.TextMeshProUGUI`,
+`TPS.Core.Navigation.NavBounds`, …) and `harvest/externals.jsonl`
+(per-dump external-file tables — the piece-02 G2 unblock artifact,
+landed since); `bundle-roster.jsonl` 176 rows with a `sceneFlag` enum;
+`relinks/matrix.json` 100 ordered cells; decompiled tree unchanged.
+
+**Headline of this report, up front:** the brief's premise ("position
+fields absent from every kind") is TRUE for the stub layer and FALSE for
+the corpus. Two harvested-but-unindexed asset families carry the entire
+map: **`TPC.LevelConfig`** (28 dumps: world bounds, plot counts, spawn
+points, scene names, scenario references) and **`TPC.LevelScenarioV2`**
+(51 dumps: 1,031 authored plots with world-space bounds, 5,188 rooms
+with grid anchors + tile bitmaps + world positions, ~23k placed items
+with positions and rotations). The game ships its own campus layouts.
+What remains genuinely missing is the scene Transform layer
+(census-counted, never dumped) and any notion of doors.
+
+---
+
+## §1 Prior map decision re-verified against current artifacts
+
+`docs/scout-report-001.mdx` §5 decided: **path D (authored cartography
+over client coordinates)**, per-campus plot maps, ceiling 26
+scene-carrying bundles. Re-measured:
+
+| Prior number | Current artifact | Verdict |
+|---|---|---|
+| 25 strict `.unity` + 1 seasonal = 26 scene-carrying | `bundle-roster.jsonl`: 176 rows, `sceneFlag` distribution `{none: 150, ".unity": 25, seasonal-scenes: 1}` | HOLDS exactly |
+| 16 campus/DLC plot-map candidates | census files exist for all 26 scene bundles; 16 carry ≥1,000 GameObjects (§5 table) | HOLDS |
+| no radar/tile CDN signal (paths A/B out) | catalog address sweep: **0 addresses containing "minimap"** (56,331 addresses scanned) | HOLDS |
+| `coordinate-sources.plot-marker: unknown-P0` | §3–§4 below measure real client coordinates | **FLIPS to `client`** — but from configs/scenarios, not scene Transforms |
+| imagery-path: authored | §10 measures the client's own metamap/loading-screen/sandbox-screenshot art as raw material | HOLDS (imagery stays authored/assembled; geometry no longer is) |
+
+One refinement the prior decision could not know: the "per-campus plot
+map" product shape has a strictly better data source than scene dumps —
+the scenario layer (§3), which is already grid-aligned, world-space, and
+per-plot.
+
+## §2 Stub-layer field-presence census (what the brief asked to measure)
+
+**Method:** flattened every row of all nine `stubs/*.jsonl` files to
+leaf paths (depth ≤6, lists sampled ≤50 elements) and matched leaf names
+against a spatial-token regex (`position|grid|footprint|rotation|floor|
+bounds|transform|x|y|z|cell|tile|plot|doorway|navmesh|size|width|height|
+depth|area|placement`). Counts below are rows-containing, not
+occurrences.
+
+| Kind | Rows | Rows with any spatial-named leaf | What the hits actually are |
+|---|---|---|---|
+| `campus-levels` | 17 | **0** | pure seed rows: `TPC.GameModePlayLevelConfig` {Name, LevelConfig GUID, MetagameConfig GUID} — no geometry |
+| `rooms` | 116 | 67 | 63 × `TPC.RoomDefinition` carry `MinCellSizeX/Y` (grid cells), `FloorHeightOffset` (world units), `CellConstructionCost`; rest are UI/shake magnitudes |
+| `configs` | 8,430 | 2,048 | 84 × `TPC.FloorArea*Definition` family (`IncludeInPlotTiles`, `ExcludeWallsFromNavMesh`, `SurroundingTileGap`, `WallHeightForSelection`); 625 `States.GraphRect.{x,y,width,height}` (**GOOSE graph-editor UI pixels, NOT world space**); 634 `IgnoreRotation` |
+| `items` | 3,885 | 2,014 | **1,654 × `TPC.GameItemDefinition` carry the placement block**: `Allow{Free,Plot,ParentArea,DigSiteEdge}Placement`, `GridSnap`, `RotationSnap`, `ApproxSizeInTiles`, `DigSiteBounds.{m_Center,m_Extent}` (local world units), `UseAllBuildBoundsForNavObstacles`, `ReachabilityInteractionOffNavMeshMaxDistanceOverride` |
+| `courses` / `metagame-nodes` / `staff` / `student-types` | 69 / 454 / 3 / 54 | 0 / 0 / 0 / 0 | nothing spatial |
+| `unlockables` | 415 | 60 | graph-editor rects + `IgnoreRotation` echoes |
+
+Verbatim examples (trimmed):
+
+```json
+item  Child_Item_Kitchen_Microwave_Oven   (configs_assets_all.bundle)
+  ApproxSizeInTiles: 1   GridSnap: 0.5   RotationSnap: 90.0
+  AllowFreePlacement: 1  AllowPlotPlacement: 0
+  DigSiteBounds: {"m_Center":{"x":0.0,"y":0.652500033,"z":-0.03},
+                  "m_Extent":{"x":0.365,"y":0.6525,"z":0.27}}
+```
+
+Distributions worth pinning:
+
+- `ApproxSizeInTiles`: **1 × 1,635 · 2 × 16 · 3 × 3** — items are
+  effectively point-pins, not multi-tile footprints.
+- `GridSnap` mode **0.5** (1,423 of 1,654; others 1.0×119, 0.25×45,
+  2.0×34, …) — placement quantises to half-world-units, i.e. quarter-cells.
+- `RotationSnap` mode **90°** (1,170; then 45°×299, 22.5°×153) — four
+  canonical orientations dominate.
+- `MinCellSize(X,Y)` on 63 RoomDefinitions: mode **5×5** (21), range
+  **(2,1)…(9,14)**; `FloorHeightOffset` mode 0.0 (48; 0.5×8, 1.0×3, 2.0×4).
+
+**The negative result stands:** no stub row carries a world position.
+Everything positional above is *rules* (snap/footprint/bounds-relative),
+not *instances*. Instances live in §3.
+
+## §3 The scenario layer — `TPC.LevelScenarioV2` (decisive find)
+
+**Method:** export-manifest filtered by class; all 51 dumps parsed;
+record arrays walked; PPtr resolution against the manifest index.
+
+51 dumps across 4 bundles (`configs_assets_all` 43 ·
+`configs-levels-prefabs` 1 · `dlc-space-configs` 4 · `dlc-ghost-configs`
+3). Sizes 765 B – 13.83 MB. Totals measured across all 51:
+**1,031 PlotRecords · 5,188 RoomRecords · 22,878 room-placed ItemRecords
+· 118 further item records** (Arrival + NonArea + NavPlotWaypoint) =
+**22,996 placed-item records**, plus 64×64-to-256×256 landscape tile
+maps per plot layer.
+
+Per-scenario highlights (full table measured; largest shown):
+
+| Scenario (m_Name) | Plots | Rooms | Items | Terrain map |
+|---|---|---|---|---|
+| LevelScenarioV2_MoonBase | 61 | 264 | 191 | 30×56 |
+| LevelScenarioV2_Mitton | 38 | 166 | 959 | 80×78 |
+| LevelScenarioV2_Party | 44 | 183 | 1,057 | 66×32 |
+| LevelScenarioV2_PerformanceWeek | 33 | 291 | 1,802 | 56×76 |
+| LevelScenario_RemixChallenge_Wanted | 35 | 218 | 1,749 | 72×36 |
+| LevelScenarioV2_Knight | 33 | 142 | 579 (+25 waypoints) | 56×76 |
+| LevelScenarioV2_Ghosts | 33 | 154 | 713 | 72×40 |
+| LevelScenarioV2_SpaceportCity | 41 | 179 | 173 | 64×44 |
+| LevelScenarioV2_Tutorial_Test | 20 | 86 | 251 | 38×40 |
+| LevelScenarioV2_Space (empty template) | 0 | 0 | 0 | — |
+
+Verbatim record schemas (MoonBase scenario, unmodified):
+
+```json
+PlotRecords[0]:
+{ "PersistentName": "Plot 15", "DefinitionID": -1165162262,
+  "Bounds": {"m_Center": {"x": -141.0, "y": -0.00016784668, "z": -92.0},
+             "m_Extent": {"x": 15.0, "y": 0.0, "z": 28.0}},
+  "BuildCost": 55000, "Locked": 0, "InitiallyBuilt": 0,
+  "IgnoreForCameraBounds": 0, ... }
+
+RoomRecords[i]:
+{ "Anchor": {"X": 2, "Y": 2},
+  "WorldPosition": {"x": -152.0, "y": -0.00016784668, "z": -116.0},
+  "DefinitionID": -690496154,
+  "Tiles": {"_width": 9, "_height": 20, "_saveData": [1,1,1,...]},
+  "PlotLayer": 3, ... }
+
+RoomRecords[i].ItemRecords[j]  (= ItemSaveData schema):
+{ "DefinitionID": -572923782,
+  "Definition": {"m_FileID": 0, "m_PathID": 522383310774550334},
+  "LocalPosition": {"x": 17.0, "y": 0.0, "z": 33.0},
+  "LocalRotation": 90.0,
+  "OwningRoomId"-analogues: PlotLayer: -1, ... }
+```
+
+Reading of the spaces (ground-truthed in §6): plot `Bounds` is
+world-space centre/extent; room `Anchor` is grid cells, `WorldPosition`
+is world units, `Tiles._saveData` is a row-major w×h occupancy bitmap
+(values observed 0/1); item `LocalPosition` is relative to its owning
+room's `WorldPosition` (sample: room at x −152 + item local 17 ⇒ world
+−135, inside the room's tiles), `LocalRotation` is degrees.
+
+**Join coverage probe:** indexing every exported
+`GameItem{,Lite,Variation}Definition` by `(bundle, pathId)` (7 bundles,
+3,779 entries) and resolving all 22,996 scenario item `Definition`
+PPtrs same-file: **22,210 resolve (96.58%)**; 786 residue concentrated
+in cross-file references (`Wanted` 14, `Super_Built_Up` 2, `FreePlay_
+BuiltUp` 6, `Ghosts` 69, …). The sample record resolves end-to-end:
+pathId `522383310774550334` → dump `Item_Door_Building_Moonbase_Main`,
+whose `_id` = **−572923782 = the ItemRecord's `DefinitionID`**. So
+`ItemSaveData.DefinitionID` ≡ `ScriptableObjectWithID._id` ≡ the numeric
+key the stub layer does not currently emit (G3).
+
+## §4 The `TPC.LevelConfig` layer — bounds, plots, spawn, scenario ref
+
+28 dumps total (`configs-levels-prefabs` 13 · `configs_assets_all` 9 ·
+`dlc-space-configs` 4 · `dlc-ghost-configs` 2), 133 top-level keys each.
+Measured geometry fields, all 28 rows:
+
+- `WorldBounds`: `{m_Center:{0,0,0}, m_Extent:{200,16,200}}` on **every**
+  config except the blank template (`Level`, extent 128×10×128,
+  PlotCount 0). One world box: **400×400 m footprint, ±32 m vertical**.
+- `SpawnPoint`: **(−66, 0, −24)** on all 28 (one PartyLevel variant
+  y=2.086…) — the camera-intro anchor.
+- `LevelScene` / `LevelScene_Optimized`: string scene names
+  (`KnightLevel`/`KnightLevel_Optimised`, `Scene_DLC1_LaunchPadLevel`/…)
+  — **the level↔scene join key the matrix currently lacks** (G5).
+- `PlotCount` (levels-prefabs set): Tutorial 5 · Knight 7 · Mitton 9 ·
+  Gastronomy 10 · Magic 7 · PerformingArts 7 · Archaeology 7 · Robotics
+  10 · Sports 6 · Spy 10 · Party 5 · Final 1 — **base sum 84**; DLC:
+  LaunchPad 11 · MoonBase 15 · SpaceportCity 18 · Ghosts 15 (×2 twins).
+  Note: the parallel `configs_assets_all` set carries variant counts for
+  three levels (Robotics 5, Spy 5, Party 5) — two definition generations
+  exist; treat PlotCount as per-config-variant, not per-campus truth.
+- `_ScenarioV2`: an AssetReference GUID. Resolved through the catalog's
+  guid keys (54,143): **27 of 28 resolve** (blank template carries none)
+  to addresses like
+  `Assets/Data/Game/Levels/Final/Part1_Early/KnightLevel/LevelScenarioV2_Knight.asset`.
+  Each campus gets a story scenario + one Remix scenario
+  (`Remix_1…Remix_10`); the address paths also expose the campaign part
+  structure (`Part1_Early` → `Part2_Mid1` → `Part2_Mid2` →
+  `Part3_LateGame`) — the progression ordering falls out of the same
+  join. DLC paths: `Assets/Data/DLCs/DLC1_Space/...`,
+  `.../DLC2_Ghost/...`.
+- Imagery pointers carried on the same object (resolved for Knight):
+  `LoadingScreenBackgroundAssetReference` →
+  `Assets/Data/UI/Textures/LoadingScreen/Levels/TPC_Level_03_Noblestead.png`;
+  `SandboxLevelScreenshot` → `UI_Sandbox_T_imageLevel_Knight.png`;
+  `SandboxLevelContainerScreenshot` → container image; `LevelIcon` →
+  atlas sub-sprite `UI_InGame_T_Spritesheet_Icons_HireMenu_Tabs_
+  Categories_KnightSchool`. Also `GameItemIconConfig`
+  {CameraDistance 0, CameraFOV 10, CameraRotation (−30,45,10),
+  TextureSize 128} — the game's own icon-render camera constants.
+
+## §5 Scene bundles — what exists, what got dumped
+
+Census (`objectsByClass`) across the 26 scene-carrying bundles:
+**141,047 GameObjects · 125,382 Transforms · 85,692 MeshFilters ·
+85,543 MeshRenderers · 11,548 BoxColliders · 46,051 MonoBehaviours.**
+The 16 playable levels:
+
+| Scene bundle | GO = Transforms | MonoBehaviours | MeshFilters | BoxColliders |
+|---|---|---|---|---|
+| magic | 15,171 | 2,462 | 11,128 | 1,603 |
+| performingarts | 12,642 | 1,553 | 8,807 | 982 |
+| tutorial | 8,413 | 2,126 | 5,369 | 1,474 |
+| gastronomy | 9,464 | 692 | 6,160 | 171 |
+| archaeology | 8,393 | 1,626 | 4,627 | 134 |
+| knight | 10,706 | 3,036 | 7,294 | 1,710 |
+| final | 6,612 | 1,899 | 4,311 | 1,154 |
+| robotics | 6,334 | 873 | 4,165 | 337 |
+| spylevel | 5,258 | 1,084 | 3,597 | 460 |
+| mitton | 5,825 | 991 | 4,184 | 609 |
+| sports | 3,664 | 1,229 | 2,458 | 608 |
+| party | 3,530 | 682 | 2,606 | 580 |
+| dlc1 launchpad | 1,375 | 217 | 1,104 | 2 |
+| dlc1 spaceportcity | 1,355 | 235 | 894 | 29 |
+| dlc1 moonbase | 652 | 58 | 472 | 16 |
+| dlc2 ghosts | 7,342 | 2,025 | 4,605 | 1,145 |
+
+(The seasonal bundle carries another 16,153 GOs; HUD/remix/sandbox
+bundles are UI planes — `levelhud` 12,858 GO / 19,451 MB, zero
+Transforms.)
+
+Exported MonoBehaviour classes inside `knightlevel_optimised`:
+`TPC.GameItemVisual` 1,702 · `TPS.Core.FadeNearMeshComponent` 806 ·
+`TPS.Core.Navigation.IgnoreBoxColliderForNavBounds` 375 ·
+`TPS.Core.Navigation.NavBounds` 118 · `TPC.GameItemBuildBoundsComponent`
+18 · `TPC.InteractionData` 8 · camera-data/cutscene tails. **Answer to
+the brief's SpriteRenderer/TMPro question:** the playable scenes are
+fully prefab/mesh-instantiated 3D hierarchies — TextMeshProUGUI/Image
+exports come from the UI-plane bundles, not the level plots; there are
+no sprite scenes to mine for layout.
+
+What the dumps give and don't: `Transform` and `GameObject` objects are
+**census-counted but not dumped** (no engine-class rows in the export
+manifest), so scene-resident world transforms are absent today (G1).
+The dumped bounds components carry **local** footprints, e.g.
+`GameItemBuildBoundsComponent {_center:(0,0.71,0), _size:(4,1.55,5)}`
+and `NavBounds {_center:(0,0,0), _size:(14.36,0.1,19.52), _areaMask:5,
+_shape:2}` — per-object build/nav volumes, useful for footprint
+libraries, useless as placements without the parent transform.
+`scenes_scenes_config_level_databases` contains exactly ONE MonoBehaviour,
+`TPC.LevelDatabasesConfig`, whose body is a single cross-file PPtr —
+the machine-readable "level DB" the earlier docs pointed at is these
+very LevelConfig/Scenario assets, not a table inside this scene.
+
+## §6 Code layer (`extracted/decompiled/il2cppdumper/dump.cs`) — the coordinate law
+
+Struct/class fields verbatim (TypeDefIndex cited):
+
+- **`GridCoord`** (line 666259): `{int X; int Y}` +
+  **`public const float CellSize = 2`** (`CellSizeSq` 4, `CellSizeInv`
+  0.5, `CellSizeHalf` 1, `CellSizeVec`). **The world grid is 2 world
+  units per cell; world→grid is ×0.5.** All scenario Anchors/Tiles live
+  here; `WorldBounds` extent 400 ⇒ 200×200 cells per campus.
+- **`PlotSaveData`** struct (987644): `{int Id; int PlotUniqueId; int
+  FloorAreaId; int DefinitionID; GridCoord Anchor; List<ItemSaveData>
+  Items; LandscapeSaveData Landscape; Bounds PlotBounds; EPlotState
+  PlotState; …}` — the save-format twin of the scenario PlotRecord,
+  confirming the runtime model: plot = grid anchor + bounds + items.
+- **`ItemSaveData`** (934753): `{…long DefinitionID; int OwningRoomId;
+  Vector3 LocalPosition; float LocalRotation; int ParentID; int
+  UpgradeLevel; bool LoadedFromScenario; …}`.
+- **`LandscapeSaveData`** (934810): `{int[,] TerrainMap; int[,]
+  ObjectMap; LandscapeCellAttributeMap.Attributes[,] AttributeMap;
+  int[,] RandomMap}` — the scenario tile maps' runtime type.
+- **`EPlotTileType`** (987631): `None=-1, Invalid=0, Default=1,
+  Unbuildable=2, NoNavigation=3` — plot-tile semantic palette.
+- **`TPS.Core.Navigation.NavBounds`** MonoBehaviour (661308):
+  `{_center: Vector3, _size: Vector3, _areaMask: int, _shape,
+  Meshes[], Terrains[]}` — navmesh volumes are runtime-built from
+  meshes/bounds (`NavMesh : MustCallDestroy` @9003,
+  `NavMeshSourceList` @9005, `FloorAreaNavMeshSourcesCache` @19006);
+  no baked navmesh data ships.
+- **`TPC.WaypointGraph`/`WaypointInfo`/`WaypointEdge`** (16326–16334):
+  runtime navigation graph; `WaypointInfo {Vector3 Position; Bounds2D
+  Bounds}`, `WaypointEdge {To; Cost; Vector3[] Corners; IsKinematic}`,
+  `Bounds2D {float2 Center; Extents}`. Runtime-only; scenario
+  `NavPlotWaypointRecords` (present only in Knight: 25) seed it.
+- Plot machinery: `TPC.FloorAreaPlotDefinition ← FloorAreaDefinition`,
+  `FloorAreaPlotInstance` (21 fields), `PlotAlgorithms` (24),
+  `PlotBuildManager` (47), `PlotBorderVisual`, `CellGridVisualisation`,
+  `TileAttribute` enum (34 values). No `Doorway`/`Door*-definition`
+  class exists in the hierarchy sweep (139 TPC./TPS. spatial-name
+  matches reviewed) — **doors are not data in this game** (see §11).
+- Camera bounds: `LevelConfig._CameraConfig` AssetReference GUID
+  (e.g. `5a9540898c42b7a4b9431a90c156112d`, Knight) — resolvable via
+  catalog like §4; not yet dumped/read. `PlotRecord.IgnoreForCamera-
+  Bounds` shows per-plot camera-bound participation is data-driven.
+
+## §7 Coordinates and units — which space each datum lives in
+
+| Datum | Source | Space | Units / convention |
+|---|---|---|---|
+| `WorldBounds` | LevelConfig (28) | world | metres-like Unity units; box 400×400×32 centred origin |
+| `SpawnPoint` | LevelConfig | world | (−66, 0, −24) |
+| `PlotRecords[].Bounds` | LevelScenarioV2 | **world** | centre+extent (Unity `Bounds`) |
+| `RoomRecords[].WorldPosition` | LevelScenarioV2 | **world** | position of the room's tile-grid origin |
+| `RoomRecords[].Anchor`, `Tiles` bitmap | LevelScenarioV2 | **grid cells** | 2.0 world units/cell; row-major w×h 0/1 occupancy |
+| `ItemRecords[].LocalPosition` / `LocalRotation` | LevelScenarioV2 | **room-local** world units / degrees CW | add owning room's WorldPosition for world coords |
+| `DigSiteBounds`, `NavBounds`, build-bounds `_center/_size` | item stubs / scene components | **object-local** world units | footprint libraries only |
+| `States.GraphRect.*` | config/unlockable payloads | **graph-editor UI pixels** | NOT geographic — exclude from anything map-shaped |
+| `TerrainMap/ObjectMap/AttributeMap` | LevelScenarioV2 plot layers | **tile indices** | ints; semantics partially known (EPlotTileType for plot tiles; terrain-paint enums unverified, G7) |
+| locale term IDs | everywhere | n/a | signed int32 → I2 registry (piece-02 §2 mechanism, unchanged) |
+
+Projection consequence for the site: one shared linear transform per
+campus — `map_px = (world_xz − campus_min) × scale` — suffices for
+plots, rooms, and items alike, because everything above shares the one
+world frame; Leaflet simple-CRS in game-unit space works unchanged from
+scout-001 §5.
+
+## §8 Relink/matrix implications
+
+Measured against `relinks/matrix.json` (100 cells, node universe
+includes `scene`):
+
+- `campus-level → scene`: **inferred/missing, 0 edges** — yet the join
+  key is measured (§4 `LevelScene` strings) and the target side exists
+  (`bundle-roster.sceneFlag == ".unity"` rows). Emitting
+  `relinks/campus-level_scene.jsonl` (mechanism `hard`, evidence
+  `fieldPath: LevelScene`) closes the cell; `campus-level → scenario`
+  rides the same emission via `_ScenarioV2`.
+- `campus-level → config` (13 edges, hard, `assetguid-catalog`) and
+  `campus-level → metagame-node` (partial) are today the only wired
+  campus-level edges; the scenario join multiplies this kind's surface
+  by ~1,031 plots / 5,188 rooms / 23k items of placeable content.
+- Scenario→entity joins need no new mechanism: same-file PPtr resolution
+  covers 96.58% (§3); the 786-record residue is exactly the
+  `externals.jsonl` use case (that file now exists — piece-02's G2
+  artifact landed after its report).
+- `room → config` already carries `FloorAreaDefinition` (62 refs,
+  piece-02 §1) — the floor-area/plot definition family (84 config rows,
+  §2) joins rooms to plot semantics without new probing.
+- Nothing in the matrix or pair files models adjacency; that absence is
+  structural, not an omission (§11 verdict 3).
+
+## §9 Locale surface for map labels
+
+From `relinks/i2_term_registry.jsonl` (15,675 IDs → 15,672 keys,
+37 prefixes — piece-02 §2 numbers reproduce):
+
+- **`Levels/*` 934 keys** — per-level title/description/objective text.
+- **`Rooms/*` 484 keys** — room display names
+  (`Rooms/Archaeology_DigSite_Name` pattern) — the label source for
+  room polygons.
+- **`Challenge/{LevelName}/*`** and **`Objectives/{LevelName}/*`** —
+  per-campus event/objective labels keyed by the same level names as §4.
+- Plot-specific labels are thin (139 keys match `plot` mostly in
+  DLC-ghost event terms); plot naming in-game is generic
+  (`PersistentName: "Plot 15"`) — authored plot labels will be derived
+  (campus + index), not mined.
+- `Items/*` 1,983 and `Courses/*` 932 feed pin tooltips via the existing
+  `entity_locale` join (10,964 edges shipped).
+
+## §10 Imagery / media candidates (catalogue-first, none extracted)
+
+Catalog address sweep (56,331 addresses):
+
+- **0 minimap/radar-tile addresses** — confirms no client-rendered map
+  layer exists to extract.
+- **MetaMap/Metamap namespaces: 1,094 addresses** — 372 `.tga` +
+  178 `.png` textures incl. per-theme feature art
+  (`T_Map_Knight_Wall_Tower_V1_DIFF.tga`,
+  `T_Map_Spy_Industrial_Power_Plant_V1_METL.tga`,
+  `T_Map_Space_Port_Gantry_V1_DIFF.tga`), 422 materials, 50 FBX, 64
+  prefabs, 8 sprite atlases; pin sprites under
+  `UI/Textures/Metamap/Map_Pins/`. This is the game's own campus-overview
+  map kit — raw material for path-D cartography.
+- **117 loadingscreen images** (incl. per-level keyart
+  `TPC_Level_09_Music.png`, `TPC_DLC3_Level_Tropical_V1.png`) + **125
+  level image/icon/screenshot addresses** (`UI_Sandbox_T_imageLevel_*`)
+  — per-campus overview imagery, referenced directly by LevelConfig (§4).
+- Environment/landscape textures: 2,526 addresses (terrain, roads,
+  buildings).
+- MEDIA-CATALOGUE cross-check (`media-catalogue.jsonl`, 47,939 rows):
+  `environment-metamap` 73 Texture2D objects, `ui-level` 49 Texture2D +
+  55 Sprites, loadingscreen bundles 40 Texture2D + 69 Sprites. Caveat:
+  the catalogue's `bytesEstimate` for Texture2D rows is a container
+  footprint estimate, not decoded size (e.g. environment-landscape 474
+  Texture2D ≈ 109 KB estimated) — true byte totals require the
+  owner-approved decode pass (G9). No binary was opened this session.
+
+## §11 Feasibility verdicts
+
+1. **Per-campus overview maps — FEASIBLE from client data.** 16
+   playable campuses each have: world bounds (§4), plot inventory with
+   world-space rectangles (§3: e.g. MoonBase 61 plots), terrain tile
+   maps, and the scenario join (§4). Geometry is measured; only the
+   visual layer is authored (path D holds for imagery — §10 supplies
+   raw material). The 26-scene ceiling survives as a *rendering*
+   ceiling, not a data ceiling: scenarios cover remix/challenge
+   variants beyond the 16 (51 total).
+2. **Room-footprint plots — FEASIBLE.** 5,188 room records with grid
+   anchors + explicit tile bitmaps + world positions (§3, §7). A room =
+   its bitmap extruded at 2 u/cell; min-size rules from §2 annotate
+   rather than constrain. Labels from `Rooms/*` terms (§9).
+3. **Door/adjacency overlays — NOT DATA; DERIVABLE ONLY.** The class
+   sweep found no doorway/door-definition type; rooms are player-built
+   on plots, so shipped adjacency exists only where scenarios pre-build
+   rooms. Derivable form: tile-bitmap contact edges between
+   `RoomRecords` sharing a plot layer (pure geometry, mark
+   `inferred: true, method: tile-bitmap-contact`). Navigation truth
+   (`WaypointGraph`, NavMesh) is runtime-computed; only Knight ships 25
+   waypoint seeds. Do not promise a door overlay in the spec.
+4. **Item-placement pins — FEASIBLE at scenario scope.** 22,996
+   placements with positions/rotations, 96.58% already name their
+   definition (§3); residue needs the externals resolver (G4). Rules
+   level (can-this-item-go-here) comes from §2's placement block +
+   FloorAreaDefinitions. Live save-file parsing is out of scope for
+   this corpus (save schema ≠ shipped content) though the code layer
+   documents it fully.
+5. **What must stay authored (path D):** campus overview ART, plot
+   display labels (generic "Plot N" in data), any cross-campus
+   "world" view (there is none — campuses are disjoint boxes), and the
+   meta-map presentation. Everything geometric above renders from
+   measured numbers.
+
+## §12 Gap ledger
+
+| # | Gap | Measured size | Unblock |
+|---|---|---|---|
+| G1 | Scene `Transform`/`GameObject` objects census-only — no scene-resident world transforms dumped | 125,382 Transforms across 26 bundles | Extend stage 3 to decode engine-native Transform/GameObject for scene bundles (UnityPy reads these without typetree synthesis; needs one probe stage + emit). Cross-checks scenario coordinates; unlocks environment-art placement (trees/roads) beyond plots |
+| G2 | Scenario layer exists only as raw harvest — no stub kind, no dataset | 51 dumps, 1,031 plots, 5,188 rooms, 22,996 items unemitted | New emit: `maps/` datasets (levels.jsonl, plots.jsonl, rooms.jsonl, item_placements.jsonl) with coordinates verbatim + provenance; `extracted/maps/` placeholder awaits exactly this |
+| G3 | Stubs drop `ScriptableObjectWithID._id` — scenario `DefinitionID`s don't join stub ids directly | 0 of 13,443 rows carry `_id` (measured) | Either re-emit stubs preserving `_id`, or ship a pathId→id bridge from export-manifest (bridge measured working end-to-end, §3) |
+| G4 | 786 scenario item records unresolved same-file | 3.42% of 22,996 | Resolve via `harvest/externals.jsonl` (artifact present; resolver not yet run over scenarios) |
+| G5 | `campus-level → scene` matrix cell empty despite measured join key | 0 edges vs 28 configs × 26 scene rows | Emit `relinks/campus-level_scene.jsonl` + `campus-level_scenario.jsonl` from LevelConfig fields (hard mechanism, §8) |
+| G6 | Plot-marker geometry in non-scenario contexts (sandbox start state) rests on scenario defaults only | PlotCount variants disagree (Robotics 10 vs 5, Spy 10 vs 5) | Treat PlotCount as per-config-variant; pick the levels-prefabs generation as canonical after one code-read of `LevelConfig.LoadAssets` (which set instantiates) |
+| G7 | Terrain/landscape tile-map value semantics | `TerrainMap` ints observed (0/16/20 patterns); attribute enum unread | Read `LandscapeBrushDatabase` + terrain paint enums in dump.cs; correlate against one scenario's map; then tile-type legends render honestly |
+| G8 | No door/adjacency data | 0 classes, 0 fields (§6, §11.3) | Accept derived-only adjacency (tile-contact edges, `inferred: true`); ledger in RELATIONS.md as proven-absent |
+| G9 | Media byte estimates not decoded sizes | `bytesEstimate` ≈ container footprint (§10) | Owner-approved texture-decode pass produces true sizes + the actual imagery for path D |
+
+Probe artifacts: none written — every number above regenerated inline
+from `stubs/`, `harvest/`, `relinks/`, `addressables/catalog.json`,
+`bundle-roster.jsonl`, `media-catalogue.jsonl`, and
+`decompiled/il2cppdumper/dump.cs` (line numbers cited in §6).
+
+## Open questions for the orchestrator
+
+1. Dataset shape for `extracted/maps/`: one JSONL per record family
+   (levels/plots/rooms/item_placements — G2) vs one nested document per
+   campus. Piece-01 contract style suggests per-family JSONL; the
+   Documentator should pin it before the CodeWriter starts.
+2. Canonical PlotCount generation when variants disagree (G6) — accept
+   both rows with a `variantOf` carrier (piece-02 §3 precedent) or
+   adjudicate by code-read first?
+3. Whether the scenario-derived geometry becomes a *shipped site layer*
+   (interactive scenario viewer) or stays a *data substrate* for the
+   planner tool — changes whether G1 (scene Transforms) is in scope for
+   piece-03 or deferrable.
+4. Medical School (`dlc-hospital-*`, out-of-roster) carries its own
+   LevelConfigs/scenarios in catalog addresses (`DLC3_Hospital/…` seen
+   in §10 imagery paths) — acquisition remains QUESTION-QUEUE #3;
+   map schemas should not hard-code axis membership.
+
+END OF scout-report-piece-03.mdx

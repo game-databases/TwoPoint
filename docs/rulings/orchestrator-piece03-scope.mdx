@@ -1,0 +1,46 @@
+# Orchestrator ruling — piece-03 map scope (answers scout open questions)
+
+Date 2026-08-26 · Authority: orchestrator, under promptForDB pipeline ·
+Input: `docs/scout-report-piece-03.mdx` §12 open questions. Technical
+sub-decisions (dataset shape, PlotCount generation policy) stay with the
+piece-03 Documentator→Arbiter chain; ruled here only where scope/product
+is affected.
+
+## R1 — Scenario geometry serves BOTH viewer and planner
+
+The mission already commits the owned `/map` differentiator (authored
+cartography over client coordinates, path D). The measured scenario layer
+(51 scenarios, 1,031 plots, 5,188 rooms, 22,996 placed items) is ruled
+**dual-purpose**: authored cartography remains the public `/map` skin;
+true plot/room/item footprints ship as **planner substrate** (the campus
+planner lays out real shapes on real grids) and as a registration/
+calibration layer beneath the cartography. This is additive, not either/or.
+
+## R2 — G1 (scene Transform dumping) stays in piece-03 scope, conditionally
+
+G1 runs **only if** the Documentator proves it necessary for calibration
+or for data the scenario layer cannot provide (e.g. camera anchors,
+prop orientation beyond ItemRecord rotation). If scenario-layer geometry
+plus LevelConfig bounds suffice for both R1 uses, G1 is deferred to a
+follow-up piece and recorded as documented-gap. Default expectation:
+deferred.
+
+## R3 — Dataset shape for `extracted/maps/`
+
+Per-family JSONL (mirrors `extracted/stubs/` + `extracted/relinks/`
+conventions, streams well, diffs cleanly); nested per-campus views are
+derived artifacts, not the source of truth. Final say: piece-03 arbiter.
+
+## R4 — PlotCount generation policy
+
+Technical; goes to the piece-03 arbiter with G6's code-read evidence.
+Orchestrator preference: pin the generation actually shipping in buildId
+20226581 and record older variants as historical notes, never silent.
+
+## R5 — Medical School DLC axis
+
+Schemas stay axis-open (no hardcoded campus enums anywhere); acquisition
+itself remains owner question Q3 in [QUESTION-QUEUE.md](../../QUESTION-QUEUE.md).
+No piece may bake `dlc-hospital-*` absence into a schema or validator as
+a permanent invariant — model it as roster-scoped fact, upgradable if the
+DLC lands.
