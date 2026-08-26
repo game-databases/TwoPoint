@@ -69,15 +69,22 @@ def seeded_extracted_root(tree, base, name="ext"):
     Hostless `--only <id>` runs read their upstream artifacts from AND write
     their outputs into the extraction root (TPC_EXTRACTED_ROOT); the copy
     keeps the session-shared fixture trees pristine between tests.
+    Recursion guard: hazardous directories never ride along — nested-deeper
+    ones are excluded silently, one DIRECTLY inside the source root raises
+    loudly (build_fixture_tree.check_source_root / hazard_ignore).
     """
     import shutil
+
+    from build_fixture_tree import check_source_root, hazard_ignore
+
     src = Path(tree) / "extracted"
     dst = Path(base) / name
     if dst.exists():
         shutil.rmtree(dst)
     dst.mkdir(parents=True)
     if src.exists():
-        shutil.copytree(src, dst, dirs_exist_ok=True)
+        check_source_root(src)
+        shutil.copytree(src, dst, dirs_exist_ok=True, ignore=hazard_ignore)
     return dst
 
 
@@ -85,6 +92,9 @@ def build_tree(stage: Path | str, tmp_path_factory, name: str, **kw) -> Path:
     out = tmp_path_factory.mktemp(name)
     sys.path.insert(0, str(HERE))
     import _fixturelib as fx
+
+    from build_fixture_tree import check_source_root
+    check_source_root(out)  # recursion guard (fresh mktemp dirs pass trivially)
     fx.build_tree(out, str(stage), **kw)
     return out
 
