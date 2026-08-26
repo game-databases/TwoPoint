@@ -1,0 +1,33 @@
+# Orchestrator ruling — piece-04 logic scope (answers scout open questions)
+
+Date 2026-08-26 · Authority: orchestrator · Input:
+`docs/scout-report-piece-04.mdx` open questions (a)–(c).
+
+## R1 — Filename
+
+`docs/scout-report-piece-04.mdx` stands (matches the piece-03
+convention). No rename; Documentator briefs cite this path.
+
+## R2 — G7 stub-ingest fix vs harvest-direct
+
+The logic-layer implementation piece reads **harvest directly** wherever
+stubs are thin (LevelScenarioV2 raws et al.). Whether thin stubs should
+be re-ingested is NOT bundled into piece-04: if site consumers (map,
+planner) need richer stub rows, that becomes a small dedicated ingest
+piece proposed by whichever downstream Documentator first hits the wall,
+with the measured gap attached. No speculative re-ingestion now.
+
+## R3 — Native-analysis piece (G1/G8)
+
+Deferred, not cancelled. Ledger-only for now. Trigger condition: the
+moment a site piece genuinely needs a code-computed constant (the known
+case: G4 XP→grade cut-offs for calculators #43), the orchestrator
+schedules a scoped native-analysis piece over GameAssembly.dll guided by
+script.json. Until then no lane spends time on native tracing — data-
+driven surfaces ship first.
+
+## R4 — Never-invent law restated
+
+Every formula on the report's not-data-driven list ships as
+"reconstructed-from-code, buildId 20226581" with its provenance inline;
+invented numbers are a launch-gate failure (FRAMEWORK §8).
