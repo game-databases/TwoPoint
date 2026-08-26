@@ -1,0 +1,310 @@
+# Arbiter ruling — arbiter-piece08-spec (ruling round 1, search corpus)
+
+**Arbiter:** arbiter-piece08 (PrepareTask step 5; rules, does not fix;
+spawned no subagents; wrote only this file — nothing committed).
+**Date:** 2026-08-26. **Subject:**
+[`docs/specs/piece-08-search-corpus.mdx`](../specs/piece-08-search-corpus.mdx)
+**Revision 2** (read to its `§END`, 911 lines), claiming full application
+of the 12-finding F-list in
+[`docs/reviews/reviewer-piece08-spec-r1.mdx`](../reviews/reviewer-piece08-spec-r1.mdx)
+(FIX-REQUIRED: 0 CRITICAL / 4 MAJOR / 8 MINOR). This ruling gates the spec
+to build.
+
+**Read in full for this ruling:** repo-root `AGENTS.md` (sentinel seen);
+`promptForDB.md`; the Rev 2 spec; the review (to sentinel); the fact base
+([scout-report-piece-08-search](../scout-report-piece-08-search.mdx) r2 +
+[verifyA](../verifications/verifyA-scout-piece08.mdx) +
+[verifyB](../verifications/verifyB-scout-piece08.mdx)); ruling precedents
+[arbiter-piece03](arbiter-piece03-spec.mdx),
+[arbiter-piece04](arbiter-piece04-spec.mdx),
+[arbiter-piece05](arbiter-piece05-spec.mdx),
+[arbiter-piece06](arbiter-piece06-spec.mdx),
+[arbiter-piece07](arbiter-piece07-spec.mdx); pack `PROGRESS.mdx`
+(W-D bands for the #23/#24 anchors); `_foundation/decision-register.md`
+entries cited by the spec.
+
+**Method:** beyond the document pass, every figure this ruling turns on
+was **independently re-measured on disk this session** against the
+committed corpus at buildId 20226581 (`identity.json` re-read): python
+walks over `tools/tpc_common.py::STAGES`, the 9 stub files,
+`relinks/{entity_locale,i2_term_registry,locale_term_entity,item_item}.jsonl`,
+`matrix.json`, `_dangling_guids.jsonl`, `locale_join_report.json`,
+`.stage-stamps/*`, all 13 `locales/*.jsonl`, and the campus-level stubs —
+including a full independent implementation of the §S1.1 pinned
+narrow-carrier walker under BOTH readings of the name-class expansion,
+the §S3.2 collision block, the F8 census detectors in both tokenizer
+orders, and the F20 course-family key census. Where this seat could not
+reproduce a seed, every candidate basis was exhausted before calling it
+(Part 5) — nothing below rests on review authority alone.
+
+---
+
+## Part 1 — Per-finding verification of the claimed Rev 2 application
+
+| Finding | Where verified in Rev 2 | Arbiter re-measure | Verdict |
+|---|---|---|---|
+| **F1** MAJOR — sizing bands | AC4 rebuilt as ratio bands over each emitter's own denominators (`60·D ≤ B ≤ 120·D` titles, `380·D ≤ B ≤ 650·D` full, :664–678); the "3,793 docs" rich-schema anchor exists ONLY inside the Rev-2 changelog describing its deletion (:850 — grep clean elsewhere); Σ≤28.4 MB retired as a gate, 9.45 MB demoted to contrast metric (:671–674, F17 :108); root cause fixed at §S2 (name-required membership + `descriptionOnlyNoDoc` counter, :328–332) and §9 floors made JOIN-STATE-AWARE (pending en [5,000, 6,500] / emitted ≥ 6,900, :800–805) | Band arithmetic closes over the spec's own anchors: titles 82–93 B/doc ∈ [60,120] with headroom both sides; full 511–536 ∈ [380,650]; ceiling projection ≈3.6 MB / 7,284 docs ≈ 494 B/doc and ≈0.61 MB titles ≈ 84 B/doc stay inside; pending floor band contains measured F16 docs (en 5,279; others 5,222–5,243 ≥ 4,500) and the emitted floor contains 5,279+2,005 = 7,284 | **APPLIED-CORRECTLY** |
+| **F2** MAJOR — registration/AC1 registry-aware | §4 blockquote asserts NO absolute `--list` count (:180); registration bullet pins ordering authority = canonical index 12, names STAGES holding seven today (:182–188); AC1 conditional ("after every currently registered stage … LAST among today's set … never a global count", :629–642); §9 runner leg mirrors it (:787–788) | Live `tpc_common.py::STAGES`: exactly **7 entries ending `relink`** — the additive premise is real; twelve-stage enumeration correctly gated on siblings registering. One Rev-1 residue survives at §1 :36 ("LAST in the enumeration") → **RF-C(a)** | **APPLIED-CORRECTLY** (with RF-C rider) |
+| **F3** MAJOR — wildcard expansion | §S1.1 enumerates EXACT member sets per kind (:237–247) with "never a broader prefix sweep"; single-field misreading named with its figures (:245–248); §S3.1 binds name-class AND dev-string extraction to the same lists (:395–397) | Both readings implemented from scratch: EXPANDED gives carriers **4,298**, union **7,178**, all nine F5 cells digit-for-digit; SINGLE-FIELD gives carriers **4,282**, union **7,172** — the spec's trap warning is exact to the digit, and the assert-equality design makes the naive reading a guaranteed exit-1 loop exactly as claimed | **APPLIED-CORRECTLY** |
+| **F4** MAJOR — membership clause 4 | §S2 gains clause 4 (`convention`/`curated` resolution whose termKey resolves in L; per-locale family matching; unresolved-in-L = membership miss, never en fill, :315–327); AC3 carries the clause-coverage leg (:662–663); §9 S2 tests all FOUR clauses incl. unresolved-in-L semantics (:763–765) | Disk asymmetry confirmed: courses split **28 CourseDefinition + 41 MarketingCourseDefinition**; **0 of 28** CD ids appear among the 41 course rows of `entity_locale.jsonl` — without clause 4 the 28 real courses ship en-only exactly as the reviewer measured | **APPLIED-CORRECTLY** |
+| **F5** MINOR — room Name basis | F7 row pins "PRESENCE basis (**48** bear text …)", basis PINNED (:98); AC2 states both numbers with the empty-struct note (:645–647) | Walked rooms.jsonl: locstr-presence **49**, text-bearing **48** — exact | **APPLIED-CORRECTLY** |
+| **F6** MINOR — weight derivation | `weight == kindWeights[kind]`, snapshotted from the §S5.1 table, all-1.0 emitter = schema violation (:347–350); AC3 spot-check (:661) | Example row consistent (room 1.0 = table entry); derivation is single-sourced | **APPLIED-CORRECTLY** |
+| **F7** MINOR — seed-table authorship/MANIFEST/conditional ledger | §S3.3 assigns authorship+commit to THIS piece's Documentator BEFORE build-pair seating, requires the append-only `data/sources/MANIFEST.md` row (AGENTS rule 4), and marks `alias-input-absent` CONDITIONAL with §9 expected-ledger sets stated per input state (:444–457, :211–215, :793–799) | `data/sources/derived/` absent today — degraded mode is the true day-one state and the ledger set is stated for it | **APPLIED-CORRECTLY** |
+| **F8** MINOR — census columns pinned | CJK detector = Han U+4E00–9FFF ∪ Kana U+3040–30FF ∪ Hangul U+AC00–D7A3 with the ko 15,213 attribution and the pure-Han ≈0 rejection named (:486–490); tokenize-then-lowercase GLOBAL order with the tr 23,445/23,420 pair (:490–492) | Reproduced exactly: ko Hangul-inclusive CJK-bearing rows **15,213** (pure-Han gives **3** ≈ 0 — the pin's reason is real); tr vocab **23,445** tokenize-then-lowercase vs **23,420** lowercase-first; ko vocab endpoint **28,594** | **APPLIED-CORRECTLY** |
+| **F9** MINOR — DRIFT semantics + inclusive brackets | Planning-floor line prints IFF `expanded != 10200` (:265–269); ALL §S5.3 brackets declared INCLUSIVE with the eight at-bound members enumerated (:549–553) | Re-measured the whole envelope TODAY — every member sits exactly on its bound (Part 2 table): exclusive comparisons would fail day one precisely as the spec now warns | **APPLIED-CORRECTLY** |
+| **F10** MINOR — 2,748 label | `expandedWalker.keys: 2748` labeled UNVERIFIED doc-probe seed (vB saw 2,655 over its superset), "never load-bearing, never asserted", reconciled fresh (:517–523) | No AC references it; grep confirms the only pinned triple is the verifier-reproduced narrow one | **APPLIED-CORRECTLY** |
+| **F11** MINOR — #23/#24 anchors | §8 routes hydration plane → search UI task **#23**, editorial content → guides/news task **#24** (:743–744) | `PROGRESS.mdx` W-D-build carries **#23 search UI**; W-D-polish carries **#24 guides/news** — both anchors real and live | **APPLIED-CORRECTLY** |
+| **F12** MINOR — union-set staging | Candidate construction PINNED as ONE union set matched in family-priority order (:405–416); intermediates declared staging-dependent (`courseMechanical` 19/28 under the pin vs vB 17 vs earlier 16); gates unchanged (≥24/28 seeded, ≥16/28 degraded) and marked cross-reading bounds (:423–429, F21 :112, AC5 :681–685) | Family tails re-census exact (qual 28 · Courses/Courses 18 · DLC 9 · Marketing 24 · Research 4); token map 7 entries verbatim; open set {Archaeology_Easter_23, SpaceExplorer, SummerSchool} matches vB A1's genuinely-nameless list | **APPLIED-CORRECTLY** |
+
+**12 / 12 APPLIED-CORRECTLY.** No finding was applied wrong, weakened, or
+silently dropped; stale-anchor sweep is clean (`3,793` and `28.4` survive
+only as changelog descriptions of their own deletion; `7,172`/`4,282`
+appear only as the named trap figures; `9.45 MB` survives only as the
+demoted contrast metric, exactly as designed).
+
+---
+
+## Part 2 — Fact-base re-measurement (this session, buildId 20226581)
+
+Everything gated reproduces from primary artifacts; the load-bearing rows:
+
+| Quantity | Spec seed | This arbiter | Status |
+|---|---|---|---|
+| STAGES entries | "seven today" | 7, ending `relink` | exact |
+| Narrow universe (pinned expansion) | 7,178; carriers 4,298 | 7,178 / 4,298 | exact |
+| Per-kind F5 (nine cells) | 3,856/2,649/406/107/54/41/49/13/3 | all nine identical | exact |
+| Trap reading (single-field) | 4,282 / 7,172 | 4,282 / 7,172 | exact |
+| matrix cells | 100 = 73 missing / 24 modeled / 3 partial | identical | exact |
+| dangling GUIDs / registryMisses | ≤1,137 / ≤5 | 1,137 / 5 | at bound |
+| entity_locale / registry / terms | ≥10,964 / ≥15,675 / ≥6,526 | 10,964 (5,850 pairs) / 15,675 (15,672 keys, 25 sourceAssets) / 6,526 | at bound |
+| Locale-row window (inclusive) | [15,371, 15,665] | ja 15,371 min … en 15,665 max, all 13 inside | at bound both ends |
+| Stamp shapes | relink `{exitCode:2, identity, outputs{relpath:sha256}}`; localisation 0 | verbatim on disk | exact |
+| Collision block | 2,993 edges / 2,059 keys / 1,895 (kind,title) / 264 / ×53 Lab Work / ×51 Specialist Book Report / 320 / 23 empty-drop | all reproduce; see RF-C(b) for the 320's basis | exact |
+| Within-locale dup texts | en 1,570 · zh-Hans 1,668 · ko 1,702 · tr 1,625 | all four | exact |
+| Course families (F20) | 28 / 18 / 9 / 24 / 4 | identical | exact |
+| Membership asymmetry (F4) | 41 course edges all Marketing; CDs carry ZERO | 0/28 CDs present | exact |
+| Item-join inputs (F8) | `item_item.jsonl` 155 unrelated PPtr rows | 155 rows; fieldPaths `Item` ×129 + `references.*._item` ×26, methods pptr-* | exact |
+| Alias volumes | devStrings 3,874 row-basis; mTerm 55/53; DescriptiveName 27; plain literals 1,456 = 1,402+41+13 | all reproduce (top-level name-class basis for the literal decomposition) | exact |
+| config LocalisedName | 552 instances | 552 locstr-presence instances | exact (basis = PRESENCE — see RF-B) |
+| Campus roster (§S2) | 11 internal + 2 public verbatim, 4 null silent | all 13 names verbatim; 4 nulls; nothing extra | exact |
+
+Day-one-green confirmation for the rebuild hook: at fixed buildId every
+§S5.3 member passes its INCLUSIVE bound while sitting ON it — the steady
+state proceeds to exit 2 with ledgers exactly as specified, and any
+one-step decrement (the AC8 fixtures' 1,138 / 10,963) trips
+RELINK-REGRESSION. The discrimination rule is checkable blind.
+
+---
+
+## Part 3 — Rulings on the routed questions
+
+### R1 — Default hydration plane: routing to #23 CONFIRMED
+
+Both planes are shipped artifacts of this stage (13 shards + 13 titles
+projections), so the choice titles-box-first vs full-shard-first is pure
+site UX with zero data-side residue; payload math is settled here (F16).
+Search UI task #23 (PROGRESS.mdx W-D-build) owns the call. Nothing owed
+by this piece; no contract change.
+
+### R2 — Editorial content in the index: routing to #24 CONFIRMED
+
+v1 entities-only holds (the 9,146-term UI-chrome exclusion stands); any
+future guide/news ingestion needs a NEW upstream input contract before it
+is data work at all — correctly out of this piece's reach. Guides/news
+task #24 owns the question; the `sourceClass` seam noted in §8 is the
+right place to keep the door open without paying for it now.
+
+### R3 — campus-level public/internal roster flip: RULED HERE — purely technical/data-side, non-blocking
+
+The initial pin is a Documentator-owned scope decision already applied
+(scout §8 G8) and this seat verified the roster verbatim on disk
+(11 internal + 2 public + 4 null-name emitting nothing). A later flip is
+editing ONE pinned list in the manifest/spec — reversible, mechanical,
+no code change — and touches no named owner gate (not domain/trademark/
+credentials/legality). **Ruled:** subsequent flips are
+orchestrator-level data-list edits under [DR-2026-08-17-closed-loop];
+no owner Hard STOP, no revision required to flip. The build pair seats
+against the pinned roster as written.
+
+### R4 — metaforge.app ABP pass: DEFERRED, non-blocking — CONFIRMED
+
+Walled 403 ×2 including the authorized crawler-UA retry (verifyB A4
+reconfirmed); AGENTS rule 10 makes it a finding, not a task. One ABP
+attempt in the UX piece IF wanted; nothing in this piece waits on it.
+
+### R5 — Stoplist reversal path: RULED — orchestrator call behind a measurement trigger, no owner gate
+
+v1 ships `stoplist: []` and titles dominate the corpus — correct at this
+vocab scale. Introduction later is a ONE-MANIFEST-FIELD data-side change
+whose trigger is measurable (description-plane tokens measurably hurting
+ranking in the site lane). **Ruled:** owner of the decision is the
+orchestrator under closed-loop, acting on evidence from the consuming UX
+piece; it is NOT an owner Hard STOP and NOT this build pair's concern.
+The manifest field is the reversal path, as stated.
+
+### R6 — sibling `stage7_*` numbering collision: independence posture CONFIRMED
+
+This spec pins only its own script (`stage12_search_corpus.py`) and
+canonical index 12, makes no absolute-count claim, and routes the
+sibling cleanup to its owning seats — exactly the robust form. Note for
+the orchestrator's sweep ledger: arbiter-piece07 R1 has already bound
+locale-proof to index 9 / `stage9_locale_proof.py`; piece-03's
+exact-eight AC1 remains the outstanding sibling item (flagged there and
+in arbiter-piece07 Part 3). None of it touches this piece.
+
+---
+
+## Part 4 — Cross-spec consistency
+
+1. **Stage index 12 vs canonical registry: CONSISTENT.** The registry
+   sentence (`relink=6 · maps=7 · logic=8 · locale-proof=9 · contracts=10
+   · media=11 · search-corpus=12`) matches the citations verified in the
+   sibling rounds (piece-04 three places; piece-05 countersigned Q6;
+   piece-06 Part 4.1) and the live seven-entry STAGES leaves room for
+   additive registration exactly as described.
+2. **Exit-2 discrimination bounds vs relink steady state: DAY-ONE GREEN**
+   (full table in Part 2). All eight members sit ON their inclusive
+   bounds today; `cellsTotal == 100` structural leg passes; stamp shapes
+   match; the same-buildId-REGRESSION vs cross-buildId-DRIFT split is
+   sound for deterministic reruns.
+3. **Output tree disjoint: CLEAN.** Grep across all sibling specs: the
+   ONLY reference to this piece's surfaces outside piece-08 is
+   piece-01's `stage12_search_corpus.py` RESERVED-PENDING-SPEC note (a
+   reservation, not a writer claim — the piece-05/06 pattern). No other
+   spec claims writes under `extracted/search/`; this stage writes
+   nowhere else (two optional READS outside the tree are ledger-declared).
+   The curated input lives at pack level (`data/sources/derived/`),
+   outside `extracted/`, respecting the media carve-out and rule-4
+   MANIFEST discipline.
+
+---
+
+## Part 5 — New findings (this seat's independent hunt)
+
+Both verifiers and the reviewer reproduced these seeds between them, but
+this seat's from-scratch walks could not reproduce three of them under
+ANY principled basis after exhausting every candidate reading. They are
+documentation-pass defects with every replacement value already measured
+below; no re-scouting, no re-review of F1–F12.
+
+### RF-A — MAJOR — the id-token rule contradicts its own seed; AC5 fails day one as written
+
+**Locations:** §2 F11 (:102); §S3.1 `id-token` class (:386–389); §S5.1
+`aliasVolumes.idTokens: 3224` (:515–516); AC5 "id-token vocabulary ==
+3,224 distinct" (:679–680).
+
+**Problem.** The pinned rule is "split on non-alphanumeric runs,
+**lowercased**, length ≥2, pure digits dropped, deduped — vocabulary
+3,224". Measured on all 13,443 ids:
+
+- faithful to the written rule (lowercased dedupe): **3,166**;
+- no-lowercase dedupe, otherwise identical: **3,224** — the delta is
+  exactly **58** case-variant token pairs that fold under lowercasing;
+- other variants (keep digits 3,203; len≥1 3,177; len≥3 3,109; `\w+`
+  splits) reach nothing near either anchor.
+
+The seed 3,224 is real but it is the CASE-SENSITIVE count (its verifyA
+#3b method line says "lowercase", which is where the contradiction was
+born). A CodeWriter implementing the rule as written and a TestWriter
+asserting AC5 as written produce a guaranteed day-one red through no
+fault of their own — the same failure class reviewer-F3 and
+arbiter-piece03 F14 were graded blocking.
+
+**Fix shape (ruled).** Keep the LOWERCASED rule — it is the semantically
+correct alias vocabulary for the casefold matcher §S3.2 pins — and
+re-seed **3,166** in all four places (F11, §S3.1, §S5.1, AC5), recording
+`3,224 (case-sensitive superset; 58 case-fold collisions)` as a
+footnote/provenance label beside the seed, never as an assertion. §9's
+fixture expectations take the same number.
+
+### RF-B — MAJOR — two expanded-component seeds carry no reproducible basis, and AC2's compression misstates the 552 basis
+
+**Locations:** §2 F7 (:98); §S1.2 component list (:253–261); AC2
+"every expanded component equals its F7/F8 seed ON ITS PINNED BASIS — …
+the rest **text-bearing** as measured (1,456 / 552 / 547 / 170 / 53 /
+27)" (:643–653).
+
+**Problem.** Measured candidate bases this session (configs.jsonl unless
+stated):
+
+| Seed | Readings tried | Result |
+|---|---|---|
+| config `LocalisedName` 552 | presence-instances **552** ✓ · `_termID≠0` 468 · dev-only 50 · text-bearing union **518** · rows-any 552 | 552 reproduces ONLY on the PRESENCE basis — AC2's "the rest text-bearing" phrasing contradicts it (text-bearing measures 518) |
+| config `Title` 547 | leaf-instances 730 · rows-any 674 · top-level 724 · `_termID≠0` 314 · text-bearing 355 · dev-only 41 · CareerGoal\* classes 272 · exhaustive class-subset search (only ad-hoc subsets sum to 547) | **NO principled basis yields 547** — the seed is unreproducible as pinned (it descends from verifyB A3's "(CareerGoal\*)" prose, which itself decomposes to 272) |
+| config `DisplayName` 170 | leaf-instances 193 · rows-any 174 · TPC.LandscapeBrushDefinition-scoped **170** ✓ | 170 reproduces ONLY class-scoped (the verifyB A3 parenthetical that never made it into the spec) |
+| plain literals 1,456 | top-level name-class fields.Name: config 1,402 + unlockable 41 + campus-level 13 | **exact** ✓ (nested `Name` strings are correctly excluded by the whitelist philosophy) |
+| unlockable mTerm 55/53, DescriptiveName 27 | rows / resolve-in-en / non-empty plain str | **exact** ✓ |
+
+Consequence: three of AC2's six component legs are uncheckable blind —
+an implementer cannot derive a basis that satisfies 547 at all, and the
+stated "text-bearing" basis fails 552. Same standard the reviewer applied
+to F1 ("cannot be checked blind" ⇒ MAJOR) and F5 (basis coin-flip ⇒ must
+be pinned).
+
+**Fix shape (ruled).**
+
+1. Pin per-seed bases: LocalisedName 552 = locstr-PRESENCE instances
+   (any nesting depth); DisplayName 170 = instances carried by
+   `TPC.LandscapeBrushDefinition` (all-class total 193 recorded beside as
+   data, never asserted).
+2. RETIRE `Title × 547` as an asserted seed — no basis reproduces it.
+   Replace with `titleCarrierInstances` counted fresh on the SAME
+   presence basis (measures **730** today), carried like every other
+   expanded component: emitted beside the union, DRIFT-tracked, never an
+   equality assert — exactly the treatment §S1.2 already prescribes for
+   boundary-dependent components.
+3. Rewrite AC2's compressed phrase "the rest text-bearing as measured"
+   into the per-seed basis list; the equality asserts hold for
+   1,456 (decomposition) / 552 / 170-scoped / 53 / 27 / room-49-presence
+   only. No downstream number moves: the expanded union has NO assert,
+   the planning-floor comparison is DRIFT-with-attribution, and the §9
+   floors are join-state-aware.
+
+### RF-C — MINOR — two one-line transcription residues
+
+(a) **§1 :36** still reads "registered ADDITIVELY in
+`tools/tpc_common.py::STAGES` LAST in the enumeration" — the exact
+append-positional phrasing F2 purged everywhere else; align with §4's
+sentence ("appended after the last currently registered stage; ordering
+authority is the canonical registry").
+(b) **§S3.4 / F18 `ignoreKindCollisions: 320`**: pin the counting basis
+— "distinct TITLE TEXTS carried by more than one ENTITY, ignoring kind"
+(this seat's reproduction; the alternative distinct-KIND reading measures
+67 and would print a spurious first-run DRIFT). One clause.
+
+---
+
+## Part 6 — Execution notes for the residual round
+
+1. Apply RF-A → RF-B → RF-C in ONE documentation pass; record it as
+   Revision 3 referencing this ruling. Every value needed is measured in
+   Parts 2 and 5 — verification, not re-adjudication: the successor check
+   is diff-level against THIS file's tables.
+2. Re-review may be scoped to RF-A..RF-C delta-checking (piece-03 §5.3
+   precedent); a fresh full arbiter round is not required unless the pass
+   alters anything outside the three residuals.
+3. Build pair seats only after Rev 3 lands; CodeWriter and TestWriter
+   remain mutually blind per pipeline. R1–R6 above are binding parts of
+   the contract regardless of the round outcome and ride the brief.
+
+---
+
+## VERDICT
+
+**BOUNCE** — residual findings **RF-A, RF-B (MAJOR), RF-C (MINOR)**, all
+documentation-pass, all values supplied above. Everything else is
+seat-ready quality: all twelve reviewer findings verified
+APPLIED-CORRECTLY against Rev 2; the measured fact base re-confirmed from
+primary artifacts to the digit this session, including the full
+narrow-universe assert under the pinned expansion, both wildcard readings
+of the F3 trap, the complete collision block, the five course families,
+the campus roster verbatim, both census detector bases, and the entire
+exit-2 envelope sitting exactly on its inclusive bounds (day-one green);
+cross-spec consistency clean (canonical index 12, disjoint output tree,
+live additive-registration premise). The two majors are narrow and
+self-inflicted by seed provenance, not architecture: one self-contradictory
+alias seed (RF-A) and two unbaseable component seeds plus one AC2 phrase
+(RF-B). Land Rev 3 as transcribed above and the spec is approve-for-build
+on delta verification. No commits made from this seat.
+
+END OF arbiter-piece08-spec
