@@ -36,6 +36,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _fixturelib as fx  # noqa: E402
+import _impl  # noqa: E402
 from _validators import BUILD_ID, CONTENT_AXES, write_jsonl  # noqa: E402
 
 # --- stage identity -------------------------------------------------------------
@@ -81,7 +82,9 @@ ROUTES_KNOWN = (
     "ui-chrome",
 )
 PLANES = ("icons", "thumbs", "ui")
-NAMED_BY_VALUES = ("subObjectName", "address-basename")
+# E2 naming ladder spellings: address basename rung AND the
+# {bundle-stem}_{signed pathId} fallback rung both stamp namedBy.
+NAMED_BY_VALUES = ("subObjectName", "address-basename", "bundle-pathid")
 
 LOSSLESS_CLI_FORMATS = ("png", "bmp", "tga")
 FORBIDDEN_CLI_FORMATS = ("webp", "jpg", "jpeg")
@@ -504,7 +507,12 @@ def media_stub_rows():
     for kind, sid, leaf, fid, pid, sib in E6_SLOT_TABLE:
         fields = {leaf: pptr(fid, pid)}
         if sib is not None:
-            fields[leaf + "Reference"] = sprite_ref(sib, "X" if sib else "")
+            # Populated sibling reference OUTSIDE the sprite universe (the
+            # paired-Reference plane, not an icon target): it exists to prove
+            # E6 admission exclusion — data riding the Reference plane is
+            # dead weight, never residue — and must NOT feed the E1 sprite
+            # walk (the oracle's 14-ref population excludes it).
+            fields[leaf + "Reference"] = tex_ref(sib, "X")
         add(kind, sid, fields)
     # plain PPtr noise that is NOT icon-named (scanned but never admitted)
     add("config", "Config_Plain_Pptr_Noise", {
@@ -596,6 +604,17 @@ def write_media_upstreams(extracted: Path):
     write_jsonl(extracted / "relinks" / "course_config.jsonl",
                 COURSE_CONFIG_EDGES)
     write_jsonl(extracted / "harvest" / "externals.jsonl", externals_rows())
+    # stage-3 per-bundle census: the M19 carve-out classes are measured
+    # container-visible-but-catalogue-uncarved, so the census artifact (not
+    # the catalogue) is the counts' source the stage reads.
+    census_dir = extracted / "harvest" / "census" / "bundles"
+    census_dir.mkdir(parents=True, exist_ok=True)
+    (census_dir / "environment_assets_all.json").write_text(
+        json.dumps({"bundle": "environment_assets_all.bundle",
+                    "buildId": BUILD_ID,
+                    "objectsByClass": {"Cubemap": 2, "Texture2DArray": 1}},
+                   sort_keys=True, indent=2) + "\n",
+        encoding="utf-8", newline="\n")
     write_jsonl(extracted / "media-catalogue.jsonl", media_catalogue_rows())
 
     stubs = extracted / "stubs"
@@ -984,19 +1003,41 @@ def floors_ok(drive_root: Path, need_gib: float) -> bool:
         return False
 
 
-TEMP_BASE = Path("D:/tpc_pytmp/tw06")
+TEMP_BASE_CANDIDATES = (Path("A:/tpc_pytmp/tw06"), Path("D:/tpc_pytmp/tw06"))
+TEMP_BASE = TEMP_BASE_CANDIDATES[0]        # compat alias (resolver below)
 
 
-def pick_scratch_root(tag: str) -> Path | None:
-    """A D:/A: scratch root meeting the 4 GiB floor; None when no legal root
-    exists on this host (black-box legs then skip honestly)."""
-    for base in (TEMP_BASE / tag, Path("A:/tpc_pytmp/tw06") / tag):
+def temp_base(tag: str | None = None) -> Path:
+    """First LEGAL scratch volume (S0: A:/D: only, never C:) meeting the
+    4 GiB floor RIGHT NOW. A: is preferred on this host: D: swings
+    double-digit GiB under concurrent pack sessions, which trips the hard
+    S0 gate mid-suite (measured 23 GiB -> 1.1 GiB inside one test run,
+    2026-08-26). The gate itself stays load-bearing — this only picks a
+    volume that can actually honor it."""
+    chosen = TEMP_BASE_CANDIDATES[-1]
+    for base in TEMP_BASE_CANDIDATES:
+        probe = base if tag is None else base / tag
         try:
-            base.mkdir(parents=True, exist_ok=True)
+            probe.mkdir(parents=True, exist_ok=True)
         except OSError:
             continue
         if floors_ok(base.anchor or str(base), TEMP_FLOOR_GIB):
             return base
+        chosen = base
+    return chosen
+
+
+def pick_scratch_root(tag: str) -> Path | None:
+    """An A:/D: scratch root meeting the 4 GiB floor; None when no legal
+    root exists on this host (black-box legs then skip honestly)."""
+    for base in TEMP_BASE_CANDIDATES:
+        root = base / tag
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            continue
+        if floors_ok(base.anchor or str(base), TEMP_FLOOR_GIB):
+            return root
     return None
 
 
@@ -1006,39 +1047,78 @@ def output_floor_ok(extracted_root: Path) -> bool:
 
 
 # =================================================================================
-# Impl symbol vocabularies (spec-vocabulary-derived candidate lists)
+# Impl symbol vocabularies (implementation-actual names first — the landed
+# tools/ spellings from the d0f0e21 build, per _impl.py's ordering convention —
+# then the spec-vocabulary alternates so the adapter survives refactors)
 # =================================================================================
 
-RECT_PARSE_NAMES = ("parse_texture_rect", "parse_rect", "texture_rect",
+def resolve_impl(*candidates):
+    """Resolve one impl symbol across BOTH stage-11 scripts and their in-
+    module import aliases (``mu`` for media_util, ``tc`` for tpc_common).
+    The landed split (spec §3 Scripts) puts the pure machinery in
+    tools/media_util.py while stage11_media.py owns orchestration; probing
+    only the first script would report every helper impl-missing. Returns
+    (module_or_namespace, attribute) or (None, None) with the absence
+    recorded LOUDLY via _impl's counters."""
+    mods = []
+    for script in STAGE11_SCRIPTS:
+        mod = _impl.load_tool(script)
+        if mod is not None and mod not in mods:
+            mods.append(mod)
+    scopes: list = []
+    for mod in mods:
+        if mod not in scopes:
+            scopes.append(mod)
+        for alias in ("mu", "tc"):
+            target = getattr(mod, alias, None)
+            if target is not None and target not in scopes:
+                scopes.append(target)
+    for scope in scopes:
+        for name in candidates:
+            if hasattr(scope, name):
+                return scope, getattr(scope, name)
+    _impl.note_missing_symbol(
+        f"stage11.{candidates[0]}"
+        + (f" (tried: {', '.join(candidates)})" if len(candidates) > 1 else ""))
+    return None, None
+
+
+RECT_PARSE_NAMES = ("parse_rect", "parse_texture_rect", "texture_rect",
                     "rect_from_texture_rect", "parse_rd_rect", "rect_from_rd",
                     "normalize_rect")
-ROUND_NAMES = ("round_half_away_from_zero", "round_half_away",
+ROUND_NAMES = ("round_half_away", "round_half_away_from_zero",
                "round_component", "round_rect_component", "round_half_up",
                "round_away_from_zero", "round_coord")
-FLIP_NAMES = ("flip_to_image_space", "to_image_space", "image_space_top",
-              "bottom_origin_top", "flip_rect", "rect_top_image_space",
-              "image_space_rect")
-BOUNDS_NAMES = ("check_rect_bounds", "rect_in_bounds", "validate_rect_bounds",
-                "bounds_check_rect", "rect_within_page", "rect_fits_page")
-PAIR_NAMES = ("match_render_data", "pair_render_data", "resolve_page_for_sprite",
-              "find_render_data_entry", "pair_sprite_page", "match_page",
-              "resolve_atlas_page", "match_rd_entry")
-CROP_NAMES = ("crop_rgba", "crop_page", "crop_pixels", "compose_crop",
-              "crop_array", "crop_image")
-PASSTHROUGH_NAMES = ("is_pass_through", "rect_covers_texture",
+FLIP_NAMES = ("rounded_crop_bounds", "flip_to_image_space", "to_image_space",
+              "image_space_top", "bottom_origin_top", "flip_rect",
+              "rect_top_image_space", "image_space_rect")
+BOUNDS_NAMES = ("rounded_crop_bounds", "check_rect_bounds", "rect_in_bounds",
+                "validate_rect_bounds", "bounds_check_rect",
+                "rect_within_page", "rect_fits_page")
+PAIR_NAMES = ("select_page_entry", "match_render_data", "pair_render_data",
+              "resolve_page_for_sprite", "find_render_data_entry",
+              "pair_sprite_page", "match_page", "resolve_atlas_page",
+              "match_rd_entry")
+CROP_NAMES = ("crop_rgba_bytes", "crop_rgba", "crop_page", "crop_pixels",
+              "compose_crop", "crop_array", "crop_image")
+PASSTHROUGH_NAMES = ("rect_covers_texture", "is_pass_through",
                      "covers_texture", "pass_through", "is_full_texture")
-FILENAME_NAMES = ("emit_filename", "asset_filename", "sprite_filename",
-                  "output_name", "filename_for_sprite", "naming_for",
-                  "out_rel_path", "outrelpath_for")
-COLLISION_NAMES = ("collision_suffix", "collision_name", "disambiguated_name",
-                   "suffix_signed_path_id", "collision_filename")
+FILENAME_NAMES = ("out_rel_path", "emit_filename", "asset_filename",
+                  "sprite_filename", "output_name", "filename_for_sprite",
+                  "naming_for", "outrelpath_for")
+COLLISION_NAMES = ("emitted_stem", "collision_suffix", "collision_name",
+                   "disambiguated_name", "suffix_signed_path_id",
+                   "collision_filename")
 ADDRESS_BASENAME_NAMES = ("address_basename", "basename_from_address",
                           "standalone_name", "empty_sub_name",
                           "name_from_address")
+STANDALONE_LADDER_NAMES = ("standalone_naming", "empty_sub_ladder",
+                           "naming_ladder")
 JOIN_NAMES = ("join_ref", "resolve_ref", "classify_ref", "resolve_sprite_ref",
               "join_reference", "resolve_reference", "walk_join")
-COMPARATOR_NAMES = ("compare_rgba", "compare_crops", "pixel_compare",
-                    "compare_arrays", "compare_images", "compare_buffers")
+COMPARATOR_NAMES = ("compare_rgba8", "compare_rgba", "compare_crops",
+                    "pixel_compare", "compare_arrays", "compare_images",
+                    "compare_buffers")
 SAMPLE_COMPOSER_NAMES = ("compose_crosscheck_sample",
                          "build_crosscheck_sample",
                          "select_crosscheck_sample", "crosscheck_sample",
@@ -1047,26 +1127,28 @@ RESIDUE_SCAN_NAMES = ("scan_pptr_residue", "pptr_residue_rows", "residue_scan",
                       "scan_icon_pptr", "collect_residue", "scan_residue")
 TEMP_ROOT_NAMES = ("resolve_temp_root", "temp_root", "resolve_scratch_root",
                    "s0_resolve_temp_root", "resolve_media_tmp")
+S0_PREFLIGHT_NAMES = ("s0_preflight",)
 DRIVE_NAMES = ("drive_of", "drive_letter", "root_drive", "drive_of_path",
                "path_drive")
-FLOOR_NAMES = ("check_free_space", "free_gib", "space_floor_ok",
+FLOOR_NAMES = ("free_gib", "check_free_space", "space_floor_ok",
                "free_space_gib", "free_space", "gib_free")
 CEILING_NAMES = ("check_scope_ceiling", "scope_ceiling_breach",
                  "web_bytes_total", "tree_bytes", "scope_bytes",
                  "ceiling_breach")
-EXPORT_MD_NAMES = ("write_media_export_md", "render_media_export_md",
+EXPORT_MD_NAMES = ("render_media_export_md", "write_media_export_md",
                    "generate_media_export_md", "media_export_markdown",
                    "render_porcelain_md")
-GAME_DIR_NAMES = ("resolve_game_dir", "find_game_dir", "resolve_client_dir",
-                  "locate_install", "game_dir", "resolve_install")
+GAME_DIR_NAMES = ("resolve_media_game_root", "resolve_game_dir",
+                  "find_game_dir", "resolve_client_dir", "locate_install",
+                  "game_dir", "resolve_install")
 RUN_NAMES = ("run", "main", "run_stage", "execute")
-FORMAT_PIN_NAMES = ("cli_export_format", "CLI_IMAGE_FORMAT",
-                    "ALLOWED_CLI_FORMATS", "CLI_FORMAT_ALLOWLIST",
-                    "CLI_EXPORT_FORMAT", "LOSSLESS_CLI_FORMATS")
-ALPHA_NAMES = ("alpha_roundtrip_ok", "alpha_sanity", "alpha_delta_ok",
-               "check_alpha_roundtrip", "alpha_roundtrip_delta",
-               "max_alpha_delta")
-ENCODE_NAMES = ("encode_webp", "encode_asset", "write_asset",
+FORMAT_PIN_NAMES = ("LOSSLESS_CLI_FORMATS", "cli_export_format",
+                    "CLI_IMAGE_FORMAT", "ALLOWED_CLI_FORMATS",
+                    "CLI_FORMAT_ALLOWLIST", "CLI_EXPORT_FORMAT")
+ALPHA_NAMES = ("alpha_roundtrip_max_delta", "alpha_roundtrip_ok",
+               "alpha_sanity", "alpha_delta_ok", "check_alpha_roundtrip",
+               "alpha_roundtrip_delta", "max_alpha_delta")
+ENCODE_NAMES = ("encode_asset", "encode_webp", "write_asset",
                 "encode_and_write", "emit_asset")
 STAMP_NAMES = ("script_hash", "deps_hash", "stamp_payload", "stage_stamp",
                "compute_deps_hash")

@@ -224,19 +224,68 @@ def classify_chain(guid: str, catalog_guid_index, container_index):
     SEVERAL addresses (duplicate-guid keys are legal Addressables); the
     first address WITH a container row wins deterministically (sorted
     order), so a multi-address guid is not misread as dangling just because
-    its alphabetically-first address is uninstalled DLC content."""
-    entries = catalog_guid_index.get(guid)
+    its alphabetically-first address is uninstalled DLC content. Set-shaped
+    probe indexes (pure-seam callers) classify membership without address
+    evidence."""
+    get = getattr(catalog_guid_index, "get", None)
+    entries = get(guid) if callable(get) else (
+        [{}] if guid in catalog_guid_index else None)
     if not entries:
         return "guid", None, None
     addresses = sorted({str(e["address"]) for e in entries
-                        if e.get("address")})
+                        if isinstance(e, dict) and e.get("address")})
     if not addresses:
         return "address", None, None
+    cget = getattr(container_index, "get", None)
     for addr in addresses:
-        rows = container_index.get(addr)
+        rows = cget(addr) if callable(cget) else (
+            [{}] if addr in container_index else None)
         if rows:
             return "none", addr, rows[0]
     return "container", addresses[0], None
+
+
+def join_ref(ref, catalog_guids, container_addresses,
+             catalogue_sprite_names) -> dict:
+    """THE pinned resolution predicate as one callable seam (spec §3 E1 /
+    arbiter F11): ``resolved`` ⟺ the ref's m_SubObjectName matches a
+    catalogue Sprite-row name — chain steps are EVIDENCE (chainBreak),
+    never gates. Returns an index-row-shaped dict (file stays null here;
+    the emission layer fills canonical outputs post-emission).
+
+    Index spellings (catalog guid → [{address,…}], address → [rows]) run
+    the full ``classify_chain``; bare membership spellings (a guids set, an
+    addresses set) get the coarse probe verdict — missing guid ⇒ 'guid',
+    no container evidence ⇒ 'address', else 'none'."""
+    guid = str(ref.get("assetGuid") or "")
+    sub = ref.get("subObjectName")
+    named = bool(sub)
+    if hasattr(catalog_guids, "values") and hasattr(container_addresses, "get"):
+        chain_break, _addr, _row = classify_chain(guid, catalog_guids,
+                                                  container_addresses)
+    elif guid not in (catalog_guids or ()):
+        chain_break = "guid"
+    elif not (container_addresses or {}):
+        chain_break = "address"
+    else:
+        chain_break = "none"
+    resolved = bool(named and sub in catalogue_sprite_names)
+    return {
+        "kind": ref.get("kind"),
+        "srcId": ref.get("srcId"),
+        "fieldPath": ref.get("fieldPath"),
+        "assetGuid": guid,
+        "subObjectName": sub or "",
+        "resolved": resolved,
+        "chainBreak": chain_break,
+        "file": None,
+        "reason": None if resolved else (
+            mu.REASON_STALE_NAME if named and chain_break == "none"
+            else mu.REASON_DLC_ABSENT if named
+            else mu.REASON_EMPTY_SUB if chain_break == "none"
+            else mu.REASON_DLC_ABSENT),
+        "buildId": int(_CURRENT_BUILD_ID_VALUE or mu.SEED_BUILD_ID),
+    }
 
 
 def walk_all_refs(stub_rows_by_kind, catalog_guid_index, container_index):
@@ -930,7 +979,6 @@ def emit_sprite(plan: dict, pixels: SpritePixels, media_dir: Path,
     counters = Counter()
     rows: list[dict] = []
     stem = plan["stem"]
-    base_rel = f"web/{subdir}/{stem}"
     img = mu.image_from_rgba(pixels.rgba, pixels.w, pixels.h)
     src = _source_block(plan, pixels, getattr(pixels, "atlas_name", None))
     named_by = plan.get("namedBy") or "subObjectName"
@@ -951,9 +999,10 @@ def emit_sprite(plan: dict, pixels: SpritePixels, media_dir: Path,
             "buildId": int(build_id),
         }
 
-    webp_bytes = mu.encode_webp(img, quality=mu.WEBP_QUALITY)
-    out_rel = base_rel + ".webp"
-    log_util.atomic_write_bytes(media_dir / out_rel, webp_bytes)
+    out_rel = mu.out_rel_path(stem, subdir=subdir, ext="webp")
+    webp_bytes = mu.encode_asset(pixels.rgba, pixels.w, pixels.h,
+                                 out_path=media_dir / out_rel,
+                                 fmt="webp", quality=mu.WEBP_QUALITY)
     rows.append(row_for(out_rel, "webp", mu.WEBP_QUALITY, webp_bytes,
                         pixels.w, pixels.h))
 
@@ -964,10 +1013,10 @@ def emit_sprite(plan: dict, pixels: SpritePixels, media_dir: Path,
         want_png = True
         counters["alphaSanityFallbacks"] += 1
     if want_png:
-        png_bytes = mu.encode_png(img)
-        out_png = base_rel + ".png"
-        log_util.atomic_write_bytes(media_dir / out_png, png_bytes)
-        rows.append(row_for(out_png, "png", None, png_bytes, pixels.w,
+        png_out = mu.out_rel_path(stem, subdir=subdir, ext="png")
+        png_bytes = mu.encode_asset(pixels.rgba, pixels.w, pixels.h,
+                                    out_path=media_dir / png_out, fmt="png")
+        rows.append(row_for(png_out, "png", None, png_bytes, pixels.w,
                             pixels.h))
         counters["pngTwins"] += 1
 
@@ -1161,9 +1210,33 @@ def run_crosscheck(sample_stems: list[str], stem_plans: dict,
     asset but exports nothing when the home object carries no texture), so
     non-exportable samples are EXCLUDED and deterministically replaced from
     the stride pool until >=20 successful comparisons AND all quotas hold;
-    exhaustion below that is a lane failure."""
+    exhaustion below that is a lane failure.
+
+    EMPTY-EMISSION RULE (interface reconciliation 2026-08-26, spec
+    ambiguity ruled): when this run emitted NO sprites, there is no
+    comparison surface and AC4's >=20-sample composition is vacuous - the
+    lane SKIPs LOUDLY (`ran:false` + reason, stamps still carried, nothing
+    scored) instead of manufacturing pixelMatchRate=0.0 -> exit 1 ahead of
+    the ledgers. A non-empty emission set that fails to verify still exits
+    1."""
     Image = mu.load_pil()
     cli_version = resolve_cli_version(cli_exe, extracted_root)
+    if not sample_stems and not stem_plans:
+        return {
+            "ran": False,
+            "reason": ("no sprites emitted this run - cross-check lane "
+                       "vacuously skipped (empty emission set; the >=20-"
+                       "sample surface presupposes emissions). Ledgers are "
+                       "unaffected."),
+            "sampleStems": [],
+            "sampleSize": 0,
+            "matchedSamples": 0,
+            "pixelMatchRate": 0.0,
+            "maxDelta": 0,
+            "cliVersion": cli_version,
+            "cliUnityVersion": mu.CLI_UNITY_VERSION_PIN,
+            "cliExportFormat": "png",
+        }
     candidates: list[str] = list(sample_stems)
     for stem in sorted(stem_plans):
         if stem not in candidates:
@@ -1453,20 +1526,38 @@ def classify_residue_target(file_id: int, path_id: int, src_bundle: str,
     return "unresolved-open"
 
 
-def run_e6_scan(stub_rows_by_kind, scene_flags, cab_by_name,
-                externals_index, build_id: int):
+def scan_pptr_residue(stub_rows, scene_flags=None, cab_by_name=None,
+                      externals_index=None,
+                      build_id: int | None = None):
+    """E6 canonical scan as one pure seam. Population: nine kinds x ALL
+    fields (the E1 walk WITHOUT the sprite type filter); vocabulary =
+    case-insensitive `icon` substring on the LEAF NAME; admission =
+    NON-null PPtr AND paired *Reference GUID empty/absent. The rule is
+    canonical; the NUMBER follows the rule (seed 122@20226581, DRIFT on
+    movement - never a silent constant, never a failure).
+
+    Accepts a flat stub-row list or a by-kind dict; bridge evidence
+    (cab_index / externals / roster scene flags) defaults to ABSENT, which
+    the classifier treats honestly (unresolved-open / removed-content, no
+    invented resolution). Returns (rows, counters, drift_lines)."""
+    if isinstance(stub_rows, dict):
+        by_kind = {k: list(stub_rows.get(k) or []) for k in STUB_KINDS}
+    else:
+        by_kind = {k: [] for k in STUB_KINDS}
+        for row in stub_rows or []:
+            by_kind.setdefault(str(row.get("kind")), []).append(row)
+    bid = int(build_id if build_id is not None
+              else (_CURRENT_BUILD_ID_VALUE or mu.SEED_BUILD_ID))
+    scene_flags = scene_flags or {}
+    cab_by_name = cab_by_name or {}
+    externals_index = externals_index or {}
     externals_by_key, objects_by_key = build_residue_indexes(
         cab_by_name, externals_index)
-    """Population: nine kinds x ALL fields (the E1 walk WITHOUT the sprite
-    type filter); vocabulary = case-insensitive `icon` substring on the LEAF
-    NAME; admission = NON-null PPtr AND paired *Reference GUID empty/absent.
-    The rule is canonical; the NUMBER follows the rule (seed 122@20226581,
-    DRIFT on movement — never a silent constant, never a failure)."""
     rows: list[dict] = []
     drift: list[str] = []
     cc: Counter = Counter()
     for kind in STUB_KINDS:
-        for row in stub_rows_by_kind[kind]:
+        for row in by_kind[kind]:
             fields = row.get("fields") or {}
             for slot in mu.walk_pptr_slots(fields):
                 cc["scanned"] += 1
@@ -1486,7 +1577,7 @@ def run_e6_scan(stub_rows_by_kind, scene_flags, cab_by_name,
                     objects_by_key, cab_by_name, scene_flags)
                 row_out, row_drift = mu.make_residue_row(
                     kind, str(row.get("id")), slot["fieldPath"], fid, pid,
-                    verdict, build_id)
+                    verdict, bid)
                 drift.extend(row_drift)
                 rows.append(row_out)
                 cc["external" if fid != 0 else "samefile"] += 1
@@ -1506,6 +1597,16 @@ def run_e6_scan(stub_rows_by_kind, scene_flags, cab_by_name,
         "pptrTargetUnresolved": cc["targetUnresolved"],
     })
     return rows, counters, drift
+
+
+def run_e6_scan(stub_rows_by_kind, scene_flags, cab_by_name,
+                externals_index, build_id: int):
+    """Pipeline entry over the loaded by-kind stubs — delegates to the pure
+    ``scan_pptr_residue`` seam."""
+    return scan_pptr_residue(stub_rows_by_kind, scene_flags=scene_flags,
+                             cab_by_name=cab_by_name,
+                             externals_index=externals_index,
+                             build_id=build_id)
 
 
 # ---------------------------------------------------------------------------
@@ -1607,6 +1708,9 @@ def parse_thumb_dims(raw: str) -> tuple[int, ...]:
 
 
 def seed_drift_lines(e1_counters, missing_rows, persisted_total) -> list[str]:
+    """M4/M16 seed reconciliation — rule-canonical / number-follows-rule:
+    movement against the seeds prints DRIFT and the fresh number wins,
+    never a failure on movement alone."""
     drift = []
     if e1_counters["distinctNames"] != mu.SEED_DISTINCT_NAMES:
         drift.append(f"DRIFT: distinct referenced sprite names measure "
@@ -1617,7 +1721,7 @@ def seed_drift_lines(e1_counters, missing_rows, persisted_total) -> list[str]:
                      f"{e1_counters['resolvedNames']} "
                      f"(seed {mu.SEED_RESOLVED_NAMES} @20226581)")
     fresh_missing = sorted(
-        g["subObjectName"] for g in missing_seed_param
+        g["subObjectName"] for g in missing_rows
         if g["subObjectName"] and g["reason"] in
         (mu.REASON_DLC_ABSENT, mu.REASON_STALE_NAME))
     seed_missing = sorted(mu.SEED_MISSING_NAMES)
@@ -1703,9 +1807,11 @@ def run(extracted_root: Path, game_root: Path | None, opts) -> int:
     externals_path = extracted_root / "harvest" / "externals.jsonl"
     externals_index = mu.load_externals_index(externals_path) \
         if externals_path.is_file() else {}
+    # pinned upstream artifact (spec §3 Inputs): a missing file while the
+    # game dir resolves is the EC exit-3 case, never soft-skipped
     entity_rows = mu.read_jsonl_rows(
         extracted_root / "relinks" / "entity_asset_guid.jsonl",
-        required=False)
+        required=True)
     persisted_total = len(entity_rows)
     persisted_sub = sum(
         1 for r in entity_rows
@@ -1857,6 +1963,8 @@ def _run_body(extracted_root, media_dir, game_root, opts, build_id,
         drift.append(f"DRIFT: E6 external subset measures "
                      f"{e6_counters['pptrResidueExternalSubset']} "
                      f"(seed {mu.SEED_E6_EXTERNAL})")
+    # M4/M16 seed reconciliation (distinct/resolved names + absence set)
+    drift.extend(seed_drift_lines(e1_counters, missing_rows, persisted_total))
 
     manifest_rows.sort(key=lambda r: r["outRelPath"])
     for row in manifest_rows:
@@ -1886,14 +1994,12 @@ def _run_body(extracted_root, media_dir, game_root, opts, build_id,
         mu.write_hashes_sha256(media_dir / "hashes.sha256",
                               [("web/" + rel, sha) for rel, sha in entries])
         web_bytes = sum(r["bytes"] for r in manifest_rows)
-        ceiling_mib = (mu.SCOPE_CEILING_MIB_UI_CHROME
-                       if opts.include_ui_chrome
-                       else mu.SCOPE_CEILING_MIB_DEFAULT)
-        if web_bytes > ceiling_mib * 1024 * 1024:
+        breach = mu.check_scope_ceiling(web_bytes, bool(opts.include_ui_chrome))
+        if breach is not None:
             raise mu.MediaError(
-                f"scope ceiling breached: web/ totals {web_bytes} B > "
-                f"{ceiling_mib} MiB — accidental bulk decode suspected",
-                exit_code=1)
+                f"scope ceiling breached: web/ totals {breach['bytes']} B > "
+                f"{breach['ceilingMiB']} MiB — accidental bulk decode "
+                "suspected", exit_code=1)
         # bundle-containment proof (AC7): no corpus-wide sweep slipped in
         opened = set(pool.opened.keys())
         for r in manifest_rows:

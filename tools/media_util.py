@@ -348,6 +348,14 @@ def select_entry_by_render_key(entries: list[dict], render_data_key) -> dict | N
     return None
 
 
+def _entry_size(entry: dict) -> tuple[int, int]:
+    """Rounded (w, h) of a renderdata candidate — accepts both rect
+    spellings (`w`/`h` normalized, `width`/`height` raw renderdata)."""
+    w = entry.get("w", entry.get("width", 0))
+    h = entry.get("h", entry.get("height", 0))
+    return round_half_away(w), round_half_away(h)
+
+
 def select_page_entry(entries: list[dict], sprite_rect_wh,
                       home_bundle_keys=None) -> tuple[dict | None, bool]:
     """PINNED duplicate-size tiebreak (spec §3 E4(1), arbiter F2):
@@ -355,28 +363,42 @@ def select_page_entry(entries: list[dict], sprite_rect_wh,
       candidates = entries whose ROUNDED (w, h) equal the sprite's OWN
       rounded m_RD.textureRect SIZE (never index alignment);
       (a) >1 candidate and page-bundle evidence present → prefer candidates
-          whose ``pageBundleKey`` sits in the sprite's HOME-bundle set
+          whose page-bundle evidence sits in the sprite's HOME-bundle set
           (container_index-derived); if NONE live there, keep the full set;
       (b) still >1 → order by ``(pagePathId ASC, entryIndex ASC)`` and take
           the FIRST.
 
-    Returns (entry_or_None, ambiguous). ``None`` ⇒ pairing MATCH FAILURE on
-    a referenced sprite (EC exit 1 — the grammar model is broken). Callers
-    increment ``ambiguousPairings`` whenever ambiguous is True and stamp the
-    chosen pageName/pagePathId on the manifest row."""
-    sw = round_half_away(sprite_rect_wh[0])
-    sh = round_half_away(sprite_rect_wh[1])
-    cands = [e for e in entries
-             if round_half_away(e["w"]) == sw and round_half_away(e["h"]) == sh]
+    Input tolerance (pure seam — fixture-testable without UnityPy):
+    ``sprite_rect_wh`` takes a (w, h) pair OR a textureRect dict;
+    ``home_bundle_keys`` takes one bundle spelling or an iterable of them;
+    entry page-bundle evidence is read from ``pageBundleKey`` (normalized
+    records) or ``pageBundle`` (raw renderdata spellings).
+
+    Returns (entry_or_None, ambiguous). A None entry ⇒ pairing MATCH
+    FAILURE on a referenced sprite (EC exit 1 — the grammar model is
+    broken). Callers increment ``ambiguousPairings`` whenever ambiguous is
+    True and stamp the chosen pageName/pagePathId on the manifest row."""
+    if isinstance(sprite_rect_wh, dict):
+        _, _, rw, rh = parse_rect(sprite_rect_wh)
+        sw, sh = round_half_away(rw), round_half_away(rh)
+    else:
+        sw = round_half_away(sprite_rect_wh[0])
+        sh = round_half_away(sprite_rect_wh[1])
+    cands = [e for e in entries if _entry_size(e) == (sw, sh)]
     if not cands:
         return None, False
     ambiguous = len(cands) > 1
     if ambiguous and home_bundle_keys:
+        keys = ({str(home_bundle_keys)}
+                if isinstance(home_bundle_keys, str)
+                else {str(k) for k in home_bundle_keys})
         pref = [e for e in cands
-                if e.get("pageBundleKey") in home_bundle_keys]
+                if str(e.get("pageBundleKey") or e.get("pageBundle") or "")
+                in keys]
         if pref:
             cands = pref
-    cands.sort(key=lambda e: (e["pagePathId"], e["entryIndex"]))
+    cands.sort(key=lambda e: (int(e.get("pagePathId") or 0),
+                              int(e.get("entryIndex") or 0)))
     return cands[0], ambiguous
 
 
@@ -404,6 +426,14 @@ def emitted_stem(sub_object_name: str, path_id: int | None = None) -> str:
     if path_id is None:
         return base
     return f"{base}_{int(path_id)}"
+
+
+def out_rel_path(stem: str, subdir: str = "icons", ext: str = "webp") -> str:
+    """§4 emitted filename grammar `{plane}/{name}.{ext}` in extracted/media/
+    space — `web/icons/<stem>.webp` and friends. Single source of the
+    outRelPath shape so manifest rows, hashes.sha256 and the bijection check
+    cannot drift apart."""
+    return f"web/{subdir}/{sanitize_component(stem)}.{ext}"
 
 
 def address_basename(address: str) -> str | None:
@@ -615,6 +645,33 @@ def encode_png(img) -> bytes:
     return bio.getvalue()
 
 
+def encode_asset(pixels, w: int, h: int, out_path=None, fmt: str = "webp",
+                 quality: int = WEBP_QUALITY) -> bytes:
+    """Encode ONE asset from raw RGBA8 pixels (optionally writing it
+    atomically to ``out_path``). Valid pixels in, encoded bytes out —
+    invalid input (None/short buffer, non-positive dims) is a LOUD
+    MediaError(exit 1), never a silent skip or an empty artifact (EC row:
+    'WebP/PNG encode exception on valid pixels')."""
+    buf = None if pixels is None else bytes(pixels)
+    w_i, h_i = int(w), int(h)
+    if buf is None or len(buf) != w_i * h_i * 4 or w_i <= 0 or h_i <= 0:
+        raise MediaError(
+            f"encode refused: invalid pixel buffer "
+            f"(len={0 if buf is None else len(buf)}, dims={w_i}x{h_i}, "
+            f"fmt={fmt})", exit_code=1)
+    img = image_from_rgba(buf, w_i, h_i)
+    if fmt == "webp":
+        payload = encode_webp(img, quality=quality)
+    elif fmt == "png":
+        payload = encode_png(img)
+    else:
+        raise MediaError(f"encode refused: unsupported format {fmt!r}",
+                         exit_code=1)
+    if out_path is not None:
+        log_util.atomic_write_bytes(Path(out_path), payload)
+    return payload
+
+
 def encode_thumb(img, dim: int) -> bytes:
     """Derived tier: downscale ONLY (never upscale), LANCZOS, WebP q80."""
     w, h = img.size
@@ -737,7 +794,29 @@ def cli_export_argv(cli_exe, input_path, out_dir, *,
     return argv
 
 
-def compare_rgba8(ours_img, cli_img) -> dict:
+def _as_rgba_image(img, width=None, height=None):
+    """Comparator input coercion: PIL Image passes through a single
+    convert("RGBA"); a raw RGBA8 buffer coerces via frombytes when its
+    dimensions are supplied (the pinned conversion path — never a second
+    color conversion). Missing dimensions for a raw buffer is a caller
+    signature error (TypeError), not a stage failure."""
+    Image = load_pil()
+    if hasattr(img, "convert"):
+        return img.convert("RGBA")
+    if width is None or height is None:
+        raise TypeError(
+            "comparator buffer needs explicit width/height for RGBA8 "
+            f"coercion (got {type(img).__name__})")
+    expected = int(width) * int(height) * 4
+    buf = bytes(img)
+    if len(buf) != expected:
+        raise MediaError(
+            f"comparator buffer is {len(buf)} B, not {expected} B of "
+            f"{width}x{height} RGBA8", exit_code=1)
+    return Image.frombytes("RGBA", (int(width), int(height)), buf)
+
+
+def compare_rgba8(ours_img, cli_img, width=None, height=None) -> dict:
     """PINNED comparator path: CLI export loaded via PIL and converted
     with a single convert("RGBA"); compared ELEMENTWISE against our
     crop's RGBA8 array. Required verdict: identical dimensions AND 0
@@ -752,8 +831,8 @@ def compare_rgba8(ours_img, cli_img) -> dict:
     color fidelity; alpha edges stay reported (softTexels /
     softDivergent) rather than failing the lane. PIL stats only - never
     a binary Read into context."""
-    ours = ours_img.convert("RGBA")
-    theirs = cli_img.convert("RGBA")
+    ours = _as_rgba_image(ours_img, width, height)
+    theirs = _as_rgba_image(cli_img, width, height)
     dims_match = ours.size == theirs.size
     if not dims_match:
         return {"dimensionsMatch": False, "pixelMatchRate": 0.0,
@@ -787,45 +866,65 @@ def compare_rgba8(ours_img, cli_img) -> dict:
             "exactSurfacePixels": exact_surface,
             "softTexels": soft_texels, "softDivergent": soft_divergent}
 
+def _quota_attr(plan: dict, *names) -> bool:
+    """Quota attributes under either spelling (normalized plan keys or the
+    raw fixture/oracle spellings)."""
+    return any(bool(plan.get(n)) for n in names)
+
+
 def compose_crosscheck_sample(planned, *, min_total: int = CROSSCHECK_MIN_SAMPLE,
-                              ) -> list[str]:
+                              **_alias) -> list[str]:
     """Deterministic ≥20-sample composition (ALL quotas mandatory):
     ≥1 per route · ≥3 ambiguous-tiebreak · ≥2 fractional-rect · the BC7-page
     sprite if referenced · BOTH probe anchors · remainder filled by
     deterministic stride over the sorted name list. ``planned`` is the dict
-    name → plan built by the stage; plans carry the quota attributes."""
-    if not planned:
+    name → plan built by the stage; a LIST of plan dicts (each carrying its
+    name under ``name``/``subObjectName``) is accepted as the same corpus —
+    quota attributes ride either spelling (ambiguous|ambiguousPairing,
+    fractional|fractionalRect, bc7|bc7Page); ``minSample`` aliases
+    ``min_total``."""
+    min_total = int(_alias.pop("minSample", min_total))
+    plans: dict = {}
+    if isinstance(planned, dict):
+        plans = planned
+    else:
+        for p in planned or []:
+            if isinstance(p, dict):
+                name = p.get("name") or p.get("subObjectName")
+                if name:
+                    plans.setdefault(str(name), p)
+    if not plans:
         return []
-    names = sorted(planned)
+    names = sorted(plans)
     chosen: list[str] = []
 
     def add(name):
-        if name is not None and name in planned and name not in chosen:
-            chosen.append(name)
+        if name is not None and str(name) in plans and str(name) not in chosen:
+            chosen.append(str(name))
 
     for anchor in CROSSCHECK_ANCHORS:
         add(anchor)
     for route in ROUTES:
         for n in names:
-            if planned[n].get("route") == route:
+            if plans[n].get("route") == route:
                 add(n)
                 break
     amb = 0
     for n in names:
         if amb >= 3:
             break
-        if planned[n].get("ambiguousPairing"):
+        if _quota_attr(plans[n], "ambiguousPairing", "ambiguous"):
             add(n)
             amb += 1
     frac = 0
     for n in names:
         if frac >= 2:
             break
-        if planned[n].get("fractionalRect"):
+        if _quota_attr(plans[n], "fractionalRect", "fractional"):
             add(n)
             frac += 1
     for n in names:
-        if planned[n].get("bc7Page"):
+        if _quota_attr(plans[n], "bc7Page", "bc7"):
             add(n)
             break
     if len(chosen) < min_total:
@@ -1083,6 +1182,21 @@ def s0_preflight(temp_root: Path, output_root: Path) -> dict:
     return readings
 
 
+def check_scope_ceiling(total_bytes: int, ui_chrome: bool) -> dict | None:
+    """AC7 scope-breach DETECTOR: web/ totals above the pinned ceiling
+    (256 MiB default run / 512 MiB with --include-ui-chrome) describe a
+    breach dict; None below it. Detectors against accidental bulk decode —
+    the CALLER maps a breach to EC exit 1."""
+    ceiling_mib = SCOPE_CEILING_MIB_UI_CHROME if ui_chrome \
+        else SCOPE_CEILING_MIB_DEFAULT
+    limit = ceiling_mib * 1024 * 1024
+    total = int(total_bytes or 0)
+    if total > limit:
+        return {"bytes": total, "limit": limit, "ceilingMiB": ceiling_mib,
+                "uiChrome": bool(ui_chrome)}
+    return None
+
+
 # ---------------------------------------------------------------------------
 # MEDIA-EXPORT.md — THE tracked artifact (self-sufficient per §4 Ownership)
 
@@ -1091,13 +1205,24 @@ def render_media_export_md(ctx: dict) -> str:
     per-plane counts + bytes, ledger sizes WITH their full enums, ROW SCHEMA
     of every local artifact (key sets + sort keys), a hash SUMMARY
     (per-artifact sha256 + row/file counts), and the crosscheck verdict.
-    NO timestamps — two builds of the same tree are byte-equal (AC5)."""
-    ledgers = ctx["ledgers"]
+    NO timestamps — two builds of the same tree are byte-equal (AC5).
+
+    Partial contexts render too (missing counters/planes/ledgers default to
+    zero/absent), so callers only supply what they measured; ``hashSummary``
+    accepts either the row-dict list built by the stage or a plain
+    {artifact: sha256} mapping."""
+    src_ledgers = ctx.get("ledgers") or {}
+    ledgers = {"missing": src_ledgers.get("missing", 0),
+               "residue": src_ledgers.get("residue", 0),
+               "skipped": src_ledgers.get("skipped", 0)}
     lines: list[str] = []
     ap = lines.append
     ap("# Media Export (stage 11 — piece-06)")
     ap("")
     ap(f"- buildId: **{ctx['buildId']}**")
+    ap("- this file: `extracted/media/MEDIA-EXPORT.md` — the TRACKED layer; "
+       "a fresh clone receives exactly this artifact and must be able to "
+       "reconstruct every local (gitignored) sibling's schema from it")
     ap(f"- generated by: `tools/stage11_media.py` + `tools/media_util.py` "
        "(tracked layer of `extracted/media/`; every other path in this tree "
        "is gitignored-local by the standing `extracted/**` rule — no "
@@ -1111,11 +1236,12 @@ def render_media_export_md(ctx: dict) -> str:
     ap("")
     ap("## Encoder pins")
     ap("")
-    env = ctx["env"]
-    ap(f"- pillow: {env['pillowVersion']} · libwebp: "
-       f"{env['webpFeatureVersion']} · WebP lossy quality: "
-       f"{WEBP_QUALITY} · PNG twins: max-dim <= {PNG_TWIN_MAX_DIM}px or "
-       f"alpha-roundtrip |delta| > {ALPHA_TOLERANCE}/255")
+    env = ctx.get("env") or {}
+    ap(f"- pillow: {env.get('pillowVersion', 'n/a')} · libwebp: "
+       f"{env.get('webpFeatureVersion', 'n/a')} · formats: webp (lossy, "
+       f"quality {WEBP_QUALITY}) primary + png twins — png twins ship when "
+       f"max-dim <= {PNG_TWIN_MAX_DIM}px or the alpha roundtrip moves any "
+       f"pixel by more than {ALPHA_TOLERANCE}/255")
     ap(f"- UnityPy fallback version seeded for bundles with `0.0.0` headers: "
        f"{env.get('fallbackUnityVersion', 'n/a')} · fallback-seeded bundle "
        f"opens this run: {env.get('fallbackVersionUsedBundles', 0)}")
@@ -1124,7 +1250,7 @@ def render_media_export_md(ctx: dict) -> str:
     ap("")
     ap("## Counts")
     ap("")
-    for k, v in sorted(ctx["counters"].items()):
+    for k, v in sorted((ctx.get("counters") or {}).items()):
         ap(f"- {k}: {v}")
     ap("")
     planes = ctx.get("planes") or {}
@@ -1185,8 +1311,14 @@ def render_media_export_md(ctx: dict) -> str:
     ap("")
     ap("| artifact | sha256 | rows/files |")
     ap("|---|---|---|")
-    for ent in ctx["hashSummary"]:
-        ap(f"| {ent['artifact']} | `{ent['sha256']}` | {ent['count']} |")
+    raw_summary = ctx.get("hashSummary") or {}
+    summary_rows = ([{"artifact": str(k), "sha256": v, "count": "n/a"}
+                     for k, v in sorted(raw_summary.items())
+                     if isinstance(raw_summary, dict)]
+                    if isinstance(raw_summary, dict) else
+                    list(raw_summary))
+    for ent in summary_rows:
+        ap(f"| {ent['artifact']} | `{ent['sha256']}` | {ent.get('count', 'n/a')} |")
     ap("")
     cc = ctx.get("crosscheck") or {}
     ap("## Cross-check verdict (AssetStudioModCLI lane)")

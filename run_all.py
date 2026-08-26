@@ -291,8 +291,38 @@ def json_safe_fp(path: Path) -> str:
     return f"{fp['size']}B@{fp['mtimeNs']}"
 
 
+# piece-06 media sub-pass flags (E3 UI chrome / E5 carrier probe / format
+# knobs / scratch override). Declared runner-level so `--only media …` stays
+# the single entrypoint (spec §1); they are FORWARDED ONLY to the media
+# stage and are part of its stamp identity (a flag change re-executes).
+MEDIA_STAGE_FLAGS = ("--include-ui-chrome", "--probe-course-carrier",
+                     "--png-all")
+
+
+def media_flag_values(args) -> dict:
+    return {
+        "flags": [f for f, attr in (
+            ("--include-ui-chrome", "include_ui_chrome"),
+            ("--probe-course-carrier", "probe_course_carrier"),
+            ("--png-all", "png_all")) if getattr(args, attr, False)],
+        "withThumbs": str(getattr(args, "with_thumbs", "") or ""),
+        "tempRoot": str(getattr(args, "temp_root", "") or ""),
+    }
+
+
+def media_forward_args(args) -> list[str]:
+    values = media_flag_values(args)
+    out: list[str] = list(values["flags"])
+    if values["withThumbs"]:
+        out += ["--with-thumbs", values["withThumbs"]]
+    if values["tempRoot"]:
+        out += ["--temp-root", values["tempRoot"]]
+    return out
+
+
 def compute_stage_identity(pack_dir: Path, extracted_root: Path,
-                           stage_id: str, game_root: Path | None) -> str:
+                           stage_id: str, game_root: Path | None,
+                           media_flags: dict | None = None) -> str:
     entry = next((e for e in tc.STAGES if e[0] == stage_id), None)
     deps = entry[2] if entry else []
     payload = {
@@ -301,6 +331,8 @@ def compute_stage_identity(pack_dir: Path, extracted_root: Path,
         "config": {
             "extractedRoot": str(extracted_root),
             "gameRoot": str(game_root) if game_root else None,
+            **({"mediaSubPass": media_flags}
+               if stage_id == "media" and media_flags else {}),
         },
         "upstream": _upstream_identity(extracted_root, stage_id,
                                        tc.game_paths(game_root)
@@ -439,6 +471,21 @@ def main(argv=None) -> int:
                         help="enumerate stages with tool/version/status")
     parser.add_argument("--print-unitypy-pin", action="store_true",
                         help="print the pinned UnityPy version (make setup)")
+    # --- media-stage sub-pass flags (piece-06; forwarded to stage 11 ONLY,
+    #     and part of its stamp identity) -------------------------------
+    parser.add_argument("--include-ui-chrome", action="store_true",
+                        help="[media] E3: crop ALL SpriteAtlas packed slots "
+                             "(default OFF — arbiter R2)")
+    parser.add_argument("--probe-course-carrier", action="store_true",
+                        help="[media] E5: report-only course-icon carrier "
+                             "probe (default OFF; NEVER emits an icon — R3)")
+    parser.add_argument("--with-thumbs", default="",
+                        help='[media] derived thumbnail tier, e.g. "96,128"')
+    parser.add_argument("--png-all", action="store_true",
+                        help="[media] PNG twin for every sprite")
+    parser.add_argument("--temp-root", default=None,
+                        help="[media] decode scratch root override "
+                             "($TPC_MEDIA_TMP > $TPC_TEMP_ROOT)")
     args = parser.parse_args(argv)
 
     pack_dir = tc.resolve_pack_dir()
@@ -511,8 +558,10 @@ def main(argv=None) -> int:
             executed.append({"stage": stage_id, "skipped": True,
                              "reason": "client-gated-no-game-dir"})
             continue
-        identity = compute_stage_identity(pack_dir, extracted_root,
-                                          stage_id, game_root)
+        identity = compute_stage_identity(
+            pack_dir, extracted_root, stage_id, game_root,
+            media_flags=media_flag_values(args) if stage_id == "media"
+            else None)
         if not args.force and log_util.is_up_to_date(extracted_root,
                                                      stage_id, identity):
             print(f"[{stage_id}] up-to-date (stamp matches; --force to rerun)")
@@ -523,6 +572,8 @@ def main(argv=None) -> int:
                                      if sid == stage_id)
             extra = ["--tool-path", args.tool_path] if (
                 args.tool_path and stage_id == "decompile") else []
+            if stage_id == "media":
+                extra += media_forward_args(args)
             print(f"[{stage_id}] running …")
             code = invoke_stage(stage_id, script, game_root, extracted_root,
                                 extra)

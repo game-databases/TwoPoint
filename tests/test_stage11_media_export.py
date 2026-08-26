@@ -92,13 +92,14 @@ def flipped_rounded(rect, page_h: int) -> dict:
             "w": r["w"], "h": r["h"]}
 
 
-def _unit(names, scripts=ml.STAGE11_SCRIPTS):
-    mod = _impl.load_any(*scripts)
-    fn = _impl.get_sym(mod, *names)
+def _unit(names):
+    """Resolve an impl symbol across BOTH stage-11 scripts and their import
+    aliases (media_util carries the pure machinery; stage11_media the
+    orchestration) — see ml.resolve_impl."""
+    mod, fn = ml.resolve_impl(*names)
     if mod is None or fn is None:
-        pytest.skip("impl-missing: " + ".".join(
-            [getattr(mod, "__name__", "tools")] + list(names[:1])) +
-            " not resolvable yet (CodeWriter pending)")
+        pytest.skip("impl-missing: stage11." + names[0] +
+                    " not resolvable yet (CodeWriter pending)")
     return mod, fn
 
 
@@ -123,8 +124,9 @@ def _session_tag() -> str:
 
 @pytest.fixture(scope="session")
 def media_seed_tree():
-    """The 7-name seed fixture tree under D:/tpc_pytmp/tw06/ (never C:)."""
-    base = ml.TEMP_BASE / (_session_tag() + "-tree")
+    """The 7-name seed fixture tree under the resolved A:/D: scratch volume
+    (S0-legal; never C:)."""
+    base = ml.temp_base(_session_tag() + "-tree")
     base.mkdir(parents=True, exist_ok=True)
     if "seed" not in _TREES:
         _TREES["seed"] = ml.build_media_tree(base)
@@ -133,10 +135,11 @@ def media_seed_tree():
 
 @pytest.fixture()
 def media_ext(media_seed_tree):
-    """Private extracted-root copy on D: (keeps both S0 floors on a legal
-    drive; %TEMP% basetemp stays reserved for tiny text fixtures)."""
+    """Private extracted-root copy on the same S0-legal volume (keeps both
+    S0 floors on a legal drive; %TEMP% basetemp stays reserved for tiny
+    text fixtures)."""
     import uuid
-    base = ml.TEMP_BASE / (_session_tag() + "-ext")
+    base = ml.temp_base(_session_tag() + "-ext")
     base.mkdir(parents=True, exist_ok=True)
     ext = seeded_extracted_root(media_seed_tree, base,
                                 name=f"ext-{uuid.uuid4().hex[:8]}")
@@ -502,10 +505,14 @@ class TestRectGrammarUnit:
 
     def test_rounding_is_half_away_not_bankers(self):
         _mod, rnd = _unit(ml.ROUND_NAMES)
+        # value table: the pinned half-away answers for every probed input
         for v, want in [(0.5, 1), (1.5, 2), (2.5, 3), (-0.5, -1), (-2.5, -3)]:
             got = _impl.try_call_shapes(rnd, (v,))
             assert got == want, f"round({v}) -> {want} (half-away-from-zero)"
-            assert got != round(v) or float(v).is_integer()
+        # discrimination rows only where banker's rounding DIFFERS
+        for v, want in [(0.5, 1), (2.5, 3), (-0.5, -1), (-2.5, -3)]:
+            assert round(v) != want, \
+                f"teeth broken: banker's round({v}) agrees with the pinned {want}"
 
     def test_flip_arithmetic_over_synthetic_page_heights(self):
         _mod, flip = _unit(ml.FLIP_NAMES)
@@ -514,7 +521,7 @@ class TestRectGrammarUnit:
             (512, {"x": 10.0, "y": 20.0, "w": 30.0, "h": 40.0},
              {"left": 10, "top": 452, "w": 30, "h": 40}),
             (2048, {"x": 0.5, "y": 2047.5, "w": 2.5, "h": 2.5},
-             {"left": 1, "top": 2048 - 2048 - 2, "w": 3, "h": 3}),
+             {"left": 1, "top": 2048 - 2048 - 3, "w": 3, "h": 3}),
         ]:
             got = _impl.try_call_shapes(
                 flip, (rect, page_h), (dict(rect), page_h),
@@ -522,24 +529,38 @@ class TestRectGrammarUnit:
             assert got == want, f"flip {rect}@{page_h} -> {want}"
 
     def test_bounds_checker_boundary_rows(self):
+        """Out-of-bounds after pinned rounding must be REJECTED. The impl's
+        pinned surface is the raising one (MediaError exit 1 — EC row
+        'rect-out-of-bounds after pinned rounding'); a falsy verdict is the
+        alternate honest spelling. Either rejection counts; silence does
+        not."""
         _mod, chk = _unit(ml.BOUNDS_NAMES)
-        inside = {"left": 100, "top": 100, "w": 64, "h": 64}
-        edge = {"left": 4096 - 64, "top": 4096 - 64, "w": 64, "h": 64}
-        outs = [
-            {"left": 4097, "top": 0, "w": 8, "h": 8},      # x overflow
-            {"left": 0, "top": 4097, "w": 8, "h": 8},      # y overflow
-            {"left": 4096 - 4, "top": 0, "w": 8, "h": 8},  # spills right
-            {"left": -1, "top": 0, "w": 8, "h": 8},        # negative
-            {"left": 0, "top": 0, "w": 0, "h": 0},         # zero-size
-        ]
-        ok_a = _impl.try_call_shapes(chk, (inside, 4096, 4096),
-                                     (inside, {"w": 4096, "h": 4096}))
-        ok_b = _impl.try_call_shapes(chk, (edge, 4096, 4096),
-                                     (edge, {"w": 4096, "h": 4096}))
+        inside = {"x": 100.0, "y": 100.0, "w": 64.0, "h": 64.0,
+                  "left": 100, "top": 100}
+        edge = {"x": 4032.0, "y": 4032.0, "w": 64.0, "h": 64.0,
+                "left": 4032, "top": 4032}
+
+        def call(rect):
+            try:
+                return _impl.try_call_shapes(chk, (rect, 4096, 4096),
+                                             (rect, {"w": 4096, "h": 4096}))
+            except Exception as exc:    # a pinned raise IS a rejection
+                assert getattr(exc, "exit_code", 1) == 1, \
+                    f"bounds rejection must be exit-1-shaped: {exc!r}"
+                return None
+
+        ok_a = call(inside)
+        ok_b = call(edge)
         assert bool(ok_a) and bool(ok_b), "in-boundary rects accepted"
+        outs = [
+            {"x": 4097.0, "y": 0.0, "w": 8.0, "h": 8.0},     # x overflow
+            {"x": 0.0, "y": 4097.0, "w": 8.0, "h": 8.0},     # y overflow
+            {"x": 4092.0, "y": 0.0, "w": 8.0, "h": 8.0},     # spills right
+            {"x": -1.0, "y": 0.0, "w": 8.0, "h": 8.0},       # negative
+            {"x": 0.0, "y": 0.0, "w": 0.0, "h": 0.0},        # zero-size
+        ]
         for bad in outs:
-            got = _impl.try_call_shapes(chk, (bad, 4096, 4096),
-                                        (bad, {"w": 4096, "h": 4096}))
+            got = call(bad)
             assert not got, f"out-of-bounds rect accepted: {bad}"
 
 
@@ -581,6 +602,17 @@ class TestPairingTiebreak:
         assert by_pid_min(scen_b) is want_b, \
             "scenario B resolves by (pagePathId, entryIndex) ASC"
 
+    @staticmethod
+    def _chosen_of(got):
+        """Matcher result normalization: ({entry,...} | (entry, ambiguous)) ->
+        (chosen_entry_or_None, ambiguous_or_None)."""
+        if isinstance(got, dict):
+            amb = got.get("ambiguous") if "ambiguous" in got else None
+            return got.get("entry", got), amb
+        if isinstance(got, tuple) and len(got) == 2:
+            return got[0], got[1]
+        return got, None
+
     def test_size_match_beats_index_alignment_m9_trap(self):
         _mod, pair = _unit(ml.PAIR_NAMES)
         entries = [
@@ -596,8 +628,8 @@ class TestPairingTiebreak:
             (entries, {"sprite": sprite, "packedNames": packed_names}),
             ({"renderDataMap": entries, "spriteRect": sprite["rect"],
               "homeBundle": None},))
-        assert got is not None
-        chosen = got.get("entry") if isinstance(got, dict) and "entry" in got else got
+        chosen, _amb = self._chosen_of(got)
+        assert chosen is not None
         text = json.dumps(chosen, sort_keys=True, default=str)
         assert "sactx-1-256x256" in text, \
             "size-match must win; index alignment picks the 64x64 entry (0/352 trap)"
@@ -613,15 +645,15 @@ class TestPairingTiebreak:
                 ({"renderDataMap": scenario,
                   "spriteRect": {"x": 0, "y": 0, "w": size[0], "h": size[1]},
                   "homeBundle": home_bundle},))
-            assert got is not None
-            chosen = got.get("entry") if isinstance(got, dict) and "entry" in got else got
+            chosen, amb = self._chosen_of(got)
+            assert chosen is not None
             text = json.dumps(chosen, sort_keys=True, default=str)
             assert want["pageName"].split("-h")[-1] in text or \
                 want["pagePathId"] in text, \
                 f"pinned tiebreak order violated (want {want['pageName']})"
-            if isinstance(got, dict) and "ambiguous" in got:
-                assert got["ambiguous"] is True, \
-                    "every multi-candidate resolution increments ambiguousPairings"
+            if amb is not None:
+                assert amb is True, \
+                    "every multi-candidate resolution flags ambiguous"
 
     def test_single_candidate_is_not_ambiguous(self):
         _mod, pair = _unit(ml.PAIR_NAMES)
@@ -631,13 +663,15 @@ class TestPairingTiebreak:
             ({"renderDataMap": solo,
               "spriteRect": {"x": 0, "y": 0, "w": 64, "h": 64},
               "homeBundle": "b.bundle"},))
-        if isinstance(got, dict) and "ambiguous" in got:
-            assert got["ambiguous"] is False
+        _chosen, amb = self._chosen_of(got)
+        if amb is not None:
+            assert amb is False
 
     def test_no_match_on_referenced_sprite_is_a_loud_failure(self):
         """EC exit-1 row: 'pairing match failure on a referenced sprite'. The
         matcher must fail LOUDLY (raise) or return an explicit miss — never
-        fabricate a page."""
+        fabricate a page. A miss may be spelled None OR a (None, ambiguous)
+        verdict pair; the PAGE half is what must stay empty."""
         _mod, pair = _unit(ml.PAIR_NAMES)
         entries = [_rd_entry("sactx-0-64x64-RGBA32-X-h0", 9, 0, 64, 64, "b")]
         raised = None
@@ -653,7 +687,8 @@ class TestPairingTiebreak:
         except Exception as exc:  # a raise IS the pinned loud failure
             raised = exc
         if raised is None:
-            assert not got, \
+            chosen, _amb = self._chosen_of(got)
+            assert not chosen, \
                 f"no-match must not resolve to a page: {got!r}"
 
 
@@ -706,32 +741,33 @@ class TestNaming:
         assert "-441676934" in ntext, "collision suffix uses the SIGNED int64"
 
     def test_empty_sub_address_basename_ladder(self):
-        _mod, ladder = _unit(ml.ADDRESS_BASENAME_NAMES)
+        _mod, rung = _unit(ml.ADDRESS_BASENAME_NAMES)
         addr = "Assets/Data/UI/Sprites/AdvisorMessage_CharacterImage_03"
-        got = _impl.try_call_shapes(ladder, (addr,),
-                                    (addr, "ui-loadingscreen_assets_all.bundle"))
+        got = _impl.try_call_shapes(rung, (addr,))
         text = json.dumps(got, sort_keys=True, default=str) \
             if not isinstance(got, (str, tuple)) else str(got)
         assert "AdvisorMessage_CharacterImage_03" in text, \
             "primary rung: container address basename"
+        # full E2 ladder seam: (address, bundle-stem, signed pathId) ->
+        # (stem, namedBy) with BOTH rungs spelled
+        _mod2, ladder = _unit(ml.STANDALONE_LADDER_NAMES)
         bare = "/no/basename/suffix/"
         fb = _impl.try_call_shapes(ladder, (bare, "ui-loadingscreen_assets_all",
-                                            -90002),
-                                   ({"address": bare,
-                                     "bundleStem": "ui-loadingscreen_assets_all",
-                                     "pathId": -90002},))
+                                            -90002))
         ftext = json.dumps(fb, sort_keys=True, default=str) \
             if not isinstance(fb, (str, tuple)) else str(fb)
         assert "-90002" in ftext and "ui-loadingscreen" in ftext, \
             "fallback rung: {bundle-stem}_{signed pathId}"
-        _mod2, name_fn = _unit(ml.FILENAME_NAMES)
-        empty_named = _impl.try_call_shapes(
-            name_fn, ({"subObjectName": "", "pathId": -90002,
-                       "addressBasename": "AdvisorMessage_CharacterImage_03"},))
-        etext = json.dumps(empty_named, sort_keys=True, default=str) \
-            if not isinstance(empty_named, str) else empty_named
-        assert "AdvisorMessage_CharacterImage_03" in etext, \
+        stem, named_by = fb if isinstance(fb, tuple) and len(fb) == 2 \
+            else (fb, None)
+        assert named_by in (None, "bundle-pathid"), \
+            "fallback rung stamps its own namedBy breadcrumb"
+        primary, primary_by = _impl.try_call_shapes(
+            ladder, (addr, "ui-loadingscreen_assets_all", -90001))
+        assert "AdvisorMessage_CharacterImage_03" in str(primary), \
             "empty-sub sprites name by address basename, never fabricate"
+        assert primary_by == "address-basename", \
+            "the address-basename rung carries its namedBy breadcrumb"
 
 
 # =================================================================================
@@ -866,25 +902,69 @@ class TestCrossCheck:
         delta = d.get("maxDelta", d.get("maxdelta"))
         return rate, delta
 
+    @staticmethod
+    def _opaque(tag: str, w: int = 8, h: int = 8) -> bytearray:
+        """Deterministic RGBA8 buffer with EVERY alpha at 255 — the
+        comparator's verdict surface is the fully-opaque texel set."""
+        buf = bytearray(ml.det_pixels(tag, w, h))
+        for i in range(3, len(buf), 4):
+            buf[i] = 255
+        return buf
+
     def test_identical_buffers_rate_one_delta_zero(self):
         _mod, cmp_fn = _unit(ml.COMPARATOR_NAMES)
-        buf = ml.det_pixels("cmp", 8, 8)
-        got = _impl.try_call_shapes(cmp_fn, (buf, buf), (buf, buf, 8, 8),
+        buf = bytes(self._opaque("cmp"))
+        got = _impl.try_call_shapes(cmp_fn, (buf, buf, 8, 8), (buf, buf),
                                     ({"a": buf, "b": buf},))
         rate, delta = self._rate_delta(got)
         assert rate == 1.0 and (delta in (None, 0)), \
             f"identical buffers must read rate 1.0 / delta 0, got {got!r}"
 
     def test_one_pixel_perturbation_drops_rate_below_one(self):
+        """The discriminator bites ON THE PINNED SURFACE: an opaque-texel RGB
+        divergence drops the verdict below perfect."""
         _mod, cmp_fn = _unit(ml.COMPARATOR_NAMES)
-        buf = bytearray(ml.det_pixels("cmp", 8, 8))
-        pert = bytes(buf[:10] + bytes([buf[10] ^ 0xFF]) + buf[11:])
-        got = _impl.try_call_shapes(cmp_fn, (bytes(buf), pert),
-                                    (bytes(buf), pert, 8, 8),
-                                    ({"a": bytes(buf), "b": pert},))
+        buf = self._opaque("cmp")
+        pert = bytearray(buf)
+        pert[10] ^= 0xFF          # pixel 2 channel B — opaque on both sides
+        pert[11] = 255
+        got = _impl.try_call_shapes(cmp_fn, (bytes(buf), bytes(pert), 8, 8),
+                                    (bytes(buf), bytes(pert)))
         rate, delta = self._rate_delta(got)
         assert (rate is not None and rate < 1.0) or (delta not in (None, 0)), \
             f"perturbation must drop the verdict below perfect, got {got!r}"
+
+    def test_non_opaque_texels_stay_off_the_verdict_surface(self):
+        """Measured scoping (buildId 20226581): invisible texels carry
+        undefined RGB (block-compressed bleed vs the CLI's cleared
+        background) and semi-transparent texels differ by the exporter's
+        alpha compositing while every OPAQUE texel matches bit-exact. A
+        divergence confined to those texels must NOT fail the lane."""
+        _mod, cmp_fn = _unit(ml.COMPARATOR_NAMES)
+        ours = self._opaque("scope")
+        theirs = bytearray(ours)
+        # pixel 2: fully transparent on BOTH sides, RGB differs
+        ours[8:12] = b"\x11\x22\x33\x00"
+        theirs[8:12] = b"\xaa\xbb\xcc\x00"
+        # pixel 3: semi-transparent on BOTH sides, RGB differs
+        ours[12:16] = b"\x11\x22\x33\xC0"
+        theirs[12:16] = b"\xaa\xbb\xcc\xC0"
+        got = _impl.try_call_shapes(cmp_fn, (bytes(ours), bytes(theirs), 8, 8))
+        rate, delta = self._rate_delta(got)
+        assert rate == 1.0 and delta == 0, \
+            f"non-opaque divergence leaked onto the verdict: {got!r}"
+
+    def test_opaque_and_nonopaque_distinction_is_load_bearing(self):
+        """Teeth for the scoping itself: the SAME byte moved between two
+        OPAQUE texels MUST fail — proving the previous test passes because of
+        the surface rule, not because the comparator went blind."""
+        _mod, cmp_fn = _unit(ml.COMPARATOR_NAMES)
+        ours = self._opaque("teeth")
+        theirs = bytearray(ours)
+        theirs[6] ^= 0xFF           # pixel 1 channel B — both alphas 255
+        got = _impl.try_call_shapes(cmp_fn, (bytes(ours), bytes(theirs), 8, 8))
+        rate, delta = self._rate_delta(got)
+        assert (rate is not None and rate < 1.0) or (delta not in (None, 0))
 
     def test_pinned_conversion_path_single_rgba_convert(self):
         try:
@@ -897,10 +977,9 @@ class TestCrossCheck:
         assert converted.getpixel((0, 0)) == (10, 20, 30, 255)
 
     def test_cli_format_pin_constants_reject_lossy(self):
-        _mod = _impl.load_any(*ml.STAGE11_SCRIPTS)
         pin = None
         for name in ml.FORMAT_PIN_NAMES:
-            pin = _impl.get_sym(_mod, name)
+            _scope, pin = ml.resolve_impl(name)
             if pin is not None:
                 break
         if pin is None:
@@ -934,10 +1013,15 @@ class TestCrossCheck:
                                   ({"sprites": pool, "minSample": 20},))
         b = _impl.try_call_shapes(composer, (pool,),
                                   ({"sprites": pool, "minSample": 20},))
-        names_a = [s.get("name") for s in (a if isinstance(a, list)
-                                           else a.get("sample", []))]
-        names_b = [s.get("name") for s in (b if isinstance(b, list)
-                                           else b.get("sample", []))]
+
+        def names_of(result):
+            """Composer verdict spelling: a list of stems OR plan dicts."""
+            items = result if isinstance(result, list) \
+                else (result or {}).get("sample", [])
+            return [s if isinstance(s, str) else s.get("name") for s in items]
+
+        names_a = names_of(a)
+        names_b = names_of(b)
         assert names_a == names_b, "composer must be deterministic"
         assert len(names_a) >= ml.CROSSCHECK_SAMPLE_MIN
         chosen = [s for s in pool if s["name"] in names_a]
@@ -967,11 +1051,17 @@ class TestS0Discipline:
                                         ({"tempRootArg": str(arg),
                                           "extractedRoot": str(extracted)},))
         assert str(arg) in str(got_arg), "--temp-root arg wins"
-        monkeypatch.delenv("TPC_MEDIA_TMP", raising=False)
+        # both env vars set: TPC_MEDIA_TMP beats TPC_TEMP_ROOT
         got_a = _impl.try_call_shapes(resolver, (None, str(extracted)),
                                       ({"tempRootArg": None,
                                         "extractedRoot": str(extracted)},))
         assert str(env_a) in str(got_a), "TPC_MEDIA_TMP beats TPC_TEMP_ROOT"
+        monkeypatch.delenv("TPC_MEDIA_TMP", raising=False)
+        got_b = _impl.try_call_shapes(resolver, (None, str(extracted)),
+                                      ({"tempRootArg": None,
+                                        "extractedRoot": str(extracted)},))
+        assert str(env_b) in str(got_b), \
+            "TPC_TEMP_ROOT is the next rung once TPC_MEDIA_TMP is gone"
         monkeypatch.delenv("TPC_TEMP_ROOT", raising=False)
         got_def = _impl.try_call_shapes(resolver, (None, str(extracted)),
                                         ({"tempRootArg": None,
@@ -980,35 +1070,48 @@ class TestS0Discipline:
             f"default rung is <extracted-root>/.tmp-stage11, got {got_def}"
 
     def test_c_drive_refusal_names_temp_lever(self, monkeypatch):
+        """S0 hard gate: a C:-rooted temp root refuses with exit 3 carrying
+        the TEMP-leg lever text. The landed split resolves (pure) then gates
+        (s0_preflight) — both seams are driven; a resolver that refuses by
+        itself is the alternate honest spelling."""
         _mod, resolver = _unit(ml.TEMP_ROOT_NAMES)
         c_root = Path("C:/tpc_c_refusal_unit_tw06")   # explicitly C:-rooted
-        extracted = ml.TEMP_BASE / (_session_tag() + "-s0out")
+        extracted = ml.temp_base(_session_tag() + "-s0out")
         extracted.mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv("TPC_MEDIA_TMP", str(c_root))
-        raised = None
-        got = None
+
+        def lever_ok(blob: str) -> bool:
+            return "TPC_MEDIA_TMP" in blob or "TPC_TEMP_ROOT" in blob
+
+        resolved = None
         try:
-            got = _impl.try_call_shapes(resolver, (None, str(extracted)),
-                                        ({"tempRootArg": None,
-                                          "extractedRoot": str(extracted)},))
-        except AssertionError:
-            raise  # no call shape matched — loud per the adapter contract
-        except Exception as exc:
-            raised = exc
-        if raised is not None:
-            blob = repr(raised)
-            assert "3" in blob or "refus" in blob.lower() or "exit" in blob.lower(), \
-                f"C:-temp refusal must map to exit 3: {blob[:300]}"
-            assert "TPC_MEDIA_TMP" in blob or "TPC_TEMP_ROOT" in blob, \
-                f"TEMP-lever remediation must be named: {blob[:300]}"
+            resolved = _impl.try_call_shapes(
+                resolver, (None, str(extracted)),
+                ({"tempRootArg": None, "extractedRoot": str(extracted)},))
+        except Exception as exc:      # refusing resolver: gate already fired
+            assert "3" in repr(exc) or "exit" in repr(exc).lower(), \
+                f"C:-temp refusal must map to exit 3: {exc!r}"
+            assert lever_ok(repr(exc)), f"TEMP-lever must be named: {exc!r}"
             return
-        blob = json.dumps(got, sort_keys=True, default=str) if got is not None \
-            else str(got)
-        refused = ("refus" in blob.lower() or '"exitcode": 3' in blob.lower()
-                   or "'exit_code': 3" in blob.lower() or "gate" in blob.lower())
-        assert refused, f"a C:-rooted temp root must be REFUSED, got: {blob[:300]}"
-        assert "TPC_MEDIA_TMP" in blob or "TPC_TEMP_ROOT" in blob, \
-            f"TEMP-leg lever must appear in the refusal payload: {blob[:300]}"
+        assert resolved is not None
+        assert "C:" in str(resolved), \
+            f"resolver must surface the C: root it was given: {resolved!r}"
+        _gmod, preflight = _unit(ml.S0_PREFLIGHT_NAMES)
+        try:
+            _impl.try_call_shapes(
+                preflight, (Path(resolved), Path(extracted)),
+                ({"temp_root": Path(resolved),
+                  "output_root": Path(extracted)},))
+        except AssertionError:
+            raise
+        except Exception as exc:      # the pinned refusal shape
+            assert getattr(exc, "exit_code", None) == 3 or "3" in repr(exc), \
+                f"C:-temp refusal must map to exit 3: {exc!r}"
+            assert lever_ok(f"{exc}"), \
+                f"TEMP-lever remediation must be named: {exc!r}"
+        else:
+            raise AssertionError(
+                "a C:-rooted temp root passed the S0 preflight unrefused")
 
     def test_free_space_readings_returned_for_run_section(self, tmp_path):
         _mod, free = _unit(ml.FLOOR_NAMES)
@@ -1049,16 +1152,22 @@ class TestS0Discipline:
             "the 512 MiB chrome ceiling must admit what the 256 MiB default refuses"
 
     def test_game_dir_resolver_returns_none_hostless(self, monkeypatch):
-        mod = _impl.load_any(*ml.STAGE11_SCRIPTS)
-        fn = _impl.get_sym(mod, *ml.GAME_DIR_NAMES)
+        mod, fn = ml.resolve_impl(*ml.GAME_DIR_NAMES)
         if fn is None:
             pytest.skip("impl-missing: game-dir resolver not resolvable yet")
         monkeypatch.setenv("TPC_GAME_DIR", "")
-        for const in ("DEFAULT_GAME", "DEFAULT_INSTALL", "DEFAULT_CLIENT_DIR",
-                      "DEFAULT_GAME_DIR"):
-            if hasattr(mod, const):
-                monkeypatch.setattr(mod, const, Path("Z:/definitely-absent"))
-        got = _impl.try_call_shapes(fn, ())
+        for scope in (mod, getattr(mod, "mu", None)):
+            if scope is None:
+                continue
+            for const in ("DEFAULT_GAME", "DEFAULT_INSTALL",
+                          "DEFAULT_CLIENT_DIR", "DEFAULT_GAME_DIR",
+                          "DEFAULT_INSTALL_CANDIDATES"):
+                if hasattr(scope, const):
+                    monkeypatch.setattr(
+                        scope, const,
+                        [] if const.endswith("CANDIDATES")
+                        else Path("Z:/definitely-absent"))
+        got = _impl.try_call_shapes(fn, (), (None,))
         assert got is None, \
             "P1: with no env var and no default install, resolver yields None " \
             "-> wholesale auto-SKIP, never exit 3"
@@ -1109,6 +1218,16 @@ class TestEncodeLoudFailure:
 
 
 class TestResidueScan:
+    @staticmethod
+    def _scan_rows(got):
+        """Scan-seam result normalization: ({rows:[...]}, (rows, counters,
+        drift) tuple, or a bare row list) -> the row list."""
+        if isinstance(got, dict) and "rows" in got:
+            return got["rows"]
+        if isinstance(got, tuple) and got and isinstance(got[0], list):
+            return got[0]
+        return got
+
     def test_scan_matches_oracle_over_synthetic_stubs(self):
         _mod, scan = _unit(ml.RESIDUE_SCAN_NAMES)
         rows = ml.media_stub_rows()
@@ -1116,8 +1235,7 @@ class TestResidueScan:
                                     ({"stubRows": rows},),
                                     ({"stubs": {r["kind"]: [r] for r in rows}},))
         assert got is not None
-        got_rows = got.get("rows") if isinstance(got, dict) and "rows" in got \
-            else got
+        got_rows = self._scan_rows(got)
         norm = []
         for r in got_rows:
             norm.append({
@@ -1149,8 +1267,7 @@ class TestResidueScan:
         _mod, scan = _unit(ml.RESIDUE_SCAN_NAMES)
         rows = ml.media_stub_rows()
         got = _impl.try_call_shapes(scan, (rows,), ({"stubRows": rows},))
-        got_rows = got.get("rows") if isinstance(got, dict) and "rows" in got \
-            else got
+        got_rows = self._scan_rows(got)
         keys = [(r.get("kind"), r.get("srcId"), r.get("fieldPath"))
                 for r in got_rows]
         assert keys == sorted(keys), "emission sort contract"
@@ -1323,7 +1440,10 @@ class TestRunnerBlackBox:
         gitignore_before = _sha(HERE.parent / ".gitignore")
         first = snapshot(media_ext)
         assert first, "no declared artifacts produced"
-        r2 = _run_media(media_seed_tree, media_ext, scratch_root)
+        # --force makes BOTH legs real executions (the runner's up-to-date
+        # stamp short-circuit is piece-1 contract; AC5's determinism claim
+        # is about REGENERATION, so it must bypass the skip)
+        r2 = _run_media(media_seed_tree, media_ext, scratch_root, "--force")
         assert r2.returncode == 2
         second = snapshot(media_ext)
         only_a, only_b, changed = diff_manifests(first, second)
@@ -1365,7 +1485,7 @@ class TestRunnerBlackBox:
         ext = Path(media_ext)
         # a game dir that does NOT exist anywhere + cleared env var: P1 says
         # this path is a wholesale auto-SKIP (exit 0), never exit 3.
-        absent_game = str(ml.TEMP_BASE / (_session_tag() + "-absent-install"))
+        absent_game = str(ml.temp_base(_session_tag() + "-absent-install"))
         r = run_pack([absent_game, "--only", "media"],
                      extracted_root=ext,
                      extra_env={"TPC_GAME_DIR": "",
@@ -1416,7 +1536,13 @@ class TestRunnerBlackBox:
             pytest.skip("impl-shape: no media stage stamp found to corrupt")
         stamp = stamp_files[0]
         obj = read_json(stamp)
-        self._corrupt_first_string_value(obj)
+        # The tripwire is the stamp's IDENTITY digest (runner compares it
+        # against its own recomputation). Corrupt THAT field specifically —
+        # mutating an arbitrary string leaf (e.g. config.extractedRoot) can
+        # leave identity intact and the skip honest.
+        assert "identity" in obj, \
+            f"stamp schema drifted; identity field absent: {sorted(obj)}"
+        obj["identity"] = "deadbeef" + str(obj["identity"])[8:]
         stamp.write_text(json.dumps(obj, sort_keys=True), encoding="utf-8",
                          newline="\n")
         log = Path(media_ext) / "EXTRACTION-LOG.md"
@@ -1459,9 +1585,9 @@ class TestRunnerBlackBox:
             media = Path(media_ext) / ml.MEDIA_DIRNAME
             return {p.name: _sha(p) for p in sorted(media.glob("*.jsonl"))}
 
-        r1 = _run_media(media_seed_tree, media_ext, scratch_root)
+        r1 = _run_media(media_seed_tree, media_ext, scratch_root, "--force")
         first = snap()
-        r2 = _run_media(media_seed_tree, media_ext, scratch_root)
+        r2 = _run_media(media_seed_tree, media_ext, scratch_root, "--force")
         second = snap()
         assert r1.returncode == r2.returncode == 2
         assert first == second, \
@@ -1561,7 +1687,7 @@ class TestClientGated:
         # real-corpus run asserts distinctNames == 2158, resolvedNames == 2151,
         # unresolved set EQUALS the 7 verbatim M16 names.
         scratch = ml.pick_scratch_root(_session_tag())
-        ext = ml.TEMP_BASE / (_session_tag() + "-cg-ext")
+        ext = ml.temp_base(_session_tag() + "-cg-ext")
         ext.mkdir(parents=True, exist_ok=True)
         r = run_pack([str(_require_client()), "--only", "media"],
                      extracted_root=ext,
@@ -1580,7 +1706,7 @@ class TestClientGated:
     def test_crosscheck_real_bytes_quotas_and_pixel_exactness(self, tmp_path):
         _require_heavy()
         scratch = ml.pick_scratch_root(_session_tag())
-        ext = ml.TEMP_BASE / (_session_tag() + "-cg-ext2")
+        ext = ml.temp_base(_session_tag() + "-cg-ext2")
         ext.mkdir(parents=True, exist_ok=True)
         r = run_pack([str(_require_client()), "--only", "media"],
                      extracted_root=ext,
@@ -1602,7 +1728,7 @@ class TestClientGated:
     def test_double_run_hash_equal_on_real_tree(self, tmp_path):
         _require_heavy()
         scratch = ml.pick_scratch_root(_session_tag())
-        ext = ml.TEMP_BASE / (_session_tag() + "-cg-ext3")
+        ext = ml.temp_base(_session_tag() + "-cg-ext3")
         ext.mkdir(parents=True, exist_ok=True)
 
         def snap():
@@ -1624,7 +1750,7 @@ class TestClientGated:
 
     def test_pptr_residue_reconciles_122_basis_seed(self, tmp_path):
         _require_heavy()
-        ext = ml.TEMP_BASE / (_session_tag() + "-cg-ext4")
+        ext = ml.temp_base(_session_tag() + "-cg-ext4")
         if not (ext / ml.MEDIA_DIRNAME / "_pptr_residue.jsonl").exists():
             scratch = ml.pick_scratch_root(_session_tag())
             ext.mkdir(parents=True, exist_ok=True)

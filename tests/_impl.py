@@ -239,11 +239,28 @@ def skip_if_none(value, what: str):
 
 
 def try_call_shapes(fn, *shapes):
-    """Call an impl function whose exact signature is unknown: each shape is
-    (args, kwargs); the first non-TypeError result wins. Raises AssertionError
-    naming every tried shape when none matches."""
+    """Call an impl function whose exact signature is unknown: the first
+    shape that calls without a TypeError wins. Raises AssertionError naming
+    every tried shape when none matches.
+
+    Shape spellings accepted per entry (the stage-11 suite writes bare args
+    tuples; earlier suites wrote ``(args, kwargs)`` pairs):
+      - ``args_tuple``          -> fn(*args)
+      - ``(args, kwargs)`` pair -> fn(*args, **kwargs)
+      - ``kwargs_dict``         -> fn(**kwargs)
+    A 2-tuple whose first member is a tuple/list and second a dict reads as
+    the pair form."""
     last = None
-    for args, kw in shapes:
+    tried = 0
+    for shape in shapes:
+        tried += 1
+        if isinstance(shape, dict):
+            args, kw = (), shape
+        elif (len(shape) == 2 and isinstance(shape[0], (tuple, list))
+              and isinstance(shape[1], dict)):
+            args, kw = shape
+        else:
+            args, kw = shape, {}
         try:
             return fn(*args, **kw)
         except TypeError as exc:
@@ -251,4 +268,4 @@ def try_call_shapes(fn, *shapes):
     name = getattr(fn, "__name__", repr(fn))
     raise AssertionError(
         f"{name} matched none of its expected call shapes "
-        f"({len(shapes)} tried); last TypeError: {last}")
+        f"({tried} tried); last TypeError: {last}")
