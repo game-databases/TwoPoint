@@ -1,0 +1,651 @@
+# Piece 5 — Contract-Pinning Spec (Two Point Campus)
+
+**Audience:** CodeWriter + TestWriter. This document is the contract for
+the `contracts` stage family: a tracked, machine-checkable pin layer over
+every emitted dataset family. Facts are grounded in
+[`../scout-report-piece-05-contracts.mdx`](../scout-report-piece-05-contracts.mdx)
+(revision 2 — N1–N5 corrections applied, counter-drift retracted and
+reframed as units-documentation items) and both verification verdicts
+([verifyA](../verifications/verifyA-scout-piece05.mdx),
+[verifyB](../verifications/verifyB-scout-piece05.mdx)) against
+`extracted/` at buildId **20226581** (last relink finished
+2026-08-25T23:49:26Z, exit 2 steady state). Where a number here conflicts
+with scout prose, this file wins: it carries the verified corrections
+(9 uncontained rows over 5 addresses; guid-bridge counters replay
+bit-exact; 11,491 zero-dependency catalog rows; 13 identity keys; 15
+overlay-report counters). Format follows
+[piece-01](piece-01-extraction-pipeline.mdx) /
+[piece-02](piece-02-relinking.mdx).
+
+---
+
+## 1. Goal
+
+The corpus is measured and reconciled — but none of that is
+machine-checkable. Today nobody compares artifact A to artifact B unless
+an agent re-derives the comparison by hand each session; the scout's
+closing analysis names this disease twice (G2/G4/G5 are
+"nobody-compares" gaps; G1/G3 are "the number is right and its unit is
+undocumented" gaps). None of the three probed competitors publishes
+versioned schemas or validators — their contracts are implicit in
+payloads. This piece beats that precedent: explicit, tracked,
+machine-checkable pins.
+
+Deliverables:
+
+- a **tracked contract layer** — `contracts/` at pack root (decision +
+  justification §3.1) holding per-family human-readable contracts that
+  are generated-and-checked against artifacts by validators under
+  `tools/`; the markdown layer is versionable, the JSONL data stays
+  local;
+- a **pin taxonomy** applied per family (§4) — schema-pin, invariant-pin,
+  cross-family-pin — with the measured values pinned as constants or,
+  preferentially, as derived identities (§3.5);
+- **exception pins** consumers must be told about (§5), **counter-unit
+  pins** (§6), and **ledger-gap pins** (§7);
+- a **red→green harness**: validators that FAIL today on exactly the
+  three real breaks that survive the correction round (§9), going green
+  after named emitter amendments — everything else lands GREEN;
+- mechanical acceptance incl. deliberate-mutation teeth proof (§11).
+
+This is a data-completeness piece under AGENTS rule 8: the Phase D site
+consumes contracts, never derives data. Its primary reader after the
+build pair is the site builder (exception sheet §5), the PROOF piece
+(#11 consumes §7's ledger inventory), and every future fixer (the pin
+suite tells them within seconds whether a change broke a cross-artifact
+identity).
+
+## 2. Corpus facts the contract layer relies on (measured)
+
+All figures measured at buildId 20226581 by the scout round and
+re-measured independently by verifyA/verifyB. They are the pins'
+ground state; §3.5 defines how they may move. Only load-bearing values
+are repeated here — the full census lives in the scout report §2–§4.
+
+| # | Fact | Value |
+|---|---|---|
+| F1 | Stub rows | **13,443** across 9 kinds: config 8,430 · item 3,885 · unlockable 415 · metagame-node 454 · room 116 · course 69 · student-type 54 · campus-level 17 · staff 3 |
+| F2 | Stub envelope | exactly `{buildId:int, fields:object, id:string, inferred:bool, kind:string, method:string, provisional:bool, slug:null|string, source:{bundle,pathId,class}}` + optional `axes[]` on merged-duplicate rows only (config ×4, metagame-node ×2; memberships base ×4 / dlc-space ×2 / dlc-ghost ×2); `slug` null on **13,443/13,443**; twins `@hash8` = 17 ⇔ `fields.id` present = 17 (config 12 · item 3 · metagame-node 2) |
+| F3 | Pair rows | **24,583** over 24 `<src>_<dst>.jsonl` files; frozen 9-key row + `sourceAxes` on exactly 1 row (`config_config`); dedup tuple `(srcKind,srcId,dstKind,dstId,method,fieldPath)` unique 24,583/24,583; methods `pptr-same-file` 11,980 · `pptr-cross-file` 8,857 · `assetguid-catalog` 3,746 |
+| F4 | Matrix | 100 cells over 10 nodes; status modeled 24 / partial 3 / missing 73; mechanism hard 24 / inferred 76 (logic unexercised); joinKey PPtr 23 · none-established 76 · AssetGUID 1; `pairs[]` row-major over `nodeUniverse.nodes`; Σ `cardinality.edges` == **24,583** |
+| F5 | Catalog | `catalog.json` 56,660 key rows (397,431,200 B); kind address 2,516 / guid 54,144; `bundle` null **45,312** (43,480 guid + 1,832 address); `address` null 329; dependency edges 3,939,716; zero-dependency rows **11,491**; `key` NON-unique — 56,659 distinct, exactly 1 duplicated value `f952c082cb03451daed3ee968ac6c63e` ×2, canonical-JSON byte-identical |
+| F6 | Coverage trio | `catalog-coverage.json`: keysTotal 56,660 · distinctBundlesReferenced 176 · bundlesUnreferenced [] · danglingDependencyKeys.count 0 · outOfRosterFileReferences.count 19 (uninstalled DLC-Hospital/preorder paths) |
+| F7 | Harvest | export-manifest 167,069 rows, `outRelPath` unique, negative pathId 60,582 (36.26%), sourceBundle 114 distinct basenames; externals 222 rows / 171 with refs / 1,781 refs = 1,671 CAB all-zero-guid + 110 built-in; census 176 files Σ objectsByClass **2,026,658**, `fallbackVersionUsed:true` on all 176; media-catalogue 47,939 rows, bytesEstimate 0 nulls, class domain == carved census on all 9 classes |
+| F8 | Locales | 13 files Σ **200,912** lines (en 15,665 · pt-BR 15,443 · zh-Hans 15,445 · zh-Hant 15,446 · fr/de/it/pl 15,445 · ja 15,371 · ko 15,457 · ru 15,422 · es 15,440 · tr 15,443); base-overlay 15,672 rows all empty-text (KEY REGISTRY, not translations); matrix 15,672 keys; base-overlay-report `compositionPolicy:"mixed"` + **15** evidence counters |
+| F9 | Locale counter units | run-section per-locale `rows` are EMISSION EVENTS incl. duplicate-key overwrites: `rowsLogged == termsWalked(15,677) − skippedEmpty` holds exactly on all 13 locales; totals 200,977 events vs 200,912 distinct-key lines (+5/locale); the SAME 5 duplicated Term keys everywhere (verifyB attack 1): `UI/General/PrestigeLevel`, `UI/Inspector/MedicalIssuesCured`, `UI/Inspector/PastoralIssuesCured`, `Characters/DLC_Hospital/Archetypes/Doctor_M_Name`, `Characters/DLC_Hospital/Archetypes/Nurse_F_Description`. `duplicateKeysOverwritten` is computed in `tools/stage4_localisation.py` and printed NOWHERE, persisted NOWHERE |
+| F10 | Registry/locale joins | `i2_term_registry.jsonl` 15,675 rows → 15,672 distinct termKeys, canonical true 15,672 / false 3, termType constant `0`, termStatus {1: 15,400 · 0: 275}, 25 source assets, **`locales[]` empty on ALL rows**; `entity_locale.jsonl` 10,964 rows (dev empty 3,429 = 31.28%; 903 fieldPaths); reverse index 6,526 rows, Σ usages == **10,964**; registry↔matrix key diff == **0** both directions |
+| F11 | GUID bridge | report `{guidRefsTotal 20170, distinctGuids 5584, resolvedToAddress 16110, resolvedToStub 3747, danglingDistinctGuids 1137, resolveRateAddress 0.7987109568666336, resolveRateStub 0.1857709469509172}` — counters count REFERENCES not rows; full replay from sibling artifacts reproduces all seven fields bit-exact plus universes (15,630 asset-row membership, 3,746 pair rows); `resolvedToStub − pairRows = 1` = exactly one collapsed dedup tuple (`Item_Union_Stage_Floor → ItemValidator_SinglePlace`, `Validators[]`). The ref unit is documented only in code docstrings |
+| F12 | Uncontained terminations (corrected G2) | `entity_asset_guid.jsonl` 15,630 rows / 4,447 distinct dstIds; **9 rows over 5 distinct addresses** absent from `container_index`, all catalog entries `bundle:null` under `Assets/Data/DLCs/DLC3_Hospital/*` = UNINSTALLED-DLC coverage (same family as F6's 19 out-of-roster references), NOT snapshot skew, NOT an id-closure break (piece-02 §R3 pins `dstId` as catalog-address-verbatim). Offenders: `Config_DLC3` `Levels[]` ×3 (Rural/Snowy/Tropical `Config_Level_*.prefab`), `Config_GameMode_IconGenerator` → `DB_DLC3_Hospital_Variations.asset`, `Config_UISprite` + `ObjectiveType_{PatientEmergency,PirateEmergency,PlotTropical,Volcano}` → shared atlas `Atlas_DLC3_Icons_Inspector.spriteatlasv2`. **No ledger row exists for any of them today** |
+| F13 | Ledgers | `_dangling_guids.jsonl` 1,137 rows, verdict `unresolved-open` on all (enum of 4, 3 arms unexercised), sampleRefs ≤5; `_unresolved_pptrs.jsonl` 2,391 rows, reason enum exactly 2 strings (2,284 + 107); stage-5 `_absences.jsonl` 2 rows (config 1, item 44; samples caps 1 & 25); `_unmapped-families.jsonl` 768 rows (evidence 677/43/47/1); `locale_availability.jsonl` EMPTY 0 bytes (stage-5-owned honest-zero v1; consumers routed to `entity_locale`) |
+| F14 | Reports | `locale_join_report.json`: instancesTotal 20,070 · sentinelZero 9,101 · registryHits 10,964 · **registryMisses 5** (an EXIT-2 CONTRIBUTOR per EXTRACTION-LOG) · coverageOnNonEmpty 0.99954 · matrixKeyDiff 0 · unresolvedIds[5] · codeRefTerms note; `ui_link_coverage.jsonl` 344 rows, mapped-schema 9 / documented-gap 335, XOR holds, `genericContainerClasses` on exactly 1 row; `competitor_applied.jsonl` 3 rows (fandom flagsMissing 383 · steam-guides flagsMissing 34 · terminal `~floor` floor-unmet sourcesApplied 0 + alias-input unblock) — measured shape carries `samples/terminal/floorRequired/sourcesApplied/unblock`, the spec'd `wall{…}` object occurs on 0 rows |
+| F15 | Stage 0/1 | `identity.json` **13** top-level keys; roster 176 rows, single keyset `{buildId,bytes,dirClass,localeFlag,relpath,sceneFlag}`, dirClass 158/10/8, sceneFlag 150/25/1 (= 26 scene ids), localeFlag null×162 + base×1 + 13 codes, relpath unique; decompile: 101 DummyDll images, assembly-index 148 entries + hierarchy stamp block (`hierarchyRowCount 20037` + counting-method inline), class-hierarchy 20,037 rows, id-registries **1,792 files** while EXTRACTION-LOG's `registryCount: 1900` counts covered CLASSES — a second units-should-be-inline case |
+
+Green join identities to keep green (all full-scan verified): pair
+srcId/dstId closure 0 misses (twins WITH suffix); `entity_locale.dstId`
+⊆ termKeys 0 misses; cab objects Σ 2,026,658 == census Σ; media rows ==
+carved census per class; stub `source.bundle` basenames 11 ⊆ roster and
+export-manifest 114 ⊆ roster, 0 orphans each.
+
+## 3. The contracts stage family
+
+### 3.1 Tracked-layer decision: `contracts/` tree, not `extracted/CONTRACTS.md`
+
+**Chosen: a `contracts/` tree at the TwoPoint pack root.** Justification:
+
+1. **The README already reserved it.** Pack README layout table:
+   `contracts/` — "emitted dataset contracts — later pieces". This piece
+   IS that later piece; honoring the reservation avoids re-plumbing the
+   documented layout.
+2. **Tracked by default policy, not by an ignore exception.** The pack
+   `.gitignore` ignores `extracted/**` with the carve-out
+   `!extracted/**/*.md`. A contract layer inside `extracted/` would
+   depend on that exception surviving every future gitignore tightening;
+   the whole point of the scout's finding #1 is that contracts MUST live
+   in robustly tracked paths. `contracts/` at pack root sits beside
+   `docs/` and `tools/` — tracked unconditionally.
+3. **Pins need a machine-readable sibling.** Validators must consume
+   pins as data (§3.2); a single markdown file cannot host per-family
+   machine slices cleanly. The tree gives each family a doc + a slice of
+   one JSON manifest.
+4. **Ownership clarity.** Everything under `extracted/` is
+   pipeline-emitted and local (md carve-out aside). Contracts are
+   repo-first products DESCRIBING those outputs; mixing a maintained
+   contract doc into the emission tree blurs who writes what.
+5. Rejected alternative recorded for the reviewer:
+   `extracted/CONTRACTS.md` (scout §8 recommendation) remains viable and
+   tracked today, but fails criteria 2–3; if the reviewer prefers it,
+   the only changes are path constants in §10 — nothing else in this
+   spec moves.
+
+### 3.2 Layer model
+
+```
+contracts/pins.json          MACHINE source of truth — every pinned constant,
+                             enum, uniqueness claim, reconciliation, unit
+                             definition, ownership rule, build scope.
+                             Sorted keys, UTF-8, LF. Committed.
+contracts/families/*.mdx     HUMAN per-family contracts (prose judgments +
+                             a fenced ```pins block that MUST canonically
+                             equal the family's pins.json slice).
+                             Generated-and-checked: the runner re-renders
+                             the blocks; stale prose numbers fail (V-D3).
+contracts/red-registry.json  Deliberately-red validators awaiting their
+                             fixing amendment (§9). Committed input.
+tools/check_contracts.py     Runner + validator implementations. Read-only
+                             over extracted/.
+tests/test_contracts_*.py    Hostless fixture lane + mutation harness.
+```
+
+Data flow: validators read `pins.json` + local artifacts under
+`extracted/` → emit the §3.4 report → exit. The MDX layer never feeds
+execution; it is kept honest BY execution (V-D3). The JSONL datasets
+stay local-only forever; git history of `contracts/` IS the contract
+change history.
+
+### 3.3 Runner integration
+
+- ONE engine, two spellings (GAME=/`TPC_GAME_DIR` precedent):
+  - standalone: `python tools/check_contracts.py [--root <extracted>]
+    [--scan-catalog] [--warn-stale]` ;
+  - make target: `make contracts` (delegates to the same module);
+  - pipeline: registered ADDITIVELY in `tools/tpc_common.py::STAGES` as
+    stage id `check-contracts` AFTER `relink` (piece-01 Revision 7
+    precedent; the existing seven stages byte-behave identically). The
+    stage is NON-EMITTING: declared outputs `[]`, stamp records identity
+    script-hash + exitCode only, run section appended by the runner like
+    every stage. Missing upstream artifacts ⇒ exit 3 naming them
+    (runner pre-check, piece-1 pattern). `--list` enumerates EIGHT
+    stages.
+- Heavy-artifact policy: the runner NEVER parses `catalog.json`
+  (397,431,200 B). Catalog-level pins are checked against an EXTENDED
+  emit-time mini-report (§8, V-I2/V-R6) — the pattern
+  `catalog-coverage.json` already uses — persisted inside stage 2 where
+  the document is already parsed. `--scan-catalog` is an explicit audit
+  lane that streams the artifact once (`raw_decode`, verifyA method) and
+  re-derives the mini-report; default runs refuse without it.
+- Determinism inherited unchanged: sorted enumeration, UTF-8 + LF, no
+  wall-clock in outputs, byte-identical reruns of the report on an
+  unchanged tree.
+
+### 3.4 Exit codes and output grammar
+
+Exit codes reuse the house vocabulary:
+
+- `0` — all registered validators PASS (steady state once §9's reds
+  close and the registry empties);
+- `2` — completed-with-known-ledger: every failing validator is listed
+  in `contracts/red-registry.json` with its fixing amendment (EXPECTED-
+  RED lines; loud, non-silent, pipeline continues);
+- `1` — contract broken: any UNEXPECTED FAIL, PIN-STALE, or unit-typed
+  reconciliation refusal;
+- `3` — inputs missing (cannot check).
+
+Output grammar (one line per event, sorted by validator id, then a final
+summary line; no timestamps):
+
+```
+PASS [V-S3] stubs/config.jsonl 8430/8430 rows conform
+FAIL [V-R1] relinks/matrix.json expected=24583 measured=24581 hint=Σ cardinality.edges
+EXPECTED-RED [V-L1] red-registry entry=uncontained-address-ledger fix=piece-05-amendments
+PIN-STALE [V-D4] pin=buildScope.buildId pinnedBuild=20226581 currentBuild=<new>
+INFO [V-S11] enum arm 'logic' declared, 0 occurrences
+{"passed":N,"failed":N,"expectedRed":N,"stale":N,"info":N,"exit":"0|1|2"}
+```
+
+Every FAIL names: validator id, artifact, PINNED expectation, MEASURED
+value, one-line hint. That quadruple is the failure-output shape for all
+validators in §8; per-validator cells below define only the
+expected/measured payloads.
+
+### 3.5 Derived-over-transcribed; buildScope and PIN-STALE
+
+Two rules keep the pin set from rotting:
+
+1. **Derived beats transcribed.** Whenever a constant can be RECOMPUTED
+   from sibling artifacts (matrix edges Σ == pair rows; reverse usages ==
+   entity_locale rows; bridge replay == report), the pin is the
+   IDENTITY, not the number — it can never go stale. Transcribed
+   constants are used only where derivation is impossible (per-kind row
+   counts, enum populations, the catalog dupe identity) and each carries
+   `"kind": "constant"`.
+2. **Constants are build-scoped.** Every constant sits under
+   `pins.buildScope = {buildId: 20226581}` semantics: when
+   `identity.json.buildId` differs from the scope, constant-scoped
+   validators emit `PIN-STALE` (exit 1, `--warn-stale` downgrades to
+   INFO for exploratory runs) instead of pretending to pass. Re-pinning
+   after a game patch is a deliberate reviewed commit of `pins.json` —
+   measured numbers win, prose gets corrected, never silently.
+
+This deliberately DIFFERS from stage-seed DRIFT discipline
+(piece-02 §2): seeds describe nature and fresh wins automatically;
+contract pins are the product promise and movement is a reviewable
+event. Both disciplines coexist; validators print `PIN-MISMATCH` (not
+`DRIFT:`) so the two never blur.
+
+## 4. Pin taxonomy and per-family coverage
+
+Three pin classes (scout §8, adopted verbatim):
+
+- **A schema-pin** — exact top-level keysets, filename grammars, frozen
+  enums, sort orders, buildId presence. VERIFY mechanically, fail loud.
+- **B invariant-pin** — uniqueness domains, arithmetic reconciliations,
+  structural rules (XOR gates, required-unblock, sample caps), the
+  exit-code ledger contract. These are the incident killers.
+- **C cross-family-pin** — id-resolution closure, report derivability,
+  bundle-name closure, single-writer ownership, availability routing.
+  Full scans; all universes small (<200k rows; catalog excluded per
+  §3.3).
+
+Plus two cross-cutting classes this piece adds because the correction
+round proved they are their own disease: **CU counter-unit pins** (§6)
+and **L ledger-gap pins** (§7).
+
+Coverage matrix (● = pins apply; ○ = explicitly none):
+
+| Family | A | B | C | CU | L |
+|---|---|---|---|---|---|
+| stage 0 identity + roster | ● | ● | ● | ○ | ○ |
+| stage 1 decompile outputs | ● | ● | ○ | ● | ○ |
+| stage 2 catalog trio | ● | ● | ● | ○ | ● (warning ledgers) |
+| stage 3 harvest + media | ● | ● | ● | ○ | ○ |
+| stage 4 locales + reports | ● | ● | ○ | ● | ○ |
+| stage 5 stubs + ledgers | ● | ● | ● | ○ | ● |
+| stage 6 relinks (pairs, bridges, registry/locale, reports, ledgers, coverage, competitor) | ● | ● | ● | ● | ● |
+| EXTRACTION-LOG run sections + `.stage-stamps/` | ○ | ● (counter↔artifact, IN UNITS) | ○ | ● | ● (contributor enumeration) |
+
+Reserved now, pinned by later pieces (names fixed here so they inherit
+the taxonomy instead of inventing their own):
+`contracts/families/maps.mdx`, `contracts/families/logic.mdx`,
+`contracts/families/protocol.mdx`. `extracted/maps/` and
+`extracted/logic/` stay `.gitkeep`-empty; their validators land with
+their pieces.
+
+NOT-WORTH-PINNING (recorded so nobody re-litigates): per-field presence
+inside stubs `fields` beyond the four engine keys
+(`m_Enabled/m_GameObject/m_Name/m_Script` at 100%) — config spans 2,872
+distinct keys over 8,430 rows; the value is in the envelope + source
+pointers, not a field whitelist.
+
+## 5. Exception pins (consumers must be told)
+
+Four measured realities look like defects and are not. Each gets a row
+in `contracts/families/exceptions.mdx` with its numbers interpolated
+from `pins.json`, enforced by V-D2. Consumers (site builder first among
+them) read this sheet BEFORE building loaders.
+
+| Exception | Measured truth | Consumer rule |
+|---|---|---|
+| catalog duplicate key | exactly 1 duplicated `key` (`f952c082cb03451daed3ee968ac6c63e`) appearing twice, canonical-JSON BYTE-IDENTICAL rows (legal Addressables duplicate registration) | key→row dict-building MUST be collision-aware; last-wins silently drops one row. Pin: duplicates always byte-identical, count build-scoped |
+| catalog `bundle` null | null on **45,312/56,660** rows (43,480 guid-kind + 1,832 address-kind); `address` null on 329 address-kind rows; for guid rows the `address` IS the container address and resolution goes through `bridges/container_index.jsonl` | owning-bundle lookup = catalog→container_index ladder, never `row.bundle` direct |
+| stub `slug` | null on **100%** of 13,443 rows BY DESIGN | display names derive via `entity_locale.jsonl` → locale tables; site layer owns slug generation policy (owner-routed, §13) |
+| `locales[]` reserved-but-empty | empty on ALL `i2_term_registry` (15,675), `entity_locale.evidence` (10,964) and `locale_term_entity` (6,526) rows because the client stores NO per-term availability: zero non-empty `mTerms[].Languages` cells across all 26 LanguageSource dumps — translations live in the per-locale category TextAssets (stage-4 route). Code implements piece-02 §R4 faithfully; the client's storage shape falsified the premise | per-term locale availability lives in `locales/locale-matrix.json`; treat the empty arrays as RESERVED fields, never data |
+
+The projection is faithful, not broken — that sentence is itself part of
+the pinned text (V-D1 greps it).
+
+## 6. Counter-unit pins
+
+The correction round's deepest lesson (G1 retracted, G3 downgraded): a
+number can be RIGHT and still mislead everyone who reads it, when its
+UNIT lives only in code. Pins:
+
+1. **Units live IN the artifact.** Every emitted report whose fields
+   carry counts (`guid_bridge_report.json`,
+   `locale_join_report.json`, `base-overlay-report.json`,
+   `catalog-coverage.json`) gains a `counterUnits` object mapping each
+   numeric field to a unit string from the frozen vocabulary
+   `reference-events | deduped-rows | distinct-keys | emission-events |
+   walked-terms | skipped-cells | bytes | objects`. Emitted by the
+   report's own generator (deterministic static dict + counts).
+   Validator V-U1 enforces presence + vocabulary membership.
+2. **Run-section keys get inline unit comments.** Every EXTRACTION-LOG
+   counter that names an emitted file states its unit beside the key
+   (stage-4 `rows` becomes `rows(emission-events)` or equivalent;
+   stage-1 `registryCount` gains `(covered classes; files =
+   <n>)`). Validator V-U2 checks the stage-4 instance; the general form
+   is checked as data by V-U3's unit table.
+3. **`duplicateKeysOverwritten` must be printed AND persisted** (fixes
+   F9's missing bridge): printed per-locale in the localisation run
+   section AND persisted into
+   `base-overlay-report.json.evidence.duplicateKeysOverwritten`
+   (per-locale map + total). This CLOSES scout open question 1: both
+   surfaces, because the run section is the acceptance surface and the
+   report is the machine surface. Validator V-U2.
+4. **Naive `rows == wc -l` pins are FORBIDDEN.** The bug class that
+   started this: logged `rows` are emission events, files hold distinct
+   keys, and the difference (+5/locale) is REAL DATA. Enforcement is
+   structural, not aspirational: every reconciliation registered in
+   `pins.json` declares `leftUnit`/`rightUnit`; the runner REFUSES TO
+   LOAD a reconciliation whose units differ without a declared transform
+   (V-U3), and the fixture lane asserts the refusal fires. There is no
+   code path left that can express the naive pin.
+
+## 7. Ledger-gap pins
+
+Ledgered absence is doctrine (never silence). Two pins close the round's
+residual gaps:
+
+1. **Address-terminal uncontained GUID terminations get ledger rows**
+   (F12). New declared ledger
+   `extracted/relinks/_uncontained_addresses.jsonl`, written by
+   `stage6_relink.py` (sole owner), one row per distinct uncontained
+   ADDRESS:
+   `{address, catalogGuid?, reason:"catalog-bundle-null-uninstalled-dlc",
+     sampleRefs:[{srcKind,srcId,fieldPath}] (≤5), buildId}` sorted by
+   `address`. First population: **5 rows covering the 9 edge rows**
+   (F12). Rationale for a new file instead of extending
+   `_dangling_guids`: those GUIDs are NOT dangling (they resolve to
+   catalog addresses; `_dangling_guids` is keyed by unresolvable
+   assetGuid) and the verdict enum there has different semantics. The
+   file becomes a DECLARED exit-2 contributor (consistent with
+   piece-02 §5.7 — today's steady state stays exit 2 until the DLC
+   axis is acquired; nothing flips silently to green). Validator V-L1
+   is RED today, GREEN after the amendment (§9 RED-1).
+2. **`registryMisses` stays an exit-2 contributor surfaced via
+   `locale_join_report.json`** (F14). The exit-code ledger contract
+   (V-I8) inventories it alongside the file-backed ledgers: exit 2 iff
+   any of `_absences.jsonl`, `_unmapped-families.jsonl`,
+   `_dangling_guids.jsonl`, `_unresolved_pptrs.jsonl`,
+   `_uncontained_addresses.jsonl`,
+   `locale_join_report.registryMisses > 0`,
+   `catalog-coverage.outOfRosterFileReferences.count > 0` (or
+   `danglingDependencyKeys.count > 0`), or a competitor terminal floor
+   row is non-empty — with the run section naming every contributor +
+   size. Today: contributors = dangling 1,137 · unresolved pptrs 2,391
+   · registryMisses 5 · outOfRoster 19 · floor-unmet ⇒ exit 2, as
+   designed. PROOF (#11) consumes this exact inventory.
+
+## 8. Validator catalog
+
+Names are exact; scripts implement them in `tools/check_contracts.py`.
+All validators are pure-read over `extracted/` (zero-write discipline,
+AC4). Expected values marked *(c)* are build-scoped constants
+(`"kind":"constant"` in pins); everything else is a derived identity
+(`"kind":"derived"`). Failure shape per §3.4.
+
+### Schema pins (V-S)
+
+| ID | Name | Inputs | Check (formula) | Expected @20226581 |
+|---|---|---|---|---|
+| V-S1 | identity-keyset | `identity.json` | sorted(top-keys) == pinned 13-name list; `buildId == targetBuildId` | 13 keys *(c)* |
+| V-S2 | roster-envelope | `bundle-roster.jsonl` | ∀ rows: keyset == `{buildId,bytes,dirClass,localeFlag,relpath,sceneFlag}`; counts per domain vs pins | 176 rows; dirClass 158/10/8; sceneFlag 150/25/1; localeFlag 162+1+13 *(c)* |
+| V-S3 | stub-envelope | `stubs/*.jsonl` ×9 | ∀ rows: 9-key envelope exact; `axes` present ⟺ merged-dup row, values ⊆ axis enum; kind ↔ filename per pinned map | 13,443 total; axes rows config 4 / metagame-node 2 / others 0 *(c)* |
+| V-S4 | pair-envelope | `relinks/<src>_<dst>.jsonl` ×24 | ∀ rows: frozen 9-key set; `sourceAxes` allowed per V-X4 rule; filename kinds ∈ node universe | 24,583 rows; `sourceAxes` on exactly 1 row *(c)* |
+| V-S5 | locale-rowshape | `locales/*.jsonl` ×14 | ∀ rows keyset == `{id,text}`; file set == 13 codes + `base-overlay` | 200,912 + 15,672 lines *(c)* |
+| V-S6 | flat-rowshapes | export-manifest, externals, media-catalogue, i2_term_registry, bridges/{cab,container}_index, ui_link_coverage | exact keyset per family on 100% of rows | manifest 167,069 · externals 222 · media 47,939 · registry 15,675 · cab 222 · container 49,855 · coverage 344 *(c)* |
+| V-S7 | matrix-cellshape | `relinks/matrix.json` | meta blocks present; 100 cells; per-status required keys; enums ⊆ frozen vocabularies; `pairs[]` order == row-major over `meta.nodeUniverse.nodes` (programmatic permutation check) | 100 cells; 10 nodes *(c)* |
+| V-S8 | report-shapes | catalog-coverage, settings.snapshot, base-overlay-report, guid_bridge_report, locale_join_report, assembly-index | exact field lists; `compositionPolicy` ∈ 4-enum; evidence counter COUNT == 15 names *(c)*; bridge report == 8 fields; join report field list; assembly-index stamp block carries `hierarchyRowCount` + counting-method string | as F6/F8/F11/F14/F15 *(c)* |
+| V-S9 | ledger-rowshapes | `_absences`, `_unmapped-families`, `_dangling_guids`, `_unresolved_pptrs`, `_uncontained_addresses` | exact keysets; `sampleRefs`/`samples` arrays present; `reason`/`evidence`/`verdict` ∈ declared vocabularies | shapes as F13/§7 *(c)* |
+| V-S10 | filename-grammars | harvest trees, `harvest/export-manifest.jsonl`, `relinks/*` | every export stem matches signed-pathId grammar `_(\|-)\d+$` (Rev 6 lesson); `outRelPath` spellings conform; `relinks/` holds ONLY the owned file set (no strays) | 167,069 stems conform; owned-set equality *(c)* |
+| V-S11 | enum-domains | all enum-bearing families | ∀ values ∈ declared domain; separately INFO-list DECLARED∧¬OCCURRING arms (method `i2-termid-registry` etc.; matrix `logic`; joinKeys 2; dangling verdicts 3) — growth into an arm prints INFO, out-of-vocabulary FAILS | occurring sets as F3/F4/F13 *(c)* |
+| V-S12 | buildid-coverage | every family carrying `buildId` | ∀ rows/artifacts: present ∧ == `identity.buildId` | 100% everywhere |
+| V-S13 | sort-orders | pair files, `_unresolved_pptrs`, `_dangling_guids`, `_uncontained_addresses`, matrix, catalog mini-report, roster, container/cab indexes | lexicographic by pinned keys (pair = dedup tuple; pptr = 5-tuple; guids/address = their key; roster = relpath; container = (bundle,address)) | all sorted |
+
+### Invariant pins (V-I)
+
+| ID | Name | Inputs | Check | Expected @20226581 |
+|---|---|---|---|---|
+| V-I1 | natural-key-uniqueness | stubs/id-per-kind, roster.relpath, export-manifest.outRelPath, container.address, (bundle,cab), (bundle,sourceFile), locale id per file, registry.termId, pair dedup tuple | duplicates == 0 per key | 176 · 167,069 · 49,855 · 222 · 222 · 15,675 · 24,583 all unique |
+| V-I2 | catalog-duplicate-key-exception | stage-2 extended mini-report (§3.3); `--scan-catalog` re-derives | distinct(key) == rows−1; exactly 1 duplicated value; its ≥2 rows byte-identical under canonical JSON | 56,660/56,659; dupe `f952c082cb03451daed3ee968ac6c63e` ×2 identical *(c)* |
+| V-I3 | ui-coverage-xor | `ui_link_coverage.jsonl` | status XOR: mapped ⇒ joins non-empty ∧ gapReason==null ∧ unblock==null; gap ⇒ gapReason+unblock non-empty ∧ joins empty | mapped 9 / gap 335 *(c)* |
+| V-I4 | matrix-structural-rules | `matrix.json` | partial∨missing ⇒ non-empty `unblock`; modeled ⇒ non-empty `pairFiles`; Σ cardinality.edges consistency delegated to V-R1 | 73+3 with unblock; 24 with pairFiles |
+| V-I5 | twin-bijection | `stubs/*.jsonl` | id ∋ `@<8hex>` ⟺ `fields.id` present; `fields.id` == suffix-stripped id | 17 ⇔ 17 (12/3/2) *(c)* |
+| V-I6 | byte-match-nonempty | last emit-stubs run section | `identifierByteMatch.checked > 0 ∧ mismatches == 0` (Rev 6 amendment 3 incident guard) | checked 2,128 *(c)* |
+| V-I7 | sample-caps | `_dangling_guids.sampleRefs`, `locale_join_report.unresolvedIds[].sampleRefs`, `_absences.samples` | array lengths ≤ pinned caps | ≤5 · ≤5 · ≤25 *(c)* |
+| V-I8 | exitcode-ledger-contract | §7 inventory ↔ last relink run section ↔ actual ledger files | declared-contributor list == computed non-empty set; sizes match; last relink exitCode == 2 iff set non-empty | contributors per §7 *(c)* |
+| V-I9 | ownership-single-writer | `pins.pathOwner` map + grep over `tools/*.py` write targets | each extracted/ path has exactly one writing script; `locale_availability.jsonl` → stage5 only; rest of `relinks/` → stage6 only; RELATIONS.md regenerated by relink only | map satisfied |
+
+### Cross-family pins (V-X)
+
+| ID | Name | Inputs | Check | Expected @20226581 |
+|---|---|---|---|---|
+| V-X1 | stub-id-closure | pairs ↔ stubs | srcId/dstId (non-special dstKinds) ⊆ emitted stub ids, twins matched WITH suffix | 0 misses / 24,583 |
+| V-X2 | special-dstkind-closure | pairs ↔ registry/container/roster/catalog | `locale-term` ⊆ termKeys; `scene` ⊆ 26 roster scene ids IF any `*_scene.jsonl` exists (absence tolerated, scout G7); `asset` ⊆ container addresses MINUS the uncontained carve-out, and carve-out set == `_uncontained_addresses` population exactly | 0 misses; carve-out 5 addresses / 9 edge rows *(c)* |
+| V-X3 | bundle-name-closure | stub `source.bundle`, manifest `sourceBundle`, pair evidence bundles, catalog mini-report | normalized basename ∈ roster relpaths | 0 orphans (11 + 114 bundles) *(c)* |
+| V-X4 | axes-consistency | pairs ↔ stubs | `sourceAxes` present ⟺ ≥1 endpoint row carries `axes`; value == union of endpoint axes | holds on the 1 carrier row *(c)* |
+
+### Counter-unit pins (V-U)
+
+| ID | Name | Inputs | Check | Expected |
+|---|---|---|---|---|
+| V-U1 | units-inline-in-artifacts (**RED-3**) | guid_bridge_report, locale_join_report, base-overlay-report, catalog-coverage | `counterUnits` present; covers EVERY numeric field; values ∈ frozen unit vocabulary; bridge report's `resolvedTo*`/rates declare `reference-events` | ABSENT today → FAIL; green after §9 fix |
+| V-U2 | duplicate-keys-printed-and-persisted (**RED-2**) | localisation run section + `base-overlay-report.json.evidence` | per-locale `duplicateKeysOverwritten` PRINTED; persisted map + total; identity `rowsLogged == termsWalked − skippedEmpty` AND `rowsLogged − fileLines == duplicateKeysOverwritten` hold per locale | counter absent today → FAIL; green after §9 fix; then +5/locale *(c)* |
+| V-U3 | unit-typed-reconciliations | `pins.json.reconciliations[]` + runner self-lint | every reconciliation declares leftUnit/rightUnit from the frozen vocabulary; mismatched units without a declared transform ⇒ runner refuses to load (exit 1); fixture test proves the refusal fires | 0 unit-mismatched registrations |
+
+### Ledger-gap pins (V-L)
+
+| ID | Name | Inputs | Check | Expected |
+|---|---|---|---|---|
+| V-L1 | uncontained-address-ledger (**RED-1**) | `entity_asset_guid.jsonl` ↔ catalog mini-report ↔ `container_index.jsonl` ↔ `_uncontained_addresses.jsonl` | every asset row whose dstId has a catalog entry with `bundle:null` (equivalently: absent from container_index while catalog-resolvable) has ≥1 matching ledger row; ledger population == distinct uncontained addresses; every row carries reason `catalog-bundle-null-uninstalled-dlc` | ledger MISSING today → FAIL; green after §9 fix; then 5 rows / 9 edges *(c)* |
+| V-L2 | ledger-sorts-and-shapes | all ledgers | sorts per V-S13; row shapes per V-S9; `_unresolved_pptrs` reason strings == the 2 pinned strings; `_dangling_guids` verdicts ⊆ 4-enum | 2,391 = 2,284+107; 1,137 all `unresolved-open` *(c)* |
+| V-L3 | registry-misses-exit2-contributor | `locale_join_report.json` ↔ run section | `registryMisses` counted as contributor (V-I8); `unresolvedIds` rows carry sampleRefs ≤5; count == 5 known IDs *(c)*, drift = PIN-MISMATCH | surfaced via locale_join_report.json |
+
+### Doc/routing pins (V-D)
+
+| ID | Name | Inputs | Check | Expected |
+|---|---|---|---|---|
+| V-D1 | availability-routing-note | `contracts/families/exceptions.mdx` + `RELATIONS.md` | both contain the pinned routing statement ("per-term locale availability lives in `locales/locale-matrix.json`; `locales[]` fields are reserved-but-empty") and the faithful-projection sentence | note ABSENT from RELATIONS.md today → FAIL; green when the generator template gains the paragraph (§9 fix bundle) |
+| V-D2 | exception-sheet-numbers | exceptions.mdx ↔ pins.json | the four §5 exceptions present; every interpolated number equals its pin | sheet ships with the layer |
+| V-D3 | pins-blocks-sync | families/*.mdx fenced ```` ```pins ```` blocks ↔ pins.json slices | canonical sorted-keys JSON equality per family | equality at all times |
+| V-D4 | buildscope-freshness | `identity.json.buildId` ↔ `pins.buildScope.buildId` | equal ⇒ PASS; differ ⇒ PIN-STALE (exit 1; `--warn-stale` downgrades) | equal at 20226581 |
+
+### Reconciliation pins (V-R)
+
+| ID | Name | Inputs | Check (identity) | Expected |
+|---|---|---|---|---|
+| V-R1 | matrix-edges==pair-rows | matrix.cells ↔ 24 pair files | Σ cardinality.edges == Σ pair-file rows | == == (24,583 today) |
+| V-R2 | cab==census | cab_index.objects ↔ 176 census files | Σ objects == Σ objectsByClass | == == (2,026,658 today) |
+| V-R3 | media==carved-census | media-catalogue ↔ census carved classes | per-class count equality, 9 classes | == == on all 9 |
+| V-R4 | registry==matrix-keys | i2_term_registry ↔ locales/locale-matrix.json | bidirectional set diff == 0 over distinct termKeys | == == (15,672 today) |
+| V-R5 | reverse-index==entity-locale | locale_term_entity ↔ entity_locale | Σ usages == row count | == == (10,964 today) |
+| V-R6 | catalog-coverage-internal | extended mini-report | keysTotal == Σ kindCounts == 56,660 *(c)*; distinctBundlesReferenced == 176; unreferenced [] ; danglingDependencyKeys 0; internal sums consistent WITHOUT touching catalog.json | == == |
+| V-R7 | roster==enumerated-bundles | roster ↔ filesystem walk of the three dirs | row count == enumerated `*.bundle` count; dirClass counts == expectedBundles | == == (176) |
+| V-R8 | guid-bridge-replay | stubs + catalog mini-report/index + container_index + roster via the pure seam `relink_util.run_guid_bridge` | replayed 7 fields == report bit-exact (floats included); universes reproduced (asset rows 15,630 membership; pair rows 3,746) — CLIENT-GATED lane | == == (values per F11) |
+
+## 9. Red→green harness — the three confirmed breaks
+
+Post-corrections, exactly three defects remain real, measurable, and
+fixable; everything else in the scout's gap list became documentation
+(G4/G5 → §5/V-D1 and the competitor shape pinned as measured in V-S9's
+vocabulary work) or was retracted (G1's drift reading). The suite lands
+with EXACTLY these three in `contracts/red-registry.json` — anything
+else unexpectedly red is a spec defect, not a finding:
+
+| Break | Validator | Why it fails TODAY | Fixing amendment (small, additive) | Green condition |
+|---|---|---|---|---|
+| RED-1 — unledgered uncontained terminations (F12) | V-L1 (+ V-X2 carve-out leg) | 9 `entity_asset_guid` rows terminate at 5 DLC3_Hospital addresses with `bundle:null` catalog entries and NO ledger row anywhere | `stage6_relink.py` emits `_uncontained_addresses.jsonl` during the R3 pass (addresses already in hand at termination time) and registers it in the §7 contributor enumeration | 5 ledger rows covering 9 edges; V-X2 carve-out == ledger set; exit stays 2 (new declared contributor) |
+| RED-2 — overwrite counter invisible (F9) | V-U2 | `duplicateKeysOverwritten` incremented twice in `tools/stage4_localisation.py`, printed nowhere, persisted nowhere — the units bridge between 200,977 events and 200,912 lines is unexpressible on paper | stage-4 prints per-locale `duplicateKeysOverwritten` in its run section and persists the map+total into `base-overlay-report.json.evidence` (CLOSES scout OQ1: both surfaces) | identities hold per locale (+5/locale today); totals reconcile |
+| RED-3 — counter units undocumented in artifacts (F11, F15) | V-U1 (+ V-D1's RELATIONS.md leg) | `guid_bridge_report.json` counts references but says so only in a code docstring; no report carries `counterUnits`; stage-1's `registryCount` unit likewise implicit | generators emit static `counterUnits` dicts (frozen vocabulary); RELATIONS.md template gains the §5 routing paragraph; EXTRACTION-LOG stage-1 line annotates the class-count unit | all four reports vocab-complete; routing statement present in both files |
+
+Sequencing contract: the contracts layer and the three emitter
+amendments are ONE piece (parallel lanes allowed: CodeWriter takes
+runner+validators, a fixer lane takes the three emitter deltas), but
+AC2 requires the END state — suite fully green, registry empty, seven
+prior stages' existing outputs byte-behaved identically except the
+three additive extensions above.
+
+## 10. Output contracts (tracked layout)
+
+```
+contracts/                          # NEW — tracked by default policy (§3.1)
+├── README.mdx                      # what this layer is; how to re-pin after a patch
+├── pins.json                       # machine source of truth (sorted keys, UTF-8, LF)
+├── red-registry.json               # deliberately-red validators + fixing amendment refs
+├── counter-units.mdx               # the frozen unit vocabulary + per-counter dictionary
+├── ledger-map.mdx                  # declared ledgers, owners, exit-2 contribution rules (§7)
+└── families/
+    ├── stage0-identity.mdx
+    ├── stage1-decompile.mdx
+    ├── stage2-addressables.mdx
+    ├── stage3-harvest.mdx
+    ├── stage4-locales.mdx
+    ├── stage5-stubs.mdx
+    ├── stage6-relinks.mdx
+    └── exceptions.mdx              # consumer-facing exception sheet (§5)
+
+extracted/relinks/
+└── _uncontained_addresses.jsonl    # NEW ledger (RED-1 fix) — local-only data
+
+tools/check_contracts.py            # NEW runner + validators (read-only)
+tests/test_contracts_*.py           # NEW hostless fixtures + mutation harness
+tests/build_fixture_tree.py         # += --stage check-contracts materialization
+Makefile                            # += contracts target
+run_all.py / tools/tpc_common.py    # += eighth stage registration (additive)
+tools/stage2_harvest_catalog.py     # += catalog mini-report extension (emit-time)
+tools/stage4_localisation.py        # += print+persist duplicateKeysOverwritten
+tools/stage6_relink.py              # += uncontained ledger + counterUnits + routing paragraph
+README.md                           # layout row: contracts/ -> this piece
+docs/specs/piece-01-extraction-pipeline.mdx   # Revision 8 one-liner set (§3.3 stage, §10 layout note)
+```
+
+Provenance: `contracts/**` and `tools/**` are repo-plane; nothing in
+them reaches user surfaces (AGENTS rule 3 — buildId may, everything
+else here stays repo-side).
+
+## 11. Acceptance criteria (mechanical, whole piece)
+
+1. **Entrypoint:** `python tools/check_contracts.py --root extracted`
+   and `make contracts` both run the full suite; `python run_all.py
+   --list` enumerates EIGHT stages ending `..., relink,
+   check-contracts`; `make list` equivalent; `--only check-contracts`
+   runs in isolation on a prepared tree (client mode via
+   `--skip check-contracts` then `--only`; hostless smoke via
+   `tests/build_fixture_tree.py --stage check-contracts`).
+2. **End-state color:** on the current corpus the suite exits 0 with
+   ZERO EXPECTED-RED entries remaining; before the emitter amendments
+   land, exactly V-L1, V-U1(+V-D1 RELATIONS.md leg), V-U2 are red and
+   registered — no other validator may be red at introduction.
+3. **Teeth (deliberate mutation):** for every FAIL-capable validator,
+   ≥1 scripted mutation in `tests/contracts_mutations.py` kills it with
+   the CORRECT id and the correct expected/measured payload — drop-a-key,
+   add-a-key, change-an-int, unsort-two-rows, delete-a-ledger-row,
+   duplicate-a-natural-key, make-dupe-rows-differ-by-one-byte,
+   swap-an-enum-value, flip-null, truncate-sample-cap, bump-counter-
+   without-sibling, register-a-unit-mismatched-reconciliation. Mutation
+   score 100% (exceptions listed per-validator if any). INFO-only
+   legs exempt.
+4. **Zero-write:** the runner creates/modifies NOTHING under
+   `extracted/` (test: tree hash before/after a full run, minus
+   log/stamps/meta exclusions).
+5. **Determinism:** two consecutive runs produce byte-identical stdout
+   reports on an unchanged tree; no timestamps anywhere in output.
+6. **Heavy-artifact policy:** default run touches `catalog.json` zero
+   times (strace-equivalent test: open-count via instrumented loader);
+   `--scan-catalog` works and agrees with the mini-report.
+7. **Unit gate:** registering any reconciliation with mismatched units
+   and no declared transform refuses to load (fixture-proven).
+8. **Non-regression:** the seven existing stages' outputs hash-equal a
+   pre-piece run EXCEPT the three additive extensions (mini-report
+   fields, overlay evidence block, new ledger file + counterUnits
+   blocks + one RELATIONS.md paragraph); `--only <any-of-seven>` reruns
+   stay byte-identical per piece-01 AC5.
+9. **Exit codes:** 0/1/2/3 per §3.4, fixture-tested including the
+   EXPECTED-RED→exit-2 path and the PIN-STALE→exit-1 path.
+
+## 12. Explicit non-goals (later pieces own these)
+
+- PROOF.md / VALIDATION-REPORT.md derivation — #11 CONSUMES §7's
+  inventory and V-R* results; this piece writes neither.
+- Maps/logic/protocol contracts — directories empty; node names
+  reserved (§4).
+- Fixing the underlying data behind ANY pin (e.g. acquiring the
+  DLC-Hospital axis, retiring I2 duplicate terms) — owner-routed; pins
+  keep state HONEST, not changed.
+- Competitor ladder execution; the floor lever stays owner-routed —
+  V-I8 keeps the terminal row auditable (`sourcesApplied` consistent
+  with dispositions), nothing more.
+- Site/UI anything (AGENTS rule 8 gate; the exception sheet is the
+  handoff surface, not site code).
+- Slug generation policy — site layer owns it (§13 Q2).
+- Re-pinning after the NEXT game patch — procedure documented in
+  `contracts/README.mdx`, executed by whoever runs that patch.
+
+## 13. Open questions routed back (none block the build)
+
+| Question | Route |
+|---|---|
+| Q1 `duplicateKeysOverwritten` surface — DECIDED HERE pending arbiter: printed in the run section AND persisted in `base-overlay-report.json.evidence` (both surfaces serve different readers) | Reviewer/arbiter confirm; scout OQ1 closes with AC2 |
+| Q2 slug policy — contract pins `slug:null` allowed; generation is site-layer | Owner confirms adjacent to QUESTION-QUEUE standing items |
+| Q3 `locale_availability.jsonl` retirement — stays stage-5-owned honest-zero v1; consumers routed; retirement remains a piece-1 revision | Owner/orchestrator per piece-02 §7 |
+| Q4 guid_bridge derivability — SETTLED by verification: replayable bit-exact, instrumentation semantics kept, `counterUnits` emitted (RED-3) | Closed; piece-02 §R3 field list unchanged, one additive object |
+| Q5 stage-2 mini-report extension touches piece-01 territory (emitter change) | Arbiter confirms additive scope; piece-01 Rev 8 note records it |
+| Q6 eighth-stage registration mutates `--list` (seven→eight) | Arbiter confirms; piece-01 Rev 8 mirrors piece-01 Rev 7's amendment pattern |
+
+## 14. Test obligations (TestWriter contract)
+
+**Fixture-based (hostless; synthetic bytes only)** — the fixture tree
+materializes minimal versions of EVERY validated family (green state),
+then the mutation harness derives red states:
+
+- runner: eight-stage `--list` ordering; `--only check-contracts`
+  isolation; exit-code mapping incl. EXPECTED-RED (registry hit → 2)
+  and PIN-STALE (bump fixture buildId → 1, `--warn-stale` → 0-with-
+  INFO); determinism double-run; zero-write assertion; missing-input →
+  3.
+- V-S*: per-family keyset violations (each family mutated once);
+  filename-grammar mutants (unsigned stem, stray relinks file, bad kind
+  filename); enum mutants (in-vocabulary-new-arm → INFO asserted;
+  out-of-vocabulary → FAIL); buildId mutant; sort mutant.
+- V-I*: uniqueness mutants per key class; catalog dupe mutants
+  (second differing copy must FAIL byte-identity leg); XOR mutants both
+  directions; unblock-less `missing` cell; twin-bijection break (17th
+  twin without `fields.id`); byte-match `checked=0` silent-pass
+  regression; cap overflow; ledger-contributor list desynced from
+  files (exit-2 contract breaks both ways); ownership map violation
+  (a second writer path injected).
+- V-X*: id-closure miss (dstId invented); scene-id space violation;
+  asset carve-out desynced from `_uncontained_addresses`; axes-union
+  mutant; bundle-name orphan.
+- V-U*: counterUnits absent / wrong vocabulary / incomplete field
+  coverage; duplicateKeysOverwritten printed-but-not-persisted and
+  vice-versa; identity arithmetic violated; unit-mismatched
+  reconciliation registration refused.
+- V-L*/V-D*: ledger sort/shape mutants; registryMisses dropped from
+  contributor list; routing note removed from either file; pins-block
+  edited by hand (V-D3 must fail); buildScope bumped (V-D4).
+- V-R*: each reconciliation mutated on ONE side only (the exact
+  failure mode the piece exists to catch) — matrix edge bumped, census
+  object dropped, media class count shifted, registry key renamed,
+  reverse usage deleted, coverage keysTotal drifted, replay seed
+  altered.
+- mutation harness self-test: an intentionally toothless validator
+  (registered only inside tests) must be reported as score-failure.
+
+**Client-gated integration (auto-SKIP without `TPC_GAME_DIR`/default
+install; runs on NE8K against the real corpus):**
+
+- full suite green at buildId 20226581 with the pinned constants of §8;
+- V-R8 replay bit-exactness incl. float rates and universe membership;
+- V-I2 agreement between mini-report and one `--scan-catalog` pass;
+- V-L1 population == 5 rows / 9 edges until the DLC axis lands;
+- V-U2 identities on all 13 real locales (+5 each, totals 200,977 /
+  200,912);
+- idempotence: `--only check-contracts` double-run hash-equal.
+
+---
+
+## Revision 1 (initial registration)
+
+Grounded in the verified scout round
+([report rev 2](../scout-report-piece-05-contracts.mdx) + both
+verdicts), 2026-08-26. Establishes the complete `contracts` stage
+family as specified above: tracked layer at pack-root `contracts/`
+(§3.1); pins.json + family MDX + red-registry layer model (§3.2);
+non-emitting eighth pipeline stage `check-contracts` + `make contracts`
+(§3.3); exit codes 0/1/2/3 with EXPECTED-RED→2 and PIN-STALE→1 (§3.4);
+derived-over-transcribed pinning with build-scoped constants (§3.5);
+taxonomy classes A/B/C plus added CU/L/D (§4); four consumer-facing
+exception pins (§5); counter-unit pins with the naive-line-equality ban
+enforced structurally (§6); ledger-gap pins adding
+`_uncontained_addresses.jsonl` as a declared exit-2 contributor and
+inventorying `registryMisses` (§7); 41 named validators with formulas,
+expected values, and the standard failure payload (§8); the three-break
+red→green harness (§9); tracked output layout (§10); nine mechanical
+acceptance criteria incl. 100%-score mutation teeth (§11). Three
+additive emitter amendments authorized: stage-2 catalog mini-report
+extension, stage-4 duplicateKeysOverwritten print+persist, stage-6
+uncontained ledger + counterUnits + RELATIONS.md routing paragraph.
+No commits in this piece; implementation follows the PrepareTask
+pipeline.
+
+§END
