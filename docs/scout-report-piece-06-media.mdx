@@ -21,17 +21,22 @@ Inputs read in full first: repo-root `AGENTS.md`,
 [`docs/scout-report-001.mdx`](scout-report-001.mdx) §toolchain.
 
 **Headline up front:** the entity→icon join is already ~solved by landed
-artifacts and measures **99.7% resolvable** — 2,151 of 2,158 distinct
+artifacts and measures **99.68% resolvable** (2,151 of 2,158 distinct
 icon sprites referenced by stub fields resolve through
-catalog-GUID → container-index → media-catalogue rows, all of them as
+catalog-GUID → container-index → media-catalogue rows), mostly as
 **SpriteAtlas-packed sprites** (`(atlasGUID, subSpriteName)` pairs), not
-loose textures. A deterministic UnityPy crop-export stage is feasible
-now at trivial volume (~26.6 Mpx source area ≈ 2–27 MiB shipped); the
-two real holes are **courses carry zero icon references** (needs a
-mapping pass, only 11/69 match the naive name convention) and **slug
-fields are 100% null** (piece-02 fact), so file naming must key on the
-game-canonical `subObjectName` first with slug rename as a later pure
-map.
+loose textures — precisely **3,717 of 3,870** sprite-typed references
+target `.spriteatlasv2`; the rest (~150, mostly with empty `sub`) point
+at plain Sprite assets and need an explicit standalone route (§3.1).
+A deterministic UnityPy crop-export stage is feasible now at modest
+volume (**108,445,749 px source crop area ≈ 8–25 MiB shipped WebP**,
+pixel-exact figure cross-validated against AssetStudioModCLI exports
+during the verification round); the two real holes are **courses carry
+zero icon references** (needs a mapping pass — though 24 config-side
+refs already point at Courses-Qualifications sprites, so the carrier
+probe is cheap) and **slug fields are 100% null** (piece-02 fact), so
+file naming must key on the game-canonical `subObjectName` first with
+slug rename as a later pure map.
 
 Probe method used throughout (read-only, no pixel decodes except none):
 UnityPy 1.25.3 from the pack `.venv` with
@@ -41,9 +46,12 @@ UnityPy 1.25.3 from the pack `.venv` with
 `0.0.0`); header-only reads of every Texture2D/Sprite/SpriteAtlas object
 (`m_Width/m_Height/m_TextureFormat/m_MipCount`, `Sprite.m_Rect`,
 `Sprite.m_RD.textureRect`). Sweep covered **all 96 texture-bearing
-bundles** in ~15 s wall time and reconciled exactly with the catalogue:
+bundles** in ~15 s wall time and reconciles with the catalogue:
 7,977 Texture2D + 6,789 Sprite + 47 SpriteAtlas = the catalogue's class
-rows, no residue.
+rows. Correction note: this scout's first sweep accidentally re-added
+the `dlc-space-ui-spriteatlas` bundle a second time (+6 rows); the
+verification round's recount is authoritative wherever the two differ
+(DXT5 = 2,793, no duplicate atlas objects exist).
 
 ---
 
@@ -94,7 +102,7 @@ stated above; counts reconcile with catalogue exactly).
 | Format (TextureFormat enum) | Count | Serialized B | Note |
 |---|---|---|---|
 | DXT1 (=10, BC1) | 4,504 | 6,873,576 | opaque world/env art |
-| DXT5 (=12, BC3) | 2,799 | 19,528,904 | alpha world/UI atlas pages |
+| DXT5 (=12, BC3) | 2,793 | 19,528,904 | alpha world/UI atlas pages (verification recount; the scout sweep's +6 double-count sat here) |
 | BC4 (=26) | 314 | 73,120 | single-channel masks |
 | RGBA32 (=4) | 141 | 157,549,760 | **75.2% of serialized bytes** — the big dlc-space-art / character textures ship uncompressed |
 | Alpha8 (=1) | 71 | 25,441,576 | font/glyph masks |
@@ -123,11 +131,13 @@ explicitly.
 
 ### Sprites
 
-6,789 Sprite objects; 4,686 carry a usable packed rect
-(`m_RD.textureRect` ≥4px both axes). Measured dims ladder (max dimension):
-≤64 px **1,477** · ≤128 px **2,582** · ≤256 px **3,712** (of 4,686);
-median area 8,192 px². This is an icon-scale corpus, not a wallpaper
-corpus — the web ladder in §5 is sized accordingly.
+6,789 Sprite objects; **6,787/6,789 carry a usable rect** once the
+render-data pairing rule is applied (textureRect where present, else the
+sprite's own m_Rect — see the exporter facts in §6); the scout's first
+pass ("4,686 usable") was an artifact of filtering on `textureRect`
+alone and is superseded. Median sprite area **34,939 px²** — this is a
+mixed icon-plus-illustration corpus, not a tiny-glyph corpus; the web
+ladder in §5 is sized accordingly.
 
 ## §3 Entity→icon join measurements per kind
 
@@ -149,49 +159,77 @@ An export stage can drive entirely off that file plus the two indexes.
 
 ### Per-kind results (every number measured this session)
 
-| kind | rows | rows w/ any GUID ref | GUID refs | refs resolving to a Sprite/SpriteAtlas target | dangling GUIDs |
+| kind | rows | rows w/ non-empty refs | GUID refs | sprite-typed targets | dangling GUIDs |
 |---|---|---|---|---|---|
-| items | 3,885 | 3,875 | 8,140 | **1,919** | 363 (351 `EditorFallbackIconReference`, editor-only; 12 `VisualsPrefab`) |
-| configs | 8,430 | 3,406 | 11,422 | **1,565** (HUD/status/trophy/reward icon chrome) | 3,664 (character-module `Meshes[n]` etc. — non-icon) |
+| items | 3,885 | 3,875 | 8,140 | **1,919** (all `.spriteatlasv2`) | 363 (351 `EditorFallbackIconReference`, editor-only; 12 `VisualsPrefab`) |
+| configs | 8,430 | 3,406 | 11,422 | **1,412 `.spriteatlasv2` + 153 plain-Sprite** (HUD/status/trophy/reward chrome; the earlier single "1,565" cell did not reproduce under recount — components stated instead) | 3,664 (character-module `Meshes[n]` etc. — non-icon) |
 | metagame-nodes | 454 | 344 | 202 | **202** (research-project icons) | 0 |
 | rooms | 116 | 106 | 115 | **115** (room IconReference + FunctionalDescriptors) | 0 |
 | student-types | 54 | 27 | 27 | **27** | 0 |
 | staff | 3 | 3 | 15 | **9** (IconReference + OverlayIconNormal/Problem ×3) | 0 |
-| unlockables | 415 | 124 | 201 | **33** | 26 (`Meshes[0]`) |
+| unlockables | 415 | **63** | 201 | **33** | 26 (`Meshes[0]`) |
 | courses | 69 | 0 | 0 | **0** | 0 |
 | campus-levels | 17 | 13 | 20 | 0 | 7 (`LevelConfig`) |
 
+Unlockables row-count note: 124 rows carry ref-SHAPED fields but only
+63 hold non-empty values — the export manifest keys on non-empty.
+
 Findings that shape the piece:
 
-1. **Every icon-bearing field resolves to a SpriteAtlas asset, 100%.**
-   All 3,870 sprite-typed references land on `.spriteatlasv2` assets
-   (`UI_Icons`, `UI_Items_New`, `UI_Costumisation`, `UI_StatusIcons_New`,
+1. **The atlas route is dominant, not total: 3,717 of 3,870**
+   sprite-typed references target `.spriteatlasv2` assets (`UI_Icons`,
+   `UI_Items_New`, `UI_Costumisation`, `UI_StatusIcons_New`,
    `DLC1_Space_UI_Icons`, `DLC2_Atlas_*`, …) with the concrete sprite in
-   `m_SubObjectName`. Zero dangling among genuine icon fields — the only
+   `m_SubObjectName`. The remaining ~150 resolve to plain **Sprite**
+   assets, mostly with empty sub-names — an export spec needs an
+   explicit standalone-sprite naming route for them, not just the atlas
+   crop path. Zero dangling among genuine icon fields — the only
    dangling icon-shaped field in the whole corpus is
    `EditorFallbackIconReference` (351, editor-only GUIDs absent from the
    runtime catalog; ledger and skip).
-2. **Distinct referenced sprites: 2,158; resolved: 2,151 (99.7%).**
+2. **Distinct referenced sprites: 2,158; resolved: 2,151 (99.676%) —
+   reproduced exactly by the verification round and kept as PRIMARY.**
    The 7 unmatched are all DLC3/Medical-School-named
    (`UI_InGame_DLC3_Icon_studentArchetype_Doctors`,
    `UI_InGame_T_Icon_Item_Teamsports_Cheeseball`, …) — content of the
    unowned DLC 2195430, consistent with catalog-coverage's 19
    out-of-roster `dlc-hospital-*` references. Honest missing states,
    not defects.
-3. **PPtr icon fields are dead weight**: `ItemsMenuIcon` /
-   `SwatchMenuIcon` plain PPtr slots measure `m_PathID=0` (null) on the
-   sampled rows while the paired `*Reference` GUID fields carry the
-   data — the Reference pattern IS the icon mechanism. Export stage
-   ignores bare PPtr icon slots (matches piece-02's slug-null finding).
-4. **Measured icon sizes for the referenced set** (rects matched by
-   name against the sweep): median max-dim **42 px**; ≤64 px 1,509
-   (70%) · ≤128 px 1,813 (84%) · ≤256 px 2,039 (95%) · >512 px 41.
-   Total source crop area **26,595,109 px** ≈ 101 MiB RGBA-equivalent.
-5. **courses are the hole.** `TPC.CourseDefinition` carries no icon or
-   visual reference field at all. Name-convention matching
-   (`Course_X → UI_InGame_Courses_T_Icon_X`) resolves only **11/69**;
-   42 `*_Courses_T_Icon_*` sprites exist. The real carrier is likely the
-   Qualification PPtr chain or configs-side course art (§9 Q1).
+   Context from the adversarial verifier: widening the universe to all
+   167k harvested dumps adds 529 extra referenced names outside stubs,
+   525 of them resolvable (99.59%) — the join holds beyond the stub
+   layer too.
+   Dual-basis footnote: counting distinct `subObjectNames` instead of
+   resolved sprite rows yields **2,146/2,153**, because only 2,119 of
+   the 2,151 names are Sprite catalogue rows (the rest match Texture2D
+   or multi-class names). State the basis in any derived artifact.
+3. **PPtr icon fields are mostly dead weight — but the live ones must
+   be ledgered, never dropped.** The overwhelming pattern holds:
+   `ItemsMenuIcon`/`SwatchMenuIcon` bare PPtr slots are null while the
+   paired `*Reference` GUID fields carry the data (683/707-style
+   dead-weight framing survives). But a minority of icon PPtr slots are
+   NON-null external pointers with empty paired References — the
+   verification round measured **24 on its external-pointer scan basis
+   (fileId 14)**; this scout's broader icon-name scan measures 122
+   nonzero icon-named PPtr slots across kinds (`BadgeIcon` ×67,
+   `RivalIcon`, `InboxTrayIcon_*`, fileId spread incl. 14), all with
+   empty paired References. Either way: these slots point somewhere the
+   Reference pattern misses — ledger them in the export stage's residue
+   file rather than ignoring the field family wholesale.
+4. **Measured sizes for the referenced set** (pixel-exact, cross-
+   validated against AssetStudioModCLI exports during verification):
+   total source crop area **108,445,749 px**; median max-dim **≈233 px**;
+   ≤64 px only **29 (1.3%)**; >512 px just 4. This is NOT a tiny-glyph
+   set — the shipped-volume bands below are rebased on it, and a
+   thumbnail downscale tier becomes meaningful (§5).
+5. **courses are the hole, refined.** Confirmed: zero visual/icon
+   fields on ALL 69 course rows. `Qualification` PPtr is populated on
+   **28/69** (not universal); strict name-convention matching
+   (`Course_X → UI_InGame_Courses_T_Icon_X`) resolves **9/69**; 42
+   `*_Courses_T_Icon_*` sprites exist. Cheapest carrier probe: **24
+   config-side refs already point at Courses-Qualifications sprites**,
+   so the qualification-chain join can be verified from landed dumps in
+   one pass (§9 Q1).
 
 ## §4 Atlas inventory
 
@@ -203,7 +241,7 @@ one bundle each):
 | UI_Items_New | ui-spriteatlas_assets_all | 1,099 |
 | UI_Costumisation | ui-spriteatlas_assets_all | 400 |
 | UI_Icons | ui-spriteatlas_assets_all | 352 |
-| UI_DLC1_Items | dlc-space-ui-spriteatlas_assets_all | 169 (×2 same-name objects — see §9 Q5) |
+| UI_DLC1_Items | dlc-space-ui-spriteatlas_assets_all | 169 |
 | UI_MenuCommon | ui-spriteatlas_assets_all | 131 |
 | UI_HUD_Icons | ui-spriteatlas_assets_all | 128 |
 | …43 more | … | total packed slots **3,154** |
@@ -237,11 +275,12 @@ Inputs the Documentator should pin — each traced to a §2–§4 measurement:
   ffmpeg 7.1 exists on PATH as an emergency transcoder but adds a
   second encode stack for no measured benefit at icon sizes.
 - **Ladder.** Ship ONE canonical asset per sprite at native resolution —
-  median max-dim 42 px, 84% ≤128 px (§3.4); downscaling 42 px sources
-  to a fixed 16/32/64 ladder destroys them, upscaling lies. Optional
-  secondary: cap >512 px outliers (41 sprites, mostly screenshots)
-  at 512. CSS owns presentation sizing. No @2x tier (sources ARE the
-  native resolution).
+  median max-dim ≈233 px, only 29 referenced crops ≤64 px and just
+  4 above 512 px (§3.4) — plus an optional derived thumbnail tier
+  (~96/128 px) for dense grid views, which is meaningful now that
+  sources are large enough to downscale honestly. No upscaling, ever;
+  a fixed 16/32/64-only ladder would destroy the median crop. CSS owns
+  presentation sizing.
 - **Naming.** `{plane}/{subObjectName}.webp` where subObjectName is the
   game-canonical sprite name (unique enough: 2,158 referenced names,
   collisions handled by `{name}_{pathId}` suffix rule — same rule as
@@ -275,7 +314,7 @@ Inputs the Documentator should pin — each traced to a §2–§4 measurement:
 | Capability | State |
 |---|---|
 | AssetStudioModCLI | **Staged and runnable** — `C:\_reps\game-databases\zero-parades\work\_tooling\AssetStudioModCLI\AssetStudioModCLI_net8_portable\AssetStudioModCLI.exe`, v0.19.0 net8 portable; `--help` executed this session. Relevant flags: `-t sprite,tex2d`, `-m info/export/exportRaw/dump`, `--image-format webp|png|jpg|bmp|tga`, `--filter-by-name/-pathid/-container`, `-g containerFull`, `-f assetName_pathID`, `--export-asset-list`, **`--unity-version <text>` — REQUIRED here** because all bundles carry header `0.0.0` (executor-001 finding). |
-| UnityPy decode path | Pack `.venv` UnityPy 1.25.3 + Pillow 12.3.0. Header sweep of all 96 tex-bearing bundles ran ~15 s (this session). `Texture2D.m_TextureFormat/m_MipCount`, `Sprite.m_RD.textureRect` all readable; pixel decode via UnityPy's image path (not exercised at scale here — the one deliberate gap in this scout). `FALLBACK_UNITY_VERSION` seeding already solved in-tree (`tools/unitypy_util.py`). |
+| UnityPy decode path | Pack `.venv` UnityPy 1.25.3 + Pillow 12.3.0. Header sweep of all 96 tex-bearing bundles ran ~15 s (this session). `Texture2D.m_TextureFormat/m_MipCount`, `Sprite.m_RD.textureRect` all readable; pixel decode via UnityPy's image path (not exercised at scale here — the one deliberate gap in this scout). `FALLBACK_UNITY_VERSION` seeding already solved in-tree (`tools/unitypy_util.py`). **Exporter facts from the verification round (validated pixel-exact against real crops):** (a) ~46% of Sprites carry NULL texture pointers — the exporter needs a render-data pairing rule (follow the sprite's render-data/texture PPtr to its home object, possibly cross-bundle) before a rect exists; (b) fractional rects occur — round with a stated rule, don't int-truncate; (c) one BC7 atlas page exists despite the format census being DXT-dominated — decode path must not assume BC1/BC3 only; (d) sprite homes are cross-bundle for 2,059 referenced refs (sprite object not in the atlas-def's bundle), so resolution must go name→container_index, never bundle-local lookup. |
 | Stage integration point | `STAGES` list in `tools/tpc_common.py` (stage-6 registered additively — same pattern); `run_all.py --only <id>` isolation, upstream pre-check exit-3, stamp layer, exit-code ledger discipline all exist. |
 | Codec/host | ffmpeg 7.1 on PATH (Winget Gyan build). `cwebp`/`avifenc`/ImageMagick absent. C: free space must be re-measured before any bulk decode (extraction-host drive-map warns it moves; last record 84.77 GiB). |
 
@@ -286,12 +325,11 @@ Gaps (all closable inside the piece, none external):
    stage is new code, first-of-kind in this pack.
 2. **AssetStudioModCLI cannot express the join** (bundle-scoped batch
    export with its own naming) — usable as a cross-check lane
-   (toolchain.md already casts it as SECONDARY/cross-check), but the
-   deterministic manifest-driven route must be UnityPy.
-3. **Same-name duplicate atlas objects** (`UI_DLC1_Items`,
-   `DLC1_Space_UI_Icons` each appear twice in one bundle) — exporter
-   needs an explicit dedupe/pick rule after §9 Q5 inspection.
-4. **Zero-decode verification tooling**: the suite will need a
+   (toolchain.md already casts it as SECONDARY/cross-check; the
+   verification round used it exactly that way to pixel-validate the
+   crop-area figure), but the deterministic manifest-driven route must
+   be UnityPy.
+3. **Zero-decode verification tooling**: the suite will need a
    fixture-tree leg (synthetic mini-bundle) so tests don't require the
    client — the pack's fixture-builder pattern supports it.
 
@@ -302,14 +340,14 @@ ESTIMATE labels + math; all other numbers measured.
 | Quantity | Value | Basis |
 |---|---|---|
 | Texture2D serialized (catalogue semantics) | 209,500,708 B | MEDIA-CATALOGUE.md (measured; excludes streamed pixels) |
-| Resident GPU-format payload (block-compressed, no mips) | 4,638,249,614 B ≈ 4.32 GiB | ESTIMATE: Σ(w·h·cpp), cpp = DXT1 0.5 / DXT5·BC7·BC4 1 / Alpha8 1 / RGB24 3 / RGBA32 4 B/px over all 7,977 measured (w,h,fmt) |
-| Same, mip chains included (mipped textures ×1⅓) | 5,927,164,602 B ≈ 5.52 GiB | ESTIMATE: Σ over mip>1 textures ×(4/3) |
+| Resident GPU-format payload (block-compressed, no mips) | **≈ 4.49 GiB** | ESTIMATE (verification recount supersedes the scout's first-pass 4.32 GiB): Σ(w·h·cpp), cpp = DXT1 0.5 / DXT5·BC7·BC4 1 / Alpha8 1 / RGB24 3 / RGBA32 4 B/px over all measured (w,h,fmt) |
+| Same, mip chains included (mipped textures ×1⅓) | **≈ 5.75 GiB** | ESTIMATE (verification recount; scout first pass 5.52 GiB): Σ over mip>1 textures ×(4/3) |
 | Full RGBA decode equivalent | 25.12 GiB | ESTIMATE: Σ(w·h) = 6,743,364,882 px × 4 B — never needed wholesale |
 | On-disk size of the 96 texture-bearing bundle FILES | 2,420,511,413 B ≈ 2.31 GiB | roster `bytes` (bundles also contain meshes/anims/audio — upper bound for art-relevant IO) |
-| **Entity-referenced icon set (THE deliverable)** | **source area 26,595,109 px** | measured Σ crop rects, 2,151 sprites |
-| ↳ shipped as WebP lossy q80 + alpha | **≈ 1.7–5 MiB** | ESTIMATE: px × 0.5–1.5 bits/px ÷ 8 |
-| ↳ shipped as WebP lossless | ≈ 6.6–13 MiB | ESTIMATE: px × 2–4 bits/px ÷ 8 (flat-color UI art compresses well) |
-| ↳ shipped as PNG | ≈ 13–27 MiB | ESTIMATE: px × 4–8 bits/px ÷ 8 |
+| **Entity-referenced icon set (THE deliverable)** | **source area 108,445,749 px** (~434 MiB RGBA-equivalent at 4 B/px) | PIXEL-EXACT, cross-validated against AssetStudioModCLI exports during verification; 2,151 sprites. (The scout's first pass — 26,595,109 px from a name→textureRect header join — was a filter artifact, superseded.) |
+| ↳ shipped as WebP lossy q80 + alpha | **≈ 8–25 MiB** | ESTIMATE rebased on verified empirical density: px × 0.54–1.91 bits/px ÷ 8, bits/px measured on real exported crops |
+| ↳ shipped as WebP lossless | ≈ 10–60 MiB | ESTIMATE: px × ~0.75–4.4 bits/px ÷ 8 (flat-color UI art compresses well) |
+| ↳ shipped as PNG | ≈ 21–100 MiB | ESTIMATE: px × 1.6–7.4 bits/px ÷ 8 |
 | Optional imagery tier (loadingscreens/UI screenshots for news/map headers) | UI-family area 717,469,505 px → ≈ 90 MiB at ~1 bit/px WebP | ESTIMATE; pick per-asset, not family-wide |
 
 Read: the decision-relevant export is **megabytes, not gigabytes**.
@@ -320,10 +358,10 @@ which the media carve-out already forbids by default.
 
 | Surface | Verdict | Grounds |
 |---|---|---|
-| Entity icon set (items, rooms, staff, student-types, metagame-nodes, configs UI chrome, unlockables-with-refs) | **FEASIBLE-NOW** | Join 99.7% measured over landed artifacts; formats all Pillow/UnityPy-decodable (no ASTC/ETC2); volume ≈2–27 MiB; toolchain staged; stage-registration pattern exists |
-| Atlas-wide bulk icon export (all 47 atlases / 3,154 slots + standalone sprites) | FEASIBLE-NOW (optional stretch) | Same mechanics; adds dedupe rule (Q5) and ~3–4× volume, still tens of MiB |
-| Course icons | FEASIBLE-AFTER-MAPPING | Zero direct refs (§3.6); needs qualification-chain/name-table join before export manifest includes courses |
-| Kudosh-style unlockable art beyond current 33 refs | FEASIBLE-AFTER-MAPPING | Ref coverage sparse (124/415 rows reference anything); carrier unmapped |
+| Entity icon set (items, rooms, staff, student-types, metagame-nodes, configs UI chrome, unlockables-with-refs) | **FEASIBLE-NOW** | Join 99.68% measured over landed artifacts (reproduced by verification); formats all Pillow/UnityPy-decodable (no ASTC/ETC2); volume ≈8–25 MiB WebP (≈21–100 MiB PNG); toolchain staged incl. pixel-exact cross-check method; stage-registration pattern exists |
+| Atlas-wide bulk icon export (all 47 atlases / 3,154 slots + standalone sprites) | FEASIBLE-NOW (optional stretch) | Same mechanics; adds the standalone-sprite route (~150 plain-Sprite refs) and ~4× volume — still tens of MiB |
+| Course icons | FEASIBLE-AFTER-MAPPING (cheap) | Zero direct refs on all 69 rows, but Qualification PPtr populated on 28/69 and 24 config-side refs already point at Courses-Qualifications sprites — one probe over landed dumps closes it |
+| Kudosh-style unlockable art beyond current 33 refs | FEASIBLE-AFTER-MAPPING | Ref coverage sparse (63/415 rows hold non-empty refs); carrier unmapped |
 | World/environment texture export (map imagery raw material) | TARGETED-ONLY | 25 GiB RGBA-equivalent corpus-wide; extract specific loadingscreen/landscape textures per map-piece need, never wholesale |
 | AVIF outputs | NOT-NOW | No encoder in venv; ffmpeg fallback exists if the site ever demands it |
 | Generative/site-chrome art | OUT-OF-SCOPE | promptForDB #5 — separate later imagegen piece; this piece is client-owned art only |
@@ -334,18 +372,21 @@ Dataminer-answerable (AGENTS rule 8 — belong to THIS layer, not the
 frontend):
 
 1. **Course→icon carrier.** Which structure binds courses to their
-   art? Candidates measured: `Qualification` PPtr on all 69 course rows
-   (points into configs), 42 existing `*_Courses_T_Icon_*` sprites,
-   metagame-node research icons reusing course iconography. One probe
-   session over the qualification/research dumps answers it.
-2. **Unlockable art routing** for the 291 unlockable rows with no refs
-   (Kudosh items likely surface through item/config joins instead) —
-   enumerate which kinds actually render icons before promising art on
-   unlockable pages.
-3. **Duplicate atlas objects** `UI_DLC1_Items` / `DLC1_Space_UI_Icons`
-   (same name+bundle, packed=169/66 twice): inspect whether
-   variant/page split or true duplicates; fix the dedupe rule from the
-   answer.
+   art? Candidates measured: `Qualification` PPtr populated on 28/69
+   course rows (points into configs), 42 existing `*_Courses_T_Icon_*`
+   sprites (strict name matches only 9/69),
+   metagame-node research icons reusing course iconography — and 24
+   config-side refs already point at Courses-Qualifications sprites, so
+   one probe session over the landed qualification/research dumps
+   answers it.
+2. **Unlockable art routing** for the 352 unlockable rows with no
+   non-empty refs (415 − 63; Kudosh items likely surface through
+   item/config joins instead) — enumerate which kinds actually render
+   icons before promising art on unlockable pages.
+3. **Non-null icon PPtr slots with empty paired References** — ledger
+   them in the export stage's residue file and resolve their targets
+   (24 by the verifier's external-pointer scan; 122 nonzero icon-named
+   PPtr slots on this scout's broader scan). Never silently dropped.
 4. **EditorFallbackIconReference (351)** — confirm editor-only status
    (GUIDs absent from the runtime catalog, names absent from
    containers) and ledger-skip in the export manifest.
