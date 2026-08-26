@@ -1,0 +1,849 @@
+# Piece 4 — Logic Layer Spec (Two Point Campus)
+
+**Audience:** CodeWriter + TestWriter. This document is the contract for
+the `logic` stage family emitting into `extracted/logic/`. Facts are
+grounded in [`../scout-report-piece-04.mdx`](../scout-report-piece-04.mdx)
+(revision 2 — both verifier corrections applied),
+[`../verifications/verifyA-scout-piece04.mdx`](../verifications/verifyA-scout-piece04.mdx)
+and [`../verifications/verifyB-scout-piece04.mdx`](../verifications/verifyB-scout-piece04.mdx)
+(both PASS-WITH-CORRECTIONS), and the binding scope rulings in
+[`../rulings/orchestrator-piece04-scope.mdx`](../rulings/orchestrator-piece04-scope.mdx)
+(R1 filename · R2 harvest-direct · R3 native deferred · R4 never-invent).
+Pipeline format inherits
+[piece-01](piece-01-extraction-pipeline.mdx) §3/§4/§5 and
+[piece-02](piece-02-relinking.mdx) §3/§5 unchanged. Where a number here
+conflicts with scout prose, the verifier-corrected figure wins (each such
+figure cites its verifyA/verifyB item).
+
+---
+
+## 1. Goal
+
+The landed corpus holds complete *rows* and, since piece-02, complete
+*relations*. What `extracted/logic/` still lacks (`.gitkeep` only) is the
+third doctrine layer: **gameplay logic reconstructed from client data** —
+progression chains, the economy's taxonomy and carriers, the grading
+ladder, and the needs/decay constants — each emitted as a deterministic,
+contract-pinned dataset with provenance down to the field path it was
+read from.
+
+This piece adds ONE entrypoint stage — `logic` — that derives, from
+committed artifacts only, four dataset families:
+
+1. **Course progression** — prerequisite chains over the 24-type
+   taxonomy (incl. the 50 `PrerequisiteHasCourseUnlocked`
+   course→course unlock edges resolved through the externals/pathId
+   machinery), the 319-row module→room chain, course economics and
+   ladders, and the attrition trigger set;
+2. **Economy ledger** — the money taxonomy (28 `BudgetType` categories
+   verbatim), finance configs with InitialBalance/fail-states, the
+   Kudosh sources/sinks graph as a separate currency, course points as
+   a third spendable, and research-point costs (209 cost-bearing rows);
+3. **Grading** — the EGrade ladder, the `Config_UISprite.Grades[9]`
+   Threshold table as DATA, per-term PassGrade, the
+   `CourseAssessmentScoring` inputs, and the XP→score normalization as
+   an **absent-with-ledger-row** artifact (never invented);
+4. **Needs & decay** — staff `ECPCharacterAttributes` decay rates +
+   init ranges, student `ECPStudent` rates, the student core-11 decay
+   carrier as an absent-with-ledger-row set, and the
+   `InteractionDefinition` family (630 rows) as the satisfaction layer.
+
+Everything runs through the single entrypoint ([DR-2026-08-18-pipeline]):
+`python run_all.py <game-dir> --only logic` must reproduce every
+declared output byte-identically. Site/UI anything, native analysis
+(R3: deferred, single known target named in §3 L3), stub re-ingestion
+(R2: NOT bundled here), and PROOF/RELATIONS mutation stay out (§6).
+
+**Hard law (R4, restated inline where it bites):** every formula on the
+scout's not-data-driven list ships labeled
+`provenance:"reconstructed-from-code"` + `buildId` if it ships at all;
+**invented numbers are a launch-gate failure** (FRAMEWORK §8). Stage L5
+enforces this mechanically — see §3 L5 and AC7.
+
+## 2. Corpus facts the logic stage relies on (measured)
+
+All figures measured on `extracted/` at buildId **20226581**; report §
+citations in brackets. Seeds reconcile with DRIFT warnings — fresh
+re-measurement wins, never a silent stale constant (piece-02 §2
+convention).
+
+| # | Fact | Value |
+|---|---|---|
+| F1 | Stub corpus | **13,443** rows / 9 kinds — config 8,430 · item 3,885 · unlockable 415 · metagame-node 454 · room 116 · course 69 · student-type 54 · campus-level 17 · staff 3 [report preamble; verifyA 1c] |
+| F2 | Course composition | 69 `courses.jsonl` ids = **28** `TPC.CourseDefinition` (full economics) + **41** `TPC.MarketingCourseDefinition`; `_assessmentScoring` + `_studentArchetypes` present in **28/28 RAW** harvest dumps but **0/69 stubs** — stub-emitter drop, so those two fields read HARVEST-DIRECT (ruling R2) [verifyA 2a/2d] |
+| F3 | Module chain | **319** `TPC.CourseModuleDefinition` rows = 312 `Module_*` + **7 `Unused_Module_*`** (prefix joins MUST include `Unused_`); `RoomType` PPtr 319/319, `Qualification` PPtr 319/319, `GradeMoneyRewards` keyset `{A,AA,B,BB,C,CC,D,F}` ×319; anchor `Module_Alien_Science_Year1_Lesson1` ClassSize 8 · Duration 2 · XPMultiplier 1.0 [report §2; verifyA #3] |
+| F4 | Prerequisite system | abstract `Prerequisite` + exactly **24** concrete subclasses (DaysPassed … ChallengeAcademicScore; actual class spellings carry the `ChallengePrerequisite*`/`Prerequisite*` mix per verifyB #6); census over configs.jsonl typed blocks: HasCourseUnlocked **×50**, UniversityLevel ×43, LevelPrerequisiteStars ×26, ChallengePrerequisiteHasRoomUnlocked ×18, DaysPassed ×17; `"Prerequisites"` exact-key occurrences **675** (substring 977 = 675 + VisiblePrerequisites 68 + StartPrerequisites 68) [report §2; verifyA 9a/9b] |
+| F5 | Typed-block carrier shape | SerializeReference payloads serialize INLINE as `{"data":{…},"type":{"asm","class","ns"}}`; on career-challenge rows they hang off a pointer indirection: `fields.Prerequisites=[{id:N}]` → `fields.references["%08x"].{data,type}` (measured on `CareerChallenge_Course_Archaeology_V1`, `_course={m_FileID:2, m_PathID:-7906850020505022578}`) [report §2; verifyB 5.1] |
+| F6 | The 50 unlock edges are NOWHERE in relinks | zero `PrerequisiteHasCourseUnlocked` rows in any `relinks/*.jsonl` pair file AND zero career-challenge rows in `_unresolved_pptrs.jsonl` (probed 2026-08-26) — the piece-02 PPtr walker does not descend into typed-block `data`. The logic stage owns their resolution; relinks stays untouched (single-writer law, §6) |
+| F7 | Cross-file resolution machinery (committed) | `harvest/externals.jsonl` 222 serialized-file rows keyed by FULL bundle relpath (`DLCs/ghost/dlc-ghost-art_assets_all.bundle`) while stub `source.bundle` stores the BASENAME (`configs_assets_all.bundle`) — resolver must normalize [verifyB 5.1]; `relinks/bridges/cab_index.jsonl` 222 rows + `container_index.jsonl` 49,855 address rows (wc -l, 2026-08-26); demonstration trace: fileId 2 of the metagame bundle → `archive:/CAB-7c07bcb2…`, pathId −7906850020505022578 → `Course_Archaeology_Lite` [verifyB 5.1] |
+| F8 | Money taxonomy | `BudgetType` = **28** named values TuitionFees=0 … PatientTreatmentIncome=27, verbatim in `decompiled/structural/id-registries/TPS.Game.BudgetType.jsonl`; `ProfitType` {TuitionFees, Rent, Bonus}; `ExpenseType` {Wages, Loans}; `FinanceManager.Summary` columns incl. CheesyBonus/MonthlyAllowance/OtherIn/Out; `EStaffStat` = 31 members [report §3; verifyA 5a/7c] |
+| F9 | Finance configs | **30** `TPC.FinanceManagerConfig` rows; anchors `Config_FinanceManager` {InitialBalance 150000, FailStateBalanceWarning −150000, FailStateBalanceGameOver −300000, RentMultiplier 1.0, TuitionFeesMultiplier 1.0, AllowTuitionFeeModification 1, UseBungleBonus 0}; `Config_FinanceManager_Level_Archaeology` differs ONLY in InitialBalance 80000 [report §3; verifyA 5b, verifyB 4.1] |
+| F10 | Kudosh separation | NO Kudosh among the 28 BudgetTypes; balance owner `MetagameLevelState.TotalKudosh` int (dump.cs ~881087); sources `RewardKudoshDefinition{_amount,_displayInHUD}`, `KudoshConsumableRewardConfig` ×6 stub rows; sinks `IKudoshUnlockable` with **three** implementers — `GameItemDefinition`, `RoomDefinition`, **`LandscapeBrushDefinition`** — plus `GameItemUpgradeDefinition.Cost` (anchor Alien_Refiner V2 10000 / V3 30000) and `CourseDefinition.KudoshCost`; literals `KudoshEarn:UI`/`KudoshSpend:UI` [report §3; verifyA 6, verifyB 4.2/4.3] |
+| F11 | Research costs | metagame-nodes 454 rows = ResearchProjectDefinition **209** + Lite **241** + 4 databases; costs ride on the **209 full rows only** (Lite carry none); domain exactly **{100, 200, 250, 300, 500, 600, 1200, 2500, 3000}**, distribution seed {100×4, 200×1, 250×12, 300×52, 500×82, 600×27, 1200×29, 2500×1, 3000×1}; anchors Bookshelf_Robotics 250 · Computer_Digital 500 · Computer_Super 500 · Course_Computer 1200 [report §3; verifyA 7a/7b] |
+| F12 | Grading data | `EGrade` registry 9 members Invalid=0, F=1 … AA=8 (`id-registries/TPS.Game.TPC.EGrade.jsonl`); `Config_UISprite.Grades[9]` (configs.jsonl id `Config_UISprite`) serializes `{Enum, Threshold, DisplayName(_termID), Icon…}` — Enum/Threshold pairs measured **0:−1.0, 1:0.0, 2:40.0, 3:50.0, 4:60.0, 5:70.0, 6:75.0, 7:80.0, 8:90.0** (NA/F/D/C/CC/B/BB/A/AA), consumed by `UISpriteConfig.GetGrade(float score)` (dump.cs ~1000712); `CourseAssessmentScoring{BonusPointsPerLevel, ExpectedAverageXPPerSecond, PowerFactor, UseTimeFactors, TimeInMedicalConsultationFactor, TimeOnCourseFactor}` (dump.cs 818247); Archaeology raw sample {10.0, 0.75, 2.0, 0, …}; `TermDefinition{Weight, PassGrade, Modules[]}`; course→config `Terms[]` PPtr refs ×75 in matrix evidence [report §2; verifyB 1.1/16, verifyA 2d] |
+| F13 | Staff decay carriers | `ECPCharacterAttributes` typed block on ALL 3 `StaffDefinition` stub rows, ten `AttributeDefinition{Disabled, MinInitialValue, MaxInitialValue, ChangeOverTime}` fields `_drink/_energy/_food/_fun/_happiness/_health/_hygiene/_sober/_social/_toilet`: drink/energy/food/hygiene/social/toilet **−0.05/s**, fun/happiness/health/sober **0.0**, init ranges 90–100 typical, sober pinned 0–0 [report §5 r2; verifyB 2.1] |
+| F14 | Student partial coverage | `ECPStudent` (dump.cs 858320) on BOTH harvested `TPC.StudentDefinition` raws (`harvest/monobehaviours/configs/TPC.StudentDefinition/*.json`, 2 files): `_clubNeed` −0.1 (band 80–100), `_relationship` −0.2 (40–100), `_selfStudy` −0.2 (40–100); corroborating `ClubNeedChangeOverTime` on 7 club rows; the STUDENT core-11 carrier is genuinely ABSENT everywhere in harvest [report §5/G3; verifyA sampled-claims, verifyB 2.2] |
+| F15 | Attrition triggers | dropout {ThresholdWarning 20.0, ThresholdChangeOfMind 15.0, ThresholdUrgent 10.0, CountdownTimer 120.0}; resignation twin {20/15/10, CountdownTimer 240.0}; `StudentFailPercent` 10; advisor `StudentUnhappyTuitionFeesThreshold` 20.0; events in namespace `TPC.CharacterEvents.Student` → `.Expelled` / `.ExpelledFail` (NOT Timeline.Events); prose literal "Happier students learn faster…" in stringliteral.json [report §2; verifyA #4, verifyB #7] |
+| F16 | Interaction family | `InteractionDefinition` = **630** stub rows — largest config class after CharacterModule — carrying `CharacterModifiers`, `CharacterStatusEffect*`, `FinanceModifier`, cooldowns; the needs-satisfaction DATA layer tied to `ActionSatisfyNeeds{_aiGraph}` + ESActionSatisfyNeedsStart/Update/End/Score, save shape `SaveData{Score, RoomID}` [report §5; verifyB 7.1] |
+| F17 | Typed-block breadth | SerializeReference typed blocks ride on 3,330 configs / 1,787 items / 130 unlockables rows — effects reconstructable with zero native analysis [report §3; verifyA verdict table, verifyB #12] |
+
+Sample edges/values pinned for tests (stable anchors):
+
+- `CareerChallenge_Course_Archaeology_V1` prerequisite payload resolves
+  end-to-end to `Course_Archaeology_Lite` (F5/F7 trace) — the L1
+  resolver's mandatory green-path anchor.
+- `Module_Alien_Science_Year1_Lesson1` → ClassSize 8, Duration 2,
+  XPMultiplier 1.0 (F3).
+- `Config_UISprite` Enum 8 → Threshold 90.0 (AA) with DisplayName
+  termID −1320794757 (F12).
+- `Staff_Assistant` `_energy.ChangeOverTime` −0.05, init 90–100;
+  `_sober` 0.0 pinned 0–0 (F13).
+- `Config_FinanceManager_Level_Archaeology` InitialBalance 80000 with
+  every other field equal to base (F9).
+
+## 3. Stage 7 — `logic`
+
+- **Stage id:** `logic` (entrypoint `--list` enumerates it AFTER
+  `relink`; EIGHT stages total — piece-01 doc implications routed in
+  §7, mirroring how piece-02's seventh stage was seated).
+- **Scripts:** `tools/stage7_logic.py` + shared `tools/logic_util.py`.
+  `logic_util.py` IMPORTS the PPtr-walk and cross-file resolver
+  primitives from `tools/relink_util.py` (no reimplementation) and adds
+  ONE new primitive: the **typed-block walker** — descends into
+  `fields.references[*].data`, returning `{fieldPath, pptr, type:{asm,class,ns}}`
+  leaves, because plain-payload walking provably misses the prerequisite
+  PPtrs (F6). Registered ADDITIVELY in `tools/tpc_common.py::STAGES`
+  with script-hash deps `["stage7_logic.py", "logic_util.py",
+  "tpc_common.py", "log_util.py"]` — stages 0–6 byte-behave identically.
+- **Inputs (upstream set — all committed artifacts; the stage opens
+  ZERO asset bundles and needs NO game dir):**
+  `stubs/<kind>.jsonl` ×9 + `stubs/_absences.jsonl`;
+  `harvest/monobehaviours/configs/TPC.CourseDefinition/*.json` +
+  `harvest/monobehaviours/configs/TPC.StudentDefinition/*.json`
+  (harvest-direct legs per ruling R2);
+  `decompiled/structural/id-registries/*.jsonl` (taxonomy enums) +
+  `decompiled/structural/class-hierarchy.jsonl` (24-subclass
+  enumeration);
+  `relinks/matrix.json` + `relinks/<src>_<dst>.jsonl` (cross-check
+  only, never mutated) + `relinks/i2_term_registry.jsonl` +
+  `relinks/entity_locale.jsonl` (DisplayName localization);
+  `relinks/bridges/{cab_index,container_index}.jsonl` +
+  `harvest/externals.jsonl` + `harvest/export-manifest.jsonl`
+  (cross-file PPtr resolution, F7);
+  `identity.json` (buildId stamp source).
+  A missing upstream artifact ⇒ **exit 3** naming it (runner
+  pre-check, piece-1 pattern). Hostless testing goes through the
+  fixture tree (§8), never through a degraded real run.
+- **Console/write discipline:** inherited unchanged from piece-1 §4 —
+  UTF-8 stdout/stderr, explicit `encoding="utf-8"` + `newline="\n"`,
+  sorted enumeration + sorted JSON keys, no wall-clock timestamps
+  inside outputs, temp-file + atomic-rename writes, byte-identical
+  reruns (EXTRACTION-LOG, `.stage-stamps/`, `.pipeline-meta.json`
+  excluded).
+- **Exit codes:** the piece-1 contract applies unchanged — `0` success
+  · `1` stage failure (schema/validation/invention-guard breakage) ·
+  `2` completed-with-ledger (gap rows standing — the EXPECTED steady
+  state until the deferred native piece closes them) · `3`
+  environment/gate refusal. Exact mapping pinned in AC9.
+- **Join-key contract (scout §6, inherited):** every dataset keys on
+  the VERBATIM stub id (`Config_*`, `Course_*`, `Module_*`,
+  `Unused_Module_*`, `ResearchProject_*`, `CareerChallenge_*`,
+  `Activity_*`, `Room_*`, item ids) — never slugified, never
+  case-folded. Mechanisms available: same-file PPtr (resolved via the
+  stub `(bundle, pathId)` index built from `stubs[].source`),
+  cross-file PPtr (externals → CAB → pathId → stub index, with the
+  basename/full-path normalization of F7), typed SerializeReference
+  blocks (`type.{asm,class,ns}` inline), GUID→catalog and
+  termID→locale (consumed from relink artifacts where already
+  resolved). Twins keep their `@<contentHash8>` suffix as distinct
+  definition versions (piece-02 F10 semantics).
+
+Sub-passes run in order; each appends its counters to the
+EXTRACTION-LOG run section (key names pinned per pass).
+
+### L0 — Load & index
+
+Build once, reuse across L1–L4: the stub index
+`(normalizedBundle, pathId) → (kind, id)` over all 9 kinds (twins
+distinct by suffixed id); the registry loader over
+`id-registries/*.jsonl`; the harvest-direct loaders for the two
+`TPC.*` families; the typed-block walker. Drift probes fire HERE:
+per-kind stub counts vs F1, course split 28+41, module split 312+7,
+interaction count 630 — any movement prints `DRIFT:` with the fresh
+number and the fresh number wins downstream (never a hard gate; the
+corpus may legally grow).
+
+Run-section keys: `stubsLoaded`, `stubIndexEntries`, `registriesLoaded`,
+`driftProbes:{name: {expected, measured}}`.
+
+### L1 — Course progression dataset
+
+Emits into `extracted/logic/course-progression/`.
+
+**`courses.jsonl`** — one row per course entity, 69 rows expected
+(F2). Keys: `id` verbatim. Schema sketch (frozen key set):
+
+```json
+{"id":"Course_Archaeology","class":"TPC.CourseDefinition",
+ "licenseCost":0,"kudoshCost":0,"yearlyTuitionFee":0,
+ "startPointsCost":0,"defaultStudentCount":0,"applicantsBoost":0,
+ "applicantsFromCourseRating":0,"applicantsFromUniversityRating":0,
+ "levels":[{"pointsCost":20,"applicantsBoost":10,
+            "hiringTeacherSkillLevelMax":1,"trainingTeacherSkillLevelMax":3}],
+ "terms":[{"index":0,"termId":"<resolved TermDefinition id|null>",
+           "passGrade":"C","weight":1.0,"moduleCount":3}],
+ "assessmentScoring":{"bonusPointsPerLevel":10.0,
+   "expectedAverageXPPerSecond":0.75,"powerFactor":2.0,
+   "useTimeFactors":0,"timeInMedicalConsultationFactor":0.0,
+   "timeOnCourseFactor":0.0},
+ "studentArchetypes":[{"weight":0,"archetype":"<id|null>"}],
+ "marketingFor":null,
+ "evidence":{"stubRow":"stubs/courses.jsonl#Course_Archaeology",
+             "rawDump":"harvest/monobehaviours/configs/TPC.CourseDefinition/configs_assets_all_<pathId>.json"},
+ "buildId":20226581}
+```
+
+Rules: the 41 `MarketingCourseDefinition` rows emit with
+`marketingFor` = the marketing variant's link target where the payload
+carries one (PPtr-resolved, else null) and null economics/ladders —
+their emptiness is DATA, never a fill-in. `assessmentScoring` +
+`studentArchetypes` come from the RAW harvest dumps exclusively
+(stub emitter dropped them, F2); the other economics fields cross-check
+stub-vs-raw and any mismatch is an **exit-1** defect (both layers claim
+to carry them). `levels[]` preserves array order and values verbatim
+(seed anchor: first row Levels[10] PointsCost 20→65 step 5, boost
+10→55, hiring 1→10, training 3→10 — report §2, verifyA 2b).
+`passGrade` resolves via the Terms[] PPtr (same resolver as below);
+unresolved terms carry `passGrade:null` + a gap row, never a guess.
+
+**`modules.jsonl`** — the module→room chain, **319 rows** (F3).
+Selection rule: every stub whose `source.class ==
+"TPC.CourseModuleDefinition"` — id prefix is NOT the selector (the 7
+`Unused_Module_*` rows prove prefix joins lossy); the prefix split is
+ASSERTED post-selection (`modulePrefix:"Module_"|"Unused_Module_*"`
+counted 312/7). Schema sketch:
+
+```json
+{"id":"Module_Alien_Science_Year1_Lesson1",
+ "roomType":{"kind":"room","id":"Room_Alien_Science|null","resolved":true},
+ "qualification":{"kind":"config","id":"Qualification_*|null","resolved":true},
+ "gradeMoneyRewards":{"AA":0,"A":0,"BB":0,"B":0,"CC":0,"C":0,"D":0,"F":0},
+ "classSize":8,"duration":2,"xpMultiplier":1.0,
+ "graphStudent":"<GOOSE graph id|null>","graphTeacher":null,
+ "graphSpectator":null,"modifiers":[],"backupCourseModule":null,
+ "evidence":{"fieldPaths":["RoomType","Qualification","GradeMoneyRewards",
+                           "ClassSize","Duration","XPMultiplier"],
+             "srcBundle":"configs_assets_all.bundle","srcPathId":"<int64>"},
+ "buildId":20226581}
+```
+
+`RoomType`/`Qualification` PPtrs resolve through the stub index; a
+target that resolves to a NON-stub object emits `resolved:false` +
+`null` id + a `_gaps` row naming the (bundle, pathId) — never silence,
+never a guessed room. `GradeMoneyRewards` zeros are the norm (313/319
+all-zero; exactly 6 modules carry payouts — verifyB 7.3): emit zeros
+VERBATIM, never omit, never flag as anomaly; the payout-bearing
+minority is counted, not curated.
+
+**`prerequisites.jsonl`** — the typed prerequisite instance census.
+One row per typed block found by the L0 typed-block walker across
+`configs.jsonl` (and any other kind carrying them), keyed by
+`(carrierId, refKey)`. Seed expectations (F4): ≥675 exact-key
+`Prerequisites` occurrences; typed-class counts reconcile with
+DRIFT — HasCourseUnlocked 50, UniversityLevel 43, Stars 26,
+HasRoomUnlocked 18, DaysPassed 17. Schema sketch:
+
+```json
+{"carrierId":"CareerChallenge_Course_Archaeology_V1","carrierKind":"config",
+ "listField":"Prerequisites","refKey":"00000000",
+ "prerequisiteClass":"PrerequisiteHasCourseUnlocked","asm":"TPS.Game","ns":"TPC",
+ "payload":{"_visibleOnHUD":0},
+ "targets":[{"fieldPath":"data._course","fileId":2,
+             "pathId":-7906850020505022578,"resolution":"course-unlock-edge"}],
+ "taxonomyIndex":17,
+ "evidence":{"sourceArtifact":"stubs/configs.jsonl"},
+ "buildId":20226581}
+```
+
+`taxonomyIndex` pins the **24-type taxonomy** as an EMITTED ENUM — the
+stage asserts the distinct `prerequisiteClass` set ⊆ the 24 names and
+ships the taxonomy itself in
+`course-progression/prerequisite-taxonomy.json`
+(`{abstract:"Prerequisite", members:[24 names verbatim], source:
+"class-hierarchy.jsonl + dump.cs census", buildId}`); a 25th distinct
+class is a `DRIFT:` + gap row (new content), not a failure.
+
+**`course-unlock-edges.jsonl`** — the payoff artifact: concrete
+course→course unlock edges. Expected population: the **50**
+`PrerequisiteHasCourseUnlocked` instances (F4), each carrying exactly
+one `_course` cross-file PPtr (F5). Resolution procedure (pinned,
+deterministic — this is the brief's "how externals/pathId resolution
+feeds them"):
+
+1. Source side: carrier stub row → `source.bundle` (BASENAME) +
+   `source.pathId`.
+2. FileId side: normalize the basename to roster full-relpaths (F7
+   mismatch is EXPECTED — strip directories, match on basename; more
+   than one full-path match ⇒ resolve against EACH and require the
+   survivors to agree, else gap row). Read `externals.jsonl` rows for
+   that bundle: `externals[fileId].path` → `archive:/CAB-<hex>` (or a
+   `Library/unity default resources` built-in → NEVER an entity target;
+   count + gap row).
+3. PathId side: candidate serialized files =
+   `bridges/cab_index.jsonl` rows whose `cab` matches the step-2 CAB;
+   a `(bundle, pathId)` candidate SURVIVES iff the stub index holds it
+   (twins matched WITH suffix). Exactly one survivor ⇒ resolved; the
+   expected destination class is `TPC.CourseLiteDefinition` /
+   `TPC.CourseDefinition` / `TPC.MarketingCourseDefinition` (the F7
+   trace resolved to a Lite twin of the real course — semantically
+   exact; emit the resolved id VERBATIM, `dstTwinOf` naming the
+   unsuffixed logical course when a suffix was stripped).
+4. Multiple survivors ⇒ disambiguate by destination class membership,
+   then by `container_index` address match; still ambiguous ⇒ gap row
+   with ALL candidates (never pick silently). Zero survivors ⇒ gap row
+   `reason:"pathId-not-a-stub-entity"`.
+
+Row shape (frozen):
+
+```json
+{"srcKind":"config","srcId":"CareerChallenge_Course_Archaeology_V1",
+ "verb":"requires-course-unlocked",
+ "dstKind":"course","dstId":"Course_Archaeology_Lite",
+ "mechanism":"hard","method":"pptr-cross-file-typed-block","inferred":false,
+ "evidence":{"fieldPath":"references[00000000].data._course",
+             "srcBundle":"configs-metagame_assets_all.bundle",
+             "srcPathId":"<int64>","extFileId":2,
+             "dstBundle":"configs-common_assets_all.bundle",
+             "dstCab":"CAB-7c07bcb2…","dstPathId":-7906850020505022578},
+ "buildId":20226581}
+```
+
+Sort: `(srcId, dstId, fieldPath)`. Dedup identity:
+`(srcId, dstId, method, fieldPath)`. Unresolved instances ALSO get a
+row here with `dstId:null`, `resolved:false`, `reason` — gapped
+resolution is data (piece-02 `_unresolved_pptrs` convention); they
+simultaneously land in `_gaps.jsonl` (L5) and hold exit 2 (AC9).
+
+**`attrition.jsonl`** — the trigger constants (F15), one row per
+setting group read from the `Config_Campus` stub row + events from the
+decompile layer: `{group:"StudentDropoutSettings"|"StaffResignationSettings"
+|"GlobalFails"|"AdvisorTrigger", fields:{…verbatim…}, events:[…],
+evidence:{artifact:"stubs/configs.jsonl#Config_Campus"}}`. Anchors: the
+two twins {20/15/10, 120 s} and {20/15/10, 240 s}, `StudentFailPercent`
+10, advisor threshold 20.0; event spelling `TPC.CharacterEvents.Student.Expelled`
+/ `.ExpelledFail` verbatim (verifyB #7 corrected namespace).
+
+### L2 — Economy ledger
+
+Emits into `extracted/logic/economy/`.
+
+**`money-taxonomy.json`** — single-object artifact; the code-fixed
+ledger vocabulary, byte-matching the registries:
+
+```json
+{"buildId":20226581,
+ "budgetTypes":[{"name":"TuitionFees","value":0},{"name":"Rent","value":1},
+   {"name":"Bonus","value":2},{"name":"Allowance","value":3},
+   {"name":"BudgetRefund","value":4},{"name":"ResearchIncome","value":5},
+   {"name":"Objectives","value":6},{"name":"ItemsIncome","value":7},
+   {"name":"EventsIncome","value":8},{"name":"LoanReceived","value":9},
+   {"name":"Wages","value":10},{"name":"LoansExpense","value":11},
+   {"name":"Training","value":12},{"name":"ResearchExpense","value":13},
+   {"name":"Marketing","value":14},{"name":"RecruitmentFees","value":15},
+   {"name":"EventsExpense","value":16},{"name":"Upgrades","value":17},
+   {"name":"ItemsExpense","value":18},{"name":"Building","value":19},
+   {"name":"CourseLicences","value":20},{"name":"Misc","value":21},
+   {"name":"Cheats","value":22},{"name":"BungleBonus","value":23},
+   {"name":"SocialBonus","value":24},{"name":"MiscExpense","value":25},
+   {"name":"Mining","value":26},{"name":"PatientTreatmentIncome","value":27}],
+ "budgetTypeSource":"decompiled/structural/id-registries/TPS.Game.BudgetType.jsonl",
+ "profitType":["TuitionFees","Rent","Bonus"],
+ "expenseType":["Wages","Loans"],
+ "summaryColumns":["TuitionFees","Rent","Wages","Bonus","LoanRepayments",
+   "LoanInterest","BungleBonus","SocialBonus","ResearchBonus","MiningProfit",
+   "PatientTreatment","CheesyBonus","MonthlyAllowance","OtherIn","OtherOut"],
+ "resources":[
+   {"resource":"money","carriers":["FinanceManager balance"],
+    "budgetMembership":true},
+   {"resource":"kudosh","carriers":["MetagameLevelState.TotalKudosh (int, dump.cs ~881087)"],
+    "budgetMembership":false,
+    "note":"NO BudgetType member is Kudosh — decisive negative, F10"},
+   {"resource":"course-points",
+    "carriers":["CoursesConfig.InitialCoursePoints",
+                "CoursesConfig.PointsPerUniversityLevel",
+                "CourseDefinition.StartPointsCost","Levels[].PointsCost"],
+    "budgetMembership":false,
+    "note":"never named a currency in code; acts as one — spendable resource DISTINCT from money and Kudosh (report §3)"}]}
+```
+
+`budgetTypes` must equal the registry file's 28 rows NAME-FOR-NAME and
+VALUE-FOR-VALUE (AC5 byte-match); the Summary column list is a
+code-derived projection — labeled `provenance:"reconstructed-from-code"`
++ `buildId` per R4, since `Summary` is a struct layout, not a payload.
+
+**`finance-configs.jsonl`** — all 30 `TPC.FinanceManagerConfig`-class
+rows (F9): `{id, initialBalance, failStateBalanceWarning,
+failStateBalanceGameOver, rentMultiplier, tuitionFeesMultiplier,
+allowTuitionFeeModification, useBungleBonus, evidence}`. Acceptance
+anchors: base row 150000/−150000/−300000/1.0/1.0/1/0; the Archaeology
+level variant differs ONLY in InitialBalance 80000 — the stage asserts
+that diff-only property mechanically (any second differing field on ANY
+level override is `DRIFT:`, not failure — new levels may legitimately
+override more).
+
+**`kudosh-ledger.jsonl`** — sources and sinks as one directional
+relation, `{direction:"source"|"sink", carrierClass, carrierId, amount,
+amountField, displayInHUD?, evidence}`. Sources: every
+`RewardKudoshDefinition` instance (typed block `_amount`,
+`_displayInHUD`) + `KudoshConsumableRewardConfig` rows (seed 6, F10) +
+sub-goal/mod reward carriers where they serialize amounts. Sinks:
+`IKudoshUnlockable` prices partitioned by implementing class —
+`GameItemDefinition`, `RoomDefinition`, `LandscapeBrushDefinition`
+(three implementers REQUIRED present, F10) — plus
+`GameItemUpgradeDefinition.Cost` rows (anchor Alien_Refiner V2 10000 /
+V3 30000) and `CourseDefinition.KudoshCost` on the 28 full course rows.
+Every `amount` equals its cited source field value (L5 audit); the
+runtime-only balance (`TotalKudosh`) appears ONLY as taxonomy metadata,
+never as a row.
+
+**`research-costs.jsonl`** — the 209 cost-bearing definitions ONLY
+(F11): selected as metagame-node stubs with `source.class ==
+"TPC.ResearchProjectDefinition"` AND a `ResearchPoints` int present.
+Rows `{id, researchPoints, evidence:{stubRow}}`. Assertions: row count
+== count of full-definition stub rows (209 seed, DRIFT wins); distinct
+`researchPoints` ⊆ {100, 200, 250, 300, 500, 600, 1200, 2500, 3000};
+distribution reconciles against the F11 seed with DRIFT. The 241 Lite
+twins are a DECLARED-EMPTY class — counted in the run section
+(`liteRowsWithoutCosts`) and named in LOGIC.md, never emitted as fake
+zero-cost rows (a zero would be an invented number).
+
+### L3 — Grading dataset
+
+Emits into `extracted/logic/grading/`.
+
+**`grade-ladder.json`** — single-object artifact joining the EGrade
+enum to the UI threshold table:
+
+```json
+{"buildId":20226581,
+ "enum":{"source":"decompiled/structural/id-registries/TPS.Game.TPC.EGrade.jsonl",
+         "members":[{"name":"Invalid","value":0},{"name":"F","value":1},
+                    {"name":"D","value":2},{"name":"C","value":3},
+                    {"name":"CC","value":4},{"name":"B","value":5},
+                    {"name":"BB","value":6},{"name":"A","value":7},
+                    {"name":"AA","value":8}]},
+ "thresholdTable":{
+   "sourceArtifact":"stubs/configs.jsonl#Config_UISprite.fields.Grades",
+   "rows":[{"grade":"NA","enumValue":0,"threshold":-1.0,
+            "displayNameTermId":-1534872139,"displayName":null},
+           {"grade":"F","enumValue":1,"threshold":0.0,
+            "displayNameTermId":-1180291283,"displayName":null},
+           {"grade":"D","enumValue":2,"threshold":40.0,
+            "displayNameTermId":-693951262,"displayName":null},
+           {"grade":"C","enumValue":3,"threshold":50.0,
+            "displayNameTermId":-673216108,"displayName":null},
+           {"grade":"CC","enumValue":4,"threshold":60.0,
+            "displayNameTermId":-639021983,"displayName":null},
+           {"grade":"B","enumValue":5,"threshold":70.0,
+            "displayNameTermId":-1899866650,"displayName":null},
+           {"grade":"BB","enumValue":6,"threshold":75.0,
+            "displayNameTermId":-1708865281,"displayName":null},
+           {"grade":"A","enumValue":7,"threshold":80.0,
+            "displayNameTermId":-1381827241,"displayName":null},
+           {"grade":"AA","enumValue":8,"threshold":90.0,
+            "displayNameTermId":-1320794757,"displayName":null}],
+   "consumer":"UISpriteConfig.GetGrade(float score) / GetGradeDisplayName (dump.cs ~1000712)"},
+ "displayNameLocaleJoin":"i2_term_registry/entity_locale (relinks)",
+ "provenance":"hard-read"}
+```
+
+Exactly **9** rows; `Enum` is the JOIN KEY to the registry values; the
+`grade` display name derives from the row's sprite SubObjectName
+(`…Notifications_Grade_NA/F/D/C/CC/B/BB/A/AA` — the NA spelling for
+enum 0 is measured from the atlas name, not invented); thresholds must
+be monotonically non-decreasing top-to-bottom EXCEPT the sentinel NA
+row (−1.0 below every achievable score). `displayName` fills from the
+locale join when the termID resolves; `null` otherwise (never a guess).
+
+**`term-pass-grades.jsonl`** — one row per course term:
+`{courseId, termIndex, passGrade, passGradeName?, weight, moduleCount,
+evidence:{fieldPath:"Terms[i]", resolution:"pptr-…"}}`. Population ==
+resolved `Terms[]` refs (matrix seed 75, F12, DRIFT wins);
+`passGrade` ∈ EGrade member names; unresolved term PPtrs emit
+`passGrade:null` + gap row.
+
+**`assessment-scoring.jsonl`** — the six `CourseAssessmentScoring`
+fields per course, read HARVEST-DIRECT (F2), one row per full
+definition (28 seed): `{courseId, bonusPointsPerLevel,
+expectedAverageXPPerSecond, powerFactor, useTimeFactors,
+timeInMedicalConsultationFactor, timeOnCourseFactor, evidence:{
+rawDump path}}`. Anchor: Archaeology {10.0, 0.75, 2.0, 0, …} (verifyA
+2d). Marketing variants are absent here BY DATA (they carry no scoring
+struct) — declared-empty, counted, never zero-filled.
+
+**`xp-score-normalization.json`** — the UNPROVEN-NATIVE marker
+artifact, exactly one object:
+
+```json
+{"buildId":20226581,
+ "surface":"XP accumulation -> assessment score normalization feeding GetGrade(score)",
+ "status":"UNPROVEN-NATIVE",
+ "basis":"score->grade cut-offs ARE data (thresholdTable above); the normalization feeding them lives native/Burst (report §4 item 6, G4 residual)",
+ "emittedNumbers":[],
+ "unblock":"scoped native-analysis piece over GameAssembly.dll guided by script.json (orchestrator ruling R3 UPDATE: THE single known trigger case)",
+ "siteLaw":"site presents the bands as client data and the step below them as unknown — never an authored curve"}
+```
+
+`emittedNumbers` is EMPTY by law (R4): no coefficient, curve, or clamp
+may appear here. This artifact always exists — it is the loud absence
+that stops anyone "helpfully" deriving the formula later.
+
+### L4 — Needs & decay dataset
+
+Emits into `extracted/logic/needs-decay/`.
+
+**`staff-decay.jsonl`** — **3 staff rows × 10 attributes = 30 rows**
+(F13): `{staffId, attribute:"Energy"|…|Sober (EAttribute spelling),
+changeOverTime, minInitialValue, maxInitialValue, disabled,
+component:"ECPCharacterAttributes", evidence:{stubRow, refKey}}`.
+Anchors: energy/food/drink/hygiene/social/toilet −0.05;
+fun/happiness/health/sober 0.0; sober init pinned 0–0. Values copied
+verbatim including float noise (−0.05000000074505806 stays
+−0.05000000074505806 — rounding is editing data).
+
+**`student-decay.jsonl`** — the ECPStudent leg, read HARVEST-DIRECT
+from the two `TPC.StudentDefinition` raws (F14): `{studentTypeId,
+component:"ECPStudent", attribute:"ClubNeed"|"Relationship"|"SelfStudy",
+changeOverTime, minInitialValue, maxInitialValue, evidence:{rawDump}}`.
+Anchors: clubNeed −0.1 (80–100), relationship −0.2 (40–100), selfStudy
+−0.2 (40–100). Corroborating club-side `ClubNeedChangeOverTime` (7 club
+rows seed) lands as additional rows with `component:"ClubDefinition"`.
+
+**`student-core11-decay.jsonl`** — the ABSENT-carrier ledger (G3
+residual): exactly **11 rows**, one per `EAttribute` member
+(registry-sourced, F13's attribute vocabulary), each:
+
+```json
+{"attribute":"Energy","changeOverTime":null,"initRange":null,
+ "carrier":"absent",
+ "searchScope":"all 9 stub kinds + every harvested monobehaviour family",
+ "status":"UNPROVEN-NATIVE",
+ "unblock":"native probe (G1/G8) or save-state diffing across time intervals (report G3)",
+ "buildId":20226581}
+```
+
+`null` is the LAW here (R4): a plausible-looking rate would be an
+invented number. The narrowness is part of the record — staff side is
+fully data-recoverable (L4 above), only this core-11 set remains
+unfound.
+
+**`interactions.jsonl`** — the satisfaction layer (F16), one row per
+InteractionDefinition stub (630 seed, DRIFT wins):
+`{id, cooldown fields (verbatim names/values),
+characterModifiers:[typed blocks verbatim],
+characterStatusEffects:[…], financeModifiers:[…],
+satisfactionTargets:[need-shaped fields verbatim],
+aiGraphRef:<resolved GOOSE GraphDefinition id|null>, evidence}`. Typed
+blocks copy `data` + `type` VERBATIM (the F17 breadth guarantee:
+3,330/1,787/130 typed-block rows exist corpus-wide — this family is
+where the needs-facing subset concentrates). `aiGraphRef` resolves
+`ActionSatisfyNeeds._aiGraph` PPtrs where present; action SEMANTICS
+stay native — the row records topology pointers, never behavior
+claims. Anchor: the typed-block shape of report §3
+(`CharacterModifier_Drink {_amount:90.0, WhenToModify:2, …}` on
+activity carriers) validates the walker on fixtures.
+
+### L5 — Invention guard + gap ledger
+
+Two mechanical passes, both LOUD:
+
+1. **Invention guard (R4 made executable).** Every emitted artifact is
+   re-opened and every numeric leaf audited against its row's
+   `evidence` citation: the cited source artifact + field path is
+   re-read and the value must MATCH (float-exact for copied floats;
+   integer-exact otherwise). Three legal escape hatches, each visibly
+   labeled IN the artifact: (a) `provenance:"reconstructed-from-code"`
+   blocks (code-layout projections like `summaryColumns`) — checked
+   for the label + buildId, not against a payload; (b) derived
+   aggregates carrying `method:"derived-arithmetic:<expr>"` + the
+   input citations (counts, splits, min/max of a domain); (c) explicit
+   `null`/absent-with-ledger representations (L3/L4 above). A numeric
+   satisfying NONE of the three = **exit 1**, naming artifact + path.
+   This is the launch-gate enforcement of "invented numbers fail".
+2. **Gap ledger assembly.** `extracted/logic/_gaps.jsonl` — one row
+   per unresolved/gapped item surfaced by L1–L4:
+   `{gapId, family:"course-progression"|"economy"|"grading"|"needs-decay",
+   kind:"unresolved-pptr"|"missing-carrier"|"ambiguous-target"|"builtin-target",
+   subjectId, reason, unblock, buildId}` sorted by `(family, gapId)`.
+   The two STANDING rows (XP→score normalization; student core-11
+   decay) are pre-seeded by L3/L4 artifacts themselves and are
+   legitimate terminal states (doctrine bar 1) — they still count for
+   AC9's exit-2 rule: completed-with-ledger is honest, silence is not.
+
+### L6 — LOGIC.md rollup + digests
+
+Regenerate `extracted/logic/LOGIC.md` mechanically: fixed section order
+— provenance header (buildId, stage id, input inventory with sizes);
+per-family dataset tables (artifact, row count, join keys, seed vs
+measured counts with drift marks); the UNPROVEN-NATIVE register (the
+two standing rows + R3's deferral note verbatim); the gap ledger with
+sizes; the reconstruction-labeling law statement. Deterministic
+markdown — two builds byte-equal. Finally compute sha256 over every
+declared output and append the digest map to the EXTRACTION-LOG run
+section (`digests:{relpath: hex8…}`) — the run section is excluded
+from byte-identity comparisons (piece-1 §4), so recording digests there
+is safe and gives reruns a cheap comparison surface. No hash manifest
+lands INSIDE `extracted/logic/` (it could not hash itself honestly).
+
+### Run-section keys (pinned, appended per pass)
+
+```
+L0: stubsLoaded / stubIndexEntries / registriesLoaded /
+    driftProbes:{name:{expected,measured}}
+L1: courseRowsFull / courseRowsMarketing / assessmentScoringRawHits /
+    moduleRows / modulePrefixSplit:{Module_*,Unused_Module_*} /
+    moduleRoomResolved / moduleRoomUnresolved /
+    prerequisiteInstances / taxonomyDistinctClasses /
+    unlockEdgesResolved / unlockEdgesUnresolved / builtinExternalsSkipped
+L2: budgetTypeCount / financeConfigRows / financeDiffOnlyOverrides /
+    kudoshSources / kudoshSinksByImplementer:{item,room,landscapeBrush,
+    upgrade,courseLicence} / researchCostRows / liteRowsWithoutCosts /
+    researchDomainDistinct
+L3: gradeLadderRows / thresholdMonotonicCheck / termPassGradeRows /
+    termPassGradeUnresolved / assessmentScoringRows
+L4: staffDecayRows / studentDecayRows / clubDecayRows /
+    core11LedgerRows / interactionRows / aiGraphsResolved
+L5: numericsAudited / numericsByEscapeHatch:{copied,reconstructedFromCode,
+    derivedArithmetic,explicitNull} / inventionGuardFailures /
+    gapRowsStanding / gapRowsByFamily:{…}
+L6: logicMdBytes / digests:{…}
+```
+
+## 4. Output contracts (additions under `extracted/`)
+
+```
+extracted/
+├── EXTRACTION-LOG.md               # += logic run sections (append-only, unchanged rules)
+├── logic/                          # stage `logic` SOLE WRITER of everything below
+│   ├── LOGIC.md                    # L6 generated rollup (byte-stable)
+│   ├── _gaps.jsonl                 # L5 unified gap ledger (empty valid iff nothing gapped)
+│   ├── course-progression/
+│   │   ├── prerequisite-taxonomy.json  # 24-member taxonomy, emitted enum
+│   │   ├── courses.jsonl            # 69 seed rows (28 full + 41 marketing)
+│   │   ├── modules.jsonl            # 319 seed rows (312 + 7 Unused_)
+│   │   ├── prerequisites.jsonl      # typed instance census (≥675 seed occurrences)
+│   │   ├── course-unlock-edges.jsonl # 50 seed edges + unresolved-as-rows
+│   │   └── attrition.jsonl          # trigger constants + events
+│   ├── economy/
+│   │   ├── money-taxonomy.json      # 28 BudgetTypes + 3-resource model
+│   │   ├── finance-configs.jsonl    # 30 rows
+│   │   ├── kudosh-ledger.jsonl      # sources+sinks, 3 IKudoshUnlockable implementers
+│   │   └── research-costs.jsonl     # 209 rows; Lite twins declared-empty
+│   ├── grading/
+│   │   ├── grade-ladder.json        # EGrade ∞ Config_UISprite.Grades[9]
+│   │   ├── term-pass-grades.jsonl   # per-term PassGrade
+│   │   ├── assessment-scoring.jsonl # 6 fields × 28 seed courses
+│   │   └── xp-score-normalization.json # UNPROVEN-NATIVE marker (always present)
+│   └── needs-decay/
+│       ├── staff-decay.jsonl        # 30 rows
+│       ├── student-decay.jsonl      # ECPStudent + club corroboration rows
+│       ├── student-core11-decay.jsonl # 11 absent-carrier rows (nulls by law)
+│       └── interactions.jsonl       # 630 seed rows
+```
+
+Ownership: EVERY path above is written by `stage7_logic.py` alone;
+EXTRACTION-LOG/.stage-stamps/.pipeline-meta stay runner-owned. No other
+stage gains writers here; NOTHING under `relinks/`, `stubs/`,
+`harvest/`, `RELATIONS.md`, `PROOF.md` is touched (piece-02 sole-owner
+rules stand). All JSONL sorted + UTF-8 + LF; all JSON sorted-keys;
+atomic renames; `buildId` on 100% of rows/artifacts (user-facing
+surfaces later may carry buildId only — AGENTS rule 3).
+
+## 5. Acceptance criteria (mechanical, whole piece)
+
+1. **Entrypoint:** `python run_all.py --list` enumerates exactly
+   `verify-client, decompile, harvest-catalog, harvest-bundles,
+   localisation, emit-stub-datasets, relink, logic` — eight stages,
+   that order; `make list` equivalent. `--only logic` runs in
+   isolation on a prepared tree (client mode `--skip logic` then
+   `--only logic`; hostless smoke:
+   `tests/build_fixture_tree.py --stage logic` materializes the §3
+   upstream set synthetically — trivial for this stage: flat JSONL/JSON
+   files only, NO synthetic bundles needed, unlike relink's AC1).
+2. **Arithmetic identities hold (hard gates):** courses rows ==
+   full + marketing rows (seeds 28 + 41 = 69); modules rows ==
+   prefix-split sum (312 + 7 = 319); `Grades` rows == 9; registry
+   joins total 9 == 9; research distribution sums to the row count;
+   staff decay rows == 3 × 10.
+3. **Byte-match gates:** `money-taxonomy.json.budgetTypes` equals
+   `id-registries/TPS.Game.BudgetType.jsonl` name-for-name and
+   value-for-value, emitted in the registry file's own (name-sorted)
+   order — the sketch in §3 L2 shows VALUE order for readability only
+   (**28 names** — the verifyA-corrected count);
+   `grade-ladder.json.thresholdTable.rows` re-derived from the
+   `Config_UISprite` stub equals the emitted table row-for-row
+   (thresholds −1/0/40/50/60/70/75/80/90); `EGrade` members equal the
+   registry file.
+4. **Id verbatim:** every emitted `id`/`srcId`/`dstId` resolves to a
+   stub id (twins WITH suffix) or to `null`-with-gap-row — sampled
+   ≤1,000 rows → all, else deterministic sorted 500 (piece-1 sampler).
+   Zero ids invented: the §2 anchor set exists verbatim in the emitted
+   files (`Course_Archaeology_Lite` edge, `Module_Alien_Science_Year1_Lesson1`
+   chain row, `Staff_Assistant` energy row, AA threshold row,
+   Archaeology finance + assessment rows).
+5. **Counts reconcile with drift:** every seed in §2 F-table is probed
+   at L0/L1–L4; movement prints `DRIFT:` and the fresh number wins —
+   no stale constant ever gates. The 50-unlock-edge population is a
+   seed too: resolved + unresolved rows must TOGETHER equal the
+   measured instance count.
+6. **Determinism:** rerunning `--only logic` twice yields
+   byte-identical declared outputs; interrupted-run convergence holds
+   (temp+rename); LOGIC.md byte-equal across builds; digests recorded
+   per L6.
+7. **Invention guard:** L5 reports `numericsAudited > 0` and
+   `inventionGuardFailures == 0` for a green run; a seeded defective
+   artifact (test fixture with one uncited number) FAILS with exit 1
+   and the offending path in stderr (the negative test proves the gate
+   bites). Every `reconstructed-from-code` block carries `buildId`.
+8. **Never-invent surfaces:** `xp-score-normalization.json.emittedNumbers`
+   == []; `student-core11-decay.jsonl` carries 11 rows all
+   `changeOverTime:null` + `carrier:"absent"`; no artifact contains a
+   float/int outside the three legal escape hatches of §3 L5.
+9. **Exit codes:** `0` iff all four families populated per AC2–AC5 AND
+   `_gaps.jsonl` EMPTY; `2` iff any gap row stands — INCLUDING the two
+   standing UNPROVEN-NATIVE rows, i.e. **exit 2 is the expected steady
+   state on today's corpus** until the deferred native-analysis piece
+   closes them (run section names every contributing gap + size);
+   `1` on any schema/validation/invention-guard failure; `3` on
+   missing upstream artifacts (§3 input list). Runner treats 2 as
+   completed-with-ledger; pipeline continues.
+10. **Carve-out + ownership guards intact:** zero media bytes under
+    `extracted/logic/` (piece-1 extension grep still passes); zero
+    writes outside `extracted/logic/**` + the runner-owned logs
+    (assertable by hashing the rest of `extracted/` before/after in
+    the integration lane).
+
+## 6. Explicit non-goals (later pieces own these)
+
+- **Native analysis (R3: DEFERRED, not cancelled).** No
+  GameAssembly.dll tracing, no Burst probing, no runtime memory reads.
+  The single known scoped target is the XP→score normalization (L3
+  marker artifact names it). Trigger stays: a site piece genuinely
+  needing a code-computed constant.
+- **Stub re-ingestion (R2).** Thin stubs (LevelScenarioV2 48×4,
+  course `_assessmentScoring`/`_studentArchetypes` drops) are worked
+  around by harvest-direct READS here; fixing the stub emitter is a
+  separate small ingest piece proposed by whoever first hits the wall
+  downstream, with the measured gap attached.
+- **Relink mutation.** The typed-block PPtr hole (F6) is worked around,
+  not patched: stage 7 never writes `relinks/**`; whether piece-02's
+  matrix should natively carry prerequisite edges is an orchestrator
+  question (§7).
+- Site/UI anything; PROOF.md reconciliation + VALIDATION-REPORT
+  derivation (the PROOF piece consumes THIS piece's ledgers); map
+  geometry; protocol content; media export; competitor-model
+  application (piece-02 bar 3 owns community claims — overlays never
+  mix into logic datasets).
+- Formula SIMULATION beyond emitted constants: no happiness simulator,
+  no timetable solver, no applicant generator ships from this stage —
+  those combine native kernels with these data (report §4/§7) and stay
+  site/tool-layer consumers of `extracted/logic/`.
+
+## 7. Open questions routed back (none block the build)
+
+| Question | Resolution route |
+|---|---|
+| Should piece-02's matrix/pair files eventually carry the 50 prerequisite edges natively (closing the F6 typed-block hole at the relink layer), or does `course-unlock-edges.jsonl` remain the logic-owned home? Default here: logic-owned, relinks untouched | Orchestrator decides; a relink amendment would be a piece-02 revision, out of this file's scope |
+| Piece-01 doc implications of the 8th stage: §4 layout grows `extracted/logic/` beyond the `.gitkeep` placeholder, §5.1 lists eight stages, §5.2 gains the stage-7 prepared-tree set (flat files, no game dir), §8 gains logic fixture bullets | Suggest a piece-1 **Revision 8** one-liner set by the documentator/orchestrator seat (piece-01 outside this piece's write scope) |
+| Config_Campus satisfaction/prestige/teaching groups (weights, curves, RoomPrestigeLevels[15]) are data but belong to no brief-listed family here; a grouped projection (`balance-groups.json`) was cut for scope | Owner/orchestrator: schedule as a small Rev 2 family if the happiness-simulator tool (tools-plan §T3) needs them before another piece emits them |
+| Career-goal/objective scoring (CareerGoalDefinition 68 + CareerGoalObjectiveDefinition 204 + Challenge_Objective 236 — verifyB 7.2) sits between the course and AI surfaces, unnamed in any family | Same routing as above; add to the next logic revision with measured counts |
+| `ECPStudent` carriers exist on only 2 StudentDefinition raws while 54 student-type stubs carry none — prefab-side student definitions were never harvested | Measured fact, ledgered in LOGIC.md; unblock is a character-module-prefabs harvest pass — owner question, non-blocking |
+| `GradeMoneyRewards` zeros: site shows "no payout" vs hiding zero rows — presentation call on verbatim-zero data | Site layer decides later; data emits all 319 rows verbatim |
+
+## 8. Test obligations (TestWriter contract)
+
+**Fixture-based (hostless; synthetic mini-artifacts only — tiny stub
+JSONL slices, registry files, externals rows; never real game bytes):**
+
+- L0: stub-index builder (basename↔full-path normalization; twins
+  distinct); registry loader; drift-probe emission (`DRIFT:` line on
+  count movement, fresh-wins semantics).
+- L1: typed-block walker over a synthetic
+  `references["00000000"].data._course` payload (finds the PPtr a plain
+  walk misses — regression anchor for F6); module selector catches the
+  7 `Unused_Module_*` rows of a fixture corpus while asserting the
+  312/7-style split; cross-file resolver happy path reproducing the F7
+  trace shape (externals row → CAB → pathId → stub id incl. an
+  `@hash8` twin endpoint); every failure mode routes to
+  unresolved-rows + gaps (unknown fileId, built-in `Library/…` path,
+  dangling pathId, multi-survivor ambiguity) — none silently dropped;
+  marketing-variant null-economics emission (emptiness preserved, no
+  zero-fill).
+- L2: BudgetType byte-match checker (mutate one name → fail);
+  diff-only override assertion (base vs variant fixture; a second
+  differing field flips to DRIFT, not crash); research domain +
+  distribution checker; declared-empty Lite class counting (no
+  zero-cost rows).
+- L3: threshold-table derivation from a fixture `Grades[9]` (join on
+  `Enum`; NA-sentinel exemption in the monotonicity check; a broken
+  monotonic order fails); `xp-score-normalization.json` validator
+  (fails if `emittedNumbers` non-empty).
+- L4: staff 3×10 expansion with verbatim float noise preserved;
+  core-11 null-law validator (any non-null rate fails); interaction
+  typed-block verbatim copy (walker output round-trips `data`+`type`).
+- L5: invention guard — green fixture passes; a fixture with ONE
+  uncited numeric fails exit 1 naming the path; each escape hatch
+  (copied/reconstructed-from-code/derived-arithmetic/explicit-null)
+  exercised positively; gap-ledger sort + standing-row accounting.
+- L6: LOGIC.md generator determinism (two builds byte-equal); digest
+  map stability.
+- Runner: `--list` shows eight stages in order; `--only logic`
+  isolation; prepared-tree builder covers the §3 upstream set; exit
+  mapping (0/1/2/3) incl. the exit-2 standing-ledger case; stamp
+  invalidation on script-hash change; interrupted-run convergence;
+  carve-out + ownership guards (AC10).
+
+**Client-gated integration (auto-SKIP without `TPC_GAME_DIR`/default
+install — though the stage itself needs no game dir, these run against
+the REAL extracted tree):**
+
+- L0: F1 per-kind counts reproduce or DRIFT-print.
+- L1: 69/28/41 course split; 319 modules with the 312/7 split;
+  `Module_Alien_Science_Year1_Lesson1` anchor row exact; the
+  Archaeology unlock edge resolves to `Course_Archaeology_Lite`
+  end-to-end; resolved+unresolved edges == measured instance count;
+  taxonomy ⊆ 24 classes.
+- L2: 30 finance rows; Archaeology diff-only property holds; three
+  `IKudoshUnlockable` implementer partitions all non-empty; upgrade
+  anchor 10000/30000 present; research rows == 209-or-fresh with
+  domain ⊆ the 9-value set.
+- L3: threshold table equals the stub-derived table byte-for-byte; 9
+  rows; term rows == resolved Terms[] refs; Archaeology assessment
+  anchor {10.0, 0.75, 2.0, 0, …}.
+- L4: 30 staff rows with the −0.05 six-set / 0.0 four-set; student
+  rows −0.1/−0.2/−0.2 with bands; 11 null core-11 rows; 630-or-fresh
+  interaction rows.
+- L5/L6: `inventionGuardFailures == 0` over the real tree; digests
+  stable across a double run; exit 2 with exactly the two standing
+  gaps (plus any genuinely new ones, enumerated).
+
+---
+
+## Revision registration
+
+| Rev | Date | Status | Grounded in |
+|---|---|---|---|
+| 1 | 2026-08-26 | THIS DOCUMENT — initial spec; enters PrepareTask review (Reviewer → Arbiter) before any CodeWriter/TestWriter seat | [`../scout-report-piece-04.mdx`](../scout-report-piece-04.mdx) r2 · [verifyA](../verifications/verifyA-scout-piece04.mdx) + [verifyB](../verifications/verifyB-scout-piece04.mdx) PASS-WITH-CORRECTIONS · [orchestrator-piece04-scope](../rulings/orchestrator-piece04-scope.mdx) R1–R4 · format templates piece-01 Rev 7 / piece-02 |
+
+Rev 1 authoring notes (what the Documentator seat changed relative to
+raw scout prose, so reviewers can diff intent): BudgetType 28 (not 27),
+CalculateRoomScore 7 static overloads, EStaffStat 31, Expelled events
+under `TPC.CharacterEvents.Student`, module prefix 312+7, career
+challenge 67/17 split, research costs on 209-of-450 rows with the wide
+9-value domain, needs-decay feasibility = partial (staff side landed) —
+all verifier corrections applied before spec-writing; the 50-edge
+resolution is specified as a logic-stage owned procedure after the F6
+probe showed relinks carries neither the edges nor their unresolved
+ledger rows.
+
+§END
