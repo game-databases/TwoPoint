@@ -74,7 +74,7 @@ convention).
 | F3 | Module chain | **319** `TPC.CourseModuleDefinition` rows = 312 `Module_*` + **7 `Unused_Module_*`** (prefix joins MUST include `Unused_`); `RoomType` PPtr 319/319, `Qualification` PPtr 319/319, `GradeMoneyRewards` keyset `{A,AA,B,BB,C,CC,D,F}` ×319; anchor `Module_Alien_Science_Year1_Lesson1` ClassSize 8 · Duration 2 · XPMultiplier 1.0 [report §2; verifyA #3] |
 | F4 | Prerequisite system | abstract `TPC.Prerequisite` + exactly **24** concrete subclasses enumerated by NAMESPACED ancestry over `class-hierarchy.jsonl` (`baseType == "TPC.Prerequisite"`; a bare `'Prerequisite'` match finds 0 rows) — full spellings `PrerequisiteDaysPassed` … `ChallengePrerequisiteAcademicScore`; short-name ↔ full-spelling map: DaysPassed→`PrerequisiteDaysPassed`, DaysPassedSinceCourseStart→`PrerequisiteDaysPassedSinceCourseStart`, ItemUnlocked→`PrerequisiteItemUnlocked`, ItemAvailable→`PrerequisiteItemAvailable`, HasResearchProjectUnlocked→`PrerequisiteHasResearchProjectUnlocked`, **HasCourseUnlocked→`PrerequisiteHasCourseUnlocked`**, HasLevelDiscovered→`PrerequisiteHasLevelDiscovered`, HasStarsInLevel→`PrerequisiteHasStarsInLevel`, UniversityLevel→`PrerequisiteUniversityLevel`, TimeSinceArrival→`PrerequisiteTimeSinceArrival`, HasCourseRunning→`PrerequisiteHasCourseRunning`, HaveStudentsOnCampus→`PrerequisiteHaveStudentsOnCampus`, HasDefeatedChallengeEvent→`PrerequisiteHasDefeatedChallengeEvent`, HasClubLevel→`PrerequisiteHasClubLevel`, StaffWithQualification→`PrerequisiteStaffWithQualification`, QualificationUnlocked→`PrerequisiteQualificationUnlocked`, EventUnlocked→`PrerequisiteEventUnlocked`, HasItemInLevel→`PrerequisiteHasItemInLevel`, HasCourseAtLevel→`PrerequisiteHasCourseAtLevel`, DaysSinceEventRun→`PrerequisiteDaysSinceEventRun`, HasUnlockable→`PrerequisiteHasUnlockable`, ChallengeHasRoom→`ChallengePrerequisiteHasRoom`, ChallengeHasRoomUnlocked→`ChallengePrerequisiteHasRoomUnlocked`, ChallengeAcademicScore→`ChallengePrerequisiteAcademicScore`. Configs.jsonl typed-block census (full spellings): PrerequisiteHasCourseUnlocked **×50**, PrerequisiteUniversityLevel ×43, ChallengePrerequisiteHasRoomUnlocked ×18, PrerequisiteDaysPassed ×17, PrerequisiteHasStarsInLevel **×13**, plus smaller counts — **193 member blocks total today**. NON-MEMBER look-alikes riding other carriers: `LevelPrerequisiteStars` ×26 (on `TPC.LevelLiteConfig`) and `LevelPrerequisiteStarsByLevelID` ×1 (on `TPC.MetagameConfig`) declare `: ILevelPrerequisiteData` (dump.cs 880899/880924), NOT `: Prerequisite` — a different family. `"Prerequisites"` exact-key occurrences **675** (substring 977 = 675 + VisiblePrerequisites 68 + StartPrerequisites 68) [report §2; verifyA 9a/9b; reviewer-piece04 F2 re-measure] |
 | F5 | Typed-block carrier shape | SerializeReference payloads serialize INLINE as `{"data":{…},"type":{"asm","class","ns"}}`; on career-challenge rows they hang off a pointer indirection: `fields.Prerequisites=[{id:N}]` → `fields.references["%08x"].{data,type}` (measured on `CareerChallenge_Course_Archaeology_V1`, `_course={m_FileID:2, m_PathID:-7906850020505022578}`) [report §2; verifyB 5.1] |
-| F6 | The 50 unlock edges are NOWHERE in relinks | zero `PrerequisiteHasCourseUnlocked` rows in any `relinks/*.jsonl` pair file AND zero career-challenge rows in `_unresolved_pptrs.jsonl` (probed 2026-08-26) — the piece-02 PPtr walker does not descend into typed-block `data`. The logic stage owns their resolution; relinks stays untouched (single-writer law, §6) |
+| F6 | Relinks ALREADY resolves the course PPtrs — anonymously | `relinks/config_config.jsonl` carries **68** rows with `evidence.fieldPath = references.<hex>.data._course` (measured 2026-08-26): **59** `method:"pptr-cross-file"` hard-resolved `resolvedVia:"externals+cab-index"`, **9** `pptr-same-file`, all `mechanism:"hard"/inferred:false`; by typed class they decompose EXACTLY as the stub census: PrerequisiteHasCourseUnlocked **50** / PrerequisiteHasCourseRunning **13** / PrerequisiteHasCourseAtLevel **3** / CharacterModifier_XP **2**. The piece-02 walker is NOT blind to typed blocks — executing `relink_util.walk_pptr_refs` on the real `CareerChallenge_Course_Archaeology_V1` stub returns `{fieldPath:"references.00000000.data._course", m_FileID:2, m_PathID:-7906850020505022578}`; `_unresolved_pptrs.jsonl` holds zero career-challenge rows because these PPtrs RESOLVED upstream, not because they were unattempted (the earlier class-spelling grep over pair files returned zero only because pair files never name classes). What relinks LACKS is TYPE ATTRIBUTION AND EDGE SEMANTICS — no `prerequisiteClass`, no verb, no payload, no taxonomy membership, no non-member separation. Logic owns the SEMANTIC layer; relinks stays untouched (single-writer law, §6) [arbiter-piece04-spec Part 2/R1] |
 | F7 | Cross-file resolution machinery (committed) | `harvest/externals.jsonl` 222 serialized-file rows keyed by FULL bundle relpath (`DLCs/ghost/dlc-ghost-art_assets_all.bundle`) while stub `source.bundle` stores the BASENAME (`configs_assets_all.bundle`) — resolver must normalize [verifyB 5.1]; `relinks/bridges/cab_index.jsonl` 222 rows + `container_index.jsonl` 49,855 address rows (wc -l, 2026-08-26); demonstration trace: fileId 2 of the metagame bundle → `archive:/CAB-7c07bcb2…`, pathId −7906850020505022578 → `Course_Archaeology_Lite` [verifyB 5.1] |
 | F8 | Money taxonomy | `BudgetType` = **28** named values TuitionFees=0 … PatientTreatmentIncome=27, verbatim in `decompiled/structural/id-registries/TPS.Game.BudgetType.jsonl`; `ProfitType` {TuitionFees, Rent, Bonus}; `ExpenseType` {Wages, Loans}; `FinanceManager.Summary` columns incl. CheesyBonus/MonthlyAllowance/OtherIn/Out; `EStaffStat` = 31 members [report §3; verifyA 5a/7c] |
 | F9 | Finance configs | **30** `TPC.FinanceManagerConfig` rows; anchors `Config_FinanceManager` {InitialBalance 150000, FailStateBalanceWarning −150000, FailStateBalanceGameOver −300000, RentMultiplier 1.0, TuitionFeesMultiplier 1.0, AllowTuitionFeeModification 1, UseBungleBonus 0}; `Config_FinanceManager_Level_Archaeology` differs ONLY in InitialBalance 80000 [report §3; verifyA 5b, verifyB 4.1] |
@@ -122,8 +122,13 @@ Sample edges/values pinned for tests (stable anchors):
   reimplementation of these; `logic_util.py` adds ONE new primitive:
   the **typed-block walker** — descends into
   `fields.references[*].data`, returning `{fieldPath, pptr, type:{asm,class,ns}}`
-  leaves, because plain-payload walking provably misses the prerequisite
-  PPtrs (F6).
+  leaves. Plain PPtr walking already REACHES typed-block data (F6: it
+  returns the `_course` leaf on the real carrier row) but yields only
+  anonymous `(fieldPath, fileId, pathId)` triples WITHOUT type
+  attribution; the walker's raison d'être is the TYPED view (`data` +
+  `type`) that plain walking cannot produce — required for the
+  prerequisite census, the non-member sidecar routing, and unlock-edge
+  semantics (verb + class), none of which a bare PPtr relation carries.
   Registered ADDITIVELY in `tools/tpc_common.py::STAGES`
   with script-hash deps `["stage8_logic.py", "logic_util.py",
   "tpc_common.py", "log_util.py"]` — stages 0–7 byte-behave identically.
@@ -317,9 +322,13 @@ interface spelling) is a `DRIFT:` + gap row.
 **`course-unlock-edges.jsonl`** — the payoff artifact: concrete
 course→course unlock edges. Expected population: the **50**
 `PrerequisiteHasCourseUnlocked` instances (F4), each carrying exactly
-one `_course` cross-file PPtr (F5). Resolution procedure (pinned,
-deterministic — this is the brief's "how externals/pathId resolution
-feeds them"):
+one `_course` cross-file PPtr (F5). Relinks already resolves these same
+PPtrs anonymously (68 rows, F6) — this artifact re-derives them WITH
+semantics (`prerequisiteClass`, verb, payload, taxonomy membership,
+non-member separation), which is why resolution is logic-owned; the
+mandatory reconciliation leg below keeps the two ledgers provably
+consistent. Resolution procedure (pinned, deterministic — this is the
+brief's "how externals/pathId resolution feeds them"):
 
 1. Source side: carrier stub row → `source.bundle` (BASENAME) +
    `source.pathId`.
@@ -369,15 +378,41 @@ row here with `dstId:null`, `resolved:false`, `reason` — gapped
 resolution is data (piece-02 `_unresolved_pptrs` convention); they
 simultaneously land in `_gaps.jsonl` (L5) and hold exit 2 (AC9).
 
+**MANDATORY relinks reconciliation leg** (arbiter-piece04-spec R1/RF-2
+— two corpus layers describe the same PPtr facts, so silent divergence
+must be impossible): after emission, every resolved unlock edge is
+matched READ-ONLY against `relinks/config_config.jsonl` rows whose
+`evidence.fieldPath` ends `.data._course`, keyed on
+`(srcBundle, srcPathId, dstPathId)` — the identity both layers carry
+regardless of spelling (`references[<hex>]` here vs `references.<hex>`
+there). Run-section counters with DRIFT-wins seeds:
+`relinksCoursePPTRRows` (**68** = F6), `unlockEdgeOverlapWithRelinks`
+(**50** — every resolved unlock edge must find its relinks counterpart;
+overlap ≠ resolved-count ⇒ gap row), `declaredScopeDifference`
+(**18** = 13 PrerequisiteHasCourseRunning + 3
+PrerequisiteHasCourseAtLevel + 2 CharacterModifier_XP — typed blocks
+relinks resolves that logic DELIBERATELY does not emit as unlock edges,
+because they are running-state requirements, level-gating, and XP
+modifiers, not unlock gates; each must be class-accounted, never
+silent). Any relinks-side counterpart WITHOUT a logic-side row outside
+the declared scope difference lands in `_gaps.jsonl` as kind
+`relinks-divergence` (PINNED spelling for this leg's failure mode) and
+holds exit 2. This leg consumes relinks read-only; it NEVER writes
+there (§6 sole-writer law unchanged).
+
 **`attrition.jsonl`** — the trigger constants (F15), one row per
 measured Config_Campus FIELD GROUP, group labels = the artifact's own
 verbatim field names (no stage-invented spellings):
 `{group:"StudentDropoutSettings"|"StaffResignationSettings"|
 "StudentFailPercent"|"StudentUnhappyTuitionFeesThreshold",
 fields:{…verbatim…}, events:[…], evidence:{artifact:
-"stubs/configs.jsonl#Config_Campus", fieldPath}}` — the last two are
-top-level scalar fields (10 and 20.0 respectively), each emitted as a
-single-row group; `AdvisorTrigger_*` typed blocks live on OTHER
+"stubs/configs.jsonl#Config_Campus", fieldPath,
+codeRef:"dump.cs TPC.CharacterEvents.Student"}}` — the `codeRef` key
+cites the decompile source for the event strings, which are CODE-DERIVED
+values (namespace members), not stub-payload leaves; every emitted
+string is cited exactly like every emitted number. The last two groups
+are top-level scalar fields (10 and 20.0 respectively), each emitted as
+a single-row group; `AdvisorTrigger_*` typed blocks live on OTHER
 carriers and are NOT Config_Campus groups here. Anchors: the two twins
 {20/15/10, 120 s} and {20/15/10, 240 s}; event spelling
 `TPC.CharacterEvents.Student.Expelled` / `.ExpelledFail` verbatim
@@ -584,6 +619,17 @@ changeOverTime, minInitialValue, maxInitialValue, evidence:{rawDump}}`.
 Anchors: clubNeed −0.1 (80–100), relationship −0.2 (40–100), selfStudy
 −0.2 (40–100). Corroborating club-side `ClubNeedChangeOverTime` (7 club
 rows seed) lands as additional rows with `component:"ClubDefinition"`.
+Coverage delta (arbiter-piece04-spec R4): only **2 of 54**
+student-bearing rows carry an ECPStudent carrier today (2 harvested
+`TPC.StudentDefinition` raws vs 54 student-type stubs — prefab-side
+student definitions were never harvested). This is a MEASURED COUNTER,
+not a gap row: the run section reports
+`studentDecayRawCoverage:{raws:2, studentTypeStubs:54}` and LOGIC.md
+prints it beside the dataset table — minting a second `_gaps.jsonl`
+row would double-count the same absence `student-core11-decay.jsonl`
+already ledgers with its 11 null carriers and would break the literal
+two-standing-gaps assertion. Scheduling the character-module-prefabs
+harvest pass is an orchestrator sequencing call, non-blocking.
 
 **`student-core11-decay.jsonl`** — the ABSENT-carrier ledger (G3
 residual): exactly **11 rows**, one per member of
@@ -651,8 +697,12 @@ Two mechanical passes, both LOUD:
 2. **Gap ledger assembly.** `extracted/logic/_gaps.jsonl` — one row
    per unresolved/gapped item surfaced by L1–L4:
    `{gapId, family:"course-progression"|"economy"|"grading"|"needs-decay",
-   kind:"unresolved-pptr"|"missing-carrier"|"ambiguous-target"|"builtin-target",
+   kind:"unresolved-pptr"|"missing-carrier"|"ambiguous-target"|
+   "builtin-target"|"relinks-divergence",
    subjectId, reason, unblock, buildId}` sorted by `(family, gapId)`.
+   `relinks-divergence` is the PINNED kind for the mandatory
+   reconciliation leg's failure mode (an unlock-edge/counterpart
+   mismatch against `relinks/config_config.jsonl`).
    The two STANDING rows (XP→score normalization; student core-11
    decay) are pre-seeded by L3/L4 artifacts themselves and are
    legitimate terminal states (doctrine bar 1) — they still count for
@@ -683,7 +733,9 @@ L1: courseRowsFull / courseRowsMarketing / assessmentScoringRawHits /
     moduleRoomResolved / moduleRoomUnresolved /
     prerequisiteInstances / taxonomyDistinctClasses /
     nonmemberBlocks / nonmemberFamilies /
-    unlockEdgesResolved / unlockEdgesUnresolved / builtinExternalsSkipped
+    unlockEdgesResolved / unlockEdgesUnresolved / builtinExternalsSkipped /
+    relinksCoursePPTRRows / unlockEdgeOverlapWithRelinks /
+    declaredScopeDifference
 L2: budgetTypeCount / financeConfigRows / financeDiffOnlyOverrides /
     kudoshSources / kudoshSinksByImplementer:{item,room,landscapeBrush,
     upgrade,courseLicence} / researchCostRows / liteRowsWithoutCosts /
@@ -691,6 +743,7 @@ L2: budgetTypeCount / financeConfigRows / financeDiffOnlyOverrides /
 L3: gradeLadderRows / thresholdMonotonicCheck / termPassGradeRows /
     termPassGradeUnresolved / assessmentScoringRows
 L4: staffDecayRows / studentDecayRows / clubDecayRows /
+    studentDecayRawCoverage:{raws,studentTypeStubs} /
     core11LedgerRows / interactionRows / aiGraphsResolved
 L5: numericsAudited / numericsByEscapeHatch:{copied,reconstructedFromCode,
     derivedArithmetic,explicitNull} / inventionGuardFailures /
@@ -741,15 +794,16 @@ surfaces later may carry buildId only — AGENTS rule 3).
 
 ## 5. Acceptance criteria (mechanical, whole piece)
 
-1. **Entrypoint:** `python run_all.py --list` enumerates exactly
-   `verify-client, decompile, harvest-catalog, harvest-bundles,
-   localisation, emit-stub-datasets, relink, maps, logic` — NINE
-   stages, that order (canonical registry indices: verify-client=0 …
-   relink=6, maps=7, logic=8, with locale-proof=9, contracts=10,
-   media=11, search-corpus=12 seated after logic as their pieces land);
-   if the maps stage has not yet registered when logic builds, the
-   assertion is stated against this canonical order and fails loudly on
-   any other position for `logic`. `make list` equivalent.
+1. **Entrypoint (ORDER asserted, count NEVER — arbiter-piece07 R1
+   form):** in `python run_all.py --list`, `logic` appears AFTER `maps`
+   IF `maps` is registered, ELSE directly after `relink`; and BEFORE any
+   canonically-later sibling IF registered (`locale-proof`=9,
+   `contracts`=10, `media`=11, `search-corpus`=12 — canonical registry:
+   …relink=6, maps=7, logic=8). Any other position for `logic` fails
+   loudly. An ABSOLUTE enumeration is asserted only on the fixture tree
+   the TestWriter controls, where the registration set is known — never
+   against a live tree a concurrent sibling may extend mid-batch.
+   `make list` equivalent.
    `--only logic` runs in
    isolation on a prepared tree (client mode `--skip logic` then
    `--only logic`; hostless smoke:
@@ -845,12 +899,12 @@ surfaces later may carry buildId only — AGENTS rule 3).
 
 | Question | Resolution route |
 |---|---|
-| Should piece-02's matrix/pair files eventually carry the 50 prerequisite edges natively (closing the F6 typed-block hole at the relink layer), or does `course-unlock-edges.jsonl` remain the logic-owned home? Default here: logic-owned, relinks untouched | Orchestrator decides; a relink amendment would be a piece-02 revision, out of this file's scope |
-| Piece-01 doc implications of the canonical registry: §4 layout grows `extracted/logic/` beyond the `.gitkeep` placeholder, §5.1 lists NINE stages (`maps`=7 seated before `logic`=8; locale-proof/contracts/media/search-corpus follow as their pieces land), §5.2 gains the stage-8 prepared-tree set (flat files, no game dir), §8 gains logic fixture bullets | Suggest a piece-1 **Revision 8** one-liner set by the documentator/orchestrator seat (piece-01 outside this piece's write scope) |
-| Config_Campus satisfaction/prestige/teaching groups (weights, curves, RoomPrestigeLevels[15]) are data but belong to no brief-listed family here; a grouped projection (`balance-groups.json`) was cut for scope | Owner/orchestrator: schedule as a small Rev 2 family if the happiness-simulator tool (tools-plan §T3) needs them before another piece emits them |
-| Career-goal/objective scoring (CareerGoalDefinition 68 + CareerGoalObjectiveDefinition 204 + Challenge_Objective 236 — verifyB 7.2) sits between the course and AI surfaces, unnamed in any family | Same routing as above; add to the next logic revision with measured counts |
-| `ECPStudent` carriers exist on only 2 StudentDefinition raws while 54 student-type stubs carry none — prefab-side student definitions were never harvested | Measured fact, ledgered in LOGIC.md; unblock is a character-module-prefabs harvest pass — owner question, non-blocking |
-| `GradeMoneyRewards` zeros: site shows "no payout" vs hiding zero rows — presentation call on verbatim-zero data | Site layer decides later; data emits all 319 rows verbatim |
+| Should piece-02's matrix/pair files eventually carry the 50 prerequisite edges natively, or does `course-unlock-edges.jsonl` remain the logic-owned home? | **RESOLVED** (arbiter-piece04-spec Part 2/R1): logic-owned on the correct grounds — relinks' 68 anonymous PPtr rows lack type attribution and edge semantics, which only the typed-block view produces; sole-writer law stands, no piece-02 revision owed; the mandatory reconciliation leg (L1) keeps both ledgers consistent |
+| Piece-01 doc implications of the canonical registry: §4 layout grows `extracted/logic/` beyond the `.gitkeep` placeholder, §5.1 stage order, §5.2 prepared-tree sets | **RESOLVED** (arbiter-piece04-spec Part 2/R2): piece-01 **Revision 8** already landed ("registry registration + availability retirement") pinning `logic`=8 with the order-not-count law; later stages' prepared-tree sets ride their owning specs — the stage-8 upstream set is THIS spec's §3 input list, which is complete. No further piece-01 edit owed |
+| Config_Campus satisfaction/prestige/teaching groups (weights, curves, RoomPrestigeLevels[15], intake caps, personal-goal windows) cut from this piece | **DEFERRED WITH BOUND FOLLOW-UP** (Part 2/R3): a small `balance-groups` + `career-goals` logic addendum is queued with the orchestrator, GATED ON FIRST CONSUMER — the happiness-simulator tool (tools-plan §T3) or any satisfaction/prestige site surface, whichever comes first. Seeds recorded so that round needs no re-scouting: teaching 0.6/0.75/1.25/0.30; RoomPrestigeLevels[15]; CareerGoalDefinition 68 / CareerGoalObjectiveDefinition 204 / Challenge_Objective 236 |
+| Career-goal/objective scoring family | Folded into the deferred addendum row above (same ruling R3, same gate, same seeds) |
+| `ECPStudent` carriers exist on only 2 StudentDefinition raws while 54 student-type stubs carry none — prefab-side student definitions were never harvested | **RESOLVED as non-blocking** (Part 2/R4): recorded as the `studentDecayRawCoverage:{raws:2, studentTypeStubs:54}` run-section counter in LOGIC.md — explicitly NOT a `_gaps.jsonl` row (the core-11 null ledger already covers the absence; a second row would double-count and break the two-standing-gaps assertion). Scheduling the character-module-prefabs harvest pass is an orchestrator sequencing call |
+| `GradeMoneyRewards` zeros: site shows "no payout" vs hiding zero rows — presentation call on verbatim-zero data | **CONFIRMED AS ROUTED** (Part 2/R5): data emits all 319 rows with zeros verbatim (313 all-zero / 6 payout-bearing, counted not curated); presentation belongs to the site pieces under [DR-2026-08-22-copy-earns-its-place] |
 
 ## 8. Test obligations (TestWriter contract)
 
@@ -861,8 +915,10 @@ JSONL slices, registry files, externals rows; never real game bytes):**
   distinct); registry loader; drift-probe emission (`DRIFT:` line on
   count movement, fresh-wins semantics).
 - L1: typed-block walker over a synthetic
-  `references["00000000"].data._course` payload (finds the PPtr a plain
-  walk misses — regression anchor for F6); module selector catches the
+  `references["00000000"].data._course` payload — asserts the TYPED
+  view (`type.{asm,class,ns}` attached to each leaf) that plain PPtr
+  leaves cannot carry (F6: the plain walker already FINDS the leaf;
+  attribution is the delta); module selector catches the
   7 `Unused_Module_*` rows of a fixture corpus while asserting the
   312/7-style split; ANCESTRY-based prerequisite selection over a
   fixture class-hierarchy — a `PrerequisiteHasStarsInLevel` block is a
@@ -877,7 +933,13 @@ JSONL slices, registry files, externals rows; never real game bytes):**
   dangling pathId, multi-survivor ambiguity) — none silently dropped;
   marketing-variant null-economics emission (emptiness preserved, no
   zero-fill); attrition group labels restricted to the four measured
-  Config_Campus field names (an invented label fails).
+  Config_Campus field names (an invented label fails); RECONCILIATION
+  leg over a synthetic `config_config.jsonl` — one row matching an
+  emitted edge on `(srcBundle, srcPathId, dstPathId)` counts into
+  `unlockEdgeOverlapWithRelinks`, one divergent row emits a
+  `relinks-divergence` gap row loudly, and a relinks-only row inside the
+  declared scope (a `PrerequisiteHasCourseRunning` counterpart) counts
+  into `declaredScopeDifference` without a gap.
 - L2: BudgetType byte-match checker (mutate one name → fail);
   diff-only override assertion (base vs variant fixture; a second
   differing field flips to DRIFT, not crash); research domain +
@@ -902,8 +964,10 @@ JSONL slices, registry files, externals rows; never real game bytes):**
   gap-ledger sort + standing-row accounting.
 - L6: LOGIC.md generator determinism (two builds byte-equal); digest
   map stability.
-- Runner: `--list` shows nine stages in order (maps seated at 7, logic
-  at 8); `--only logic`
+- Runner: `--list` order-not-count assertion — `logic` after `maps` if
+  registered else after `relink`, before any canonically-later sibling
+  if registered, loud failure on any other position; absolute
+  enumeration asserted only over the fixture tree; `--only logic`
   isolation; prepared-tree builder covers the §3 upstream set; exit
   mapping (0/1/2/3) incl. the exit-2 standing-ledger case; stamp
   invalidation on script-hash change; interrupted-run convergence;
@@ -921,7 +985,11 @@ the REAL extracted tree):**
   member census == 193-or-fresh with taxonomy ⊆ the 24 namespaced
   spellings; non-member sidecar == 27-or-fresh rows (26
   `LevelPrerequisiteStars` + 1 `LevelPrerequisiteStarsByLevelID`),
-  zero non-members inside `prerequisites.jsonl`.
+  zero non-members inside `prerequisites.jsonl`; reconciliation seeds
+  reproduce or DRIFT-print — `relinksCoursePPTRRows` ≈ 68,
+  `unlockEdgeOverlapWithRelinks` == resolved-count,
+  `declaredScopeDifference` == 18-or-fresh with every counterpart
+  class-accounted, zero `relinks-divergence` gap rows.
 - L2: 30 finance rows; Archaeology diff-only property holds; three
   `IKudoshUnlockable` implementer partitions all non-empty; upgrade
   anchor 10000/30000 present; research rows == 209-or-fresh with
@@ -942,7 +1010,8 @@ the REAL extracted tree):**
 
 | Rev | Date | Status | Grounded in |
 |---|---|---|---|
-| 2 | 2026-08-26 | THIS DOCUMENT — applies all eight reviewer findings (F1–F8) from the round-1 FIX-REQUIRED review; re-enters PrepareTask review (Reviewer → Arbiter) before any CodeWriter/TestWriter seat | [`../reviews/reviewer-piece04-spec-r1.mdx`](../reviews/reviewer-piece04-spec-r1.mdx) + Rev-1 grounding (below); every new pinned fact re-measured on disk before landing |
+| 3 | 2026-08-26 | THIS DOCUMENT — applies arbiter residual list RF-1…RF-5 and folds rulings R1–R5 into the body; documentation-only, no re-scouting; build pair seats after this lands (re-review scoped to RF-delta per the ruling) | [`../rulings/arbiter-piece04-spec.mdx`](../rulings/arbiter-piece04-spec.mdx) (Parts 2–4) + Rev-2 grounding below; every corrected figure re-measured on disk this session before landing |
+| 2 | 2026-08-26 | Superseded by Rev 3 — applied all eight reviewer findings (F1–F8), all verified APPLIED-CORRECTLY by the arbiter; one stated premise refuted → RF-1 | [`../reviews/reviewer-piece04-spec-r1.mdx`](../reviews/reviewer-piece04-spec-r1.mdx). PROVENANCE CORRECTION (RF-1c): this revision's claim that "every new pinned fact re-measured on disk before landing" was falsified in one instance — the §2-F6 probe behind "the 50 unlock edges are NOWHERE in relinks" was a CLASS-SPELLING GREP over `relinks/**` pair files, which never name typed classes, and therefore could only return zero; relinks in fact carried 68 resolved `_course` rows. The probe method, not the disk, was the defect |
 | 1 | 2026-08-26 | Superseded by Rev 2 — initial spec | [`../scout-report-piece-04.mdx`](../scout-report-piece-04.mdx) r2 · [verifyA](../verifications/verifyA-scout-piece04.mdx) + [verifyB](../verifications/verifyB-scout-piece04.mdx) PASS-WITH-CORRECTIONS · [orchestrator-piece04-scope](../rulings/orchestrator-piece04-scope.mdx) R1–R4 · format templates piece-01 Rev 7 / piece-02 |
 
 Rev 1 authoring notes (what the Documentator seat changed relative to
@@ -951,10 +1020,13 @@ CalculateRoomScore 7 static overloads, EStaffStat 31, Expelled events
 under `TPC.CharacterEvents.Student`, module prefix 312+7, career
 challenge 67/17 split, research costs on 209-of-450 rows with the wide
 9-value domain, needs-decay feasibility = partial (staff side landed) —
-all verifier corrections applied before spec-writing; the 50-edge
-resolution is specified as a logic-stage owned procedure after the F6
-probe showed relinks carries neither the edges nor their unresolved
-ledger rows.
+all verifier corrections applied before spec-writing. The 50-edge
+resolution is specified as a logic-stage owned procedure — a rationale
+REVISED in Rev 3: not because relinks lacks resolution (it carries 68
+anonymous rows, F6 as rewritten), but because type attribution, edge
+semantics, census, and non-member separation are logic-layer work
+(arbiter R1), with the reconciliation leg keeping the two ledgers
+honest.
 
 Rev 2 change list (reviewer finding → what changed):
 
@@ -1011,17 +1083,44 @@ Rev 2 change list (reviewer finding → what changed):
 Nothing verified by the reviewer changed: every numeric anchor,
 threshold pair, distribution seed, split identity, exit-code mapping,
 and the two standing UNPROVEN-NATIVE ledger states carry over from
-Rev 1 untouched.
+Rev 1 untouched. (Rev-3 note: the one exception is the §2-F6 entry
+itself, whose "measurement" the arbiter refuted — see RF-1 below and
+the provenance correction in the registration table.)
 
-Rev 1 authoring notes (what the Documentator seat changed relative to
-raw scout prose, so reviewers can diff intent): BudgetType 28 (not 27),
-CalculateRoomScore 7 static overloads, EStaffStat 31, Expelled events
-under `TPC.CharacterEvents.Student`, module prefix 312+7, career
-challenge 67/17 split, research costs on 209-of-450 rows with the wide
-9-value domain, needs-decay feasibility = partial (staff side landed) —
-all verifier corrections applied before spec-writing; the 50-edge
-resolution is specified as a logic-stage owned procedure after the F6
-probe showed relinks carries neither the edges nor their unresolved
-ledger rows.
+Rev 3 change list (arbiter residual → what changed):
+
+1. **RF-1 (MAJOR, refuted premise):** §2 F6 rewritten to MEASURED
+   truth — relinks' `config_config.jsonl` already carries **68**
+   `references.*.data._course` rows (59 cross-file hard-resolved via
+   externals+cab-index + 9 same-file; classes 50/13/3/2), the plain
+   walker demonstrably reaches typed-block data (executed on the real
+   carrier row: returns `references.00000000.data._course`), and
+   `_unresolved_pptrs.jsonl` is clean because resolution SUCCEEDED
+   upstream. Walker justification reworded to type attribution (not
+   discovery); ownership grounds restated as semantic enrichment +
+   sole-writer law; the falsified probe method annotated in the
+   registration table.
+2. **RF-2 (MAJOR):** MANDATORY relinks reconciliation leg added to L1 —
+   per-edge match read-only against `relinks/config_config.jsonl` on
+   `(srcBundle, srcPathId, dstPathId)`; run-section keys
+   `relinksCoursePPTRRows`/`unlockEdgeOverlapWithRelinks`/
+   `declaredScopeDifference` with seeds 68/50/18 and DRIFT-wins;
+   failure kind `relinks-divergence` PINNED in the gap enum; fixture
+   leg (matching + divergent synthetic pair rows) and client-gated leg
+   (overlap == resolved count) added to §8.
+3. **RF-3:** AC1 + runner bullet adopt arbiter-piece07 R1's
+   order-not-count form (`logic` after `maps` if registered else after
+   `relink`, before any canonically-later sibling if registered, loud
+   fail otherwise); absolute enumeration asserted only on the fixture
+   tree.
+4. **RF-4:** attrition rows gain `evidence.codeRef:
+   "dump.cs TPC.CharacterEvents.Student"` so every emitted string is
+   cited like every emitted number.
+5. **RF-5:** duplicated Rev-1-notes paragraph deleted; surviving copy's
+   F6 sentence corrected; §7 rows marked RESOLVED/DEFERRED per rulings
+   R1–R5 (piece-01 Rev 8 landed → row RESOLVED; Config_Campus +
+   career-goal follow-up queued gated on first consumer with seeds;
+   student-prefab delta = LOGIC.md counter, never a gap row;
+   GradeMoneyRewards verbatim emission confirmed standing).
 
 §END
