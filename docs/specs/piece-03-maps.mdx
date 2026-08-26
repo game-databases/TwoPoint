@@ -103,11 +103,11 @@ wins — never a silent stale constant (piece-2 §2 precedent).
 | F2 | Placed-item census | **23,004** total = 22,878 room `ItemRecords` + 86 `ArrivalItemRecords` + 7 `NonAreaItemRecords` + 25 `NavPlotWaypointRecords` + **8 `PlotActivationItemRecords`** [S §3; B A5] |
 | F3 | Other record families | **1,031** `PlotRecords` · **5,188** `RoomRecords` · **20** `StudentRecords` · **32** `StaffGenerationRecord.StaffRecords`; landscape tile maps: scout "2×2 … 432×216 cells over **4,070** plot layers" [S §3] vs verifiers "**4,082** TerrainMaps" incl. a 0×0 minimum [A 3.5; B #9]. Spec-side re-probe (2026-08-26, all 51 dumps walked) settles it: **4,082** layers, nonzero dims min (2,2), largest single map 432×216 (MoonBase — scout's max holds per-map), widest single 532×68, tallest single 212×356, **twelve 0-dim maps** — run-time measurement wins over every seed here |
 | F4 | LevelConfig layer | **28** `TPC.LevelConfig` dumps (`configs-levels-prefabs` 13 · `configs_assets_all` 9 · `dlc-space-configs` 4 · `dlc-ghost-configs` 2), 133 top-level keys each; `WorldBounds` extent (200,16,200) on **27**, blank template `Level` (128,10,128) with PlotCount 0 and NO `_ScenarioV2` GUID; `SpawnPoint` (−66,0,−24) on **26 of 28** — deviants: blank template x=−68, one PartyLevel variant y≈2.0865 [S §4; A 4.2/4.3] |
-| F5 | PlotCount generations | levels-prefabs generation: Tutorial 5 · Knight 7 · Mitton 9 · Gastronomy 10 · Magic 7 · PerformingArts 7 · Archaeology 7 · Robotics 10 · Sports 6 · Spy 10 · Party 5 · Final 1 (**base sum 84**); DLC LaunchPad 11 · MoonBase 15 · SpaceportCity 18 · Ghosts 15 ×2 twins; `configs_assets_all` generation disagrees ONLY for Robotics (10→5) and Spy (10→5); Party reads 5 in both [S §4; A 4.4; B #12] |
-| F6 | Scenario↔PlotCount divergence | LaunchPad **18** scenario plot records vs PlotCount 11; Mitton **38** vs 9 — records likely include unbuilt/merge variants (G10) [S §12 G10; B A5] |
+| F5 | PlotCount generations | levels-prefabs family: Tutorial 5 · Knight 7 · Mitton 9 · Gastronomy 10 · Magic 7 · PerformingArts 7 · Archaeology 7 · Robotics 10 · Sports 6 · Spy 10 · Party 5 · Final 1 (**base sum 84**); DLC LaunchPad 11 · MoonBase 15 · SpaceportCity 18 · Ghosts 15 ×2 twins; configs_assets_all differs ONLY for Robotics and Spy (both 5); Party 5 in both [S §4; A 4.4; B #12]. **R4 reframes the reading** [arbiter-piece03 §R4.0]: story-vs-remix MODE split, live in this buildId — not version drift; no canonical row exists (M2) |
+| F6 | Scenario↔PlotCount divergence | LaunchPad **18** scenario plot records vs PlotCount 11; Mitton **38** vs 9 — records likely include unbuilt/merge variants (G10) [S §12 G10; B A5]. **R4.3 authority split:** scenario records = planner-substrate truth; `plotCount {value, generation}` = per-config statements; single-number consumers name their source row; divergences stay DRIFT-checked seeds, no invented reconciliation (M2) |
 | F7 | Coordinate law | `GridCoord` (dump.cs line 666259): `{int X; int Y}` + **`public const float CellSize = 2`** (`CellSizeSq` 4, `CellSizeInv` 0.5, `CellSizeHalf` 1) — world grid is 2 world units/cell; `EPlotTileType` @987631 `None=-1, Invalid=0, Default=1, Unbuildable=2, NoNavigation=3`; `PlotSaveData` @987644; `ItemSaveData` @934753; `LandscapeSaveData` @934810 [S §6; A 6.1/6.2; B #13] |
 | F8 | Join contract | Index `GameItem{,Lite,Variation}Definition` exports (**3,779 entries, 7 bundles**), resolve scenario item `Definition` PPtrs same-file: **22,210 / 22,996 = 96.58%**; residue **786**: LaunchPad 464 · Ghosts_Remix_V2 110 · Ghosts 69 · SpaceportCity 65 · MoonBase 46 · Wanted 14 · Landscaping_Level 6 · FreePlay_BuiltUp 6 · Unused_Ghosts_Remix 3 · Super_Built_Up 2 · JoTestLevel 1; **771 of 786 cross-file** (`m_FileID ≥ 1`, covered by `harvest/externals.jsonl`), **15 same-file misses** needing a wider definition-class set [S §3; A 3.7; B A2/#6] |
-| F9 | Corroboration rule | Join key is the PPtr `(m_FileID, m_PathID)` — **authoritative**. `_id` corroborates: equals the referencing `DefinitionID` on **22,200 of 22,210** resolved records; the **10 mismatches are Lite/Variation twin definitions** sharing one PPtr target. `_id` is NEVER the join key [S §3; B #7] |
+| F9 | Corroboration rule | Join key is the PPtr `(m_FileID, m_PathID)` — **authoritative**. `_id` corroborates: equals the referencing `DefinitionID` on **22,200 of 22,210** resolved records; the **10 non-matching records resolve to target dumps whose payload failed decode (`{_raw,_scriptClass,_sourceFile}` only — no `_id`, no `m_Name`)**, so they classify ABSENT, not twin-mismatched [arbiter probe 2026-08-26, correcting the earlier Lite/Variation-twin reading of B #7]. `_id` is NEVER the join key [S §3; B #7] |
 | F10 | Worked sample chain | pathId `522383310774550334` → dump `Item_Door_Building_Moonbase_Main`, `_id` −572923782 = the ItemRecord's `DefinitionID`; room WorldPosition x −152 + item LocalPosition x 17 ⇒ world −135 inside the room's tiles [S §3; A 3.8/3.9; B A2] |
 | F11 | Doors ship three ways | `TPC.ItemValidator_Door` **×54** dumped instances, ALL with populated `_entranceToRooms[]`/`_exitToRooms[]` — **71 distinct int refs** (sample `[-39494005, -1741033445]`) plus the validator's own `_id`; ×37 `AutomaticSlidingDoorsComponent` dumps; runtime ECS `ECDoor`/`ECDoorLogic(Automatic)`/`EDBDoorLink {Entity; float3 Position}` (dump.cs 859636, positions NOT shipped as data); **1,261 scenario door-item placements across 55 kinds** (scout; verifier counted ~1,260–1,310 across **56** kinds [B A1a] — reconcile at run time via `extraKindSpellings[]`, M5) (`Item_Door_Wooden` ×232, `Item_Door_Internal` ×129) render directly on maps; door-reachability fields sit on all 1,654 placement-block GameItemDefinitions and do **NOT** appear on FloorAreaDefinition dumps (checked 80/80) [S §6, §11 V3; A 6.4; B A1a/#8] |
 | F12 | Validator id-space | The 71 refs have **zero intersection** with the 78 room-definition and 539 floor-area `_id`s and land fully in the `TPC.RoomType`(50)/`TPC.RoomTypeBuilding`(21) dump `_id` space — door validators gate by room TYPE, not room instance; the verification round's narrower integer sweep reported best match **13/71** — the two sweeps are reconciled at implementation time (M5 ledger), adjacency stays DERIVED-ONLY until then (G8) [S §6, §12 G8] |
@@ -260,31 +260,49 @@ Rules:
 
 ```json
 {"subject": "TPC.LevelConfig.LoadAssets",
- "declaration": {"dumpCsLine": 994902,
-                  "typeDefIndex": 18952,
-                  "shape": "compiler-generated iterator state machine "
-                           "<LoadAssets>d__32 : IEnumerator<object>",
-                  "rvas": ["0x8DAE40", "0xAEF70"],
+ "declaration": {"methodDeclaration": "public IEnumerator LoadAssets() { }",
+                  "methodDumpCsLine": 996384,
+                  "enclosingClass": "TPC.LevelConfig : MonoBehaviour",
+                  "enclosingTypeDefIndex": 18955,
+                  "iteratorShape": "compiler-generated iterator state "
+                                   "machine <LoadAssets>d__532 : "
+                                   "IEnumerator<object>",
+                  "iteratorDumpCsLine": 994902,
+                  "iteratorTypeDefIndex": 18952,
+                  "members": {"ctorRva": "0x7E2A50", "ctorLine": 994916,
+                               "disposeRva": "0x669000", "disposeLine": 994920,
+                               "moveNextRva": "0x8D8D10",
+                               "moveNextOffset": "0x8D7710",
+                               "moveNextVa": "0x1808D8D10",
+                               "moveNextLines": [994923, 994924]},
                   "methodBodyAvailable": false,
                   "note": "il2cppdumper emits declarations, not bodies"},
  "readStatus": "resolved | inconclusive-from-dumpcs",
- "instantiatedGeneration": "<levels-prefabs | configs-assets-all | null>",
+ "instantiatedGeneration": null,
  "evidence": [],
- "unblock": "decompile the d__32 MoveNext body (Ghidra/IDA pass over "
-            "GameAssembly.dll at the recorded RVA) or instrument via a "
-            "runtime probe; either is OUTSIDE stage maps",
+ "unblock": "OPTIONAL corroboration only (R4.1): decompile d__532."
+            "MoveNext (RVA 0x8D8D10 / VA 0x1808D8D10) via Ghidra/IDA "
+            "over GameAssembly.dll — routes to the orchestrator as an "
+            "out-of-stage follow-up; emission never depends on it",
  "buildId": 20226581}
 ```
 
-  The spec-drafting code-read already established what dump.cs CAN say:
-  the method exists ONLY as the `d__32` iterator declaration (line
-  994902) — no body, so "which generation instantiates" is NOT
-  conclusively readable from the decompiled tree today. The emitter
-  records that state honestly (`inconclusive-from-dumpcs` is a legal,
-  expected first-run value) instead of manufacturing a verdict.
-  FALLBACK while inconclusive: no `canonical` flag anywhere; both
-  generations ride `variantOf` (the ruling's documented preference
-  stays pending real evidence).
+  Errata fixed per arbiter F18: the iterator class is **`d__532`**
+  (not `d__32`); the previously listed RVAs were misattributed
+  (0xAEF70 is the shared CompilerGenerated/DebuggerHidden stub;
+  0x8DAE40 belongs to the PRECEDING class's `GetEnumerator`) — the
+  class's own members are those in `members` above. The spec-drafting
+  read established what dump.cs CAN say: the method exists ONLY as its
+  declaration (line 996384) plus the `d__532` state machine — no body,
+  so "which generation instantiates" is not conclusively readable from
+  the decompiled tree today; the emitter records that honestly
+  (`inconclusive-from-dumpcs` is the expected first-run value). Per
+  ruling **R4.1** this is TERMINAL for buildId 20226581, not a waiting
+  state: no `canonical` flag anywhere, both generations ride
+  `variantOf` as first-class rows, and the body-read is optional
+  corroboration outside stage maps. The EMITTER stays generic (`d__NN`
+  regex, parsed fresh every run) — only these pinned example values
+  carry the correction.
 - Run-section keys: `gridConstParsed / gridDrift / boundsRows=28 /
   spawnRows=28 / spawnVariants=2 / loadassetsReadStatus`.
 
@@ -299,7 +317,7 @@ its source bundle per the piece-1 family rule) + `buildId` +
 **`levels.jsonl`** — 28 rows, one per `TPC.LevelConfig` dump:
 
 ```json
-{"levelId": "<m_Name verbatim>",
+{"levelId": "<LevelScene verbatim>",
  "contentAxis": "base",
  "worldBounds": {"center": {"x": 0.0, "y": 0.0, "z": 0.0},
                   "extent": {"x": 200.0, "y": 16.0, "z": 200.0}},
@@ -312,6 +330,9 @@ its source bundle per the piece-1 family rule) + `buildId` +
  "scenarioGuid": "<_ScenarioV2 m_AssetGUID verbatim | null>",
  "scenarioAddress": "<catalog-resolved address | null>",
  "campaignPart": "<derived from address path | null>",
+ "assetAddress": "<LEVELCONFIG asset address via container_index "
+                  "reverse lookup | null>",
+ "assetNameStem": null,
  "imagery": {"loadingScreenBackground": null, "sandboxScreenshot": null,
               "sandboxContainerScreenshot": null, "levelIcon": null},
  "iconRenderCamera": {"cameraDistance": 0.0, "cameraFov": 10.0,
@@ -322,28 +343,80 @@ its source bundle per the piece-1 family rule) + `buildId` +
  "buildId": 20226581}
 ```
 
+- **Identity law (arbiter F14):** `m_Name` is the EMPTY STRING on ALL
+  28 real `TPC.LevelConfig` dumps [arbiter probe 2026-08-26] — it must
+  never carry identity. `levelId` := **`LevelScene` verbatim**
+  (present and populated on all 28; campus-distinct within a family;
+  shared across twin generations, which is exactly what `variantOf`
+  links on). Row identity = `(generation, levelId, source.pathId)` —
+  the pathId leg is REQUIRED because the two Ghosts rows share BOTH
+  family and scene (F15). Sort by the same tuple.
+  `scenarios.jsonl` is unaffected — scenario `m_Name` values ARE
+  populated ("LevelScenarioV2_MoonBase" et al.). Optional derived
+  disambiguators `assetAddress` / `assetNameStem` come from reverse
+  `relinks/bridges/container_index.jsonl` lookup of `(bundle, pathId)`
+  (`inferred:true`, `method:"container-index-reverse"`), making the
+  Ghosts pair human-readable; they never replace verbatim fields.
 - `generation` is DERIVED from the source bundle family and its
   vocabulary is CLOSED to the four measured config families:
   `levels-prefabs | configs-assets-all | dlc-space-configs |
   dlc-ghost-configs` (F4's split: 13 / 9 / 4 / 2 — all 28 rows
   representable; the validator rejects any value outside the four, and
   a fifth family appearing in a future axis is a DRIFT line + schema
-  revision, never an invented value). `variantOf` links twin rows that
-  share `levelId` across generations: the base pairs
-  (configs-assets-all ↔ levels-prefabs) AND the DLC pair (the Ghosts
-  15×2 twins across dlc-space-configs-era and dlc-ghost-configs
-  dumps); agreement on PlotCount is NOT required for the link —
-  DISAGREEMENT (Robotics, Spy — F5) keeps BOTH rows with `variantOf`
+  revision, never an invented value).
+- **R4 BINDING — no canonical generation for buildId 20226581**
+  ([ruling](../rulings/arbiter-piece03-spec.mdx) §R4.0–R4.2). The
+  routed question is SETTLED by data: resolving every `_ScenarioV2`
+  GUID through the catalog gives a TOTAL, exception-free
+  family↔mode split — LIVE mode-scoped wiring in this buildId, not
+  version drift:
+
+  | Generation | Rows | Scenario addresses wired |
+  |---|---|---|
+  | `configs-levels-prefabs` | 12 playable + blank | campaign STORY scenarios (`…/Levels/Final/Part1_Early … Part3_LateGame/…`) |
+  | `configs_assets_all` | 9 | EVERY row a Remix/event scenario (`…/Remix/Remix_1 … Remix_10/…`) |
+  | `dlc-space-configs` | 4 | DLC1 carriers (`DLC1_Space/Game/Levels/Final/{SpaceportCity,LaunchPad,MoonBase}` + `Test/SpaceLevel`) |
+  | `dlc-ghost-configs` | 2 | DLC2 story + remix (`LevelScenarioV2_Ghosts` + `Remix_Ghost/…_Remix_V2`) |
+
+  The "Robotics/Spy disagreement" is a story-vs-remix difference on
+  the same campus scene, not older-vs-newer. Pinned consequences:
+  (a) NO `canonical` flag is emitted while
+  `loadassets_read.readStatus == "inconclusive-from-dumpcs"` — and per
+  R4.1 that state is TERMINAL POLICY for this buildId, not a waiting
+  state; (b) both rows of every twin pair ride `variantOf` as
+  FIRST-CLASS rows in the closed enum — never collapsed into
+  historical notes, prose annotations, or preferred-row picks
+  (collapsing live mode data into notes is data destruction);
+  derived method-stamped annotations (like the reading above) may ride
+  rows but never reclassify them; (c) the one-field upgrade path
+  (`canonical:true`) stays RESERVED exactly as designed but requires a
+  spec revision citing new evidence, never an implementation choice;
+  (d) the conclusive Ghidra body-read is DOWNGRADED to optional
+  corroboration routed OUTSIDE stage maps (M1 records it honestly).
+  `variantOf` links twins sharing `levelId`: base pairs span
+  `configs-levels-prefabs ↔ configs_assets_all`; BOTH Ghosts
+  PlotCount-15 configs live INSIDE `dlc-ghost-configs_assets_all`
+  (two GUIDs — `641b156d…`, `28930d87…` — same `Scene_DLC2_Ghosts`;
+  F15 corrected attribution); agreement on PlotCount is NOT required
+  for the link, and DISAGREEMENT keeps BOTH rows with `variantOf`
   naming the twin, neither deleted, neither overwritten.
-  Canonical-generation PINNING is
-  deferred to the arbiter with code-read evidence (R4/G6) — this schema
-  makes that decision a one-field change (`canonical: true`), not a
-  migration.
 - `campaignPart` is DERIVED (`inferred:true`,
   `method:"address-path-segment"`) from the resolved scenario address
   (`Part1_Early → Part2_Mid1 → Part2_Mid2 → Part3_LateGame`, F4); null
   when no address resolves. It never mutates the address itself.
-- Sort: `(levelId, generation)`.
+- **G10 / R4.3 — plot-count authority split:** scenario plot records
+  (`plots.jsonl` / `scenarios.jsonl`) are the PLANNER-SUBSTRATE truth
+  (ruling R1); `plotCount {value, generation}` governs PER-CONFIG
+  statements only. They measure DIFFERENT OBJECTS (authored inventory
+  incl. unbuilt/merge variants vs one mode-scoped build-target number)
+  — neither overrides the other. A consumer showing a SINGLE
+  per-campus plot number must derive it from scenario records or name
+  the exact `(levelId, generation)` row it read; a silent single-number
+  pick is a defect. Known divergences (LaunchPad 18 records vs
+  PlotCount 11; Mitton 38 vs 9) stay DRIFT-checked seeds — NO
+  reconciliation is invented in this stage.
+- Identity: `(generation, levelId, source.pathId)`; sort by the same
+  tuple (F14).
 
 **`scenarios.jsonl`** — 51 rows, one per `LevelScenarioV2` dump:
 `{scenarioName (m_Name verbatim), levelRecordName
@@ -543,10 +616,13 @@ as an EMITTED FACT (never prose).
 3. **Corroboration (never the key):** for each resolved placement,
    compare the target dump's `_id` to the record's `DefinitionID`:
    `corroboration` ∈ `match | twin-mismatch | absent`. Seed
-   expectations: 22,200 match / 10 twin-mismatch on the 22,210
-   same-file-resolved set (F9); `twin-mismatch` rows classify as
-   Lite/Variation twins sharing one PPtr target — recorded, never
-   "fixed".
+   expectations on the 22,210 resolved set: **match 22,200 /
+   twinMismatch 0 / absent 10** (F9; arbiter probe 2026-08-26) — the
+   10 are targets whose payload failed decode (`{_raw,_scriptClass,
+   _sourceFile}` only: no `_id`, no `m_Name` readable), so the
+   classifier emits `absent`; `twin-mismatch` remains a legal class
+   for genuine id divergence between resolvable twins — recorded,
+   never "fixed".
 4. **Report:** `maps/join_report.json` —
 
 ```json
@@ -559,7 +635,9 @@ as an EMITTED FACT (never prose).
  "residueCrossFile": 771, "residueSameFileMiss": 15,
  "widenedClasses": [],
  "plotActivationFamily": {"total": 8, "resolved": 0, "unresolved": 0},
- "corroboration": {"match": 22200, "twinMismatch": 10, "absent": 0},
+ "corroboration": {"match": 22200, "twinMismatch": 0, "absent": 10,
+                    "cause": "the 10 targets are _raw-only undecoded "
+                             "GameItemDefinition dumps (no _id readable)"},
  "indexEntries": 3779, "indexBundles": 7,
  "buildId": 20226581}
 ```
@@ -651,14 +729,19 @@ the MoonBase validator resolving to
 **`door_placement_index.jsonl`** — projection over
 `item_placements.jsonl`, NOT a duplicate of coordinates: `{scenarioName,
 recordFamily, owningRoomId, itemIndex, definitionName, source, buildId}`
-for every placement whose RESOLVED `definitionName` matches the pinned
-predicate `^Item_Door_` (any additional door-kind spelling discovered
-— e.g. `Variation_Door_Building_*` — lands in `extraKindSpellings[]`
-inside `door_id_space.json` instead of silently widening the
-predicate). Census seeds: **1,261 placements / 55 kinds** (scout;
-verifier ~56 kinds [B A1a] — extra spellings route to
-`extraKindSpellings[]`, never a silent predicate widening) — reconcile
-with `DRIFT:`. Sort by the identity tuple.
+for every placement whose RESOLVED `definitionName` contains the
+pinned case-sensitive SUBSTRING `Item_Door_` — ruled F16: the anchored
+form `^Item_Door_` measures only 1,247/53 and would DROP 14 placed
+`Unused_Item_Door_*` records (`Unused_Item_Door_Building_Main_
+Entrance_Magic_V1` ×7, `Unused_Item_Door_Building_Large` ×7), which
+are placed scenario geometry; the substring form reproduces the full
+measured census **1,261 placements / 55 kinds** (scout; arbiter probe
+2026-08-26 concurs; verifier's ~56 kinds [B A1a] reconciles under the
+same rule). `extraKindSpellings[]` inside `door_id_space.json` keeps
+its anti-widening role for genuinely OTHER spellings — none placed
+today (the stub-side `Variation_Door_Building_*` family has ZERO
+scenario placements); drift-wins applies to future spellings. Sort by
+the identity tuple.
 
 **`door_id_space.json`** — THE ledger row (G8):
 
@@ -873,7 +956,7 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
    | `students.jsonl` / `staff_records.jsonl` | 20 / 32 |
    | `landscape_layers.jsonl` == `landscape_maps.jsonl` | 4,082 (re-probe seed); nonzero dims min (2,2), largest single map 432×216, twelve 0-dim maps DECLARED (a 0-dim row is data, not a violation) |
    | `door_validators.jsonl` | 54 |
-   | `door_placement_index.jsonl` | 1,261 rows / 55 kinds (verifier ~56 — F8; extras ledger) |
+   | `door_placement_index.jsonl` | 1,261 rows / 55 kinds under the pinned SUBSTRING predicate `Item_Door_` — incl. the 14 placed `Unused_Item_Door_*` records; the anchored `^Item_Door_` form would yield 1,247/53 and is NOT the contract (F16) |
    | `named_plots.jsonl` | 12 |
 
 3. **Coordinate law:** `coordinate_law.json.grid.cellSize == 2.0` AND
@@ -886,7 +969,8 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
 4. **Join contract:** `join_report.json.resolved == 22210` and
    `resolveRate == 0.9658` (±DRIFT); `residueByScenario[0] ==
    {LaunchPad, 464}`; `residueCrossFile == 771`;
-   `corroboration == {match 22200, twinMismatch 10}`;
+   `corroboration == {match 22200, twinMismatch 0, absent 10}` with
+   the `_raw`-only cause recorded in the report;
    `plotActivationFamily.total == 8` measured fresh. Worked chain
    asserted verbatim in `item_placements.jsonl`: the MoonBase row with
    `definitionPptr.pathId == 522383310774550334` resolves to
@@ -978,7 +1062,7 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
 
 | Question | Resolution route |
 |---|---|
-| Canonical PlotCount generation when Robotics/Spy variants disagree (G6/R4) | **Arbiter**, consuming `maps/loadassets_read.json` as its round input — NAMED PRODUCER: CodeWriter implements the M1 emitter; the spec-drafting read already fixed what dump.cs can say (`<LoadAssets>d__32` iterator declaration only, line 994902, no method body), so first-run state is honestly `inconclusive-from-dumpcs`; a conclusive body-read (Ghidra/IDA over GameAssembly.dll at RVA 0x8DAE40) is OUTSIDE stage maps and routes to the orchestrator. FALLBACK while inconclusive: no canonical flag anywhere — both generations ride `variantOf`, matching the orchestrator preference to pin only on real evidence |
+| Canonical PlotCount generation when Robotics/Spy variants disagree (G6/R4) | **SETTLED by ruling R4** ([arbiter-piece03](../rulings/arbiter-piece03-spec.mdx)): no canonical generation exists to pick — the two base families are LIVE mode-scoped wiring (story vs remix), not generations of one config set; variants ride as first-class `variantOf` rows in the closed four-family enum, `canonical:true` stays reserved behind a spec revision, and the Ghidra body-read (d__532.MoveNext @ RVA 0x8D8D10) is optional corroboration routed outside stage maps. G10 authority split pinned in M2. Closed — reopening requires new evidence through the decision register |
 | Reference frame of non-room item families (`arrival`/`nonArea`/`waypoint`/`plotActivation` LocalPosition space) | Implementation verifies against plot bounds during M3 (OQ2); if unprovable, rows stay verbatim-only + `_absences.jsonl` row — never guessed |
 | Door id-space sweep divergence (71/71 RoomType-family vs 13/71 best-match) | M5 re-runs BOTH sweeps mechanically and records agreement status; if still divergent after one reconciliation pass, route to arbiter with both methodologies quoted |
 | Whether scenario geometry ships as a viewer-facing layer or stays planner substrate | SETTLED by ruling R1: both, additively — no further decision needed |
@@ -993,10 +1077,13 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
   plot/room/item/student/staff/waypoint records including a
   cross-file PPtr + an `_id`-mismatch twin AND **two plots each
   carrying a PlotActivationItemRecords array** — the F7 collision
-  case; one near-empty), THREE LevelConfig dumps covering three of the
-  four generation families (levels-prefabs, configs-assets-all,
-  dlc-ghost-configs incl. a twin pair) so the closed enum is exercised
-  beyond base, TWO door validator dumps, one brush database + two
+  case; one near-empty), FOUR LevelConfig fixtures faithful to the
+  real corpus shape (`m_Name` EMPTY, `LevelScene` populated — the F14
+  law) covering all four generation families with `dlc-ghost-configs`
+  contributing a TWIN PAIR (same levelId, distinct pathIds) so the
+  three-part identity key is exercised; TWO door validator dumps (one
+  placement named `Unused_Item_Door_*` for the F16 substring leg);
+  one brush database + two
   brush definitions, minimal `catalog.json`, `export-manifest.jsonl`,
   `externals.jsonl`, bridge indexes, `i2_term_registry.jsonl`,
   `bundle-roster.jsonl`, `identity.json`, and a `dump.cs` SLICE
@@ -1010,7 +1097,10 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
   `inconclusive-from-dumpcs` is emitted, never a verdict).
 - M2: per-family schema validators (EXACT key sets; enums frozen —
   levels generation validated against ALL FOUR family values and a
-  fifth value REJECTED); identity-uniqueness PER FAMILY incl. the
+  fifth value REJECTED; levelId asserted NON-EMPTY and equal to the
+  dump's `LevelScene` with row identity `(generation, levelId,
+  source.pathId)` unique incl. the ghost twin pair); identity-
+  uniqueness PER FAMILY incl. the
   two-plots-with-activation-arrays fixture colliding under any global
   key but passing under the pinned per-family key; composite-`@r`
   fallback; record-family count decomposition assertion; float
@@ -1028,9 +1118,11 @@ JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
   histogram determinism; decode-status machine (proven→partial→blocked
   transitions; blocked emits `unblock`).
 - M5: validator emitter verbatim (message fields optional — a dump
-  without them validates); predicate-driven placement projection
-  (no coordinate duplication by construction); id-space dual-sweep
-  recorder; HARD-GATE IN-STAGE fixture — the emitter path itself
+  without them validates); placement projection under the SUBSTRING
+  `Item_Door_` (fixture carries an `Unused_Item_Door_*` placement the
+  anchored form would miss; no coordinate duplication by construction);
+  id-space dual-sweep recorder; HARD-GATE IN-STAGE fixture — the
+  emitter path itself
   refuses a synthetic gated row (validator ref + room uniqueId in one
   relation) with exit 1 while `instanceLinks.measured == 0`, and
   ACCEPTS it once the ledger reads agreed + links > 0; placement
@@ -1054,9 +1146,11 @@ install):**
 - Row-count table of AC2 holds on the real tree (±DRIFT).
 - **levels↔scenario GUID chain:** ≥27 of 28 `scenarioGuid`s resolve to
   catalog addresses; every resolved row's `campaignPart` equals the
-  `Part*` path segment of its resolved address; the blank-template row
-  carries null guid/address/part (reviewer F13 — a broken resolver
-  cannot ship green).
+  `Part*` path segment of its resolved address; the blank template
+  (`levelId == "Level"` from its populated `LevelScene`) carries null
+  guid/address/part (reviewer F13 — a broken resolver cannot ship
+  green); all 28 rows carry non-empty distinct-enough `levelId`
+  values with the ghost pair distinguished by pathId (F14).
 - AC3/AC4 chains verbatim: CellSize parse, spawn deviants, MoonBase
   placement chain, LaunchPad-464 residue head, corroboration split.
 - `landscape_layers` == `landscape_maps` row count == fresh
@@ -1079,8 +1173,49 @@ install):**
 
 | Rev | Date | Status | Grounding |
 |---|---|---|---|
-| **2** | 2026-08-26 | Applies ALL reviewer-piece03-r1 findings (F1–F13) — pending Arbiter pass (no build entry until arbiter approval, promptForDB PrepareTask step 5) | Same fact base as Rev 1 PLUS fresh labeled spec-side probes (2026-08-26): plot termKeys 136; unlockables 52 (14+38 disjoint); landscape layers 4,082 incl. twelve 0-dim maps, per-map extremes; all seven imagery predicates measured on the current catalog; LoadAssets read = iterator declaration only |
+| **3** | 2026-08-26 | Applies arbiter-piece03 residuals **F14–F18** + **BINDING R4 generation-policy ruling** — seated for the build pair pending the ruling's diff-level verification (execution note 3: no fresh full arbiter round required) | [arbiter-piece03-spec.mdx](../rulings/arbiter-piece03-spec.mdx) (BOUNCE verdict; every [AP] value adopted as drift-checked seed, provenance "arbiter probe 2026-08-26"); reviewer-piece03-spec-r1 F1–F13 verified applied by that arbiter |
+| **2** | 2026-08-26 | Superseded by Rev 3 | Reviewer F1–F13 applied; spec-side probes: plot termKeys 136; unlockables 52; landscape layers 4,082 + extremes; all seven imagery predicates measured on the current catalog; LoadAssets read = declaration-only |
 | **1** | 2026-08-26 | Superseded by Rev 2 | Scout report piece-03 **rev 2** (M1–M5 corrections applied); verifyA PASS-WITH-CORRECTIONS; verifyB PASS-WITH-CORRECTIONS; orchestrator ruling R1–R5 (2026-08-26); format template per piece-01 (Rev 7 state) + piece-02; on-disk structural probes P1–P6 re-verifiable at run time |
+
+**Rev 3 change list (finding → change):**
+
+- **F14 (MAJOR):** `levels.jsonl` identity law rewritten — `m_Name` is
+  empty on ALL 28 real dumps [arbiter probe]; `levelId` :=
+  `LevelScene` verbatim; row identity `(generation, levelId,
+  source.pathId)` with sort to match; optional derived
+  `assetAddress`/`assetNameStem` via reverse `container_index`
+  (`inferred:true`, `method:"container-index-reverse"`); M2 sketch,
+  §8 validator legs, and the client-gated blank-template wording
+  (`levelId == "Level"`) updated.
+- **F15:** Ghosts ×2 twins corrected — BOTH live inside
+  `dlc-ghost-configs_assets_all` (GUIDs `641b156d…` / `28930d87…`,
+  same `Scene_DLC2_Ghosts`); base twins span
+  `configs-levels-prefabs ↔ configs_assets_all`.
+- **R4 BINDING folded into §2/M2/§7:** family↔mode table recorded
+  (levels-prefabs → campaign Part\* story; configs_assets_all → every
+  Remix_N; DLC families their own); NO canonical flag for buildId
+  20226581 — terminal policy per R4.1, not a waiting state; twin rows
+  are FIRST-CLASS `variantOf` rows in the closed enum, never
+  historical-note collapses; `canonical:true` stays reserved behind a
+  spec revision; Ghidra body-read downgraded to optional corroboration
+  outside stage maps; G10 authority split pinned (scenario records =
+  planner substrate; plotCount = per-config statements; single-number
+  consumers name their source row; LaunchPad 18-vs-11 and Mitton
+  38-vs-9 stay DRIFT-checked seeds).
+- **F16:** door projection predicate ruled the case-sensitive SUBSTRING
+  `Item_Door_` — reproduces 1,261/55 including the 14 placed
+  `Unused_Item_Door_*` records (anchored form would yield 1,247/53);
+  `extraKindSpellings[]` keeps anti-widening (no other spellings placed
+  today); AC2 + §8 legs updated.
+- **F17:** corroboration cause corrected — the 10 non-matching records
+  resolve to `_raw`-only UNDECODED target dumps, so seeds become
+  match 22,200 / twinMismatch 0 / absent 10 across F9, M3 step 3, the
+  join_report sketch (+ cause field), and AC4.
+- **F18:** loadassets errata — `<LoadAssets>d__532` (not d__32);
+  misattributed RVAs replaced with the class's own members (MoveNext
+  RVA 0x8D8D10 / Offset 0x8D7710 / VA 0x1808D8D10 @dump.cs 994923–924;
+  .ctor 0x7E2A50; Dispose 0x669000); methodDeclaration @996384 +
+  enclosing TypeDefIndex 18955 added; emitter stays generic (`d__NN`).
 
 **Rev 2 change list (finding → change):**
 
