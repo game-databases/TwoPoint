@@ -1,0 +1,315 @@
+# Arbiter ruling — arbiter-piece04-spec (ruling round 1, logic)
+
+**Arbiter:** arbiter-piece04 (PrepareTask step 5; rules, does not fix;
+spawned no subagents; wrote only this file — nothing committed).
+**Date:** 2026-08-26. **Subject:**
+[`docs/specs/piece-04-logic.mdx`](../specs/piece-04-logic.mdx)
+**Revision 2**, claiming full application of the 8-finding F-list in
+[`docs/reviews/reviewer-piece04-spec-r1.mdx`](../reviews/reviewer-piece04-spec-r1.mdx).
+This ruling gates the spec to build.
+
+**Read in full for this ruling:** the Rev 2 spec (to its `§END`);
+the reviewer F-list (to sentinel);
+[`../scout-report-piece-04.mdx`](../scout-report-piece-04.mdx) (r2),
+[`../verifications/verifyA-scout-piece04.mdx`](../verifications/verifyA-scout-piece04.mdx),
+[`../verifications/verifyB-scout-piece04.mdx`](../verifications/verifyB-scout-piece04.mdx);
+[orchestrator-piece04-scope](orchestrator-piece04-scope.mdx) (R1–R4 incl.
+the R3 UPDATE); ruling precedents
+[arbiter-001-piece-01](arbiter-001-piece-01.mdx),
+[arbiter-002-piece-01-build](arbiter-002-piece-01-build.mdx),
+[arbiter-piece07-spec](arbiter-piece07-spec.mdx),
+[orchestrator-piece03-scope](orchestrator-piece03-scope.mdx);
+repo-root `AGENTS.md` (sentinel seen),
+`_foundation/decision-register.md` (sentinel seen), `promptForDB.md`;
+cross-spec sources
+[piece-01-extraction-pipeline.mdx](../specs/piece-01-extraction-pipeline.mdx)
+(incl. Revision 8) and the stage-registration/output-root claims of
+[piece-03](../specs/piece-03-maps.mdx),
+[piece-05](../specs/piece-05-contracts.mdx),
+[piece-06](../specs/piece-06-media.mdx),
+[piece-07](../specs/piece-07-locale-proof.mdx),
+[piece-08](../specs/piece-08-search-corpus.mdx).
+
+**Method:** beyond the document pass, every load-bearing figure and every
+claim this ruling turns on was **independently re-measured on disk this
+session** against the landed tree at buildId 20226581 (`identity.json`
+re-read): python walks over `stubs/*.jsonl`,
+`decompiled/structural/class-hierarchy.jsonl`, the id-registries,
+`relinks/config_config.jsonl`, `_unresolved_pptrs.jsonl`,
+`bridges/{cab_index,container_index}.jsonl`, `harvest/externals.jsonl`;
+`tools/tpc_common.py::STAGES` read; `tools/relink_util.py` symbol table
+read AND its walker **executed** against the real carrier row; dump.cs
+windows opened at the cited lines. The reviewer's probes were not taken
+on authority — one of them did not survive this treatment (RF-1 below).
+
+---
+
+## Part 1 — Per-finding verification of the claimed Rev 2 application
+
+| Finding | Where verified | Verdict |
+|---|---|---|
+| **F1** MAJOR — stage-8 naming throughout + nine-stage enumeration with loud-fail-on-wrong-position | §3 header `## 3. Stage 8 — \`logic\`` (line 104); scripts bullet `tools/stage8_logic.py` + deps `["stage8_logic.py", …]` (112–129); AC1 enumerates nine ending `…, relink, maps, logic` with the canonical-index parenthetical and the loud-fail clause (744–752); §7 row 2 "NINE stages / stage-8 prepared-tree set" (849); runner test bullet "maps seated at 7, logic at 8" (905). Grep sweep: **zero** residual `Stage 7` / `stage7_` / "eight stages" spellings. Registry agreement verified corpus-wide: `tpc_common.py::STAGES` currently holds exactly seven entries ending `("relink", "tools/stage6_relink.py", …)` (logic registers ninth-entry-in-order, index 8); piece-03 pins `tools/stage7_maps.py`; piece-05 explicit-10, piece-07 index 9 / `stage9_locale_proof.py`, piece-06 index 11, piece-08 index 12 — the Rev-2 registry sentence matches ALL siblings. One residual wording defect against newer precedent → RF-3 (the AC1 count form predates arbiter-piece07 R1's order-not-count law by minutes) | **APPLIED-CORRECTLY** (with RF-3 rider) |
+| **F2** MAJOR — ancestry selection over `baseType=="TPC.Prerequisite"` + non-member sidecar + stars re-anchor + spelling map | Disk-reproduced exactly: `class-hierarchy.jsonl` has **exactly 24** rows with `baseType == "TPC.Prerequisite"` (bare `'Prerequisite'`: **0 rows**); the alphabetical member order matches the spec's pinned indices cell-for-cell — index 0 `ChallengePrerequisiteAcademicScore`, **index 10 `PrerequisiteHasCourseUnlocked`**, index 23 `PrerequisiteUniversityLevel`. configs.jsonl typed-block census: members total **193** across 16 distinct classes; seeds `PrerequisiteHasCourseUnlocked` **50**, `PrerequisiteUniversityLevel` **43**, `ChallengePrerequisiteHasRoomUnlocked` **18**, `PrerequisiteDaysPassed` **17**, `PrerequisiteHasStarsInLevel` **13** — all five exact; non-members `LevelPrerequisiteStars` **26** + `LevelPrerequisiteStarsByLevelID` **1** = the sidecar's 27 seed, both declared `: ILevelPrerequisiteData` at dump.cs **880899/880924** (window-verified), while `PrerequisiteHasStarsInLevel : Prerequisite` sits at **929869**. Sidecar artifact, taxonomy emission (`prerequisite-taxonomy.json`), short-name↔full-spelling map, namespaced-matching note, and the 675-carrier-side clarification all present as claimed (F4 row, L1, §4 tree, AC/L1 drift legs) | **APPLIED-CORRECTLY** |
+| **F3** MINOR — namespaced interaction selector | F16, L0 drift probe and L4 all pin `source.class == "TPC.InteractionDefinition"`; disk: **630** rows at that spelling, bare `InteractionDefinition` = **0**; second-largest config class after `TPC.CharacterModule` 769 confirmed | **APPLIED-CORRECTLY** |
+| **F4** MINOR — measured attrition labels + negative fixture | L1 attrition enum is exactly the four measured Config_Campus field names; disk: `StudentDropoutSettings` {20/15/10, CountdownTimer 120.0}, `StaffResignationSettings` {20/15/10, 240.0}, `StudentFailPercent` 10, `StudentUnhappyTuitionFeesThreshold` 20.0 all verbatim; `GlobalFails` ABSENT from the row and from dump.cs; `AdvisorTrigger_*` correctly demoted to other-carrier typed blocks; §8 carries the invented-label negative fixture | **APPLIED-CORRECTLY** |
+| **F5** MINOR — function-level relink reuse surface + mandatory `simplify_external_path` | Every named symbol exists in `tools/relink_util.py`: `walk_pptr_refs` (:202) / `walk_pptr_leaves` (:173), `StubIndex` (:574) + `load_stubs` (:604), `load_externals` (:547) / `simplify_external_path` (:536) / `builtin_external` (:563), `BridgeIndexes.resolve_cab_path` (:416) / `.container_exact` (:427) / `.container_by_address` (:432), `bundle_base` (:156); step 2 marks simplification MANDATORY with the doubled path shape — disk: externals.jsonl 222 rows, **1,671 external entries carry doubled `archive:/CAB-…/CAB-…` paths** | **APPLIED-CORRECTLY** |
+| **F6** MINOR — `AlternativeIconReference.m_SubObjectName` grade token + EGrade readability note | Disk: all nine `Grades[]` entries carry AIR sub-name `UI_HUD_T_Spritesheet_Notifications_Grade_<X>` (uniform incl. NA), IR diverges to `UI_HUD_Status_T_Icon_Grade_<X>` for F–AA and AGREES with AIR on the NA row — precisely the spec's description; thresholds −1/0/40/50/60/70/75/80/90 and **all nine displayNameTermIds match the L3 sketch digit-for-digit** (−1534872139 … −1320794757); EGrade/BudgetType sketches carry the value-order-for-readability note with AC3 equality restated against the name-sorted registry files (both registries verified stored name-sorted: Allowance→Wages, A→Invalid) | **APPLIED-CORRECTLY** |
+| **F7** MINOR — invention-guard recomputation + mis-derived negative | L5 pass 1 states copied-and-matching numerics are the default audited path needing no inline label; hatch (b) expressions are RECOMPUTED from cited inputs with exit 1 on non-recomputable/mismatching; AC7 carries BOTH negatives (uncited number; mis-derived arithmetic); AC8 wording aligned to "copied-and-matching under citation OR one of the three labeled hatches"; four-bucket counter retained consistently | **APPLIED-CORRECTLY** |
+| **F8** MINOR — `_toilet→ToiletComfort` map + EAttribute vocabulary re-source | L4 pins the map and the no-Litter note; disk: staff `ECPCharacterAttributes` on all 3 rows carries exactly the ten `_` fields incl. `_toilet` (no `_litter`) ⇒ 30 rows not 33; registry `TPS.Game.TPC.EAttribute.jsonl` = **11 members** incl. `ToiletComfort`=5, `Litter`=6; core-11 ledger cites the registry file directly; anchors reproduced: −0.05000000074505806 six-set (drink/energy/food/hygiene/social/toilet), 0.0 four-set, sober pinned 0–0, energy init 90–100 | **APPLIED-CORRECTLY** |
+
+Stale-figure sweep: clean — no leftover pre-F2 star counts, no
+pre-F3 selector, no `GlobalFails`/`AdvisorTrigger` group labels, no
+stage-7 spellings anywhere.
+
+Fact-fidelity spot-audit beyond the findings (all independently
+reproduced this session): courses 28+41=69 · modules 312+7=319 · finance
+30 rows with diff-only keys `{m_Name, InitialBalance}` (150000 vs
+80000) · research 209 cost-bearing of 209 full defs, domain
+{100,200,250,300,500,600,1200,2500,3000}, distribution
+{4,1,12,52,82,27,29,1,1} summing 209 · Lite twins 241 with zero costs ·
+cab_index 222 / container_index 49,855 · harvest raw dirs present with
+exactly 2 `TPC.StudentDefinition` raws · upstream set complete incl.
+`_absences.jsonl`, export-manifest, i2_term_registry, entity_locale ·
+dump.cs anchors 929626/929869/880899/880924 exact. **The fact base is
+sound except for one entry: §2 F6.**
+
+---
+
+## Part 2 — Rulings on the routed questions (§7)
+
+### R1 — Relink-vs-logic ownership of the prerequisite edges: logic-owned CONFIRMED — but the stated reason is REFUTED, and a reconciliation leg becomes mandatory
+
+The documentator chose logic-owned "after measuring relinks carries
+neither edges nor unresolved rows". I probed harder than that probe:
+
+1. `extracted/relinks/config_config.jsonl` carries **68 rows whose
+   `evidence.fieldPath` is `references.<hex>.data._course`** — 59 as
+   `method:"pptr-cross-file"`, `mechanism:"hard"`, `inferred:false`,
+   `resolvedVia:"externals+cab-index"` (dstCab `cab-7c07bcb2…`,
+   extFileId 2), 9 as `pptr-same-file`; 68 distinct carrier ids, sample
+   `CareerChallenge_Course_Archaeology_V1 → Course_Archaeology_Lite`.
+   By typed class these decompose EXACTLY: `PrerequisiteHasCourseUnlocked`
+   **50**, `PrerequisiteHasCourseRunning` **13**,
+   `PrerequisiteHasCourseAtLevel` **3**, `CharacterModifier_XP` **2**
+   (68 total — measured independently from the stub census, agreeing
+   row-for-row).
+2. The piece-02 walker is NOT blind to typed blocks. Executing
+   `relink_util.walk_pptr_refs()` on the real
+   `CareerChallenge_Course_Archaeology_V1` stub returns exactly
+   `{fieldPath: "references.00000000.data._course", m_FileID: 2,
+   m_PathID: -7906850020505022578}` (plus `Objectives[]`). Generic
+   descent reaches `fields.references[*].data`.
+3. `_unresolved_pptrs.jsonl` (2,391 rows) holds **zero**
+   career-challenge / prerequisite / `_course` rows — because those PPtrs
+   RESOLVED upstream, not because they were never attempted.
+4. Why everyone missed it: pair files never name typed classes, so the
+   F6 probe's grep for `PrerequisiteHasCourseUnlocked` in `relinks/**`
+   could only ever return zero. verifyB 5.1's "no pathId-level resolver
+   exists in relinks" is likewise stale against the current corpus.
+
+**Ruled:** ownership stays with the LOGIC stage — but on the correct
+grounds, and with teeth added:
+
+- **Correct grounds:** relinks' 68 rows are anonymous PPtr relations.
+  They carry no `prerequisiteClass`, no verb, no payload, no taxonomy
+  membership, no non-member separation, no unlock-edge semantics. That
+  enrichment (plus the census/sidecar artifacts only a typed-block view
+  can produce) is logic-layer work. Sole-writer law stands: stage 8
+  never writes `relinks/**`, no piece-02 revision is owed, and §6's
+  non-goal text survives unchanged.
+- **The typed-block walker stays justified — with honest wording.** Its
+  true raison d'être is that plain PPtr walking yields `(fieldPath,
+  fileId, pathId)` leaves WITHOUT type attribution; the census,
+  non-member routing, and semantic verb require the
+  `data`+`type` view. It is not needed to "find" the PPtrs.
+- **Mandatory reconciliation leg (new, binding — see RF-2):** because
+  two layers of the corpus will now describe the same facts, silent
+  divergence must be impossible. Every resolved unlock edge MUST be
+  matched against relinks' `config_config` rows on
+  `(srcBundle, srcPathId, dstPathId)`; the run section reports
+  `relinksCoursePPTRRows` (seed 68), `unlockEdgeOverlapWithRelinks`
+  (seed 50), `declaredScopeDifference` (seed 18 = 13 HasCourseRunning +
+  3 HasCourseAtLevel + 2 CharacterModifier_XP, which logic deliberately
+  does NOT emit as unlock edges); any overlap ≠ resolved-count mismatch
+  or unexplained relinks-side counterpart is a named gap row / DRIFT —
+  never silence. This mirrors the spec's own existing
+  "cross-check only, never mutated" stance toward `matrix.json`.
+
+### R2 — Piece-01 Revision-8 registration ownership: SATISFIED — already landed; mark the routed row resolved
+
+Piece-01 **Revision 8 exists** ("registry registration + availability
+retirement", per arbiter-piece07 R5) and already pins the
+canonical-registry entry naming `logic`=8 (`tools/stage8_logic.py`),
+locale-proof=9, contracts=10, media/search-corpus reserved — with the
+registry-aware law "order asserted, count never" resident in its own §8
+runner language. Per that same text, later stages' prepared-tree sets
+"ride their owning specs": the stage-8 upstream set is owned by THIS
+spec's §3 input list, which is complete (verified on disk). No further
+piece-01 edit is owed from this piece. Residual hygiene only: §7's row 2
+still phrases the item as future work — mark it RESOLVED via piece-01
+Rev 8 at the Rev-3 touch, following the arbiter-piece07 R6
+supersession-mark discipline.
+
+### R3 — Config_Campus satisfaction/prestige groups + career-goal/objective families: DEFERRED from this build pair, with a bound follow-up
+
+Cutting `balance-groups.json` from this piece was right — piece 4 is
+already four families deep, and neither family blocks any L0–L6
+contract. But deferral must not become amnesia: AGENTS rule 8 makes
+these data-answerable families part of the data layer that must exist
+before frontend starts, and verifyB 7.2 logged them as unnamed omissions
+once already. **Ruled:** schedule a small follow-up logic addendum
+(`balance-groups` family over the measured Config_Campus groups —
+teaching 0.6/0.75/1.25/0.30, satisfaction weights+curves,
+RoomPrestigeLevels[15], intake caps, personal-goal windows — plus a
+`career-goals` family over CareerGoalDefinition 68 /
+CareerGoalObjectiveDefinition 204 / Challenge_Objective 236) owned by
+the orchestrator's queue, gated on the first consumer: the
+happiness-simulator tool (tools-plan §T3) or any satisfaction/prestige
+site surface, whichever comes first. The measured seeds above are
+recorded here so that round needs no re-scouting. Not blocking this
+build pair.
+
+### R4 — Student-prefab harvest gap: non-blocking; NO separate gap row; counter in LOGIC.md
+
+The 2-of-54 coverage delta (ECPStudent raws exist for 2 StudentDefinition
+raws; 54 student-type stubs carry none; prefabs never harvested) is
+truthfully covered TODAY by `student-core11-decay.jsonl` — its 11 null
+rows with `carrier:"absent"` and the all-families searchScope ARE the
+ledger of the absent student decay carrier set. Minting a second
+`_gaps.jsonl` row for the same underlying absence would double-count and
+would break §8's "exit 2 with exactly the two standing gaps" leg.
+**Ruled:** the delta is recorded in LOGIC.md plus a run-section counter
+(`studentDecayRawCoverage: {raws:2, studentTypeStubs:54}`); no gap row;
+§8's literal two-standing-gaps assertion stands. Scheduling the
+character-module-prefab harvest pass is an orchestrator sequencing call
+under [DR-2026-08-17-closed-loop] (no named owner gate applies), using
+the same "small dedicated ingest piece proposed by whoever first hits
+the wall" pattern as orchestrator R2. Non-blocking.
+
+### R5 — GradeMoneyRewards zeros presentation: site layer decides; verbatim emission stands
+
+Confirmed as routed. Data emits all 319 module rows with zeros verbatim
+(313 all-zero / 6 payout-bearing, counted not curated); whether the site
+shows "no payout" or hides zero cells is a presentation call governed by
+the anti-slop rulings ([DR-2026-08-22-copy-earns-its-place]) and belongs
+to the site pieces. No change to this spec.
+
+---
+
+## Part 3 — Cross-spec consistency
+
+1. **Stage index 8 — consistent corpus-wide.** Verified against
+   `tpc_common.py::STAGES` (seven registered today, ending relink) and
+   all five sibling specs (piece-03=7/stage7_maps, piece-05=10,
+   piece-06=11, piece-07=9, piece-08=12). Rev 2's registry sentence is
+   the canonical spelling. Residual wording defect RF-3 concerns the
+   ASSERTION FORM only.
+2. **Sole-writer output tree — disjoint, verified against each sibling's
+   emission root.** `extracted/logic/**` (this piece) vs
+   `extracted/maps/**` (piece-03), `extracted/media/**` + carve-out
+   guard amendment (piece-06), `extracted/locales/proof/**` +
+   `relinks/locale_availability.jsonl` sole-writer handover (piece-07),
+   `extracted/search/**` (piece-08), contracts validators (piece-05,
+   read-only over extracted). Nothing under `relinks/`, `stubs/`,
+   `harvest/`, RELATIONS.md, PROOF.md is written by stage 8; runner-owned
+   logs standard; media carve-out carried in AC10. No collision found.
+3. **Invention-law compliance — absolute, with one provenance nit.**
+   Every numeric leaf traces to a cited artifact (thresholds, termIds,
+   economics, decay rates, distributions) or sits in a labeled hatch
+   (`summaryColumns` reconstructed-from-code; counts/splits as recomputable
+   derived-arithmetic; the two explicit-null standing ledgers). The two
+   UNPROVEN-NATIVE markers are always-present and negatively tested.
+   One nit: `attrition.jsonl`'s `events` strings are code-derived
+   (namespace `TPC.CharacterEvents.Student`), not stub-payload values,
+   while the row's `evidence` cites only the stub — name the code source
+   in evidence so no emitted string is uncited (RF-4).
+
+---
+
+## Part 4 — Residual F-list (binding for the Rev-3 touch; documentation only, NO re-scouting needed — every number below was disk-verified this session)
+
+### RF-1 — MAJOR · §2 F6 and its dependent claims state a refuted "measurement"
+
+Rewrite three places to the measured truth of Part 2/R1:
+
+- **§2 F6 row:** replace the "NOWHERE in relinks / walker does not
+  descend into typed-block data" claim with: relinks'
+  `config_config.jsonl` already carries **68** `references.*.data._course`
+  rows (59 `pptr-cross-file` hard-resolved via externals+cab-index, 9
+  `pptr-same-file`; classes: HasCourseUnlocked 50 / HasCourseRunning 13 /
+  HasCourseAtLevel 3 / CharacterModifier_XP 2); the plain walker DOES
+  reach typed-block data (demonstrable on
+  `CareerChallenge_Course_Archaeology_V1`); `_unresolved_pptrs.jsonl` is
+  clean because resolution succeeded upstream, not because unattempted.
+  What relinks lacks is TYPE ATTRIBUTION AND EDGE SEMANTICS — that, plus
+  sole-writer discipline, is why resolution is logic-owned.
+- **§3 scripts bullet:** the typed-block walker's justification becomes
+  "yields the typed view (`data`+`type`) that plain PPtr walking cannot
+  attribute — required for the census, the non-member sidecar, and edge
+  semantics", dropping the false "provably misses the prerequisite
+  PPtrs".
+- **Revision registration:** both copies of the Rev-1 note claim "every
+  new pinned fact re-measured on disk before landing" and cite the F6
+  probe — falsified by this finding; annotate honestly (probe method was
+  class-spelling grep over files that never name classes).
+
+### RF-2 — MAJOR (consequence of RF-1) · add the mandatory relinks cross-check leg
+
+L1 gains the reconciliation duty specified in Part 2/R1: per-edge match
+on `(srcBundle, srcPathId, dstPathId)` against `relinks/config_config.jsonl`
+(read-only), run-section keys `relinksCoursePPTRRows` / 
+`unlockEdgeOverlapWithRelinks` / `declaredScopeDifference` with seeds
+68/50/18 and DRIFT-wins semantics; mismatches land in `_gaps.jsonl`
+(kind `ambiguous-target` or a new `relinks-divergence` kind — pick one
+and pin it). §8 gains the matching obligations: fixture leg (a synthetic
+pair file with one matching and one divergent row — divergence fails or
+gaps loudly), client-gated leg (overlap == resolved count on the real
+tree). Without this, the corpus ships two ledgers of the same relation
+that nothing reconciles.
+
+### RF-3 — MINOR · AC1 and the runner bullet must assert ORDER, never a count
+
+AC1's "enumerates exactly … NINE stages" and §8's "--list shows nine
+stages" predate arbiter-piece07 R1 (same day) and contradict piece-01
+Rev 8's resident "canonically-later siblings appended iff registered
+(order asserted, count never)". Adopt the R1 form verbatim: `logic`
+appears after `maps` IF maps is registered, else after `relink`, and
+before any canonically-later sibling IF registered — failing loudly on
+any other position; an absolute enumeration is asserted ONLY on the
+fixture tree the TestWriter controls. In a concurrent batch (piece-07's
+W-C-tail precedent) whichever sibling lands first otherwise breaks this
+AC mechanically.
+
+### RF-4 — MINOR · attrition event strings need their code citation
+
+`attrition.jsonl` rows carry `events:[…]` sourced from decompiled
+metadata, but `evidence` cites only the stub row. Add e.g.
+`evidence.codeRef:"dump.cs TPC.CharacterEvents.Student"` (or equivalent)
+so every emitted string is cited like every emitted number. One line;
+keeps the invention-guard's citation discipline uniform across value
+types.
+
+### RF-5 — HYGIENE · duplication and stale routing marks
+
+(a) The "Rev 1 authoring notes" paragraph appears TWICE (lines ~949–957
+and ~1016–1025) — delete one copy (do it in the same pass that corrects
+its F6 sentence per RF-1). (b) Mark §7 row 2 RESOLVED via piece-01
+Revision 8 (Part 2/R2 above).
+
+---
+
+## Verdict
+
+**BOUNCE** — one numbered residual list, RF-1 through RF-5, all
+documentation-side. Nothing here reopens PrepareTask scouting: the fact
+base survived independent re-measurement everywhere except the single F6
+entry, and this ruling supplies every corrected figure, the new leg's
+seeds, and the replacement assertion forms. All eight Rev-2 findings are
+verified APPLIED-CORRECTLY; the architecture, output contracts, exit-code
+mapping, invention guard, and ownership walls are approved as-is. Route
+to the documentator seat for Revision 3 as a mechanical transcription of
+Parts 2 and 4; given that, the re-review may be scoped to RF-1..RF-5
+delta-checking rather than a fresh full pass. The build pair seats after
+Rev 3 lands. No commits made from this seat.
+
+END OF arbiter-piece04-spec
