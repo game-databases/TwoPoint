@@ -1,0 +1,449 @@
+# Arbiter ruling — arbiter-piece05-spec (piece-05-contracts, Revision 2)
+
+**Arbiter:** arbiter-piece05 (PrepareTask step 5; rules, does not fix;
+spawned no subagents; wrote only this file). **Date:** 2026-08-26.
+**Subject:** [`docs/specs/piece-05-contracts.mdx`](../specs/piece-05-contracts.mdx)
+Revision 2 (read to its `§END` sentinel, 825 lines), as claimed fixed by
+[`docs/reviews/reviewer-piece05-spec-r1.mdx`](../reviews/reviewer-piece05-spec-r1.mdx)
+(FIX-REQUIRED: 0 CRITICAL / 3 MAJOR / 7 MINOR).
+
+**Read in full for this ruling:** repo-root `AGENTS.md`;
+`_foundation/decision-register.md` (in full, sentinel seen);
+`promptForDB.md`; the spec; the review; the fact base
+([scout-report-piece-05-contracts](../scout-report-piece-05-contracts.mdx)
+rev 2 +
+[verifyA](../verifications/verifyA-scout-piece05.mdx) +
+[verifyB](../verifications/verifyB-scout-piece05.mdx)); ruling
+precedents [arbiter-001-piece-01](arbiter-001-piece-01.mdx),
+[arbiter-002-piece-01-build](arbiter-002-piece-01-build.mdx),
+[orchestrator-piece03-scope](orchestrator-piece03-scope.mdx),
+[orchestrator-piece04-scope](orchestrator-piece04-scope.mdx).
+Consulted per disputed claim (probe method stated where cited):
+`tools/tpc_common.py::STAGES` (lines 116–139, full block);
+[piece-02-relinking](../specs/piece-02-relinking.mdx) §R6/R7/tree/test
+obligations (targeted reads, lines 490–570 + 650–731);
+[piece-07-locale-proof](../specs/piece-07-locale-proof.mdx) §5–§6
+(lines 540–609, the availability-path handover);
+[piece-06-media](../specs/piece-06-media.mdx) + piece-08 headers
+(canonical-registry citations).
+
+---
+
+## Verdict summary
+
+| Finding (reviewer) | Verification | Ruling |
+|---|---|---|
+| F1 stage self-numbering + `--list` | **APPLIED-CORRECTLY** | accepted |
+| F2 V-I8 iff-set | **APPLIED-CORRECTLY** | accepted |
+| F3 sidecar contract | **APPLIED-CORRECTLY** | accepted |
+| F4 count 41→44 | **APPLIED-CORRECTLY** | accepted |
+| F5 V-S11 per-family scoping | **APPLIED-CORRECTLY** | accepted |
+| F6 relation rowshapes + V-I1 cells | **APPLIED-CORRECTLY** | accepted |
+| F7 CU cell + §10 bullets | **APPLIED-CORRECTLY** | accepted |
+| F8 transform registry | **APPLIED-CORRECTLY** | accepted |
+| F9 heavy-artifact sentence | **APPLIED-CORRECTLY** | accepted |
+| F10 piece-02 routing + Q7 | **APPLIED-CORRECTLY** (set incomplete — RF-2) | accepted with amendment |
+
+**OVERALL: BOUNCE** — all ten reviewer findings verified applied
+correctly; the Rev 2 execution is faithful and mechanical. The bounce is
+not about the F-list: this seat's independent hunt found **two residuals
+the reviewer missed**, one MAJOR (RF-1 — the spec's ownership pins
+contradict piece-07's decided `locale_availability.jsonl` handover,
+leaving V-I9/V-S10 wrong-on-arrival or orphaned with no routed owner,
+under the canonical order in which locale-proof=9 lands before
+contracts=10) and one MINOR (RF-2 — the piece-02 revision note omits the
+§R6 measured-shape supersession this piece performs). Both are one-pass
+documentation fixes; no re-scouting, no re-review of the fact base, no
+validator redesign.
+
+---
+
+## Duty 1 — per-finding verification (Rev 2 claims vs spec text)
+
+### F1 — APPLIED-CORRECTLY (MAJOR)
+
+All six self-numbering locations are purged and replaced with the
+canonical identity:
+
+1. §3.3 now registers stage id `check-contracts` at CANONICAL INDEX 10
+   with the full registry spelled out (relink=6 · maps=7 · logic=8 ·
+   locale-proof=9 · contracts=10 · media=11 · search-corpus=12), script
+   `tools/stage10_check_contracts.py`, "explicit-10 naming, slot taken
+   whether or not siblings 7–9 have landed yet."
+2. §3.2 layer model names the same script with "explicit-10 naming per
+   the orchestrator stage-index registry, F1".
+3. §10's pipeline bullet reads "+= stage id check-contracts registered
+   at CANONICAL INDEX 10 (additive; gaps allowed while siblings 7–9
+   pend)" — no "eighth".
+4. §11 AC1 is rewritten SUBSET-AND-ORDER: `--list` CONTAINS
+   `verify-client`, `harvest-bundles`, `relink`, `check-contracts`, with
+   check-contracts AFTER relink and (once registered) AFTER locale-proof
+   — "never a frozen total stage count."
+5. §14's fixture bullet repeats the subset-and-order form plus the
+   synthetic-sibling immunity clause.
+6. §13 Q6 is recast as "RESOLVED by the orchestrator stage-index
+   registry: canonical index 10 recorded … arbiter countersigns the
+   recording." The Revision-1 note drops "eighth."
+
+Grep sweep: zero residual `eight/eighth/EIGHT` outside the Rev-2
+changelog line that *describes* the purge. Ground-truth checks pass:
+`tpc_common.py::STAGES` today holds exactly seven entries ending
+`("relink", "tools/stage6_relink.py", …)` — the additive-registration
+claim is real; every id named in AC1's assertion exists or is the id
+being registered (`verify-client`, `harvest-bundles`, `relink` are live
+stage ids); and the spec's `.stage-stamps/harvest-catalog.json` reference
+matches the real stage-2 id `harvest-catalog`. The registry agrees with
+the independent citations in piece-06 (media=11) and piece-08
+(search-corpus=12).
+
+### F2 — APPLIED-CORRECTLY (MAJOR)
+
+The recommended option is executed exactly. §7 item 2 declares the
+complete iff-set as `_dangling_guids` (∃ `unresolved-open`),
+`_unresolved_pptrs` (any row), `_uncontained_addresses` (any row),
+`locale_join_report.registryMisses > 0`,
+`catalog-coverage.outOfRosterFileReferences.count > 0 ∨
+danglingDependencyKeys.count > 0`, and a terminal floor-unmet row — and
+explicitly rules `_absences.jsonl`/`_unmapped-families.jsonl`
+DELIBERATELY NOT CONTRIBUTORS as permanent-by-design ledgers, citing
+piece-02 §5.7/AC7 ("populated never demands zero gapped cells"). The
+Today enumeration (dangling 1,137 · pptrs 2,391 · registryMisses 5 ·
+outOfRoster 19 · floor-unmet ⇒ exit 2, exit 0 reachable) is now true as
+written against its own declared set. V-I8's check is scoped "OVER THE
+§7 SET ONLY (permanent-by-design ledgers excluded — F2)". Honesty
+coverage for the excluded ledgers survives intact: V-S9 shapes, V-L2
+sorts/enums, V-I7 caps, plus the §4 stage-5 L-cell annotation
+("shapes/sorts/caps ONLY … deliberately NOT exit-2 contributors").
+Relative to piece-02 §5.7's pinned condition, the extension set is
+exactly the two the reviewer pre-approved (`_uncontained_addresses`,
+catalog-coverage counts), and it is routed (Q7/RF-2).
+
+### F3 — APPLIED-CORRECTLY (MAJOR)
+
+The sidecar is contracted in full: path
+`extracted/addressables/catalog-mini-report.json` (§3.3 + §10 layout,
+local-only); write discipline (stage-2 post-parse, temp-file +
+atomic-rename, sorted keys and arrays, UTF-8 + LF, deterministic); a
+pinned six-key top-level schema (`meta` incl. `catalogSha256` /
+`counts` / `duplicateKeys` / `bundleUniverse` / `guidIndex` /
+`nullBundleAddresses`) added to V-S8's report-shape row; a per-validator
+input ruling covering all five consumers (V-I2 dupe identity, V-R6
+internal sums, V-X2 carve-out as O(1) `nullBundleAddresses` membership,
+V-L1 termination classification, V-R8 CLIENT-GATED off the FULL
+`guidIndex`); and AC6 given two well-defined sides (streamed rebuild
+byte-compared against the persisted file). Every number in the schema
+sketch cross-checks the fact base: keysTotal 56,660 / distinct 56,659 /
+kinds 2,516+54,144 / nullBundleRows 45,312 = 43,480+1,832 /
+nullAddressRows 329 / rowsWithNoDependencies **11,491** (corrected
+value) / edges 3,939,716 / dupe `f952c082…` ×2 byte-identical with kind
+guid + address `Style Sheets/Default Style Sheet` (verifyA V6) /
+referencedRelpaths 176 / outOfRoster 19 / `guidIndex` "~54,143 distinct
+keys" (verifyB attack 4: 54,144 guid rows, 54,143 distinct). Choosing
+the sized-honestly sidecar over client-gated streaming for V-R8 was one
+of the reviewer's two sanctioned options; sizing it a local sidecar is
+sound (~54k entries).
+
+### F4 — APPLIED-CORRECTLY (MINOR)
+
+Revision-1 note now reads "44 named validators." Recounted from the §8
+tables: S13 + I9 + X4 + U3 + L3 + D4 + R8 = **44**. Arithmetic and tables agree.
+
+### F5 — APPLIED-CORRECTLY (MINOR)
+
+V-S11 is scoped "occurrence counted PER FAMILY"; the INFO leg lists the
+four cold method arms as living ONLY in the pair files; matrix mechanism
+`logic` + two joinKeys cold; `_dangling_guids` 3 verdict arms cold; and
+`entity_locale`: method `i2-termid-registry` OCCURRING on all 10,964
+rows — "NEVER listed cold (F5)." Exactly the prescribed repair; the
+day-one false-INFO line is gone.
+
+### F6 — APPLIED-CORRECTLY (MINOR)
+
+V-S9's inputs gain the four relation files (`entity_locale`,
+`entity_asset_guid`, `locale_term_entity`, `competitor_applied`) with
+the competitor MEASURED shape pinned (`samples/terminal/floorRequired/
+sourcesApplied/unblock` present, spec'd `wall{}` on 0 rows — "G5 pinned
+HERE"), repairing §9's dangling pointer (its preamble now routes G5 to
+"the competitor_applied rowshape leg of V-S9"). V-I1's expected cell is
+filled for all nine stub kinds (Σ 13,443), per-file locale uniqueness
+over all 14 files at Σ **216,584** lines (arithmetic checks: 200,912 +
+15,672), termId 15,675, dedup tuple 24,583.
+
+### F7 — APPLIED-CORRECTLY (MINOR)
+
+Coverage-matrix stage-2 CU cell flipped ●; §10 bullets now carry all
+four counterUnits targets across their three emitters — stage-2 +=
+catalog-coverage counterUnits, stage-4 += base-overlay-report
+counterUnits, stage-6 += bridge/join-report counterUnits — matching
+§6 item 1 exactly.
+
+### F8 — APPLIED-CORRECTLY (MINOR)
+
+The transform concept is defined structurally: a `transforms:` section
+in `contracts/counter-units.mdx`; unit-differing reconciliations REQUIRE
+a registered transform name or the runner REFUSES TO LOAD (exit 1 at
+load time, before any check — V-U3); first registration
+`events-minus-distinct-lines: emission-events − distinct-key-lines ==
+overwrite-events`, licensing "V-U2's flagship identity and nothing
+else"; V-U2 carries both identities with the mixed-unit one registered
+under the transform; the refusal fixture is specified twice (§14 runner
+bullet, AC7) and the mutation list gains
+register-a-unit-mismatched-reconciliation; `PIN-MISMATCH` joined the
+§3.4 legend beside `PIN-STALE` (both exit 1) and appears in the output
+example. Internally coherent reading (this seat's confirmation for the
+build pair): the gated registration is the flagship mixed-unit
+identity; the companion identity `rowsLogged == termsWalked −
+skippedEmpty` is enforced inline by V-U2 and is not a second gated
+registration — the registry licenses exactly one.
+
+### F9 — APPLIED-CORRECTLY (MINOR)
+
+The heavy-artifact paragraph is the reviewer's rewrite verbatim-plus:
+default runs verify catalog pins solely against the persisted sidecar
+and refuse exit 3 iff absent; `--scan-catalog` streams once (`raw_decode`
+— verifyA's method) and re-derives byte-for-byte. AC6 aligns
+(zero-touch open-count; exits 3 iff mini-report absent; both sides
+well-defined; stamp-hash agreement on both paths).
+
+### F10 — APPLIED-CORRECTLY (MINOR)
+
+§10 gains the piece-02 revision-note line (contributor iff-set, §4 tree
++= `_uncontained_addresses.jsonl`, §R7 template += routing paragraph,
+§R3 += counterUnits object) and Q7 routes arbiter confirmation of the
+delta set alongside Q5. Applied as specified — but the delta set itself
+is incomplete; see RF-2.
+
+---
+
+## Duty 2 — routed-question rulings
+
+### Q1 — dup-key surface: **CONFIRMED** (both surfaces)
+
+The spec's decision stands: `duplicateKeysOverwritten` is printed per
+locale in the localisation run section AND persisted into
+`base-overlay-report.json.evidence` (per-locale map + total). Rationale
+concurring with the reviewer: the run section is the acceptance surface
+(house convention; both verifiers' adjudications demanded the print),
+the report is the deterministic machine surface V-U2 reads — parsing
+EXTRACTION-LOG prose for a number that belongs in JSON is fragile.
+V-U2 enforces both legs with bidirectional mutants
+(printed-but-not-persisted and vice versa, §14). Scout OQ1 closes with
+AC2.
+
+### Q5 — stage-2 mini-report extension: **CONFIRMED** (additive scope)
+
+Stage 2 gains one post-parse emission from data already in memory;
+local-only, deterministic, atomic-rename — inside piece-01's
+determinism discipline. Existing stage-2 outputs are protected by AC8's
+enumerated-exception non-regression (mini-report + catalog-coverage
+counterUnits are the only stage-2 deltas). The piece-01 Rev 8 note
+records it. No authority grab: the sidecar describes stage-2's own
+output.
+
+### Q6 — stage registration: **COUNTERSIGNED**
+
+Canonical index 10 for `check-contracts` with explicit-10 naming is
+countersigned as recorded. Verified against `tpc_common.py::STAGES`
+(seven entries, additive comment precedent from piece-01 Rev 7) and the
+identical registry quoted independently by piece-06 (position 11) and
+piece-08 (position 12). The SUBSET-AND-ORDER assertions make the
+registration order-robust in both directions.
+
+### Q7 — piece-02 delta set: **CONFIRMED, AMENDED by RF-2**
+
+Four of the five amended piece-02-owned surfaces are correctly listed
+(§5.7 iff-set · §4 tree · §R7 template · §R3 counterUnits object). The
+fifth is missing: this piece also supersedes **piece-02 §R6's**
+competitor-rowshape contract (V-S9 pins the measured shape; §R6's
+`wall:{httpStatus, oneQuestionItWouldHaveAnswered}` occurs on 0 rows —
+verifyA V15, verifyB attack 5). See RF-2.
+
+### Q2 — slug policy: stays **OWNER** (orchestrator-routed residue)
+
+Correctly not self-ruled. Contract pins `slug:null` allowed; generation
+policy is site-layer, adjacent to QUESTION-QUEUE standing items.
+
+### Q3 — availability retirement: **RE-ROUTED — no longer owner-pending** (folded into RF-1)
+
+The spec routes Q3 to "Owner/orchestrator per piece-02 §7," and the
+reviewer blessed that routing against piece-02 §7. Both missed that
+[piece-07-locale-proof §5](../specs/piece-07-locale-proof.mdx) has
+already DECIDED it: regenerate at the canonical path, stage
+`locale-proof` becomes SOLE writer, the stage-5 emission block is
+REMOVED in code, and `extracted/relinks/locale_availability.jsonl` is
+relaid as 5,850 v2 rows (+ `locale_availability.report.json`). Q3 stops
+being an open owner question; the spec's forward-looking statements
+that depend on the old state are defects — see RF-1.
+
+### Q4 — guid_bridge derivability: **CLOSED** (no action)
+
+Settled by verification (bit-exact replay, verifyA V4/M3 + verifyB
+attack 2b); instrumentation semantics kept; RED-3 emits `counterUnits`.
+Correct.
+
+---
+
+## Duty 3 — cross-spec consistency
+
+1. **Stage index 10 vs canonical registry: CONSISTENT.** See F1/Q6.
+2. **Red→green set unchanged per PR-3: CONFIRMED.** Each RED row
+   re-checked against the corrected fact base: RED-1 = 9 rows / 5
+   addresses, bundle-null DLC3_Hospital mechanism, offender list
+   row-for-row identical to verifyA M2 / verifyB attack 2a
+   (Config_DLC3 Levels[] ×3 Rural/Snowy/Tropical,
+   Config_GameMode_IconGenerator → DB_DLC3_Hospital_Variations.asset,
+   Config_UISprite + ObjectiveType_{PatientEmergency, PirateEmergency,
+   PlotTropical, Volcano} → Atlas_DLC3_Icons_Inspector.spriteatlasv2),
+   address-keyed ledger, reason `catalog-bundle-null-uninstalled-dlc`,
+   exit stays 2; RED-2 encodes both identities with the counter's real
+   locus (incremented twice, printed nowhere, persisted nowhere) and
+   the same five duplicated Term keys verifyB named; RED-3 emits units
+   rather than "fixing counting," honoring the bit-exact-replay
+   verdicts. §9's dispositions of G1 (retracted/reframed), G4
+   (→ §5/V-D1/V-D2), G5 (→ V-S9 leg, repaired), G6 (→ V-I2 + §5 row 1),
+   G7 (tolerated absence in V-X2), G8 (V-S11 INFO arms) all match r2.
+3. **No authority grab from sibling reservations: CLEAN, one seam.**
+   `contracts/families/maps.mdx` / `logic.mdx` / `protocol.mdx` are
+   reserved-by-name with directories left `.gitkeep`-empty; §12's
+   non-goals hold (PROOF derivation, data fixes behind pins, floor
+   lever, site code, slug policy, future re-pinning). Media surfaces
+   pinned here (media-catalogue rowshape, V-R3) are stage-3 harvest
+   emissions, not piece-06's stage-11 icon tree. **The seam is piece-07:
+   its §5 handover of `locale_availability.jsonl` (and the new
+   `locales/proof/**` + `locale_availability.report.json` families) is
+   neither accommodated nor routed — RF-1.**
+
+---
+
+## New findings (this seat's hunt — holes in the reviewer's judgments)
+
+### RF-1 — MAJOR — Ownership pins contradict piece-07's decided `locale_availability.jsonl` handover; the delta is unrouted in both directions
+
+**Locations:** V-I9 expected cell ("`locale_availability.jsonl` →
+stage5 only"); V-S10 ("`relinks/` holds ONLY the owned file set"); §2
+F13 framing + §13 Q3 ("stays stage-5-owned honest-zero v1 … retirement
+remains a piece-1 revision | Owner/orchestrator per piece-02 §7").
+
+**Problem:** Piece-07 §5 (decided, reviewed, in-repo) transfers sole
+ownership of `extracted/relinks/locale_availability.jsonl` to stage
+`locale-proof`: stage-5's emission block is deleted in code ("After
+landing, NO stage-5 code path can write the file"), a 5,850-row v2 file
+plus `locale_availability.report.json` replace the honest-zero v1, and
+the canonical registry orders locale-proof=9 BEFORE contracts=10. The
+reviewer validated Q3 against piece-02 §7 and never opened piece-07.
+Consequences, by landing order:
+
+- *locale-proof first (the canonical order):* V-I9's illustrated map
+  names a writer that no longer exists — the grep leg finds the
+  locale-proof script as sole writer and the map says stage 5 ⇒ V-I9
+  FAILS at introduction, a fourth red against AC2's "no other validator
+  may be red"; V-S10's owned set likewise flags the regenerated file
+  pair as strays. An implementer must silently rewrite the map — the
+  exact unauthorized-side-picking F2 eliminated.
+- *contracts first:* today's map is true, but when piece-07 lands, ITS
+  routed doc deltas (piece-1 note, piece-2 §4/AC3) do not mention
+  piece-05's `pins.pathOwner` or owned set — the move reaches pins.json
+  with no routed owner, and the next contracts run goes red orphaned.
+  Unrecorded cross-spec amendments are the drift class this piece
+  exists to kill.
+
+**Fix shape (mechanical; no fact-base change):**
+
+1. State the ownership INVARIANT, not the incumbent: each path has
+   exactly ONE writer at any moment; `pins.pathOwner` names the current
+   canonical writer per the pack's stage registry — stage 5 for
+   `locale_availability.jsonl` until piece-07's handover lands, stage
+   `locale-proof` after (cite piece-07 §5).
+2. Add `locale_availability.report.json` (and, once landed, the
+   `locales/proof/**` family) to the owned-set/pathOwner illustrations
+   so V-S10/V-I9 survive the handover without red.
+3. Route the map move: extend the §10 revision-note mechanism with a
+   piece-07-facing line ("piece-07 landing additionally moves
+   piece-05's `pins.pathOwner` entry + relinks owned set"), mirroring
+   how this spec already routes piece-01/piece-02 notes.
+4. Rewrite Q3's route: decided by piece-07 §5 (orchestrator-confirmed
+   at that spec's review); remove "owner/orchestrator per piece-02 §7"
+   and the "stays stage-5-owned" forward-looking clause. F13 stays as a
+   buildId-scoped fact (no validator pins the v1 empty shape — V-S6/
+   V-S9 correctly omit the file).
+
+### RF-2 — MINOR — Piece-02 revision-note delta set omits the §R6 measured-shape supersession
+
+**Location:** §10's `piece-02-relinking.mdx` revision-note line; §13 Q7.
+
+**Problem:** Piece-02 §R6 pins the competitor ledger rowshape including
+`wall?:{httpStatus, oneQuestionItWouldHaveAnswered}` and a "wall-row
+shape" test obligation; this piece's V-S9 pins the MEASURED shape with
+`wall{}` on 0 rows. After landing, two binding specs state different
+contracts for the same artifact, and piece-02's own test bullet
+contradicts piece-05's mutant expectations. F10's own rationale
+("unrecorded cross-spec amendments are how this drift class gets born")
+applies to the note this spec itself created.
+
+**Fix shape (one clause):** append to the §10 piece-02 note line and the
+Q7 row: "§R6 competitor rowshape superseded-as-measured (pointer to
+V-S9; `wall{}` occurs on 0 rows)."
+
+---
+
+## Non-blocking watch items (recorded for the build pair; no fix owed)
+
+1. **V-I8's run-section leg:** the declared-vs-computed comparison is
+   fully machine-derivable (pins rules ↔ ledger files ↔ report fields),
+   but the third leg reads the last relink run section's contributor
+   naming as it exists TODAY. If the current log spells contributors
+   differently than §7's vocabulary, V-I8 risks a spurious
+   day-one red. Implement against the actual EXTRACTION-LOG section and
+   prove the day-one-green case in the hostless fixtures.
+2. **Red-registry membership spelling:** AC2's "exactly V-L1,
+   V-U1(+V-D1 RELATIONS.md leg), V-U2" implies four registered ids
+   across three breaks (V-D1 fails until the generator-template delta
+   lands). Register all four; EXPECTED-RED matching must not leave
+   V-D1 unregistered.
+3. **Reserved-family symmetry:** §4 reserves maps/logic/protocol by
+   name; locale-proof/media/search-corpus families inherit the taxonomy
+   through their own pieces' amendments. Sufficient as written — do not
+   expand piece-05 to pin families it has not measured (evidence
+   discipline beats symmetry).
+4. **RELATIONS.md template concurrency:** piece-07 also edits the
+   RELATIONS.md generator template (availability-canonical-path line).
+   Two additive lines compose; AC8's baseline ("hash-equal a pre-piece
+   run") self-adjusts to whichever order lands. No action.
+
+---
+
+## Orchestrator-routed residue (unchanged by this ruling)
+
+- **Q2 slug generation policy** — owner; site-layer owns generation;
+  contract keeps `slug:null` allowed.
+- **DLC-Hospital axis acquisition** (behind RED-1/V-L1/V-X2's carve-out
+  and F12) — owner; per [orchestrator-piece03-scope R5] modeled as
+  roster-scoped fact, never baked in as permanent invariant (the spec
+  complies: reason string + upgradable ledger, exit 0 reachable).
+- **Competitor floor lever** — owner; V-I8/V-S9 keep the terminal row
+  auditable only.
+- **Re-pinning after the NEXT game patch** — executed by whoever runs
+  that patch, per `contracts/README.mdx` procedure.
+- **Sequencing call:** whether contracts seats before or after
+  locale-proof is orchestrator scheduling; RF-1's fix makes the spec
+  order-robust either way.
+
+---
+
+## VERDICT
+
+**BOUNCE** — Rev 2 applies all ten reviewer findings
+APPLIED-CORRECTLY (verified item-by-item above; fact base untouched and
+clean; red→green set unchanged per PR-3; stage-index recording
+countersigned; Q1/Q5/Q6 confirmed-countersigned), but the spec ships
+two residuals this seat will not waive: **RF-1 (MAJOR)** — align V-I9 /
+V-S10 / Q3 with piece-07 §5's decided `locale_availability.jsonl`
+handover and route the pins move; **RF-2 (MINOR)** — add the §R6
+measured-shape supersession clause to the piece-02 revision note and
+Q7. Apply both (mechanical, well under an hour, no re-scouting, no
+re-review of findings F1–F10) and the spec is approve-for-build on the
+next pass; the build pair may seat immediately upon a fixer round
+landing RF-1 + RF-2 and this seat's successor confirming the two-line
+delta.
+
+END OF arbiter-piece05-spec
