@@ -1,0 +1,60 @@
+# Reconciler notes — piece-04 stage 8 logic (interface reconciliation)
+
+**Seat:** Reconciler (blind-build pair reconciliation round). **Date:**
+2026-08-26. **Subject:** adjudication of the open failing legs between the
+landed implementation (`tools/stage8_logic.py` +
+`tools/logic_util.py` @ `9ba57df`) and the blind suite
+(`tests/test_stage8_logic.py` + `tests/_logiclib.py` @ `34aebf5`), against
+[`../specs/piece-04-logic.mdx`](../specs/piece-04-logic.mdx) Rev 3 and
+[arbiter-piece04-spec](arbiter-piece04-spec.mdx). Every ruling below was
+checked against the measured corpus (buildId 20226581) this session —
+where the disk decided, the measurement is cited. No assertion was
+weakened; the never-invent law and the two-standing-gaps assertion are
+untouched and still bite (negative legs re-verified post-fix).
+
+## Adjudication of the defect bites
+
+| # | Bite | Ruling | Fix site |
+|---|---|---|---|
+| 1 | Run-section `relinksCoursePPTRRows` "prints seed 68 instead of measured count" | **SUITE DEFECT.** The headline L1 counter measures correctly (5 fixture / 68 real); the L0+`driftProbes` lines legitimately echo every probed key as `{"expected": <seed>, "measured": …}` (RF-2 DRIFT-wins seeds are probed keys), and the test's first-match regex read the SEED. Helper now reads the pass-counter lines, skipping probe echoes. Asserted values unchanged. | `tests/test_stage8_logic.py::test_run_section_headline_keys_and_fixture_values.keyval` |
+| 2 | Unlock-edge `dstKind:'config'` vs sketch-pinned `'course'` | **IMPL DEFECT.** The frozen row shape itself pairs `dstKind:"course"` with the Lite-twin `dstId` — dstKind is the SEMANTIC course family, not the twin's storage kind. Now derived mechanically from the resolved destination CLASS (`UNLOCK_DST_CLASSES` ⇒ `"course"`); off-class destinations keep their honest storage kind. | `tools/stage8_logic.py::run_l1_unlock_edges` |
+| 3 | `marketingFor` unresolved on a resolvable same-file PPtr | **IMPL DEFECT.** The link field's measured spelling is `MarketingFor`; the candidate key list held only Course/CourseDefinition/_course. Real-corpus note: 0/41 marketing stubs carry ANY link field today (measured), so real-corpus emission stays null — the fix makes the resolver honest where a payload does carry one. | `_marketing_link_target` |
+| 4 | Taxonomy artifact namespaces member spellings ("TPC.X" vs bare census) | **IMPL DEFECT** (three facets): (a) emitted `members` are the F4 BARE full spellings while ancestry SELECTION stays namespaced (`baseType == 'TPC.Prerequisite'`), with a hard error on bare↔namespaced collision; (b) `shortNameMap` is the F4 map FORWARD-only (24 short→full pairs — a bidirectional fold doubles the keyset and loses the pinned direction); (c) sidecar `interfaceFamily` carries the sketch's bare `ILevelPrerequisiteData` label (namespaced spelling kept for matching). | `prerequisite_membership` / `short_name_map` / `NONMEMBER_FAMILY_LABEL`; `run_l1_prerequisites` |
+| 5 | Kudosh item/room partitions priced from Lite twins only — "1,654 full GameItemDefinition rows skipped" | **HYPOTHESIS REFUTED BY MEASUREMENT + defensive broadening.** Disk: full `TPC.GameItemDefinition` (1,654) and `TPC.RoomDefinition` (63) stubs carry NO price field anywhere in the payload (recursive walk, 0 hits); prices serialize on the Lite twins (1728 item / 70 room, `Kudosh` AND `Cost` present; `Kudosh != Cost` on 1,048 rows, so `Kudosh` is the kudosh price). The blind fixture modeled FULL-class carriers, so the selector now accepts EITHER spelling per partition — a full row that ever carries the price joins its partition instead of being silently skipped; today's real population is unchanged. Licence-family rows spell `implementer:"courseLicence"` (the spec names that sink family SEPARATELY from the three IKudoshUnlockable implementers, which keep their implementing-class spellings). | `run_l2` sink selection |
+| 6 | `studentTypeId:''` (raw↔stub join gap) | **IMPL DEFECT.** Layered verbatim join, each route recorded in `evidence.studentTypeIdSource`: (1) harvest stem→bundle basename + pathId through the stub index; (2) the dump's own `m_Name` — the MEASURED prefab-side raw spelling (`Student_Generic`, `Student_GhostStudent`, neither a stub id); (3) string `_id`. Never guessed, never slugified. | `_join_student_type_id` |
+| 7 | `aiGraphRef` unresolved at fixture scale | **SUITE DEFECT (fixture fidelity).** The fixture modeled the graph target as `TPC.GraphDefinition` — a spelling that exists NOWHERE in the measured corpus (configs.jsonl holds 625 `TPS.Core.GOOSE.GraphDefinition`) and contradicts spec L4's "resolved GOOSE GraphDefinition". Fixture corrected; the implementation's typed selector stays strict. | `_logiclib.Graph_Lecture_Default` |
+| 8 | Generic unresolved-edge reasons vs pinned `pathId-not-a-stub-entity` | **IMPL DEFECT ×2 + hidden SUITE DEFECT.** Zero-survivor reason WAS pinned correctly; the real defects were (a) `builtinExternalsSkipped` counting unlock edges only — now ONE shared counter across edge + module Room/Qualification built-in skips; (b) ambiguous outcomes crashing row construction (outcome dict carries `candidates`, not `reason`). Hidden suite defect underneath: the failmodes bridge tables were built from the GREEN world, so the broken carrier had no owning serialized file and all four planted failure modes collapsed into one — `cab_index_rows` now threads the variant so the source object exists. | `run_l1_modules` / `run_l1_unlock_edges`; `_logiclib.cab_index_rows(variant)` |
+| 9 | Divergence exits 1 instead of exit-2-with-ledger | **IMPL DEFECT.** RF-2 pins ONE failure-mode kind for the reconciliation leg, routed to `_gaps.jsonl` holding exit 2 (completed-with-ledger); the logic-side-unmatched leg wrongly appended to `problems` (exit 1). Gap row + the overlap≠resolved DRIFT line keep it loud. | `run_l1_unlock_edges` mine_only leg |
+| 10 | L6 digest map reduced to `digestCount` | **IMPL DEFECT (spec letter restored).** The digest map now lands as its own run-section line `- digests:{relpath: hex8…}` exactly as §3 L6 sketches (the suite had accepted+noted the delta; byte-stability legs unchanged and still bite). | run-section L6 block |
+| 11 | PART E adapter legs skipping loud (`log_util` unimportable; walker/guard symbols unresolvable) | **IMPL DEFECT (adapter surface).** `logic_util.py` was not standalone-importable (no tools/ path bootstrap); added the same bootstrap stage8_logic has, a `fieldPath` location on each walker block record, and the routing-level `run_invention_guard` unit surface (safe AST recomputation of `derived-arithmetic:<expr>` over inline cited inputs — non-recomputable/mismatching still fails; disk byte-match stays in `NumericAudit.audit_artifact`). | `tools/logic_util.py` |
+
+## Spec ambiguities ruled (for the reviewer)
+
+1. **`dstKind` semantics** — semantic entity family (`course`) per the
+   frozen sketch's own example, never the twin's storage kind.
+2. **`interfaceFamily` label** — bare `ILevelPrerequisiteData` (sketch
+   spelling); namespaced spelling retained for ancestry matching only.
+3. **`shortNameMap` direction** — forward short→full, 24 pairs, F4 verbatim.
+4. **Kudosh sink `implementer` vocabulary** — three IKudoshUnlockable
+   implementers + upgrade spelled by IMPLEMENTING CLASS;
+   the CourseDefinition.KudoshCost family spelled by its spec-key name
+   `courseLicence` (it is named separately from the implementers in F10/L2).
+5. **RF-2 divergence severity** — ledger state holding exit 2, never an
+   exit-1 validation failure (both directions of the leg).
+6. **aiGraphRef destination vocabulary** — `TPS.Core.GOOSE.GraphDefinition`
+   (spec wording + measured corpus agree; fixture world-model corrected).
+7. **Digest record form** — own run-section line in the sketch's
+   `digests:{relpath: hex8…}` spelling; run section stays excluded from
+   byte-identity comparisons.
+
+## Scope note
+
+Rev 3's letter stands everywhere else. Where the fixes above touch seed
+figures, none moved: every drift probe still prints `DRIFT:` with the fresh
+number winning, the seeds stay WRITTEN values in `SEEDS`, and the real
+corpus reproduces 28+41 courses / 319 modules / 193-member census / 50
+unlock edges / 68·50·18 reconciliation triple / 209 research / 30 staff×10 /
+11 core-11 nulls exactly as before the round. Suite verdict at close:
+**56 passed / 0 failed / 0 skipped** — fixture-scale AND client-gated
+real-corpus legs alike (exit-2 steady state with exactly the two standing
+gaps, double-run byte identity, invention-guard negative legs biting).

@@ -207,7 +207,10 @@ def run_l0(extracted_root: Path, p: Pass, drift: list[str]) -> dict:
                           bundle_map=basename_to_rel)
     registries = lu.load_registries(extracted_root, list(REGISTRY_FILES))
     hier = lu.load_class_hierarchy(extracted_root)
-    members = lu.prerequisite_members(hier)
+    # Emitted vocabulary is BARE (F4 full spellings, pinned alphabetical
+    # indices); ancestry SELECTION stays namespaced (baseType ==
+    # 'TPC.Prerequisite' — a bare match selects nothing).
+    members, member_ns = lu.prerequisite_membership(hier)
     if members != sorted(members) or len(set(members)) != len(members):
         raise tc.StageError(
             "prerequisite taxonomy is not a distinct alphabetically-ordered "
@@ -227,6 +230,7 @@ def run_l0(extracted_root: Path, p: Pass, drift: list[str]) -> dict:
         "identity": identity, "build_id": build_id,
         "basename_to_rel": basename_to_rel, "stubs": stubs,
         "registries": registries, "hier": hier, "members": members,
+        "member_ns": member_ns,
         "nonmembers": nonmembers, "externals": externals,
         "bridges": bridges, "class_by_stub": class_by_stub,
         "_extracted_root": extracted_root,
@@ -493,10 +497,11 @@ def _register_term_derivations(ctx: dict, audit, artifact: str,
 
 def _marketing_link_target(ctx: dict, row: dict):
     """The marketing variant's link target where the payload carries one —
-    PPtr-resolved, else null."""
+    PPtr-resolved, else null. Candidate spellings include the measured
+    `MarketingFor` field; absence stays null (emptiness is DATA)."""
     fields = row.get("fields") or {}
     src = row.get("source") or {}
-    for key in ("Course", "CourseDefinition", "_course"):
+    for key in ("MarketingFor", "Course", "CourseDefinition", "_course"):
         ptr = fields.get(key)
         if isinstance(ptr, dict) and "m_PathID" in ptr:
             resolved, _out = resolve_field_ptr(ctx, src, ptr)
@@ -522,6 +527,7 @@ def run_l1_modules(ctx: dict, p: Pass, drift: list[str],
     split = Counter()
     room_resolved = room_unresolved = qual_resolved = qual_unresolved = 0
     graphs_resolved = 0
+    builtin_skipped = 0
     for row in mods:
         holder = cites.row()
         rid = str(row["id"])
@@ -536,11 +542,15 @@ def run_l1_modules(ctx: dict, p: Pass, drift: list[str],
             return resolve_field_ptr(ctx, src, f.get(field_name))
 
         room, room_out = res("RoomType")
-        qual, _q = res("Qualification")
+        qual, _q_out = res("Qualification")
         if room["resolved"]:
             room_resolved += 1
         elif room_out is not None:
             room_unresolved += 1
+            if room_out.get("status") == "builtin":
+                # built-in externals are never entity targets — counted on
+                # the SAME run-section surface as the unlock-edge skips
+                builtin_skipped += 1
             gaps.append(lu.make_gap_row(
                 "course-progression", "unresolved-pptr", rid,
                 f"RoomType target unresolved: {room_out.get('reason')}",
@@ -619,6 +629,8 @@ def run_l1_modules(ctx: dict, p: Pass, drift: list[str],
         "moduleQualificationResolved": qual_resolved,
         "moduleQualificationUnresolved": qual_unresolved,
         "aiGraphsResolvedModules": graphs_resolved,
+        # shared surface: unlock-edge skips ADD onto the module count below
+        "builtinExternalsSkipped": builtin_skipped,
     })
     log_util.write_jsonl(out_dir / "modules.jsonl", rows)
     return rows
@@ -662,13 +674,20 @@ def run_l1_prerequisites(ctx: dict, p: Pass, drift: list[str],
                          audit: lu.NumericAudit, out_dir: Path,
                          records: list[dict], gaps: list[dict]):
     build_id = ctx["build_id"]
-    members = ctx["members"]
+    members = ctx["members"]          # BARE spellings (emitted enum order)
+    member_ns = ctx["member_ns"]      # NAMESPACED membership (selection)
 
     member_records = [r for r in records
-                      if r["fullClass"] in set(members)]
+                      if r["fullClass"] in member_ns]
     configs_members = [r for r in member_records if r["carrierKind"] == "config"]
     nm_classes = ctx["nonmembers"]      # NAMESPACED spellings
     nonmember_records = [r for r in records if r["fullClass"] in nm_classes]
+
+    def _bare(rec_or_cls):
+        """Namespaced full spelling → the taxonomy's BARE member spelling."""
+        cls = rec_or_cls if isinstance(rec_or_cls, str) \
+            else str((rec_or_cls["type"] or {}).get("class"))
+        return cls
 
     # --- taxonomy artifact ---------------------------------------------------
     tax_artifact = "logic/course-progression/prerequisite-taxonomy.json"
@@ -677,7 +696,8 @@ def run_l1_prerequisites(ctx: dict, p: Pass, drift: list[str],
         "abstract": lu.ABSTRACT_PREREQUISITE,
         "members": list(members),
         "selection": "ancestry: class-hierarchy.baseType == "
-                     "'TPC.Prerequisite'",
+                     "'TPC.Prerequisite' (namespaced); emitted members are "
+                     "the F4 bare full spellings",
         "shortNameMap": {k: shortmap[k] for k in sorted(shortmap)},
         "source": "class-hierarchy.jsonl + dump.cs census",
         "provenance": "hard-read",
@@ -725,7 +745,7 @@ def run_l1_prerequisites(ctx: dict, p: Pass, drift: list[str],
             "ns": str((rec["type"] or {}).get("ns") or ""),
             "payload": payload,
             "targets": targets,
-            "taxonomyIndex": members.index(rec["fullClass"]),
+            "taxonomyIndex": members.index(_bare(rec)),
             "evidence": {"sourceArtifact": stub_artifact},
             "buildId": build_id,
         }
@@ -740,7 +760,7 @@ def run_l1_prerequisites(ctx: dict, p: Pass, drift: list[str],
                      [{"sourceArtifact":
                        "logic/course-progression/prerequisite-taxonomy.json",
                        "sourcePath": "members"}],
-                     lambda vals, _c=rec["fullClass"]: list(vals[0]).index(_c))
+                     lambda vals, _c=_bare(rec): list(vals[0]).index(_c))
 
     # --- non-member sidecar --------------------------------------------------
     nm_artifact = "logic/course-progression/prerequisite-nonmembers.jsonl"
@@ -758,7 +778,7 @@ def run_l1_prerequisites(ctx: dict, p: Pass, drift: list[str],
         doc = {"carrierId": rec["carrierId"],
                "carrierKind": rec["carrierKind"], "refKey": rec["refKey"],
                "blockClass": str((rec["type"] or {}).get("class")),
-               "interfaceFamily": lu.NONMEMBER_INTERFACE,
+               "interfaceFamily": lu.NONMEMBER_FAMILY_LABEL,
                "payload": payload,
                "evidence": {"sourceArtifact": stub_artifact},
                "buildId": build_id}
@@ -788,7 +808,7 @@ def run_l1_prerequisites(ctx: dict, p: Pass, drift: list[str],
                 len({str((r["type"] or {}).get("class"))
                      for r in nonmember_records}))
     distinct_full = sorted({r["fullClass"] for r in member_records})
-    outside = [c for c in distinct_full if c not in set(members)]
+    outside = [c for c in distinct_full if c not in member_ns]
     if outside:
         drift.append(
             f"DRIFT: {len(outside)} new ancestor-resolving prerequisite "
@@ -854,9 +874,17 @@ def run_l1_unlock_edges(ctx: dict, p: Pass, drift: list[str],
         if out["status"] == "resolved":
             resolved += 1
             dst_id = out["id"]
+            # dstKind is the SEMANTIC course family per the frozen row shape
+            # (the F7 trace itself pairs dstKind:"course" with the Lite-twin
+            # dstId) — derived from the resolved destination CLASS, never
+            # relabelled by hand; a destination outside the course classes
+            # keeps its honest storage kind.
+            dst_class = ctx["class_by_stub"].get((out["kind"], dst_id), "")
             doc = {
                 "srcKind": rec["carrierKind"], "srcId": rec["carrierId"],
-                "verb": "requires-course-unlocked", "dstKind": out["kind"],
+                "verb": "requires-course-unlocked",
+                "dstKind": "course"
+                if dst_class in set(lu.UNLOCK_DST_CLASSES) else out["kind"],
                 "dstId": dst_id, "resolved": True, "mechanism": "hard",
                 "method": "pptr-same-file-typed-block"
                 if out.get("sameFile") else "pptr-cross-file-typed-block",
@@ -876,7 +904,11 @@ def run_l1_unlock_edges(ctx: dict, p: Pass, drift: list[str],
                 doc["dstTwinOf"] = dst_id.split("@", 1)[0]
         else:
             unresolved += 1
-            doc = _edge_row(rec, field_path, build_id, out["reason"],
+            # ambiguous outcomes carry candidates instead of a reason string
+            reason = out.get("reason") or (
+                "multiple surviving candidates: "
+                f"{out.get('candidates')}")
+            doc = _edge_row(rec, field_path, build_id, reason,
                             ext_file_id=tp["m_FileID"],
                             path_id=tp["m_PathID"])
             if out["status"] == "builtin":
@@ -959,13 +991,15 @@ def run_l1_unlock_edges(ctx: dict, p: Pass, drift: list[str],
         else:
             class_accounting[cls] += 1
     for key in mine_only:
-        problems.append(
-            f"unlock edge {key} has NO relinks counterpart in "
-            "relinks/config_config.jsonl — the ledgers diverge")
+        # RF-2 pins ONE failure-mode kind for this leg and routes it to the
+        # gap ledger holding exit 2 (completed-with-ledger) — a divergence is
+        # honest ledger state, never an exit-1 validation failure. The DRIFT
+        # line below keeps it loud on top of the gap row.
         gaps.append(lu.make_gap_row(
             "course-progression", "relinks-divergence",
             f"{key[0]}#{key[1]}->{key[2]}",
-            "resolved unlock edge without a relinks-side counterpart",
+            "resolved unlock edge without a relinks-side counterpart in "
+            "relinks/config_config.jsonl — the ledgers diverge",
             "re-run the relink stage or reconcile its pair-file filter",
             build_id))
     if overlap != resolved:
@@ -990,7 +1024,9 @@ def run_l1_unlock_edges(ctx: dict, p: Pass, drift: list[str],
     p.L1.update({
         "unlockEdgesResolved": resolved,
         "unlockEdgesUnresolved": unresolved,
-        "builtinExternalsSkipped": builtin_skipped,
+        # edges + module Room/Qualification refs share ONE skip counter
+        "builtinExternalsSkipped":
+            p.L1.get("builtinExternalsSkipped", 0) + builtin_skipped,
         "relinksCoursePPTRRows": len(relink_rows),
         "unlockEdgeOverlapWithRelinks": overlap,
         "declaredScopeDifference": len(scope_only),
@@ -1245,15 +1281,24 @@ def run_l2(ctx: dict, p: Pass, drift: list[str], audit: lu.NumericAudit,
         for r in sorted(ctx["stubs"].rows_by_kind[kind], key=lambda x: x["id"]):
             cls = str((r.get("source") or {}).get("class"))
             flds = r.get("fields") or {}
-            if cls == "TPC.GameItemLiteDefinition" and "Kudosh" in flds:
+            # IKudoshUnlockable prices partitioned by IMPLEMENTING class
+            # (F10); the DATA carrier may be the full definition or its Lite
+            # twin — measured corpus prices serialize on the twins (1728
+            # GameItemLite / 70 RoomLite), while a full row that ever carries
+            # the field joins the same partition instead of being skipped.
+            # carrierClass records whichever spelling carried the number.
+            if cls in ("TPC.GameItemLiteDefinition",
+                       "TPC.GameItemDefinition") and "Kudosh" in flds:
                 sinks_by_impl["item"] += 1
                 add_sink(cls, r["id"], flds["Kudosh"], "Kudosh",
                          "GameItemDefinition", kind)
-            elif cls == "TPC.RoomLiteDefinition" and "Kudosh" in flds:
+            elif cls in ("TPC.RoomLiteDefinition",
+                         "TPC.RoomDefinition") and "Kudosh" in flds:
                 sinks_by_impl["room"] += 1
                 add_sink(cls, r["id"], flds["Kudosh"], "Kudosh",
                          "RoomDefinition", kind)
-            elif cls == "TPC.LandscapeBrushDefinition"                     and ("Cost" in flds or "_kudosh" in flds):
+            elif cls == "TPC.LandscapeBrushDefinition" \
+                    and ("Cost" in flds or "_kudosh" in flds):
                 price_field = "Cost" if "Cost" in flds else "_kudosh"
                 sinks_by_impl["landscapeBrush"] += 1
                 add_sink(cls, r["id"], flds[price_field], price_field,
@@ -1263,9 +1308,12 @@ def run_l2(ctx: dict, p: Pass, drift: list[str], audit: lu.NumericAudit,
                 add_sink(cls, r["id"], flds["Cost"], "Cost",
                          "GameItemUpgradeDefinition", kind)
             elif cls == "TPC.CourseDefinition" and "KudoshCost" in flds:
+                # NOT an IKudoshUnlockable implementer — the spec names this
+                # sink family separately (CourseDefinition.KudoshCost), and
+                # the row spells the family key, not a class
                 sinks_by_impl["courseLicence"] += 1
                 add_sink(cls, r["id"], flds["KudoshCost"], "KudoshCost",
-                         "CourseDefinition", kind)
+                         "courseLicence", kind)
     for rec in sorted(records, key=lambda r: (r["carrierId"], r["refKey"])):
         if rec["fullClass"] != "TPC.RewardKudoshDefinition":
             continue
@@ -1631,6 +1679,34 @@ def _was_same_file(ctx: dict, src: dict, ptr: dict) -> bool:
 # ---------------------------------------------------------------------------
 # L4 — needs & decay
 
+def _join_student_type_id(ctx: dict, stem, pid, payload) -> tuple[str, str]:
+    """Raw↔stub identity for one harvested StudentDefinition dump — layered,
+    every route verbatim and recorded in the row's evidence:
+
+      1. location join — the dump's (bundle-stem, pathId) through the stub
+         index (`configs_assets_all_9210.json` → its emitted stub id);
+      2. the dump's own `m_Name` (the measured prefab-side raw spelling);
+      3. a string `_id`.
+
+    A prefab-side dump whose (bundle, pathId) was never stubbed still carries
+    its verbatim name, so the row joins honestly instead of collapsing to an
+    empty id (never guessed, never slugified).
+    """
+    if stem is not None and pid is not None:
+        rel_bundle = ctx["basename_to_rel"].get(f"{stem}.bundle")
+        if rel_bundle is not None:
+            hit = ctx["stubs"].at(rel_bundle, int(pid))
+            if hit is not None:
+                return str(hit[1]), "location-join"
+    name = str(payload.get("m_Name") or "")
+    if name:
+        return name, "raw.m_Name"
+    raw_id = payload.get("_id")
+    if isinstance(raw_id, str) and raw_id:
+        return raw_id, "raw._id"
+    return "", "unjoined"
+
+
 def run_l4(ctx: dict, p: Pass, drift: list[str], audit: lu.NumericAudit,
            out_dir: Path):
     build_id = ctx["build_id"]
@@ -1690,7 +1766,8 @@ def run_l4(ctx: dict, p: Pass, drift: list[str], audit: lu.NumericAudit,
     raws = lu.load_harvest_family(
         ctx["_extracted_root"] / "harvest" / "monobehaviours",
         "TPC.StudentDefinition")
-    for rel, _stem, _pid, payload in raws:
+    for rel, stem, pid, payload in raws:
+        sid, sid_route = _join_student_type_id(ctx, stem, pid, payload)
         refs = payload.get("references") or {}
         for ref_key in sorted(k for k in refs if k != "version"):
             block = refs[ref_key]
@@ -1704,7 +1781,7 @@ def run_l4(ctx: dict, p: Pass, drift: list[str], audit: lu.NumericAudit,
                     continue
                 holder: list[tuple] = []
                 doc = {
-                    "studentTypeId": str(payload.get("m_Name") or ""),
+                    "studentTypeId": sid,
                     "component": "ECPStudent",
                     "attribute": lu.STUDENT_FIELD_TO_ATTRIBUTE[field_name],
                     "changeOverTime": attr_block.get("ChangeOverTime"),
@@ -1713,7 +1790,8 @@ def run_l4(ctx: dict, p: Pass, drift: list[str], audit: lu.NumericAudit,
                     "evidence": {
                         "rawDump": rel,
                         "fieldPath": f"references[{ref_key}].data."
-                                     f"{field_name}"},
+                                     f"{field_name}",
+                        "studentTypeIdSource": sid_route},
                     "buildId": build_id,
                 }
                 for out_key, src_key in (
@@ -2157,8 +2235,10 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
         "- L4: " + log_util.dump_jsonl_row(p.L4).rstrip(),
         "- L5: " + log_util.dump_jsonl_row(p.L5).rstrip(),
         "- L6: " + log_util.dump_jsonl_row(
-            {"digestCount": len(digests),
-             "logicMdBytes": p.L6["logicMdBytes"]}).rstrip(),
+            {"logicMdBytes": p.L6["logicMdBytes"]}).rstrip(),
+        # spec L6 letter: `digests:{relpath: hex8…}` — the rerun comparison
+        # surface lives on ITS OWN run-section line, in the sketch's spelling
+        "- digests: " + log_util.dump_jsonl_row(digests),
         ("- LEDGER-CONTRIBUTORS (exit 2): "
          + "; ".join(g["gapId"] for g in gap_rows)) if gap_rows
         else "- LEDGER-CONTRIBUTORS: none",

@@ -483,9 +483,20 @@ def test_run_section_headline_keys_and_fixture_values():
     assert not errs, errs
 
     def keyval(key):
-        m = re.search(rf"{re.escape(key)}\b[^0-9\n\-]*(-?\d+)", text,
-                      re.IGNORECASE)
-        return int(m.group(1)) if m else None
+        """Headline-counter reader. The L0/driftProbes lines legitimately echo
+        every probed key as {"expected": <seed>, "measured": ...} — reading
+        the seed as the measurement was this test's own parsing defect (the
+        reconciliation keys are probed WITH drift seeds per RF-2), so the
+        probe-echo contexts are skipped and the pass counters are read."""
+        for ln in text.splitlines():
+            s = ln.strip()
+            if s.startswith(("- driftProbes", "- L0:")) or '"expected"' in s:
+                continue
+            m = re.search(rf"{re.escape(key)}\b[^0-9\n\-]*(-?\d+)", s,
+                          re.IGNORECASE)
+            if m:
+                return int(m.group(1))
+        return None
 
     assert keyval("relinksCoursePPTRRows") == 5
     assert keyval("unlockEdgeOverlapWithRelinks") == 2
@@ -536,9 +547,9 @@ def test_double_run_byte_identical():
         f"double-run not byte-identical: {only_b[:4]} {only_a[:4]} {changed[:4]}"
     assert (ext / "logic" / "LOGIC.md").read_bytes() == md1
     log = log_text(ext)
-    # L6 records a rerun-comparison surface: per-file digest map (spec
-    # sketch `digests:{relpath: hex8}`) - the landed impl records a
-    # digestCount instead (noted delta; LOGIC.md byte-equality still bites)
+    # L6 records the rerun-comparison surface: the per-file digest map in the
+    # spec sketch's own spelling (the reconciler round restored the map; the
+    # bare-count alternative stays accepted so both forms keep biting)
     assert re.search(r"digests\s*:", log) or re.search(r"\bdigestCount\b",
                                                        log), \
         "L6 digest record missing from the run section"
@@ -1034,9 +1045,9 @@ def test_c18_logic_md_rollup_and_digests():
     assert "UNPROVEN-NATIVE" in text, \
         "the register of the two standing rows must be printed"
     log = log_text(ext)
-    # L6 records a rerun-comparison surface: per-file digest map (spec
-    # sketch `digests:{relpath: hex8}`) - the landed impl records a
-    # digestCount instead (noted delta; byte-stability leg still bites)
+    # L6 records the rerun-comparison surface: the per-file digest map in the
+    # spec sketch's own spelling (the reconciler round restored the map; the
+    # bare-count alternative stays accepted so both forms keep biting)
     assert re.search(r"digests\s*:", log) or re.search(r"\bdigestCount\b",
                                                        log), \
         "digest record missing"

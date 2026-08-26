@@ -804,7 +804,10 @@ def stub_rows(variant: str = "green") -> dict:
                      BARE_INTERACTION_DECOY["pid"], "InteractionDefinition",
                      B_CONFIGS, {"CooldownInSeconds": 99.0}))
     cfg.append(_stub("config", "Graph_Lecture_Default", 9150,
-                     "TPC.GraphDefinition", B_CONFIGS,
+                     # measured GOOSE spelling (configs.jsonl, 625 rows);
+                     # spec L4 pins the aiGraphRef target as a GOOSE
+                     # GraphDefinition — never an invented class spelling
+                     "TPS.Core.GOOSE.GraphDefinition", B_CONFIGS,
                      {"m_Name": "Graph_Lecture_Default"}))
     for c in NONMEMBER_CARRIERS:
         kind = c["carrierKind"]
@@ -1143,9 +1146,9 @@ def entity_locale_rows() -> list:
 # Bridges + externals + export manifest
 # ---------------------------------------------------------------------------
 
-def _cab_objects(bundle: str) -> list:
+def _cab_objects(bundle: str, variant: str = "green") -> list:
     objs = []
-    for rows in stub_rows().values():
+    for rows in stub_rows(variant).values():
         for r in rows:
             if r["source"]["bundle"] == bundle:
                 objs.append({"pathId": r["source"]["pathId"],
@@ -1153,13 +1156,19 @@ def _cab_objects(bundle: str) -> list:
     return sorted(objs, key=lambda o: o["pathId"])
 
 
-def cab_index_rows() -> list:
+def cab_index_rows(variant: str = "green") -> list:
+    # the bridge tables MUST describe the SAME world as the stub corpus they
+    # index: a variant-added source object (the failmodes broken carrier)
+    # has to be locatable as a SOURCE side for its planted per-ref failure
+    # modes to be exercised (unknown fileId / builtin / dangling / ambiguous
+    # all presuppose the owning serialized file is known)
     rows = []
     for b, cab in ((B_CONFIGS, CAB_CONFIGS), (B_APP, CAB_APP),
                    (B_META, CAB_META), (B_COMMON, CAB_COMMON),
                    (B_ROOMS, CAB_ROOMS), (B_SHARED, CAB_SHARED),
                    (B_ITEMS, CAB_ITEMS), (B_UNLOCK, CAB_UNLOCK)):
-        rows.append({"bundle": b, "cab": cab, "objects": _cab_objects(b),
+        rows.append({"bundle": b, "cab": cab,
+                     "objects": _cab_objects(b, variant),
                      "buildId": BUILD_ID})
     # the ambiguity setup: ONE cab registered under TWO bundles
     rows.append({"bundle": B_COMMON, "cab": CAB_DUP,
@@ -1310,7 +1319,7 @@ def write_relinks_upstream(extracted: Path, variant: str = "green") -> None:
     write_jsonl(rel / "entity_locale.jsonl", entity_locale_rows())
     bridges = rel / "bridges"
     bridges.mkdir(parents=True, exist_ok=True)
-    write_jsonl(bridges / "cab_index.jsonl", cab_index_rows())
+    write_jsonl(bridges / "cab_index.jsonl", cab_index_rows(variant))
     write_jsonl(bridges / "container_index.jsonl", container_index_rows())
 
 

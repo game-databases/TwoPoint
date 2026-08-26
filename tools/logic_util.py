@@ -20,10 +20,14 @@ temp+rename writes via log_util, UTF-8 + LF. Ids stay VERBATIM end to end
 """
 from __future__ import annotations
 
+import ast
 import json
 import math
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import log_util
 import relink_util as ru
@@ -38,7 +42,11 @@ KIND_FILES = dict(ru.KIND_FILES)
 STUB_KINDS = ru.STUB_KINDS
 
 ABSTRACT_PREREQUISITE = "TPC.Prerequisite"
+# Namespaced spelling for ANCESTRY matching; the sidecar's emitted
+# interfaceFamily label is the spec's bare spelling (piece-04 §3 L1 sketch:
+# interfaceFamily:"ILevelPrerequisiteData").
 NONMEMBER_INTERFACE = "TPC.ILevelPrerequisiteData"
+NONMEMBER_FAMILY_LABEL = "ILevelPrerequisiteData"
 
 # Expected destination classes of a course-unlock edge (spec L1 step 3).
 UNLOCK_DST_CLASSES = ("TPC.CourseLiteDefinition", "TPC.CourseDefinition",
@@ -185,15 +193,34 @@ def load_class_hierarchy(extracted_root: Path) -> list[dict]:
 
 def prerequisite_members(hier_rows: list[dict]) -> list[str]:
     """The taxonomy ENUM: every type whose baseType is the NAMESPACED abstract
-    `TPC.Prerequisite`, alphabetically ordered over full spellings (pinned
-    member order — index 10 must be PrerequisiteHasCourseUnlocked)."""
-    members = set()
+    `TPC.Prerequisite`, alphabetically ordered over FULL SPELLINGS (pinned
+    member order — index 0 ChallengePrerequisiteAcademicScore, index 10
+    PrerequisiteHasCourseUnlocked, index 23 PrerequisiteUniversityLevel).
+
+    Emitted spellings are BARE (`PrerequisiteHasCourseUnlocked`, F4 verbatim);
+    selection stays NAMESPACED through :func:`prerequisite_membership`, whose
+    namespaced set is guaranteed to biject these bare names."""
+    return prerequisite_membership(hier_rows)[0]
+
+
+def prerequisite_membership(hier_rows: list[dict]) -> tuple[list[str], set[str]]:
+    """(bare alphabetical members, namespaced membership set for ancestry
+    selection). A bare↔namespaced collision would make the pinned indices
+    ambiguous and is a hard error."""
+    bare: set[str] = set()
+    namespaced: set[str] = set()
     for r in hier_rows:
         if str(r.get("baseType")) == ABSTRACT_PREREQUISITE:
-            ns = str(r.get("namespace") or "")
             name = str(r.get("name"))
-            members.add(f"{ns}.{name}" if ns else name)
-    return sorted(members)
+            ns = str(r.get("namespace") or "")
+            bare.add(name)
+            namespaced.add(f"{ns}.{name}" if ns else name)
+    if len(bare) != len(namespaced):
+        raise LogicError(
+            "prerequisite taxonomy bare/name-spaced collision — pinned "
+            f"alphabetical indices would be ambiguous "
+            f"(bare={sorted(bare)[:5]}…)", 1)
+    return sorted(bare), namespaced
 
 
 def nonmember_classes(hier_rows: list[dict]) -> set[str]:
@@ -211,9 +238,11 @@ def nonmember_classes(hier_rows: list[dict]) -> set[str]:
 
 
 def short_name_map(members: list[str]) -> dict:
-    """shortName ↔ full-spelling map from spec §2 F4 (the F4 short names are
-    the dump.cs class spellings minus the Prerequisite/Challenge prefix
-    family spelling — pinned verbatim in the taxonomy artifact)."""
+    """shortName → full-spelling map from spec §2 F4, FORWARD DIRECTION ONLY
+    (24 pairs — the taxonomy artifact's `shortNameMap` is the F4 map
+    verbatim; a bidirectional fold would double the keyset and lose the
+    pinned direction). Members absent from this corpus's hierarchy are
+    dropped so the emitted map never names a non-member."""
     pairs = {
         "DaysPassed": "PrerequisiteDaysPassed",
         "DaysPassedSinceCourseStart": "PrerequisiteDaysPassedSinceCourseStart",
@@ -240,8 +269,7 @@ def short_name_map(members: list[str]) -> dict:
         "ChallengeHasRoomUnlocked": "ChallengePrerequisiteHasRoomUnlocked",
         "ChallengeAcademicScore": "ChallengePrerequisiteAcademicScore",
     }
-    return {k: v for k, v in pairs.items() if v in set(members)} \
-        | {v: k for k, v in pairs.items() if v in set(members)}
+    return {k: v for k, v in pairs.items() if v in set(members)}
 
 
 def iter_stub_rows(stubs_dir: Path):
@@ -290,11 +318,13 @@ def walk_typed_blocks(fields: dict) -> list[dict]:
     """Typed SerializeReference view over one stub row's fields — descends
     into `fields.references[*]`, returning ONE RECORD PER BLOCK:
 
-        {"refKey":   "00000000",
-         "type":     {"asm","class","ns"} verbatim,
+        {"refKey":    "00000000",
+         "fieldPath": "references[00000000].data._course" (block location:
+                      the refKey anchor plus every PPtr leaf path it carries),
+         "type":      {"asm","class","ns"} verbatim,
          "fullClass": namespaced spelling,
-         "data":     block payload verbatim,
-         "pptrs":    [{"fieldPath", "m_FileID", "m_PathID"}] under data}
+         "data":      block payload verbatim,
+         "pptrs":     [{"fieldPath", "m_FileID", "m_PathID"}] under data}
 
     Plain PPtr walking already REACHES these leaves anonymously (piece-04
     F6); what it cannot produce is the TYPED view — the census, the
@@ -319,13 +349,16 @@ def walk_typed_blocks(fields: dict) -> list[dict]:
         for _leaf_key, raw_path, fid, pid in ru.walk_pptr_leaves(data or {}):
             pptrs.append({"fieldPath": f"data.{ru.normalize_field_path(raw_path)}",
                           "m_FileID": int(fid), "m_PathID": int(pid)})
+        pptrs.sort(key=lambda p: (p["fieldPath"], p["m_PathID"]))
+        field_path = f"references[{ref_key}]" + "".join(
+            "." + p["fieldPath"] for p in pptrs)
         blocks.append({
             "refKey": str(ref_key),
+            "fieldPath": field_path,
             "type": dtype if isinstance(dtype, dict) else {},
             "fullClass": full_type_spelling(dtype),
             "data": data if isinstance(data, dict) else {},
-            "pptrs": sorted(pptrs, key=lambda p: (p["fieldPath"],
-                                                  p["m_PathID"])),
+            "pptrs": pptrs,
         })
     blocks.sort(key=lambda b: b["refKey"])
     return blocks
@@ -704,6 +737,167 @@ class NumericAudit:
         return {"copied": copied, "derivedArithmetic": derived,
                 "reconstructedFromCode": code, "explicitNull": nulls,
                 "failures": failures}
+
+
+_DERIVED_EXPR_ALLOWED_BINOPS = (ast.Add, ast.Sub, ast.Mult, ast.Div,
+                                ast.FloorDiv, ast.Mod, ast.Pow)
+
+
+def _eval_derived_expr(expr: str, env: dict):
+    """Recompute a `derived-arithmetic:<expr>` label from its cited inputs.
+
+    Supports arithmetic over dotted/subscripted names rooted in `env`
+    (`inputs.a + inputs.b`). Anything else — calls, attributes outside the
+    environment, comparison chains — raises ValueError, which the guard
+    reports as non-recomputable: a label that cannot be recomputed cannot
+    launder an invented number.
+    """
+
+    def ev(node):
+        if isinstance(node, ast.Expression):
+            return ev(node.body)
+        if isinstance(node, ast.BinOp) and \
+                isinstance(node.op, _DERIVED_EXPR_ALLOWED_BINOPS):
+            left, right = ev(node.left), ev(node.right)
+            if isinstance(node.op, ast.Add):
+                return left + right
+            if isinstance(node.op, ast.Sub):
+                return left - right
+            if isinstance(node.op, ast.Mult):
+                return left * right
+            if isinstance(node.op, ast.Div):
+                return left / right
+            if isinstance(node.op, ast.FloorDiv):
+                return left // right
+            if isinstance(node.op, ast.Mod):
+                return left % right
+            return left ** right
+        if isinstance(node, ast.UnaryOp) and \
+                isinstance(node.op, (ast.UAdd, ast.USub)):
+            v = ev(node.operand)
+            return v if isinstance(node.op, ast.UAdd) else -v
+        if isinstance(node, ast.Constant) and \
+                isinstance(node.value, (int, float)) and \
+                not isinstance(node.value, bool):
+            return node.value
+        if isinstance(node, ast.Name):
+            if node.id in env:
+                return env[node.id]
+            raise ValueError(f"name {node.id!r} is not a cited input")
+        if isinstance(node, ast.Attribute):
+            base = ev(node.value)
+            key = node.attr
+            if isinstance(base, dict) and key in base:
+                return base[key]
+            raise ValueError(f"'{key}' is not a cited input")
+        if isinstance(node, ast.Subscript):
+            base, idx = ev(node.value), ev(node.slice)
+            if isinstance(base, (dict, list)):
+                try:
+                    return base[idx]
+                except (KeyError, IndexError, TypeError) as exc:
+                    raise ValueError(str(exc))
+        raise ValueError(f"unsupported expression node "
+                         f"{type(node).__name__}")
+
+    tree = ast.parse(expr, mode="eval")
+    return ev(tree)
+
+
+def run_invention_guard(doc, extracted_root=None) -> dict:
+    """Routing-level AC7 audit of ONE parsed emitted document (unit surface;
+    the disk byte-match lives in :meth:`NumericAudit.audit_artifact`).
+
+    Every numeric leaf must sit in exactly one audited route:
+
+      copied               — the row cites a source identity
+                             (`evidence.source`/`sourceArtifact`);
+      derived-arithmetic   — the row carries
+                             `method:"derived-arithmetic:<expr>"` with cited
+                             inputs; the expression is RECOMPUTED from those
+                             inputs and must match the emitted value;
+      reconstructed-from-code — the row is labeled
+                             `provenance:"reconstructed-from-code"`;
+      explicit-null        — null absent-with-ledger representations.
+
+    A numeric satisfying NONE of these routes is UNCITED → failure naming
+    artifact path; a derived label that does not recompute → failure (the
+    label-laundering route closes here too).
+    """
+    del extracted_root   # routing audit: no disk re-read at this level
+    failures: list[str] = []
+    buckets = {"copied": 0, "derivedArithmetic": 0,
+               "reconstructedFromCode": 0, "explicitNull": 0}
+    rows = doc if isinstance(doc, list) else [doc]
+    for ri, row in enumerate(rows):
+        prefix = f"{ri}/" if isinstance(doc, list) else ""
+        if not isinstance(row, dict):
+            continue
+        method = str(row.get("method") or "")
+        ev = row.get("evidence") if isinstance(row.get("evidence"), dict) \
+            else {}
+        cited = bool(ev.get("source") or ev.get("sourceArtifact")
+                     or ev.get("stubRow") or ev.get("rawDump"))
+        labeled_code = row.get("provenance") == "reconstructed-from-code"
+        if method.startswith("derived-arithmetic:"):
+            expr = method.split(":", 1)[1].strip()
+            inputs = ev.get("inputs")
+            emitted = row.get("value", row.get("amount"))
+            try:
+                expected = _eval_derived_expr(expr,
+                                              {"inputs": inputs})
+            except Exception as exc:  # noqa: BLE001 — non-recomputable
+                failures.append(
+                    f"{prefix or './'}value derived-arithmetic:{expr} not "
+                    f"recomputable from cited inputs "
+                    f"({type(exc).__name__}: {exc})")
+                continue
+            if not _numbers_equal(expected, emitted):
+                failures.append(
+                    f"{prefix or './'}value derived-arithmetic:{expr} "
+                    f"recomputes to {expected!r}, emitted {emitted!r}")
+                continue
+            buckets["derivedArithmetic"] += 1
+            continue
+        for sub, value in _numeric_leaves(row, ("evidence", "inputs")):
+            if value is None:
+                buckets["explicitNull"] += 1
+                continue
+            if labeled_code:
+                buckets["reconstructedFromCode"] += 1
+                continue
+            if cited:
+                buckets["copied"] += 1
+                continue
+            failures.append(f"{prefix}{sub} numeric leaf is UNCITED "
+                            f"(no copied citation, no labeled hatch)")
+    out = dict(buckets)
+    out["failures"] = failures
+    return out
+
+
+def _numeric_leaves(obj, skip_subtrees: tuple[str, ...] = ()):
+    """(relative path, value) for every numeric leaf, NOT descending into
+    the named bookkeeping subtrees (citations/inputs are anchors, not
+    emissions)."""
+    stack = [("", obj)]
+    while stack:
+        path, node = stack.pop()
+        if isinstance(node, dict):
+            prefix = f"{path}/" if path else ""
+            for k, v in node.items():
+                if not path and k in skip_subtrees:
+                    continue
+                stack.append((prefix + str(k), v))
+        elif isinstance(node, list):
+            for i, v in enumerate(node):
+                stack.append((f"{path}/{i}" if path else str(i), v))
+        elif node is None:
+            yield path, node
+        elif isinstance(node, bool):
+            continue
+        elif isinstance(node, (int, float)):
+            yield path, node
 
 
 def load_source_document(extracted_root: Path, source_artifact: str):
