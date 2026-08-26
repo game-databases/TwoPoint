@@ -1,0 +1,218 @@
+# Verify A — independent re-measurement — scout-report-piece-06 (media pipeline)
+
+**Verifier:** verifyA-piece06 (independent measurement pass; judges, does not
+fix; spawned no subagents). **Date:** 2026-08-26 · **Host:** NE8K.
+**Subject:** [`docs/scout-report-piece-06-media.mdx`](../scout-report-piece-06-media.mdx)
+(read to its §END sentinel).
+**Requirement set read in full first:** repo-root `AGENTS.md`,
+`promptForDB.md`. **Method:** every load-bearing number re-derived from
+primary artifacts (`extracted/media-catalogue.jsonl`,
+`extracted/relinks/entity_asset_guid.jsonl`,
+`extracted/relinks/bridges/container_index.jsonl`,
+`addressables/catalog.json`, `stubs/*.jsonl`) plus a fresh UnityPy
+header sweep of all 176 roster bundles (pack `.venv` python,
+`tools/unitypy_util.seed_fallback_unity_version` seam, 26.9 s wall;
+sweep artifact parked outside the repo at `A:\_va_piece06_tmp\sweep.jsonl`).
+No pixel decodes, no image Reads, nothing exported, nothing committed;
+the only repo write is this file.
+
+---
+
+## Verdict table
+
+Measured-vs-claimed, per re-measure tasking. "Exact" = my independent
+count equals the reported number.
+
+### 1. Icon join rate — CORRECTED (rate + miss-list hold; exact digits do not)
+
+| Sub-claim | Claimed | Measured | Verdict |
+|---|---|---|---|
+| Join ladder inputs | 54,143 distinct guids · 49,855 addresses · 47,939 catalogue rows | 54,143 · 49,855 · 47,939 — **exact** | CONFIRMED |
+| Per-kind table (§3), all columns | items 3,885/3,875/8,140/**1,919**/363 · configs 8,430/3,406/11,422/**1,565**/3,664 · metagame-nodes **202** · rooms **115** · student-types **27** · staff **9** · unlockables **33**/26 dang · courses 0/0 · campus-levels 13/20/0/7 | Reproduced **exactly**, cell for cell, from `stubs/*.jsonl` → catalog → container_index (rows-with-refs column requires counting guid-shaped fields *including empty*; refs column excludes empties). Sprite/SpriteAtlas-targeted refs sum to **3,870 — exact**. Dangling decomposition exact too (items: 351 `EditorFallbackIconReference` + 12 `VisualsPrefab`; configs: 3,664 dominated by `Meshes[].GeometryList[].MaterialList[].Material` 3,617) | CONFIRMED |
+| Distinct referenced icon sprites resolve 2,151/2,158 = 99.7% | 2,151 of 2,158 | Not reproducible at those digits under any of six identity rules tested. Rule that reproduces the report's own stated miss-set: **2,146 resolved of 2,153 distinct = 99.67%** (rounds to the claimed 99.7%). Atlas-pair-only reading: 2,147/2,147. Including standalone direct-Sprite targets by catalogue name: 2,218 of 2,225 names. Note: **2,151 is exactly the count of distinct `subObjectName` values in `relinks/entity_asset_guid.jsonl`** — the likely source of the numerator — but only 2,119 of those match catalogue Sprite rows (32 are ANIM_/prefab names), so that file cannot be what "resolved through … media-catalogue" means | CORRECTED (digits ±5; rate stands) |
+| The 7 unmatched are DLC3/Medical-named honest missing states | 7 names | **Exactly 7**, named identically in kind: `DLC3_UI_Icons_Objective_Pirates`, `DLC3_UI_Icons_Objective_Volcano`, `Gorge_UI_Icons_Objectives_DLC3_Emergency`, `UI_HUD_Room_T_Icon_DLC3_plot`, `UI_InGame_DLC3_Icon_studentArchetype_Doctors`, `UI_InGame_DLC3_Icon_studentArchetype_Nurses` (GUID hits a catalog address with **no container entry** — dlc-hospital content absent from install) + `UI_InGame_T_Icon_Item_Teamsports_Cheeseball` (atlas target, name absent from catalogue) | CONFIRMED |
+| "Every icon-bearing field resolves to a SpriteAtlas asset, 100%" (finding 1) | all 3,870 on `.spriteatlasv2` | **3,717/3,870 (96.0%)** are SpriteAtlas-targeted with non-empty `m_SubObjectName`; **153 refs** target plain `Sprite`-class assets (`AdvisorMessage.CharacterImage`, loadingscreen/character images in `ui-art*`/`ui-loadingscreens*` bundles; 150 of them with *empty* sub). Contradicted also by the report's own §4 standalone-sprite route | CORRECTED |
+
+### 2. Format census — CONFIRMED (two small numeric corrections)
+
+Whole-corpus Texture2D header census, all 7,977 objects, sweep artifact
+`sweep.jsonl` (method: `obj.read()` headers only, no pixel access):
+
+| Format | Claimed count/B | Measured count/B | Verdict |
+|---|---|---|---|
+| DXT1 (=10) | 4,504 / 6,873,576 | 4,504 / 6,873,576 — exact | CONFIRMED |
+| DXT5 (=12) | 2,799 / 19,528,904 (report's own sweep) | **2,793 / 19,527,408** | CORRECTED |
+| BC4 (=26) | 314 / 73,120 | 314 / 73,120 — exact | CONFIRMED |
+| RGBA32 (=4) | 141 / 157,549,760 | 141 / 157,549,760 — exact | CONFIRMED |
+| Alpha8 (=1) | 71 / 25,441,576 | 71 / 25,441,576 — exact | CONFIRMED |
+| RGB24 (=3) | 64 / 15,016 | 64 / 15,016 — exact | CONFIRMED |
+| BC7 (=25) | 90 / 20,252 | 90 / 20,252 — exact | CONFIRMED |
+| Total | 7,977 / 209,502,204 (report's sweep), "catalogue says 209,500,708, 1,496 B delta, immaterial" | **7,977 / 209,500,708** | My sweep lands on the **catalogue** figure exactly, so the 1,496 B delta was the scout's sweep being off by 6 DXT5 objects, not catalogue drift |
+
+- **No ASTC/ETC2 anywhere**: CONFIRMED — format enum values present
+  corpus-wide are exactly {1, 3, 4, 10, 12, 25, 26}. Hosting pages behind
+  the referenced set add no exotic formats ({DXT5, DXT1, BC7, RGB24}
+  observed on their host-bundle textures).
+- **Largest pages 4096×4096 DXT5**: CONFIRMED
+  (`sactx-0-4096x4096-DXT5-UI_Icons-f59ce1d5`, three `UI_Items_New`
+  4096² pages + the 4096×2048 tail, `UI_Icons` 4096² + 2048×4096 — all as
+  listed). Page-name grammar `sactx-{page}-{W}x{H}-{fmt}-{Atlas}-{hash}`
+  confirmed on all 125 pages. One nuance: `UI_Costumisation` has **one**
+  4096² + one **2048²** page, not "two 4096²"; and the largest single
+  4096² texture overall is a DXT1 VFX frame in `unlockables_assets_all`
+  (not an atlas page).
+- Duplicate-atlas claim (§4 note, §6 gap 3, §9 Q3): **REFUTED** — zero
+  duplicate SpriteAtlas names corpus-wide across the 47 objects;
+  `UI_DLC1_Items` (packed=169) and `DLC1_Space_UI_Icons` (packed=66)
+  each appear **once** in `dlc-space-ui-spriteatlas_assets_all.bundle`.
+  The dedupe rule and Q3 inspection are moot.
+
+### 3. Atlas-crop measurability — CONFIRMED (stronger than claimed)
+
+- `m_RD.textureRect` present and measurable on **2,146/2,146** referenced
+  atlas-pair sprites (and 6,787/6,789 corpus sprites pass a ≥4 px-both-
+  axes usability filter; 0 sprites lack the field). The report's "4,686
+  carry a usable packed rect" understates availability ~31%; direction
+  favors feasibility.
+- Sample of 22 concrete rects extracted (printed in the verification
+  run; e.g. `DLC2_Courses_T_Icon_DeadLanguage_LRG`
+  tr=(18.0, 3.1, 224.9, 244.9);
+  `UI_HUD_Status_T_Icon_Club_Walking` tr=(126×126)).
+- Counterexample hunt: none found. The §4 worked example reproduces
+  byte-for-byte: `UI_Generic_T_Spritesheet_Icons_InGame_ItemsList_
+  Tabs_Main_DLC` **tr=(227, 31, 70, 70)** — exactly the claimed 70×70 @
+  (227,31). Non-grid layout confirmed (irregular offsets, trimmed
+  fractional sizes like 142.9×255.0 inside 256×256 cells, visible
+  padding bleeds such as 253.9×231.8).
+
+### 4. Volume math — REFUTED (area ~3.9× larger; conclusion survives)
+
+| Quantity | Claimed | Measured | Verdict |
+|---|---|---|---|
+| Icon-set source crop area | 26,595,109 px ≈ 101 MiB RGBA (2,151 sprites) | **104,078,227 px ≈ 397 MiB RGBA** (2,146 atlas-pair sprites); **133,875,506 px ≈ 511 MiB** including the ~79 standalone direct-Sprite targets (2,225) | REFUTED |
+| Median max-dim | 42 px | **232 px** (both readings) | REFUTED |
+| Ladder ≤64 / ≤128 / ≤256 / >512 | 1,509 (70%) / 1,813 (84%) / 2,039 (95%) / 41 | **29 (1.4%) / 442 (20.6%) / 2,012 (93.8%) / 3** | REFUTED (only the ≤256 bucket roughly agrees) |
+| Shipped as WebP lossy q80 | ≈ 1.7–5 MiB | Redo from measured area: **≈ 1.6–9.4 MiB** (atlas-pair) / 2.0–12.0 MiB (incl. standalone) | CORRECTED upward |
+| Shipped as WebP lossless | ≈ 6.6–13 MiB | **≈ 24.9–49.7 MiB** | CORRECTED upward |
+| Shipped as PNG | ≈ 13–27 MiB | **≈ 49.6–99.2 MiB** (63.8–127.7 incl. standalone) | CORRECTED upward |
+| GPU payload, no mips | 4,638,249,614 B ≈ 4.32 GiB | **4,816,753,294 B ≈ 4.49 GiB** (Σ w·h·cpp over my sweep) | CORRECTED (+3.8%) |
+| GPU payload, mips ×4/3 | 5,927,164,602 B ≈ 5.52 GiB | **6,171,504,655 B ≈ 5.75 GiB** | CORRECTED |
+| Full RGBA equivalent | 6,743,364,882 px / 25.12 GiB | **6,724,359,442 px / 25.05 GiB** | CONFIRMED (−0.28%) |
+| On-disk 96 tex-bearing bundle files | 2,420,511,413 B | **96 bundles / 2,420,511,413 B — exact** | CONFIRMED |
+| Catalogue totalBytesEstimate | 1,068,259,162 B | 1,068,259,162 B — exact | CONFIRMED |
+
+The decision-read ("megabytes, not gigabytes; never bulk-decode") still
+holds at the corrected numbers, but the PNG worst case is ~4× the stated
+band and the icon corpus is mid-resolution (256-px cells), not 42-px
+glyphs — the §5 "ship ONE canonical asset at native resolution, no @2x"
+input survives; the "median 42 px" justification for it does not.
+No subset rule I tested (kind-restricted, field-restricted,
+host-bundle-restricted, min-copy-per-name, m_Rect instead of
+textureRect) reproduces 26.6 Mpx or median 42 px; the §3.4/§2 sprite
+size figures look like a probe defect in the scout's sweep, not a
+different definitional slice.
+
+### 5. Coverage holes — CONFIRMED (three digit corrections)
+
+- `TPC.CourseDefinition` carries **no visual field**: CONFIRMED — 69
+  rows, 34 distinct fields, none icon/visual/sprite/prefab/material/
+  texture/mesh (only false positive on a name-substring scan:
+  `StartPointsCost`). The hole is real.
+- Name-convention match `Course_X → UI_InGame_Courses_T_Icon_X`:
+  claimed 11/69, measured **9/69** (loose suffix variants reach 10, not
+  11). Direction fully confirmed; digit corrected.
+- 42 existing `*_Courses_T_Icon_*` sprites: **exact**.
+- §9 Q1 premise "`Qualification` PPtr on all 69 course rows":
+  **CORRECTED — present on 28/69 rows** (top-level stub field).
+- Unlockables "33 sprite refs over 415 rows": **exact** (33
+  SpriteAtlas-targeted refs). §8's "124/415 rows reference anything" is
+  misleading: 124 rows carry guid-shaped *fields*, mostly empty; only
+  **63/415 rows hold non-empty refs** (201 refs total).
+
+### 6. Naming substrate — CONFIRMED
+
+- `subObjectName` present on resolved pairs: 3,717/3,870 sprite-target
+  refs carry it non-empty; persisted on 3,779 `entity_asset_guid.jsonl`
+  rows; spot-verified (e.g. `ItemsMenuIconReference.m_AssetGUID
+  63441881…` → sub `UI_InGame_T_Icon_Item_LS_Construction_Blocks_
+  Customisable_v1`). Keying exports on it is sound — with the caveat
+  from claim 1 that 153 refs resolve to standalone Sprites with *empty*
+  sub, which need the address-basename naming route.
+- Slugs 100% null: **exact** — 13,443/13,443 stub rows have `slug: null`.
+
+### 7. Tooling readiness — CONFIRMED (hands-on)
+
+- **AssetStudioModCLI**: staged at the cited path
+  `C:\_reps\game-databases\zero-parades\work\_tooling\AssetStudioModCLI\
+  AssetStudioModCLI_net8_portable\AssetStudioModCLI.exe`, self-reports
+  "Based on AssetStudioMod v0.19.0.0". Executed live against
+  `ui-prefabs_assets_all.bundle` with `--unity-version 2020.3.47f1`:
+  reports `[Unity Version] # 2020.3.47f1`, 131 exportable assets
+  (Texture2D 68 + Sprite 63). Flags verified present in `-h`: `-m
+  info/export/exportRaw/dump`, `-t sprite,tex2d`, `--image-format`
+  webp|png|jpg|bmp|tga, `--filter-by-name/-pathid/-container`,
+  `-g containerFull`, `-f assetName_pathID`, `--export-asset-list`,
+  `--unity-version`. Runnable as claimed.
+- **venv**: pack `.venv` python 3.14.7, UnityPy **1.25.3**, Pillow
+  **12.3.0**, `features.check('webp') = True`, `pillow-avif` **absent**
+  (grounds the AVIF NOT-NOW verdict).
+- **Fallback-version seam**: `seed_fallback_unity_version(bundle_path)`
+  exists in `tools/unitypy_util.py` as cited; applied per-bundle, **all
+  176 bundles seed the fallback** (real header count 0) — confirming
+  "all 176 bundles carry UnityFS header 0.0.0". Full 176-bundle header
+  sweep ran 26.9 s (scout: "~15 s for the 96 texture-bearing ones";
+  same order).
+- **Codec/host**: ffmpeg 7.1 (Gyan winget build) on PATH;
+  `cwebp`/`avifenc`/ImageMagick absent — all as claimed.
+- **Environment observation the piece must plan around**: C: free space
+  is currently **~0.36 GB** (the report's warning to re-measure was
+  prescient; last recorded 84.77 GiB). Any bulk decode stage today must
+  stage scratch/output on A: (577 GB free) or wait for cleanup.
+
+---
+
+## Corrections list (for the Documentator/arbiter)
+
+1. §3 headline counts: 2,151/2,158 → **2,146/2,153** (99.67%, rounds to
+   the claimed 99.7%; the 7-name miss-list is correct as written).
+   Likely root cause: numerator taken from distinct `subObjectName`
+   values in `entity_asset_guid.jsonl` (exactly 2,151) rather than a
+   fresh stub-side join into the media catalogue.
+2. Finding 1 "all 3,870 land on `.spriteatlasv2`" → **3,717/3,870**
+   atlas pairs; 153 refs resolve to plain `Sprite` assets (150 with
+   empty sub) needing the standalone naming route.
+3. §3.4/§7 volume basis wrong: source area **104.1 Mpx** (not 26.6),
+   median max-dim **232 px** (not 42); shipped bands become ~1.6–9.4
+   MiB WebP-lossy / ~25–50 MiB WebP-lossless / ~50–99 MiB PNG.
+   §2's sprite ladder and "4,686 usable rects" are off the same way
+   (measured 6,787/6,789 usable).
+4. §4 `UI_Costumisation` "two 4096²" → one 4096² + one 2048².
+5. §4 note / §6 gap 3 / §9 Q3 duplicate atlas objects (`UI_DLC1_Items`,
+   `DLC1_Space_UI_Icons` ×2): **do not exist** — all 47 atlas names
+   unique; drop the dedupe rule and close Q3 as void.
+6. §3.6 course name-convention 11/69 → **9/69**; §9 Q1 "Qualification
+   PPtr on all 69 rows" → **28/69**.
+7. §8 unlockable coverage "124/415 reference anything" → **63/415**
+   non-empty (124 counts empty guid fields).
+8. §2 DXT5 row 2,799/19,528,904 → 2,793/19,527,408; total 209,502,204 →
+   209,500,708 (= catalogue exactly; the "delta" was the scout's sweep).
+9. §7 GPU payload estimates: 4.32 → **4.49 GiB** (no-mip), 5.52 →
+   **5.75 GiB** (mip-inclusive). RGBA-equivalent and bundle-file bytes
+   confirmed.
+
+Everything else re-measured reproduced exactly, including: the full §3
+per-kind join table (every cell), 3,870 sprite-target refs, catalogue
+class rollups and 47,939 rows, 47 SpriteAtlas objects / 3,154 packed
+slots with the quoted top-6 counts, `m_IsVariant=false` throughout, the
+§4 rect worked example, 176/176 header-zero bundles, 96 tex-bearing
+bundle files at 2,420,511,413 B, export-manifest 167,069 rows, and the
+courses/unlockables/slugs structural findings.
+
+## Closing verdict
+
+**PASS-WITH-CORRECTIONS** — the piece's feasibility spine (join already
+~99.7% resolvable from landed artifacts, no ASTC/ETC2, Pillow-decodable
+formats, toolchain staged, MiB-scale deliverable, courses hole real,
+slugs null, subObjectName keying sound) is independently confirmed; the
+nine corrections above are quantitative and none reverses a verdict in
+the scout's §8 table.
