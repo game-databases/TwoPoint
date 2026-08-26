@@ -1,0 +1,348 @@
+# Reviewer piece-08 — spec review round 1 (search corpus)
+
+**Date:** 2026-08-26 · **Scope:** [`docs/specs/piece-08-search-corpus.mdx`](../specs/piece-08-search-corpus.mdx)
+(Revision 1 registration) reviewed before any build pair seats. Inputs
+read in full: the spec; fact base
+[`../scout-report-piece-08-search.mdx`](../scout-report-piece-08-search.mdx)
+(rev 2) + [`../verifications/verifyA-scout-piece08.mdx`](../verifications/verifyA-scout-piece08.mdx)
++ [`verifyB-scout-piece08.mdx`](../verifications/verifyB-scout-piece08.mdx);
+format precedent [`piece-01-extraction-pipeline.mdx`](../specs/piece-01-extraction-pipeline.mdx)
+(Revs 2–7) + [`piece-02-relinking.mdx`](../specs/piece-02-relinking.mdx);
+the shared-input counterparty
+[`piece-07-locale-proof.mdx`](../specs/piece-07-locale-proof.mdx) §4;
+repo-root `AGENTS.md`, `_foundation/decision-register.md`,
+`FRAMEWORK.md` §2.1–§2.14, `promptForDB.md`; pack `spec.md`, `README.md`,
+`data-acquisition.md`, `tools/tpc_common.py::STAGES`.
+
+**Method:** beyond the document pass, every load-bearing number in §2 was
+RE-MEASURED on this machine against the committed `extracted/` corpus at
+buildId 20226581 (python walks over the 9 stub files, `entity_locale.jsonl`,
+registry, reverse index, `matrix.json`, dangling ledger, join report,
+13 locale tables, `.stage-stamps/*`, `item_item.jsonl`, campus-levels),
+plus implementation probes of the pinned narrow-carrier recipe, the §S3.2
+course-resolution recipe (all five families + token map + seed table), the
+F9 collision census under both wildcard readings, and both item-join
+ceilings. Findings cite measured evidence wherever the spec and the corpus
+diverge.
+
+---
+
+## Pre-ruling enforcement (orchestrator, 2026-08-26)
+
+1. **Stage index 12** — recorded, not absorbed: §4 blockquote pins
+   `stage12_search_corpus.py` against the canonical registry and routes the
+   sibling collision out (§8 row 6). Disk confirms the collision is real,
+   not hypothetical: sibling specs spell `stage7_maps.py` (×6),
+   `stage7_locale_proof.py` (×2), `stage8_logic.py`, `stage9_locale_proof.py`
+   (×4), `stage11_media.py`. One residual defect in HOW registration is
+   worded → **F2**.
+2. **Rebuild hook / exit-2 discrimination** — every member of the §S5.3
+   steady-state envelope re-measured green TODAY, most sitting exactly on
+   its bound: matrix 100 cells = **73 missing / 24 modeled / 3 partial** ·
+   dangling **1,137** · registryMisses **5** · entity_locale **10,964** ·
+   registry **15,675** (15,672 keys, 25 sourceAssets, `locales[]` empty on
+   all rows) · referenced terms **6,526** distinct / 10,964 usages ·
+   per-locale rows min ja **15,371** … max en **15,665**. Stamp shapes as
+   claimed (`relink.json`: exitCode 2 + identity + `outputs{relpath:sha256}`;
+   `localisation.json` exitCode 0). Bounds directions and the
+   same-buildId-REGRESSION vs cross-buildId-DRIFT split are sound
+   (deterministic reruns cannot move counts at fixed buildId, so any breach
+   IS an upstream change; refusing to overwrite a healthy index is correct
+   anti-masking). Two precision nits fold into **F9**.
+3. **Per-locale shards mandatory** — enforced: 13 shards + 13 title
+   projections; analyzer table pins zh-Hans/zh-Hant `cjk-bigram`, ja
+   `mixed`, ko `whitespace`, matching the measured F18 reality (ko Hangul
+   caveat carried); shard content is analyzer-independent by §S4.4, so two
+   implementers produce identical shards modulo manifest census definitions
+   (**F8**).
+4. **Routed-question dispositions** — stage-numbering renumber ownership
+   routed to orchestrator/arbiter (§8 row 6) ✓; metaforge ABP deferred
+   non-blocking (§8 row 5, rule-10 posture verbatim) ✓; default hydration
+   plane + editorial content routed out to site lanes (§8 rows 1–2 — task
+   anchors #23/#24 dropped, **F11**) ✓; campus-level roster flip recorded as
+   a data-list edit, and the pinned roster verified verbatim on disk (13
+   named rows: internal `Blank Level`, `Free Play Level`, `IL3 Video
+   1…5`, `IL3 Demo Level`, `Mark's Test Scenario`, `September 2020
+   Milestone`, `Test Level`; public `All buildings`, `Knight Level`; 4
+   null-name rows emit nothing) ✓.
+
+---
+
+## Fact-fidelity audit (checklist 1) — PASS
+
+No stale figure survives: 53.4 % appears only correctly framed as the
+conservative carrier variant beside the 10,200 = 75.9 % planning floor;
+no `<150 KB` titles claim (replaced by metrics F14/F15/F16); no 12/28
+course count (replaced by the pinned recipe band + gate). Corpus
+re-measurements this session:
+
+| Spec figure | Corpus re-measure | Match |
+|---|---|---|
+| F1 stubs 13,443 / 9 kinds (per-kind split); slug null ×13,443 | exact incl. every kind cell | exact |
+| F2 A = 5,850 distinct `(srcKind,srcId)` over 10,964 rows | 10,964 / 5,850 | exact |
+| F3/F4/F5 carriers 4,298 · union **7,178** · all nine F5 per-kind cells | 4,298 / 7,178 / all nine digit-for-digit — under the expanded wildcard reading (see F3) | exact |
+| F7 config LocalisedName 552 · Title 547 · DisplayName 170 · plain-string Name literals 1,456 (= config 1,402 + unlockable 41 + campus-level 13) · unlockable mTerm 55 rows/53 resolve · DescriptiveName 27 | 552 / 547 / 170 / 1,456 with identical decomposition / 55 & 53 / 27 | exact |
+| F7 room `Name` locstr ×49 | 49 locstr rows present; **48** bearing text (_termID≠0 or non-empty `_dev`) → basis unpinned (F5) | off-by-one on one basis |
+| F8 variation→Lite **353/353**; `<id>_Lite` twins **1,652/1,654** (misses: `Item_Prime_Gaming_Vending_Machine_MilkMade` + one `@hash8`-suffixed twin id); ceiling add 2,005; `item_item.jsonl` = 155 PPtr-only rows (`Item`/`references.*._item`, methods pptr-*) | all exact → day-one `joinState:"pending"` posture correct | exact |
+| F9 2,993 name edges → 2,059 keys · 1,895 (kind,title) · **264 collide** · Lab Work ×53 · Specialist Book Report ×51 · 320 ignore-kind · 23 clean-to-empty | every cell reproduces (wildcard reading); 23 empty-drop reproduces under tags+braces cleaning | exact |
+| F10 registry triple + 25 sourceAssets; reverse index 6,526 terms / 10,964 usages | exact | exact |
+| F13/F18 locale row window [15,371, 15,665]; vocab endpoints en 11,897 … ko 28,594 | rows confirmed ×13 (ja min, en max); vocab endpoints per vA #4c/#5a (not re-walked here) | exact |
+| F14 en title-text bytes 34,044 over the 2,059-key set | **34,044** byte-exact | exact |
+| F19 exit-2 envelope (all seven members + stamp shapes) | see pre-ruling 2 — all at bound today | exact |
+| F20/F21 course surface: 69 = 28 + 41; families qual 28 · cc 18 · dlc 9 · mkt 24 · res 4; token-map yield 23/28; +seeds **25/28**, open {Archaeology_Easter_23, SpaceExplorer, SummerSchool}; seed rows validate against en | 28/41 split ✓; family tail counts 28/18/9/24/4 ✓; map 23/28 ✓; seeds 25/28 with both seeded termKeys present in en ✓; open set identical ✓; mechanical-no-map intermediate reads **19/28** under a faithful simultaneous-candidate reading vs the quoted 16 (gates unaffected — F12) | exact at every gated figure |
+
+New measured context the spec's own rules turn on: the 41 course edges in
+`entity_locale.jsonl` are ALL `Marketing_Course_*` rows carrying REAL
+localized copy (`Marketing/Courses[/DLC_Space]/…_Description` resolves with
+German/Japanese text) — so the 41 marketing courses satisfy locale
+membership via their description edges in every locale, while the 28
+`TPC.CourseDefinition` rows carry **zero** entity_locale edges. That asymmetry
+is what gives **F4** its exact blast radius.
+
+---
+
+## Findings
+
+### F1 — MAJOR — AC4 sizing bands and their F16 anchors are not derivable from the fact base and contradict each other
+
+Location: §2 F16; §6 AC4; §9 client-gated sanity floors.
+
+What's wrong. Three connected defects:
+
+1. F16's titles anchor — "**≈249 B/doc rich schema**, 0.94 MB @ **3,793
+   docs**" — has an unexplained denominator: 3,793 appears nowhere else in
+   the spec or the fact base, and it contradicts §9's own floor ("en shard
+   doc count ≥ 7,000"). Under the S2 membership rule every expanded-universe
+   member ships an en doc (localized edges resolve in en because the
+   registry↔en key diff is 0 and stage 4 emits zero empty texts; dev/literal
+   material is English), so the en shard lands near the 10,200 planning
+   floor. At 249 B/doc that is ≈2.5 MB — **above** AC4's titles ceiling of
+   1.6 MB — while the PINNED slim shape `{kind,id,t}` (~100 B/doc) lands
+   ≈1.0 MB, inside the band. The band's pass/fail therefore depends on
+   which "titles projection" schema a CodeWriter believes.
+2. F16's full-doc anchor "1.74 MB" carries no doc-count denominator at all;
+   at its implied ≈459 B/doc × ~10.2k docs the full en shard is ≈4.7 MB —
+   outside AC4's [1.0, 3.5] MB — while lean emitters (~300 B/doc) land
+   inside. Same flippable-band defect.
+3. AC4's Σ ≤ 28.4 MB "≤3× entity-relevant source law" divides the wrong
+   universe: 9.45 MB covers only the 6,526 registry-referenced keys, but the
+   shipped docs additionally serialize plain-string literals (×1,456), dev
+   fallback strings (3,874 rows), joined item titles (≤2,005) and course
+   conventions — source text that is BY CONSTRUCTION outside the
+   denominator. The law can fail on a correct implementation.
+
+Fix shape. Prototype-measure one locale (en) with the pinned schemas and
+re-derive the bands from that measurement; state F16's doc-count
+denominators explicitly; either re-state the Σ law over the actual doc-source
+text universe or demote it to a DRIFT-tracked informational metric; delete
+the "rich schema" titles anchor so `{kind,id,t}` is the only reading. Until
+then AC4 cannot be checked blind — the exact failure mode pre-ruling 2
+exists to prevent.
+
+### F2 — MAJOR — AC1 asserts twelve enumerated stages, which is unsatisfiable until sibling pieces register
+
+Location: §4 ("registered ADDITIVELY … LAST in the enumeration"); §6 AC1;
+§9 runner legs.
+
+What's wrong. `tools/tpc_common.py::STAGES` holds exactly SEVEN stages today
+(stage0–stage6; verified by import). Pieces 03/04/06/07 claim `stage7_maps` /
+`stage8_logic` / `stage9_locale_proof` / `stage11_media` in prose but have
+landed nothing. If this piece's pair seats before those siblings,
+`--list` shows eight stages and AC1's "enumerates twelve stages ending
+`..., search-corpus`" is red through no defect of this piece — an arbiter
+round burned on an artifact boundary. The spec also says "LAST in the
+enumeration", which races piece-07 §4's own LAST-registration clause;
+append position is not order authority, the registry index is.
+
+Fix shape. Adopt piece-07 §4's already-proven wording verbatim: "--list
+shows it appended after the last registered stage until its canonical
+predecessors land; ordering authority is the canonical registry." Scope AC1
+to "search-corpus enumerates after every currently registered stage, in
+canonical registry order; the twelve-stage enumeration holds once pieces
+03/04/06/07 register" and gate the twelve-count test accordingly.
+
+### F3 — MAJOR — the `LocalisedName*` wildcard is load-bearing in three seed sets but never expanded; the naive reading trips the exit-1 assertion
+
+Location: §2 F3/F9; §S1.1; §S3.1; §6 AC2/AC5.
+
+What's wrong. Measured both readings on disk. Reading `LocalisedName*` as
+the prefix family {`LocalisedName`, `LocalisedNameFemale`,
+`LocalisedNameMale`} reproduces EVERYTHING digit-for-digit: carriers 4,298,
+union 7,178 with all nine F5 cells, and the whole F9 collision block
+(2,993 / 2,059 / 1,895 / 264 / 320, top pairs ×53/×51). Reading it as the
+single field `LocalisedName` yields carriers 4,282, union **7,172**, and
+collision seeds 254 collideKT / 310 ignore-kind — and §S1.1 makes that
+deviation an exit-1 validation failure, i.e. a guaranteed day-one failure
+loop for the implementer who took the spec's literal notation. The variant
+names appear nowhere in this document (only student-type's distinct
+`LocalisedNameF/M` spellings and staff `Ranks[].TitleM/F`). Two
+implementers diverge silently until the assert fires.
+
+Fix shape. Enumerate the pinned path list per kind explicitly in §S1.1
+(config `Name` · room `NameWhenBuilt` · staff `LocalisedName` ·
+item/metagame-node/unlockable `LocalisedName | LocalisedNameFemale |
+LocalisedNameMale` · student-type `LocalisedNameF | LocalisedNameM` ·
+campus-level plain `Name`) or define the star as a prefix match in one
+sentence; reference the same expansion from §S3.1's `id-token`/
+name-class wording and F9's edge-class definition.
+
+### F4 — MAJOR — §S2's membership iff-list omits convention/curated resolution, so the 28 real courses go missing from all 12 non-en shards under the strict reading
+
+Location: §S2 "Membership rule"; §S3.2; §3 constraint 1.
+
+What's wrong. Membership is defined iff "≥1 NON-EMPTY text RESOLVED IN L —
+a localized term edge with text in L's table, or an `mTerm` key resolving
+in L, or (any locale) a plain literal." Measured: the 28
+`TPC.CourseDefinition` rows have ZERO `entity_locale` edges (all 41 course
+edges are `Marketing_Course_*`), so their only name material is
+convention/curated — a basis the membership list does not include, even
+though the name-resolution chain and `basis` enum both carry
+`convention|curated`. The family keys (`Courses/Courses/KnightSchool_Name`,
+…) exist in all 13 tables, so a convention resolution resolves per-locale
+naturally; under the iff-list as written the resolved course names ship in
+the en shard only and up to 25 × 12 (doc, locale) pairs vanish from exactly
+the per-locale surface this piece calls its differentiator (FRAMEWORK §2.4
+spirit; DR-2026-08-20-locale-urls routing).
+
+Fix shape. Add the fourth clause — "or a `convention`/`curated` resolution
+whose `termKey` resolves in L" — and pin that family/tail matching runs
+against each locale's table (keys are locale-independent; only the text
+differs), with unresolved-in-L rows behaving like any other membership miss.
+
+### F5 — MINOR — F7's room `Name` component seed 49 is a presence-basis count; the text-bearing basis gives 48
+
+Location: §2 F7; §6 AC2.
+
+Measured: 49 room rows carry a `Name` locstr; 48 bear text (`_termID≠0` or
+non-empty `_dev`). AC2 asserts component equality without naming the basis —
+a coin-flip day-one mismatch. Pin "locstr-row presence" (and note the one
+empty struct contributes no document).
+
+### F6 — MINOR — the document `weight` field's derivation is unstated
+
+Location: §S2 frozen row shape; §S5.1 `kindWeights`.
+
+The example carries `"weight":1.0` on a room and the manifest pins
+`kindWeights` whose room entry is 1.0 — presumably `weight =
+kindWeights[kind]` snapshotted per doc. Not stated. An implementer who
+writes all-1.0 produces different bytes than one who joins the manifest
+table. Pin the derivation (or drop the per-doc field and let the client
+join `kindWeights` — either is fine; say which).
+
+### F7 — MINOR — curated seed-table provenance, MANIFEST duty, and expected-ledger variance unassigned
+
+Location: §S3.3; §4 Inputs; §9.
+
+`data/sources/derived/` does not exist yet; nobody is told who authors and
+commits the 2-row seed file (Documentator? the build pair?), and AGENTS
+rule 4's append-only `data/sources/MANIFEST.md` row is never mentioned for
+it. Relatedly, §9's client-gated "pinned ledger set" lists
+`alias-input-absent` without noting it disappears once the seed table
+lands — the two lanes of the same piece would disagree about the expected
+exit-2 ledger. Name the author seat, require the MANIFEST row, and mark
+that ledger row conditional on input absence.
+
+### F8 — MINOR — analyzer census columns are under-defined for two-implementer identity of `manifest.analyzers`
+
+Location: §S4.2.
+
+"CJK-bearing rows" has no detector definition and the fact base contains
+two (Hangul-inclusive → ko 15,213; pure-Han → ≈0 — vB C4); the spec quotes
+both numbers without saying which the census emits. Tokenize-vs-lowercase
+order is pinned only inside the tr parenthetical (23,445 vs 23,420).
+Shard bytes are safe (§S4.4 keeps tokenization client-side), but the
+manifest census should reproduce identically: pin CJK = Han + Kana +
+Hangul ranges (matching the scout §3 table being reconciled against) and
+tokenize-then-lowercase as the global order.
+
+### F9 — MINOR — DRIFT-line semantics: print-on-movement vs always, and bracket inclusivity
+
+Location: §S1.3; §S5.3.
+
+§S1.3 mandates the planning-floor `DRIFT:` line unconditionally, while
+everywhere else DRIFT signals movement — a steady-state run then emits a
+line that log-diff tests will read as drift. Say "printed when the delta
+is non-zero" (or deliberately always, stated as such). Separately: today
+ja sits EXACTLY on the locale-window lower endpoint (15,371) and en on the
+upper (15,665), and six more members sit exactly on their bounds — state
+that all §S5.3 brackets are INCLUSIVE, since exclusive comparisons fail
+day one.
+
+### F10 — MINOR — `titleKeySets.expandedWalker.keys: 2748` is corroborated nowhere
+
+Location: §S5.1.
+
+vB's superset measured 2,655 distinct termKeys; the scout's expanded name
+class gave 2,532; neither verifier saw 2,748. It inherits the global
+seeds-never-constants rule, but it should be labeled an unverified
+doc-probe seed (as F14 honestly labels itself) or dropped from the pinned
+block until reproduced, so a first-run reconciliation dispute has a stated
+provenance.
+
+### F11 — MINOR — routed-out site tasks lose their pre-ruling anchors (#23/#24)
+
+Location: §8 rows 1–2.
+
+The orchestrator ruling routes the hydration-plane question to search UI
+task **#23** and editorial-content scope to guides/news task **#24**
+(numbering live in `PROGRESS.mdx` W-D bands); §8 routes them to generic
+"UX piece"/"Site IA lanes". Carry the IDs so the routing survives
+orchestration handoff.
+
+### F12 — MINOR — §S3.2 candidate-generation staging is ambiguous; intermediate counters are implementation-dependent even though every gate holds
+
+Location: §S3.2; §2 F21; §6 AC5.
+
+A faithful simultaneous-set implementation of "{tail, tail±plural-s, LAST
+underscore segment, last±s}, casefold, priority-order match" over the five
+families resolves 19/28 WITHOUT the token map (spec quotes 16; vB measured
+17) — the intermediate is rule-staging-dependent. Everything gated
+reproduces under every reading tried: 23/28 with the map, 25/28 with the
+seed table, open set exactly {Archaeology_Easter_23, SpaceExplorer,
+SummerSchool}, marketing 37/41 mechanical-or-map with the residue
+ledgered, and the ≥24-seeded / ≥16-mechanical-floor gates hold with
+margin. Pin the candidate construction order (staged priority vs union)
+so `courseMechanical` counters are reproducible facts, not just gates.
+
+---
+
+## Checklist roll-up
+
+- **Fact fidelity vs r2 (1): PASS** — audit table above; every stale-figure
+  hunt negative; corrections from both verifiers fully resident.
+- **AC quality (2):** ten ACs mechanically checkable blind EXCEPT AC4
+  (F1) and AC1's global count (F2). Alias-resolution AC is testable
+  against the seeded table including the exit-1 dangling-termKey leg ✓.
+- **Determinism (3):** byte-stable reruns, hashes self-excluded,
+  timestamps banned from outputs, temp+rename convergence — all inherited
+  correctly; DRIFT (cross-buildId, rebase) vs REGRESSION (same-buildId,
+  refuse-and-exit-1) separated precisely ✓ (semantics nits → F9).
+- **Analyzer config (4):** shard bytes are analyzer-independent by design
+  (two implementers → identical shards); manifest census needs F8 pins.
+- **TestWriter contract (5):** fixtures buildable hostless (mini roster +
+  synthetic relink/locale/stamp artifacts, NO Unity bytes; fixture builder
+  exists with `--stage` interface); client-gated legs auto-SKIP keyed to
+  the corpus; the real-tree regression drill (decrement one tracked member
+  at fixed buildId → exit 1 + prior tree byte-unchanged) is feasible and
+  correctly specified.
+- **Scope honesty (6):** non-goals are real and load-bearing; no grab of
+  site-layer UX authority (hydration left open with both planes shipped;
+  ranking shipped as hints only; MiniSearch instantiation explicitly
+  site-lane per FRAMEWORK §2.9's "index is a pipeline artifact" split);
+  pending relink edges consumed-or-ledgered, never derived (rule-8
+  routing intact).
+
+## Verdict
+
+**FIX-REQUIRED** — F-list: F1, F2, F3, F4 (MAJOR), F5–F12 (MINOR). Twelve
+findings; no CRITICAL. F1–F4 block seating the build pair (an
+uncheckable sizing gate, an unsatisfiable enumeration assert, an
+exit-1-tripping recipe ambiguity, and a locale-membership hole in the
+piece's own differentiator); F5–F12 fold into the same revision pass. The
+measured fact base is excellent — every gated figure in §2 reproduced
+from the corpus this session, including the full collision block, both
+item-join ceilings, and the complete exit-2 envelope at bound — the
+defects concentrate in the sizing AC, the registration/AC wording, and
+two recipe-pin gaps.
+
+END OF reviewer-piece08-spec-r1
