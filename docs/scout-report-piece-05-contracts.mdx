@@ -1,0 +1,585 @@
+# Scout piece #10 prep — contract-pinning inventory (every emitted dataset family)
+
+**Agent:** scout-piece-05 · **Date:** 2026-08-26 · **Scope:**
+intelligence only — no implementation, no edits outside this file, no
+commits. Every number below was **measured from disk** during this
+session against `extracted/` at buildId **20226581** (last pipeline run:
+`relink` finishing 2026-08-25T23:49:26Z, exit 2 steady state). Probe
+method stated per claim; artifacts named per number.
+
+Inputs read in full first: repo-root `AGENTS.md`,
+`_foundation/extraction-doctrine.md`,
+`_foundation/extraction-host.md`, `_foundation/decision-register.md`
+(in full), pack `README.md`, `spec.md`, `data-acquisition.md`,
+`PROGRESS.mdx`, `docs/specs/piece-01-extraction-pipeline.mdx` (Rev 7),
+`docs/specs/piece-02-relinking.mdx`, `extracted/EXTRACTION-LOG.md`,
+`extracted/identity.json`.
+
+Corpus state at probe time (measured): 13,443 stub rows over 9 kinds ·
+167,069 export-manifest rows · 47,939 media-catalogue rows · 56,660
+catalog keys · 15,675 registry terms · 24,583 relink edges over 24 pair
+files · 100-cell matrix (24 modeled / 3 partial / 73 missing) ·
+`maps/` + `logic/` still empty (`.gitkeep` only).
+
+---
+
+## §1 Prior art + conventions this piece inherits
+
+**House conventions already binding on any contract-pinning stage:**
+
+1. **Determinism contract** ([piece-01 §4](./specs/piece-01-extraction-pipeline.mdx)):
+   sorted enumeration + sorted JSON keys, UTF-8 + LF, temp-file +
+   atomic-rename writes, no wall-clock inside stage outputs,
+   byte-identical reruns (EXTRACTION-LOG, `.stage-stamps/`,
+   `.pipeline-meta.json` excluded from comparison). Exit codes
+   `0/1/2/3` with `2` = completed-with-ledger as relink's EXPECTED
+   steady state.
+2. **Verbatim identifiers** (doctrine Principle one): ids, GUIDs,
+   path_ids, loc keys preserved byte-exact; curated views may ADD
+   slugs, never replace originals. Enforced today by the stage-5
+   byte-match test (checked=2,128, mismatches=0 at last run).
+3. **Provenance two-class rule** ([DR-2026-08-15 D2]):
+   `buildId` + coverage scope may reach user surfaces; everything else
+   provenance-shaped stays repo-plane. Every emitted row carries
+   `buildId` — measured 100% single-valued `20226581` on every family
+   probed (stubs, roster, pairs, registry, locale rows, ledgers).
+4. **Ledgered absence, never silence**: `_absences.jsonl`,
+   `_unmapped-families.jsonl`, `_dangling_guids.jsonl`,
+   `_unresolved_pptrs.jsonl`, competitor walls — gapped output is data.
+5. **Seeds reconcile, fresh wins**: piece-02's `DRIFT:` discipline
+   (measured numbers beat pinned constants; drift prints a line, never
+   silently re-pinned). Two live DRIFT examples are in
+   `EXTRACTION-LOG.md` (GUID bridge seed F9 20,042/5,548 vs measured
+   20,170/5,584; campus-level→metagame-node seed fact 13 landing in
+   `campus_level_config` because stage-5 kinded the carrier `config`).
+6. **The git plane matters for contracts** (measured, `TwoPoint/.gitignore`):
+   `extracted/**` is **local-only** except `extracted/**/*.md`. Game
+   data never enters git — so the dataset FILES have no git history,
+   and the contract layer (schemas, invariants, validators) MUST live
+   in tracked paths (`docs/`, `tools/`, `extracted/**/*.md`) or it is
+   unversioned. The pack README already reserves `contracts/` for
+   "emitted dataset contracts — later pieces".
+
+**External prior art** is in §7 (competitor precedent).
+
+---
+
+## §2 Family census (file lists, row counts, schemas)
+
+All shapes below were measured by full-file scans (Python json/jsonl),
+not sampled, except where marked sample-based.
+
+### Stage 0 — client identity
+
+| Artifact | Rows/size | Schema (measured) |
+|---|---|---|
+| `extracted/identity.json` | 14 keys | `{appid, buildId, targetBuildId, versionString, unityVersion, metadataVersion, dumper, addressablesVersion, settingsHash, languageSetting, expectedBundles{aa,dlc-space,dlc-ghost}, localeBundleCount, sceneCounts{4}}` |
+| `extracted/bundle-roster.jsonl` | **176 rows** | exactly `{buildId, bytes, dirClass, localeFlag, relpath, sceneFlag}` — one keyset on 100% of rows |
+
+Roster domains (measured): `dirClass` base 158 · dlc-space 10 ·
+dlc-ghost 8; `sceneFlag` none 150 · `.unity` 25 · `seasonal-scenes` 1
+(**26 scene-carrying rows = the `scene` node id space**); `localeFlag`
+null ×162 + `base` ×1 + the 13 BCP-47 codes ×1 each; `relpath` unique
+176/176; `buildId` single-valued.
+
+### Stage 2 — addressables
+
+| Artifact | Rows/size | Notes |
+|---|---|---|
+| `addressables/catalog.json` | **56,660 key rows**, 397,431,200 B | `meta{addressablesVersion:"1.21.10", buildId, providerIds[5 — includes an EMPTY string], settingsHash}`; per-row `{address, bundle, dependencies[], key, kind, providerIds[]}` sorted-keys verified by inspection |
+| `addressables/catalog-coverage.json` | 1 object | `keysTotal 56660 · distinctBundlesReferenced 176 · bundlesUnreferenced [] · danglingDependencyKeys.count 0 · outOfRosterFileReferences.count 19 (sample lists all 19)` |
+| `addressables/settings.snapshot.json` | 1 object | `{parsed{m_AddressablesVersion, m_BuildTarget, m_IsLocalCatalogInBundle, m_SettingsHash}, verbatim:"<raw settings.json>"}` |
+
+Catalog field reality (**differs from the spec's prose** "every
+addressable key with its owning bundle and internal address",
+[piece-01 §3 stage 2](./specs/piece-01-extraction-pipeline.mdx)):
+
+- `kind`: `address` 2,516 · `guid` 54,144 (matches piece-02 F5).
+- `bundle` is **null on 45,312 rows** (43,480 guid-kind + 1,832
+  address-kind); `address` is **null on 329 rows** (all address-kind;
+  guid-kind always carries an address — for guid rows the `address`
+  IS the container address and bundle resolution happens through
+  `bridges/container_index.jsonl`).
+- `dependencies[]`: **3,939,716 total edges**; 12,700 rows carry zero.
+- **`key` is NOT unique**: 56,660 rows, 56,659 distinct values —
+  `f952c082cb03451daed3ee968ac6c63e` appears twice (byte-identical
+  rows, legal Addressables duplicate registration). Any consumer doing
+  key→row dict-building without collision handling breaks here first.
+
+### Stage 3 — harvest
+
+| Artifact | Rows/size | Schema (measured) |
+|---|---|---|
+| `harvest/export-manifest.jsonl` | **167,069 rows** (51.4 MB) | exactly `{bytes, class, outRelPath, pathId, sourceBundle}`; `outRelPath` unique 167,069/167,069 (assertion holds); **negative pathId 60,582 rows (36.26%)** — the signed-stem contract is load-bearing |
+| `harvest/externals.jsonl` | **222 rows** | `{bundle, sourceFile, externals[{fileId, guid, path, type}]}`; unique on `(bundle, sourceFile)` 222/222; **1,781 refs total** = 1,671 `archive:/CAB-*` with all-zero GUIDs + 110 Unity built-in paths; 171 of 222 rows carry ≥1 ref |
+| `harvest/census/bundles/*.json` | **176 files** | `{bytesByClass, errors[], fallbackVersionUsed, objectsByClass}`; `fallbackVersionUsed:true` on the sampled file; Σ objectsByClass across all 176 = **2,026,658** |
+| `harvest/textassets/` | 355 files | raw TextAsset exports |
+| `harvest/monobehaviours/<class>/…json` | **166,714 JSON files under 95 class dirs** | typetree-decoded dumps; `_scriptClass` in-band |
+| `media-catalogue.jsonl` | **47,939 rows** | exactly `{bundle, bytesEstimate, class, contentAxis, name, pathId}`; `bytesEstimate` null on **0** rows |
+
+Media-catalogue class domain equals the carved-class census exactly
+(measured both sides): AnimationClip 7,985 · AudioClip 5,624 · Font 24
+· Mesh 19,249 · Shader 213 · Sprite 6,789 · SpriteAtlas 47 · Texture2D
+7,977 · VideoClip 31. `contentAxis`: base 42,247 · dlc-space 4,026 ·
+dlc-ghost 1,666.
+
+### Stage 4 — locales
+
+| Artifact | Rows | Schema |
+|---|---|---|
+| `locales/{en,pt-BR,zh-Hans,zh-Hant,fr,de,it,ja,ko,pl,ru,es,tr}.jsonl` | see §4 table | exactly `{id, text}` on 100% of rows in all 13 files |
+| `locales/base-overlay.jsonl` | **15,672 rows** | same `{id,text}` contract; **text is `""` on 15,672/15,672 rows** — the base bundle is a KEY REGISTRY, not a translation table (consumers must not render it) |
+| `locales/base-overlay-report.json` | 1 object | `compositionPolicy:"mixed"` (enum of 4) + 17 evidence counters |
+| `locales/locale-matrix.json` | **15,672 keys** | `{keys:{<locKey>:{baseOverlay:bool, locales:[BCP-47 codes]}}, meta:{buildId, includesBaseKeys:true, locales:[13]}}` |
+
+Per-locale row counts (wc-equivalent, measured): en 15,665 · pt-BR
+15,443 · zh-Hans 15,445 · zh-Hant 15,446 · fr/de/it/pl 15,445 · ja
+15,371 · ko 15,457 · ru 15,422 · es 15,440 · tr 15,443. Sum =
+**200,912**. Cross-locale diff vs pivot en: every locale is MISSING
+208–295 en keys; only zh-Hans, zh-Hant, ja each carry **1** key en
+lacks.
+
+**Measured log↔artifact defect:** the last `localisation` run section
+(EXTRACTION-LOG 2026-08-25T03:13Z) reports per-locale `rows` exactly
+**+5 above the file line counts on all 13 locales** (e.g. de 15,450
+logged vs 15,445 on disk; en 15,670 vs 15,665), and
+`localeRowsEmittedTotal` **200,977 vs 200,912 measured** (−65 = 13×5).
+The run-section counter does not reconcile to its own artifact by any
+documented rule — a contract invariant ("counter == artifact line
+count") would catch this today. See §10 G1.
+
+### Stage 5 — stubs
+
+Nine kinds, **13,443 rows total** (matches piece-02 F1):
+campus-level 17 · config 8,430 · course 69 · item 3,885 ·
+metagame-node 454 · room 116 · staff 3 · student-type 54 ·
+unlockable 415. Kind↔filename map verified (all nine files conform to
+the pinned map).
+
+Row contract (measured — one top-level keyset on 100% of rows):
+
+```
+{buildId:int, fields:object, id:string, inferred:bool, kind:string,
+ method:string, provisional:bool, slug:null|string, source:{bundle,pathId,class}}
++ optional axes:[...]      ← ONLY on merged-duplicate rows: config ×4, metagame-node ×2
+```
+
+Measured per-family facts:
+
+| kind | rows | twins `@hash8` | `fields.id` present | distinct `source.class` | distinct `fields` keys |
+|---|---|---|---|---|---|
+| config | 8,430 | 12 | 12 | 344 | **2,872** |
+| item | 3,885 | 3 | 3 | 7 | 143 |
+| unlockable | 415 | 0 | 0 | 48 | 184 |
+| metagame-node | 454 | 2 | 2 | 4 | 22 |
+| room | 116 | 0 | 0 | 4 | 101 |
+| student-type | 54 | 0 | 0 | 2 | 28 |
+| campus-level | 17 | 0 | 0 | 3 | 18 |
+| course | 69 | 0 | 0 | 2 | 34 |
+| staff | 3 | 0 | 0 | 1 | 28 |
+
+- `method` enum (measured): `seeded-family-heuristic` ·
+  `seeded-class-heuristic` — nothing else occurs.
+- `provisional:true` and `inferred:true` on 100% of rows; `buildId`
+  single-valued.
+- Twin semantics hold mechanically: the 17 `@hash8` ids are exactly
+  the 17 rows carrying `fields.id` (verbatim original preserved).
+- `axes` values measured: base ×4, dlc-space ×2, dlc-ghost ×2.
+- Ledgers: `stubs/_absences.jsonl` **2 rows**
+  (`absenceType:"no-identifier"` only; config count 1, item count 44;
+  `samples` capped, `scannedBundles`+`scannedClasses` populated);
+  `stubs/_unmapped-families.jsonl` **768 rows**
+  `{bundles[], class, evidence, objectCount}` with a **4-value
+  evidence vocabulary** (component-chain 677 · engine/primitive
+  namespace 43 · no seeded kind 47 · unresolved-generic 1).
+- `relinks/locale_availability.jsonl` exists and is **EMPTY (0
+  bytes)** — the stage-5-owned v1 artifact, honest-zero by design;
+  consumers are routed to `entity_locale.jsonl` (piece-02 §R4 pin).
+
+### Stage 6 — relinks
+
+| Artifact | Rows | Schema notes (all keysets measured exact) |
+|---|---|---|
+| `matrix.json` | **100 cells** | status **modeled 24 / partial 3 / missing 73**; mechanism hard 24 / inferred 76; joinKey `PPtr(m_FileID,m_PathID)` 23 · `none-established` 76 · `AssetGUID(…)->catalog.guid->container-address->pathId` 1; `pairs[]` is row-major over `nodeUniverse.nodes` (verified programmatically); every partial/missing carries non-empty `unblock`; every modeled carries existing `pairFiles[]` |
+| `<src>_<dst>.jsonl` × **24 files** | **24,583 rows** | frozen 9-key row `{srcKind,srcId,dstKind,dstId,mechanism,method,inferred,evidence,buildId}` (+`sourceAxes` on exactly 1 row, in `config_config`); dedup identity `(srcKind,srcId,dstKind,dstId,method,fieldPath)` unique 24,583/24,583 |
+| `bridges/cab_index.jsonl` | **222 rows** | `{buildId,bundle,cab,objects[{pathId,class}]}`; `(bundle,cab)` unique; objects total **2,026,658 == Σ census objectsByClass** (exact reconciliation) |
+| `bridges/container_index.jsonl` | **49,855 rows** | `{address,buildId,bundle,class,pathId}`; `address` unique 49,855/49,855 |
+| `i2_term_registry.jsonl` | **15,675 rows** | `{termId,termKey,sourceAsset,termType,termStatus,locales[],canonical,buildId}`; termId unique; termKey 15,672 distinct (3 keys carry 2 IDs; `canonical:true` 15,672 / false 3); `termType` constant `0`; `termStatus` {1:15,400 · 0:275}; 25 distinct source-asset names; **`locales[]` empty on ALL rows** (see §4) |
+| `entity_locale.jsonl` | **10,964 rows** | pair-schema with `dstKind:"locale-term"` throughout; `evidence{dev, fieldPath, locales[], termId}`; 903 distinct fieldPaths (top: Name 1,880 · Description 1,869 · LocalisedName 1,625 · FlavourDescriptions[] 1,268) |
+| `locale_term_entity.jsonl` | **6,526 rows** | `{buildId, locales, termKey, usages[]}`; Σ usages = **10,964 == entity_locale rows** (reverse index reconciles exactly) |
+| `entity_asset_guid.jsonl` | **15,630 rows** | pair-schema with `dstKind:"asset"`; `resolvedVia` single value `"catalog-guid+container-index"`; 4,447 distinct addresses |
+| `guid_bridge_report.json` | 1 object | `{guidRefsTotal 20170, distinctGuids 5584, resolvedToAddress 16110, resolvedToStub 3747, danglingDistinctGuids 1137, resolveRateAddress 0.79871, resolveRateStub 0.18577, buildId}` |
+| `_dangling_guids.jsonl` | **1,137 rows** | `{assetGuid, buildId, sampleRefs[≤5], unblock, verdict}`; verdict `unresolved-open` on all (declared enum has 4 values — 3 never exercised); sampleRefs cap respected |
+| `_unresolved_pptrs.jsonl` | **2,391 rows** | `{srcKind,srcId,fieldPath,extFileId,extPath,m_PathID,reason,buildId}`; reason enum measured at exactly 2 values: "pathId exists in the resolved file but is not an emitted stub entity" 2,284 + "same-file pathId … bundle carries no scene flag" 107 |
+| `ui_link_coverage.jsonl` | **344 rows** | `{surfaceId, uiClass, exportedCount, definitionClasses[], impliedFamilies[], status, joins[], gapReason, unblock, buildId}` (+`genericContainerClasses` on exactly 1 row — the tooltip generic-container case); **mapped-schema 9 / documented-gap 335** |
+| `competitor_applied.jsonl` | **3 rows** | fandom F1 `flagsMissing 383` · steam-guides F1 `flagsMissing 34` · terminal `~floor` row `floor-unmet, sourcesApplied 0` with the alias-input unblock. **Schema drift vs piece-02 §R6**: measured rows carry `samples`/`terminal`/`floorRequired`/`sourcesApplied`/`unblock`; the spec'd `wall:{httpStatus, oneQuestionItWouldHaveAnswered}` shape does not occur |
+
+Pair-file method distribution (measured over all 24,583 rows):
+`pptr-same-file` 11,980 · `pptr-cross-file` 8,857 ·
+`assetguid-catalog` 3,746. Evidence keysets are exact per method —
+pptr-same-file `{dstBundle,dstPathId,fieldPath,refCount,srcBundle,srcPathId}`;
+pptr-cross-file adds `{dstCab,extFileId,resolvedVia:"externals+cab-index"}`;
+assetguid-catalog `{assetGuid,catalogAddress,fieldPath}`. Zero
+off-vocabulary evidence keys anywhere.
+
+### Pending directories
+
+`extracted/maps/` and `extracted/logic/` are **empty** (`.gitkeep`
+only) — their contracts get pinned by the maps/logic pieces; reserve
+the node names now (§8). `extracted/protocol/` holds the piece-1
+README placeholder only.
+
+---
+
+## §3 Key-uniqueness + join-consistency measurements
+
+Uniqueness claims, each mechanically checked this session:
+
+| Family / key | Claim | Result |
+|---|---|---|
+| stubs `id` within kind | unique | **HOLDS** — 0 duplicates across all 9 kinds (post-policy) |
+| roster `relpath` | unique | HOLDS 176/176 |
+| export-manifest `outRelPath` | unique | HOLDS 167,069/167,069 |
+| catalog.json `key` | treated unique by prose | **FAILS** — 1 duplicated value (§2) |
+| container_index `address` | unique | HOLDS 49,855/49,855 |
+| cab_index `(bundle,cab)` | unique | HOLDS 222/222 |
+| externals `(bundle,sourceFile)` | unique | HOLDS 222/222 |
+| locale files `id` per file | unique | HOLDS in all 13 + base-overlay |
+| registry `termId` | unique | HOLDS 15,675/15,675 |
+| registry `termKey` | canonical-on-key | 15,672 distinct; 3 keys ×2 IDs, `canonical` marks the primary |
+| pair dedup tuple | unique | HOLDS 24,583/24,583 |
+
+Cross-family join checks (full scans, not samples):
+
+| Join | Universe | Result |
+|---|---|---|
+| pair `srcId` → stub ids (twins matched WITH `@hash8`) | 24,583 rows | **0 unresolved** |
+| pair `dstId` → stub ids (excluding special dstKinds) | 24,583 rows | **0 unresolved** |
+| `entity_locale.dstId` → registry `termKey` | 10,964 rows | **0 unresolved** |
+| registry keys ↔ `locale-matrix.json` keys | bidirectional | **diff == 0** both directions (F7 holds on the current tree) |
+| reverse index Σ usages ↔ entity_locale rows | arithmetic | **10,964 == 10,964** exact |
+| matrix `cardinality.edges` Σ ↔ pair-file rows | arithmetic | **24,583 == 24,583** exact |
+| cab_index objects Σ ↔ census `objectsByClass` Σ | arithmetic | **2,026,658 == 2,026,658** exact |
+| media-catalogue rows ↔ carved census per class | 9 classes | exact equality on every class |
+| stub `source.bundle` basename ⊆ roster basenames | 11 bundles | **0 orphans** |
+| export-manifest `sourceBundle` ⊆ roster basenames | 114 bundles | **0 orphans** |
+| `entity_asset_guid.dstId` → container_index `address` | 15,630 rows | **5 rows reference an address ABSENT from container_index** — live join defect (§10 G2) |
+| `guid_bridge_report` counters ↔ emitted artifacts | arithmetic | **NOT derivable**: report `resolvedToAddress 16,110` vs 15,630 emitted asset rows; `resolvedToStub 3,747` vs 3,746 assetguid pair rows (§10 G3) |
+| localisation run-section `rows` ↔ file line counts | 13 locales | **−5 per locale, −65 total** (§10 G1) |
+
+Special dstKind id spaces (contract exists, data state noted):
+`scene` resolves against the 26 roster scene rows — but
+`sceneAttributedEdges=0` at last run, so **no `*_scene.jsonl` pair file
+exists yet** (the branch is unexercised on this corpus);
+`asset` against container_index; `locale-term` against the registry.
+
+Where two families disagree about the same entity — the honest list:
+(a) the 5 dangling-address rows above; (b) the seeded-vs-measured
+disagreements already settled by DRIFT lines (GUID bridge seed;
+campus-level→metagame-node carrier kinding); (c) the
+`competitor_applied` ledger shape vs its spec. No other
+cross-family disagreement found in full scans.
+
+---
+
+## §4 Nullability + enum-domain measurements
+
+Nullability of consumer-critical fields (measured, full scans):
+
+| Field | Null/empty rate | Reading |
+|---|---|---|
+| stubs `.slug` | **100% null (13,443/13,443)** | display names must derive via `entity_locale` → locale tables; site layer owns slug policy (open question Q3) |
+| stubs `.fields.<k>` | varies wildly per kind (config spans 2,872 keys over 8,430 rows) | `fields` is an OPEN dict — pin presence only for the 4 engine keys (`m_Enabled/m_GameObject/m_Name/m_Script` at 100%) |
+| `entity_locale.evidence.dev` | **empty/null on 3,429 rows (31.28%)** | dev-string is best-effort; never required |
+| registry / entity_locale / reverse `locales[]` | **empty on 100% of rows** | the spec'd per-term availability projection (piece-02 §R4) is NOT realized in data — consumers needing per-term locale availability must read `locales/locale-matrix.json` instead (§10 G4) |
+| `ui_link_coverage.gapReason/unblock` | null exactly on the 9 mapped rows | XOR holds: gaps always carry both, mapped rows never do |
+| `catalog.address` / `catalog.bundle` | null 329 / null 45,312 | §2; guid-row address is the container address |
+| media-catalogue `bytesEstimate` | 0% null | safe for sums |
+| locale `text` | 0% null; base-overlay 100% empty-string | empty-string ≠ missing: base overlay is a key registry |
+| `_absences.samples` | capped list (≤25 observed) | sample, not census |
+
+Enum domains (measured occurrences, full scans):
+
+| Enum | Domain (measured) |
+|---|---|
+| `dirClass` / `contentAxis` | `base · dlc-space · dlc-ghost` — consistent across roster, media-catalogue, stub `axes` |
+| `sceneFlag` | `none · .unity · seasonal-scenes` |
+| `localeFlag` | null · `base` · 13 BCP-47 codes |
+| stub `method` | `seeded-family-heuristic · seeded-class-heuristic` |
+| pair `method` | `pptr-same-file · pptr-cross-file · assetguid-catalog` (spec vocabulary also declares `i2-termid-registry · name-convention:<rule> · code-analysis:<descriptor> · competitor-model:<source-id>` — the latter four unexercised) |
+| matrix `mechanism` / `status` | `hard·logic·inferred` / `modeled·partial·missing` (logic never exercised yet) |
+| matrix `joinKey` | the 3 spelled values above (of 5 declared; `LocalisedString(_termID)->I2-termID->Term-key` and `name-equality(<rule>)` unexercised) |
+| `compositionPolicy` | `mixed` (of 4) |
+| `_absences.absenceType` | `no-identifier` (only value) |
+| `_unmapped-families.evidence` | 4 values (§2) |
+| `_dangling_guids.verdict` | `unresolved-open` (of 4 declared) |
+| `_unresolved_pptrs.reason` | exactly 2 strings |
+| `ui_link_coverage.status` | `mapped-schema · documented-gap` (XOR enforced, holds) |
+| registry `termType` | constant `0` |
+| registry `termStatus` | `{0,1}` (not-for-translation / for-translation) |
+| entity_asset_guid `resolvedVia` | `catalog-guid+container-index` (single value) |
+
+---
+
+## §5 Determinism status per family
+
+Evidence surface: `extracted/.stage-stamps/*.json` (all seven stages
+present) record per-output **SHA-256 hashes** + a stage `identity`
+script-hash + `finishedAt` + exitCode; EXTRACTION-LOG records repeated
+real-corpus reruns whose counters are comparable.
+
+| Family | Determinism status (evidence) |
+|---|---|
+| stage 0 (identity, roster) | PROVEN — double-run hash-equal test in the suite; stamp hashes pinned |
+| stage 2 (catalog trio) | PINNED — stamp hashes; deterministic decode route recorded (`decodeRoute: textasset-json(primary)` on every successful run) |
+| stage 3 (manifest, externals, census, catalogue) | STRONG — five real reruns (03:53→12:17Z) with identical headline counters (167,069 exports / 47,939 catalogue rows / 2,026,658 objects); caveat: outputs legitimately changed when decoder tooling changed pre-R11 (`synthesis 688` → `oracle/synthesis/residue` shifts) — the contract is **same-code rerun byte-identity**, not cross-tool-version stability |
+| stage 4 (locales, matrix, overlay report) | STRONG — two identical logged run sections; stamp hashes |
+| stage 5 (stubs, absences, unmapped, availability) | STRONG — consecutive same-tree reruns produced identical per-kind counts and identical identity-policy counters; `identifierByteMatch checked=2128 mismatches=0` |
+| stage 6 (relinks, RELATIONS.md) | STRONG-with-ledger — three logged reruns; R1–R7 counters stable; the only cross-run differences are the two documented DRIFT wins and the matrix-honesty regeneration (20/6/74 → 24/3/73); exit 2 is the designed steady state until ledgers close |
+| RELATIONS.md | generated-from structure pinned (`generatedFrom{edgesEmitted, registryRows, guidRefsTotal, coverageRows, competitorLedgerRows}`); byte-size stable across the last two runs (29,321 → 29,346 changed only with data) |
+
+Contract consequence: a pin should compare **stamp hash ↔ current file
+hash** (cheap, already computed at emit time) rather than re-running
+stages; and it should treat tool-version bumps as legitimate byte
+changes while requiring counter-level reconciliation to survive them.
+
+---
+
+## §6 Consumer map (who relies on what)
+
+| Consumer (existing or scheduled) | Consumes | Contract surfaces they depend on |
+|---|---|---|
+| piece-03 map geometry (scout in flight) | roster scene ids (26), `campus-level` stubs (`LevelConfig`/`MetagameConfig`), `configs-levels-prefabs` dumps, `container_index`, `cab_index`, matrix `scene` seam | roster `sceneFlag` enum; container address uniqueness; the `dstKind:"scene"` id space |
+| logic-layer piece | stub `fields` open dicts, `decompiled/structural/*`, pair edges (unlock/requirement chains) | stub row envelope stability; pair dedup tuple; `references.NNNN.data.*` field-path grammar visible in evidence |
+| #38 search corpus | stubs (ids, names) + locale tables + `entity_locale` | locale `{id,text}` shape; registry↔matrix diff==0; slug-null reality |
+| #36 locale coverage proof | `locale-matrix.json` + per-locale files + `base-overlay-report` | `includesBaseKeys`; BCP-47 set equality; empty-text semantics |
+| #35 media pipeline / owner picks | `MEDIA-CATALOGUE.md` + `media-catalogue.jsonl` | class enum; `contentAxis`; bytesEstimate non-null |
+| #11 PROOF.md | ALL ledgers: `_dangling_guids`, `_unresolved_pptrs`, `competitor_applied` terminal row, `catalog-coverage`, census reconciliation | ledger row shapes; exit-2 ledger-contributor enumeration; counter↔artifact equalities (§3) — PROOF cannot reconcile if the §10 defects stand |
+| Phase D site (pages, builder, calculators, map) | everything above | needs: display names via `entity_locale`→locales (slug is dead), Kudosh prices (`item.fields.Kudosh/Cost`), requirement chains (`course→config→room/item` cells), research tree (`metagame_node_config` + diagonal), tooltip joins (bar-2 map) |
+| future patch-diff (update tripwire) | stamp hashes + buildId stamps | per-output SHA-256 in `.stage-stamps` is the diff baseline |
+
+---
+
+## §7 Competitor contract precedent
+
+Probed 2026-08-26 with plain curl (Chrome UA), human-paced, one pass;
+walls recorded as findings per AGENTS rule 10 (none hit — all three
+answered):
+
+- **wikily.gg** — publishes a real machine plane: `/llms.txt` (fetched)
+  enumerates per-game sections, states the editorial contract in
+  prose, and pins the honesty rules we already enforce: *"Numbers come
+  from data miners that extract values directly from the game
+  binaries… Unknown fields are left blank rather than guessed."* Page
+  payloads are Astro-islands (NO `__NEXT_DATA__`); the machine-readable
+  layer per page is JSON-LD (`WebSite`, `Organization`,
+  `BreadcrumbList`, `CollectionPage` measured on an ARK database page).
+  No public raw dumps; the contract lives in llms.txt + JSON-LD.
+- **new-world.guide** — the de-facto API is Next.js
+  `__NEXT_DATA__` embedded per page (measured on the sandworm
+  firestaff item page): flat camelCase entity schema (`itemId`, `tier`,
+  `rarity`, `gearScore`, `bindOnEquip`…) with **pre-joined relation
+  arrays shipped in the same payload** (`possibleDrops`, `usedInRecipe`,
+  `unlockItems`, `questReward`, `creatures`, `expeditions`),
+  lifecycle booleans (`isDeprecated`, `isNew`), version rows
+  (`itemVersions`), and an i18n namespace manifest (`__namespaces`).
+  Lesson: relations are PRE-RESOLVED into the page contract — exactly
+  our AGENTS-rule-8 posture ("frontend consumes contracts").
+- **metaforge.app** — `/llms.txt` 404s into a dynamic "Game not found"
+  page; the discoverable machine surface is `robots.txt` exposing
+  **per-game sitemaps** (`https://metaforge.app/<game>/sitemap.xml`
+  measured). Contract-by-URL-structure; no data dumps surfaced.
+
+Net precedent: none of the three publishes versioned schemas or
+validators — their contracts are implicit in payloads. That is the gap
+our contract-pinning piece should beat: explicit, tracked,
+machine-checkable pins + (later, site phase) an `/llms.txt` that states
+them.
+
+---
+
+## §8 Proposed pin taxonomy
+
+Three pin classes, each with a VERIFY-vs-DOCUMENT ruling. Sizes make
+verification cheap: every check below runs over < 200k rows / < 400 MB
+(catalog.json being the one heavy artifact — validate at emit time
+inside stage 2 where it is already parsed, or stream-check with jq).
+
+**A. schema-pin** (VERIFY mechanically, per family — fail loud):
+
+1. Exact top-level keysets per artifact family (§2 tables): stub row
+   envelope (9 keys + optional `axes`), pair row (9 keys +
+   optional `sourceAxes`), roster/export/externals/media/registry/
+   coverage row shapes, locale `{id,text}`, matrix cell shape.
+2. Filename grammars: kind↔filename map (already pinned piece-01 §3),
+   signed-pathId stems `_(|-)\d+$` (Rev 6 lesson — a standing
+   filename-grammar pin would have caught the unsigned-parser incident
+   before the corpus existed), `<srcKind>_<dstKind>.jsonl` naming over
+   the node universe, `contracts/` layout itself.
+3. Frozen enums with measured domains (§4): reject out-of-vocabulary
+   values; separately TRACK which declared values are unexercised so a
+   new value is a reviewable event, not silence.
+4. Sort orders: pair files lexicographic by dedup tuple;
+   `_unresolved_pptrs` by its pinned 5-tuple; `_dangling_guids` by
+   assetGuid; matrix `pairs[]` row-major; catalog keys sorted.
+5. `buildId` present and equal to `identity.buildId` on 100% of rows
+   of every family.
+
+**B. invariant-pin** (VERIFY — these are the incident killers):
+
+1. Uniqueness set from §3 (stub id per kind, relpath, outRelPath,
+   container address, cab tuple, externals tuple, locale id per file,
+   termId, dedup tuple) — PLUS the corrected claim for catalog.json:
+   pin `key` as **non-unique** (documented exception) so consumers are
+   told, and pin duplicate rows to be byte-identical.
+2. Arithmetic reconciliations, all currently green and worth keeping
+   green: matrix edges Σ == pair rows; cab objects == census Σ;
+   media-catalogue rows == carved census per class; registry↔matrix
+   diff == 0; reverse usages == entity_locale rows; catalog-coverage
+   `keysTotal` == catalog rows; roster rows == enumerated bundles.
+3. Counter↔artifact equality for every EXTRACTION-LOG run-section
+   counter that names an emitted file (`rows` == wc-l, `stubRowsByKind`
+   == per-file counts, `edgesEmitted` == pair rows, …). This pin finds
+   **G1 today** (−5/locale).
+4. Structural rules: mapped-schema XOR documented-gap with
+   gapReason+unblock on gaps; unblock REQUIRED on every partial/missing
+   matrix cell; sampleRefs ≤5; sentinel `_termID==0` excluded from
+   entity_locale while counted in the report; twin ids ⇔ `fields.id`
+   presence; `sampled byteMatch checked > 0`.
+5. Exit-code ledger contract: exit 2 iff any declared ledger is
+   non-empty, with the run section naming every contributor + size
+   (already specced piece-02 §5.7 — pin it as data, checked against the
+   actual ledger files).
+
+**C. cross-family-pin** (VERIFY by full scan — all universes are
+small):
+
+1. Id-resolution closure: pair srcId/dstId ⊆ stub ids (twins with
+   suffix); `locale-term` ⊆ registry; `scene` ⊆ roster scene ids;
+   `asset` ⊆ container_index addresses. Finds **G2** (5 dangling
+   addresses) today.
+2. Report derivability: every emitted report's counters must be
+   recomputable from sibling artifacts by a documented formula —
+   either fix the formula or demote the field to "instrumentation,
+   not contract". Finds **G3** today.
+3. Bundle-name closure: every `*.bundle` reference in any artifact
+   (stub `source.bundle`, export-manifest `sourceBundle`, pair
+   evidence bundles, catalog `bundle`) resolves to a roster `relpath`
+   by basename after the pinned normalization. Currently green — keep
+   it green.
+4. Ownership pins (DOCUMENT, enforce by grep): stage-5 sole ownership
+   of `locale_availability.jsonl`; stage-6 sole ownership of the rest
+   of `relinks/`; RELATIONS.md regenerated only by relink; the routed
+   consumer note (v1 file honest-zero, authoritative relation is
+   `entity_locale`).
+5. Availability routing (DOCUMENT + one VERIFY): until G4 is fixed,
+   pin the statement "per-term locale availability lives in
+   `locales/locale-matrix.json`; `i2_term_registry.locales[]` and
+   `entity_locale.evidence.locales[]` are reserved-but-empty fields" so
+   no site builder trusts the empty arrays.
+
+Where pins live (recommendation, respecting the gitignore finding):
+tracked validators under `tools/check_contracts.py` (or a
+`contracts/` dir of small per-family JSON Schemas + a runner) wired as
+a NON-emitting check stage or test-lane suite; a human summary in
+`extracted/CONTRACTS.md` (tracked md, survives the carve-out) that
+states the documented halves. The datasets themselves stay local-only.
+
+---
+
+## §9 Feasibility verdicts
+
+| Verdict | Item | Grounds |
+|---|---|---|
+| FEASIBLE-CHEAP | All schema-pins (A1–A5) | every family's keyset is already uniform (measured single-keyset files); validators are pure-python scans of < 60 MB each except catalog |
+| FEASIBLE-CHEAP | Invariant-pins B1/B2/B4 | full scans measured in seconds this session; all green today except catalog key (pin as exception) |
+| FEASIBLE, HIGH VALUE | B3 counter↔artifact pins | catches G1 immediately; requires reading only EXTRACTION-LOG + line counts |
+| FEASIBLE, HIGH VALUE | C1 id-closure pins | 0-miss today except 5 rows — turning that 5 into a red gate forces the bridge fix before site build |
+| FEASIBLE-AT-EMIT-TIME | catalog.json checks | 397 MB — do not re-parse per check; assert inside stage 2 post-parse, persist a checksummed mini-report (the pattern `catalog-coverage.json` already uses) |
+| DEFER (owner-routed) | competitor floor flip | structurally blocked on inputs, not on contracts — the terminal ledger row already names the alias-input lever; a pin can only keep the floor state HONEST (verify `sourcesApplied` matches dispositions) |
+| DEFER (own pieces) | `maps/`, `logic/`, protocol-section contracts | directories empty today; reserve node names + path contracts in the pin doc so later pieces inherit, don't invent |
+| NOT-WORTH-PINNING | per-field presence inside stubs `fields` beyond the 4 engine keys | 2,872-key open dict on config; the value is in the envelope + source pointers, not a field whitelist |
+
+---
+
+## §10 Gap ledger + open questions
+
+**Gaps (measured this session; each is a candidate the pin stage
+should turn red-then-green):**
+
+- **G1 — localisation run-section counter ≠ artifact.** Logged
+  per-locale `rows` exceed on-disk line counts by exactly 5 on all 13
+  locales (totals 200,977 vs 200,912). Either the counter or the file
+  is off by a systematic 5 keys; house rule says the artifact wins and
+  the doc gets corrected, but nobody has noticed because no invariant
+  compares them. Artifact: EXTRACTION-LOG `2026-08-25T03:13:17Z` vs
+  `wc -l extracted/locales/*.jsonl`.
+- **G2 — 5 `entity_asset_guid` rows point at addresses absent from
+  `container_index`** (both stamped by the same relink run). Either
+  the GUID bridge emits from a slightly different index snapshot than
+  the container pass, or the report/artifact disagree about
+  termination. Files: `relinks/entity_asset_guid.jsonl` vs
+  `relinks/bridges/container_index.jsonl`.
+- **G3 — `guid_bridge_report.json` counters are not recomputable from
+  emitted artifacts** (`resolvedToAddress` 16,110 vs 15,630 emitted
+  asset rows; `resolvedToStub` 3,747 vs 3,746 assetguid pair rows).
+  Consumers cannot audit the resolve-rate facts they are told to
+  trust.
+- **G4 — the spec'd per-term availability projection is empty in
+  data**: `i2_term_registry.locales[]`, `entity_locale.evidence.locales[]`,
+  `locale_term_entity.locales[]` are `[]` on 100% of rows although
+  piece-02 §R4 defines them as the per-term availability layer.
+  Functional today (locale-matrix covers it) but a silent trap for
+  consumers who read the field.
+- **G5 — `competitor_applied.jsonl` row shape drifted from its spec**
+  (extra `samples`/`terminal`/`floorRequired`/`sourcesApplied`/`unblock`;
+  spec'd `wall` object never occurs). Harmless now, but it is exactly
+  the class of drift the piece exists to prevent — pin the MEASURED
+  shape as the contract and note the spec delta.
+- **G6 — `catalog.json.key` is not unique** (1 duplicate,
+  byte-identical pair) while stage-2 prose implies key-addressability.
+  Pin as documented exception or emit a dedup note in
+  catalog-coverage.
+- **G7 — `dstKind:"scene"` emission path is unexercised**
+  (`sceneAttributedEdges=0`; no `*_scene.jsonl` exists). The contract
+  exists and is tested hostless; the corpus simply has not produced
+  such an edge. Pin should tolerate absence while requiring the 26-id
+  space to resolve IF present.
+- **G8 — declared-but-unexercised enum arms** (pair methods
+  `i2-termid-registry`/`name-convention:*`/`code-analysis:*`/
+  `competitor-model:*`; matrix joinKeys `LocalisedString…` /
+  `name-equality`; `_dangling_guids` verdicts beyond `unresolved-open`):
+  fine today, but pins must distinguish "declared" from "occurs", or
+  the next agent reads occurrence-free arms as broken.
+
+**Open questions (routed, none blocking the pin work):**
+
+1. Which side of G1 is truth — the counter or the file? (Owner rule
+   "fresh/measured wins" suggests the file; the fix is a one-line
+   counter correction routed to a fixer, discovered BY the pin.)
+2. Slug policy: `slug` is 100% null by design — confirm the site
+   layer owns slug generation and the contract stays `slug:null`
+   allowed (adjacent to QUESTION-QUEUE standing items).
+3. `locale_availability.jsonl` retirement (piece-02 §7 routed to
+   owner/orchestrator) — until decided, the pin documents the
+   honest-zero v1 artifact and the `entity_locale` routing.
+4. Should `guid_bridge_report` become derivable (fix counting) or be
+   demoted to instrumentation? Recommend derivable-or-renamed; the
+   arbiter should rule since piece-02 §R3 pins the field list.
+5. Competitor floor lever (alias input riding the research-pass lane)
+   remains owner-routed per `competitor_applied` terminal row; the
+   contract piece should only keep the floor state auditable.
+
+**What pins would have caught past incidents (searched
+`EXTRACTION-LOG.md` DRIFT/failure lines):** the duplicate-id exit-1
+run (03:55:37Z) → B1; the unsigned-parser stem breakage (Rev 6) → A2;
+byte-match `checked=0` silent pass (Rev 6 amendment 3) → B4;
+locale zero-table refusal (01:44:20Z) → B2-style non-empty gate;
+catalog out-of-roster exit-1 (01:35:11Z, softened to warning ledger in
+Rev 5) → C3; GUID-seed and campus-level-carrier DRIFT lines → B2
+arithmetic pins with seeds-as-reconciliation-only; R2-attribution
+`chargedRefs=0` and bar-3 `sourcesApplied=0` honesty rows → B5 ledger
+presence pins. G1/G2/G3/G4 are NEW instances of the same disease:
+nobody compares artifact A to artifact B unless a pin does.
+
+§END
