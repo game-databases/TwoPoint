@@ -33,8 +33,9 @@ from committed inputs:
 
 - New stage id **`search-corpus`**, script
   `tools/stage12_search_corpus.py`, registered ADDITIVELY in
-  `tools/tpc_common.py::STAGES` LAST in the enumeration. Every existing
-  stage byte-behaves identically.
+  `tools/tpc_common.py::STAGES` — appended after the last currently
+  registered stage, ordering authority the canonical registry (§4).
+  Every existing stage byte-behaves identically.
 - **Purely derived stage:** it opens NO bundles, imports NO UnityPy,
   and needs NO game dir. Its entire upstream set is committed
   `extracted/` artifacts plus two optional DATA input files (§4
@@ -95,11 +96,11 @@ measurement wins (piece-2 §2 rule).
 | F4 | **Conservative universe = 7,178** (53.4 %) | A(5,850) ∪ carriers(4,298), overlap 2,970 — reproduced digit-for-digit by this spec's probe (doc) | vA #1e; doc |
 | F5 | Conservative per-kind | config 3,856 · item 2,649 · metagame-node 406 · room 107 · student-type 54 · course 41 · unlockable 49 · campus-level 13 · staff 3 | vA #1f |
 | F6 | Expanded planning floor | **10,200 = 75.9 %** (vB attack A3); independent verifier recomputation **10,107 = 75.2 %** with differing boundary choices (nested `States[].Name`, course-alias rows) — the floor is recipe-dependent inside a ~±0.9 % band; id-only remainder outside it ≈ 3,243 | vB #4; vA corrections |
-| F7 | Expanded extra components (this spec's pinned recipe) | plain-string `Name` literals on any kind ×**1,456** (doc; incl. campus-level 13) · config `LocalisedName` instances ×**552**, `Title` ×**547**, `DisplayName` ×**170** · room `Name` locstr rows ×**49** on the PRESENCE basis (**48** bear text — `_termID≠0` or non-empty `_dev`; the one empty struct emits nothing; basis PINNED as presence, reviewer F5) · unlockable `DisplayName.mTerm` resolving in en ×**53** (of 55 rows) · unlockable `DescriptiveName` ×**27** | doc; vB A3; vA #3d |
+| F7 | Expanded extra components (this spec's pinned recipe, PER-SEED BASES PINNED per arbiter RF-B) | plain-string `Name` literals on any kind ×**1,456** (top-level name-class `fields.Name`: config 1,402 + unlockable 41 + campus-level 13 — nested `Name` strings excluded by the whitelist philosophy) · config `LocalisedName` instances ×**552** on the locstr-PRESENCE basis at any nesting depth (text-bearing union measures **518** — presence is what reproduces the seed) · config `Title` carriers: RETIRED AS ASSERTED SEED (×547 reproduces under NO principled basis — leaf-instances measure **730**, rows-any 674, `_termID≠0` 314; the figure descends from verifyB A3's "(CareerGoal*)" prose which itself decomposes to 272) → replaced by `titleCarrierInstances` counted FRESH on the SAME presence basis (**730 today**), DRIFT-tracked data beside the union, never an equality assert · config `DisplayName` instances ×**170** scoped to `TPC.LandscapeBrushDefinition` (all-class total **193** recorded beside as data) · room `Name` locstr rows ×**49** on the PRESENCE basis (**48** bear text — `_termID≠0` or non-empty `_dev`; the one empty struct emits nothing) · unlockable `DisplayName.mTerm` resolving in en ×**53** (of 55 rows) · unlockable `DescriptiveName` ×**27** (non-empty plain str) | doc; arbiter Part 5 RF-B; vB A3; vA #3d |
 | F8 | Item-title joins (ceiling) | variation `GameItem` int refs resolve to Lite `DefinitionID` **353/353**; full defs with `<id>_Lite` twin **1,652/1,654** — ceiling add **2,005** titles. NOT yet emitted by piece-02 (`item_item.jsonl`'s 155 rows are unrelated PPtr edges) — a relink-family work item, consumed here IF present, never re-derived | vB #3; vA #3g; doc |
 | F9 | Display-name edge truth | 2,993 name edges resolve to en text → **2,059 distinct term keys** (probe-reproduced); **1,895** distinct (kind,title); **264 collide** — top ("config","Lab Work") ×53, ("config","Specialist Book Report") ×51; 320 collide ignoring kind; **23 titles clean to empty** after tag+placeholder stripping (drop, never index "") | vA #2a/#2b; doc |
 | F10 | Registry + reverse index | registry 15,675 rows / 15,672 distinct keys / canonical-on-key / `locales[]` empty on all rows / **25** distinct sourceAssets (26 counts dump files — vA correction C1); reverse index **6,526** terms actually referenced by entities; remainder ≈9,146 = UI chrome, OUT of search scope | vA #2c/#2e; vB C1 |
-| F11 | Alias material on disk | internal-id split → **3,224** distinct id tokens · `_dev` English fallbacks **3,874** ROWS (row-basis; instance-count 3,919 — cite the basis, vA #3c): config 2,184 · item 1,458 · metagame-node 159 · room 31 · student-type 22 · unlockable 17 · staff 3 · `DisplayName.mTerm` 55 rows / 53 resolve (outside the `{_dev,_termID}` walker, G7) | vA #3b/#3c/#3d |
+| F11 | Alias material on disk | internal-id split on non-alphanumeric runs, LOWERCASED (the pinned §S3.1 rule), length ≥2, pure digits dropped, deduped → **3,166** distinct id tokens. PROVENANCE: the 3,224 long cited for this figure is the CASE-SENSITIVE superset — exactly **58** case-variant token pairs fold under lowercasing (arbiter RF-A measured both readings over all 13,443 ids; vA #3b's method line says "lowercase" while its walk counted case-sensitively). 3,224 is carried beside as a provenance label, never as an assertion · `_dev` English fallbacks **3,874** ROWS (row-basis; instance-count 3,919 — cite the basis, vA #3c): config 2,184 · item 1,458 · metagame-node 159 · room 31 · student-type 22 · unlockable 17 · staff 3 · `DisplayName.mTerm` 55 rows / 53 resolve (outside the `{_dev,_termID}` walker, G7) | doc; arbiter Part 5 RF-A; vA #3b/#3c/#3d |
 | F12 | Long-tail guard | config spans **344** classes; `Meshes[].GeometryList[].Bones[]` alone = **139,847** bone-name strings — naive index-every-string balloons ~10× for garbage; whitelisted fieldPaths ONLY | vA #3f |
 | F13 | Locale planes | 13 tables + base overlay = **23,107,394 B (23.1 MB)**; rows en 15,665 … ko 15,457 … ja 15,371; zero whitespace-empty emitted texts; cross-locale identity vs en: ru 30.5 % · ja 16.5 % · de 14.3 % · pt-BR 13.4 % · fr 10.2 % · zh/ko ≈1.3 % | vA #4a/#4b/#4e |
 | F14 | Sizing metric (a) — TITLE TEXT BYTES | sum of UTF-8 title-text bytes per locale over the 2,059-key narrow set: **29,645 B (zh-Hant) … 62,286 B (ru)**, en 34,044 (doc probe). The scout's "51–100 KB raw" band used a looser denominator — superseded by this per-metric definition | doc |
@@ -251,9 +252,14 @@ acceptance surface).
    reviewer r1 re-measured every cell digit-for-digit with it).
 2. **Pinned expanded recipe (computed every run):** union of the
    conservative universe with the F7 components — plain-string `Name`
-   literals (any kind), dev-bearing sentinel structs on the expanded
-   config name-class fields (`LocalisedName`/`Title`/`DisplayName`),
-   room `Name` locstr rows, unlockable `DisplayName.mTerm` (resolving)
+   literals (any kind, top-level name-class basis), config
+   `LocalisedName` locstr-PRESENCE instances (any nesting depth),
+   config `Title` carriers counted fresh on the same presence basis as
+   `titleCarrierInstances` (DRIFT-tracked data — the former ×547 seed
+   is RETIRED, no principled basis reproduces it; arbiter RF-B),
+   config `DisplayName` instances scoped to
+   `TPC.LandscapeBrushDefinition`, room `Name` locstr rows (presence
+   basis), unlockable `DisplayName.mTerm` (resolving)
    + `DescriptiveName`, item-title joins AS EMITTED (§S1.4), and
    course-convention resolutions (§S3). Every component count is
    emitted beside the union so boundary disputes are data, not prose
@@ -385,7 +391,10 @@ Frozen row shape (exact key set; NO additional or missing keys):
 
 1. **Classes (enum, frozen):** `id-token` (verbatim internal id split
    on non-alphanumeric runs, lowercased, length ≥2, pure digits
-   dropped, deduped — vocabulary 3,224, F11) · `name-variant`
+   dropped, deduped — vocabulary **3,166** under this lowercased rule;
+   the case-sensitive superset 3,224 (58 case-fold collisions) is
+   provenance data beside the seed, never an assert — arbiter RF-A),
+   F11) · `name-variant`
    (M/F forms — the §S1.1 member spellings `LocalisedNameFemale`/
    `LocalisedNameMale`/`LocalisedNameM`, plus staff `Ranks[].TitleM/F`)
    · `dev-string` (the `_dev` English
@@ -462,8 +471,13 @@ Frozen row shape (exact key set; NO additional or missing keys):
    {"config","Specialist Book Report",51}], ignoreKindCollisions: 320,
    withinLocaleDuplicateTexts: {en: 1570, "zh-Hans": 1668, ko: 1702,
    tr: 1625}}` — recomputed each run, reconciled against F9/F18 with
-   `DRIFT:` on movement. Ranking disambiguation (kind weighting + id)
-   is a CLIENT concern guided by `kindWeights`.
+   `DRIFT:` on movement. COUNTING BASIS pinned (arbiter RF-C):
+   `ignoreKindCollisions: 320` counts DISTINCT TITLE TEXTS carried by
+   more than one ENTITY ignoring kind (the alternative distinct-kind
+   reading measures 67 and would print a spurious first-run DRIFT);
+   `collidingPairs: 264` counts (kind,title) PAIRS with multiplicity >1.
+   Ranking disambiguation (kind weighting + id) is a CLIENT concern
+   guided by `kindWeights`.
 
 ### S4 — Tokenization + analyzer census
 
@@ -512,8 +526,10 @@ Frozen row shape (exact key set; NO additional or missing keys):
    `universe` (§S1 dual floors + components + perKind + idOnly +
    `descriptionOnlyNoDoc` per kind — §S2 name-required pin);
    `shards` (per locale: docs, bytes, sha256; titles docs/bytes/sha256);
-   `analyzers` (§S4); `aliasVolumes` (`{idTokens: 3224, devStrings:
-   3874, mTermRows: 55, mTermResolved: 53}`);
+   `analyzers` (§S4); `aliasVolumes` (`{idTokens: 3166,
+   idTokensCaseSensitiveSuperset: 3224, caseFoldCollisions: 58,
+   devStrings: 3874, mTermRows: 55, mTermResolved: 53}` — the superset
+   and collision fields are provenance data, arbiter RF-A);
    `titleKeySets` (`{narrow: {edges: 2993, keys: 2059, enResolvePct:
    100}, expandedWalker: {keys: 2748}}` — the narrow triple is
    verifier-reproduced; the `expandedWalker` figure is an UNVERIFIED
@@ -641,11 +657,19 @@ two-class rule).
    materializes §4's upstream set synthetically — mini stubs + relink
    JSONLs + 2 locale tables + stamps; NO Unity bytes).
 2. **Universe (AC by carrier definition):** `universeNarrow == 7,178`
-   EXACT with per-kind F5 decomposition; every expanded component
-   equals its F7/F8 seed ON ITS PINNED BASIS — room `Name` = 49 on the
-   locstr-PRESENCE basis (48 text-bearing; the empty struct emits no
-   doc), the rest text-bearing as measured (1,456 / 552 / 547 / 170 /
-   53 / 27; joins ≤ 353 + 1,652); `expanded == |union(components)|`
+   EXACT with per-kind F5 decomposition. Expanded components on their
+   PINNED bases (arbiter RF-B) — EQUALITY ASSERTS hold for exactly
+   these: plain-string literals **1,456** with its three-way
+   decomposition (config 1,402 + unlockable 41 + campus-level 13) ·
+   config `LocalisedName` **552** (locstr-PRESENCE instances, any
+   nesting depth) · config `DisplayName` **170** (`TPC.
+   LandscapeBrushDefinition`-scoped) · room `Name` **49**
+   (locstr-PRESENCE; 48 text-bearing; the empty struct emits no doc) ·
+   unlockable mTerm resolving in en **53** of 55 rows · unlockable
+   `DescriptiveName` **27** · joins ≤ 353 + 1,652.
+   `titleCarrierInstances` is DRIFT-TRACKED DATA, NOT asserted
+   (measures 730 today on the presence basis); `expanded ==
+   |union(components)|`
    internally consistent and `expanded == ceiling −
    pendingJoinCandidates`; planning-floor DRIFT line printed IFF
    `expanded != 10200`, carrying the share of 13,443; `idOnly ==
@@ -676,7 +700,10 @@ two-class rule).
    INFORMATIONAL, DRIFT-tracked in `manifest.sizes` beside all three
    named metrics (F14 text bytes / F15 key-line bytes / F16 doc
    planes) — no gate may quote a metric it does not name.
-5. **Alias layer:** id-token vocabulary == 3,224 distinct; `dev-string`
+5. **Alias layer:** id-token vocabulary == **3,166** distinct under
+   the pinned lowercased rule (the case-sensitive superset 3,224 /
+   58 collisions rides the manifest as provenance data — arbiter
+   RF-A); `dev-string`
    aliases reconcile with the 3,874-row basis; mTerm 55 rows → 53
    resolved + 2 ledgered; course resolution **≥24/28** over the 28
    `TPC.CourseDefinition` rows WITH the seed table present (measured
@@ -907,5 +934,48 @@ measurement and confirmed its B/doc predictions (83 B/doc slim titles;
 514 B/doc full en). No contract change beyond the listed pins: stage
 id, emission root, doc schema, analyzer table, exit-code contract, and
 both universe definitions stand as registered in Revision 1.
+
+## Revision 3 (arbiter residuals RF-A/RF-B/RF-C applied)
+
+Grounded in [`../rulings/arbiter-piece08-spec.mdx`](../rulings/arbiter-piece08-spec.mdx)
+(BOUNCE with 12/12 reviewer findings verified APPLIED-CORRECTLY; three
+documentation-pass residuals, every replacement value MEASURED in the
+ruling's Parts 2/5). Applied in one documentation pass:
+
+- **RF-A (MAJOR) — id-token seed re-based:** the pinned rule stays
+  LOWERCASED; the vocabulary seed re-seeded **3,166** in all four
+  places (§2 F11 · §S3.1 · §S5.1 `aliasVolumes` · §6 AC5), with
+  `3,224 (case-sensitive superset; 58 case-fold collisions)` carried as
+  a provenance label beside it — never an assertion. The old 3,224 was
+  the case-sensitive count (verifyA #3b's method line says "lowercase"
+  while its walk counted case-sensitively); implementing the rule as
+  written against asserting 3,224 guaranteed a day-one red.
+- **RF-B (MAJOR) — expanded-component bases made reproducible:**
+  config `LocalisedName` 552 pinned on the locstr-PRESENCE basis at any
+  nesting depth (text-bearing union measures 518); config
+  `DisplayName` 170 pinned to `TPC.LandscapeBrushDefinition` scope
+  (all-class total 193 recorded beside as data); `Title × 547` RETIRED
+  as an asserted seed — no principled basis reproduces it — and
+  replaced by `titleCarrierInstances` counted fresh on the same
+  presence basis (**measures 730 today**), DRIFT-tracked beside the
+  union, never equality-asserted. AC2's compressed "the rest
+  text-bearing" phrase rewritten into the per-seed basis list;
+  equality asserts now hold only for 1,456 (with decomposition) /
+  552 / 170-scoped / 53 / 27 / room-49-presence (+ join ceilings).
+  No downstream number moves — the expanded union has no assert, the
+  planning-floor comparison is DRIFT-with-attribution, §9 floors are
+  join-state-aware.
+- **RF-C (MINOR) — two transcription residues:** §1's "LAST in the
+  enumeration" append-positional phrasing aligned with §4's
+  registry-aware sentence (appended after the last currently registered
+  stage; ordering authority the canonical registry); §S3.4 pins the
+  collision-counting basis — `ignoreKindCollisions: 320` = distinct
+  TITLE TEXTS carried by more than one entity ignoring kind (the
+  distinct-kind reading measures 67).
+
+Scope discipline per Part 6 of the ruling: nothing outside these three
+residuals was altered; all other Rev 2 content stands as ruled
+APPLIED-CORRECTLY. Successor check is diff-level against the ruling's
+Part 2/5 tables.
 
 §END
