@@ -270,6 +270,36 @@ STAGE_OUTPUTS = {
         "relinks/bridges/cab_index.jsonl",
         "relinks/bridges/container_index.jsonl",
     ],
+    # stage 7 (piece-03 maps, canonical index 7): the FIXED declared-output
+    # universe of extracted/maps/** (piece-03 §4) — every path always
+    # emitted (empty ledgers valid). `_manifest.sha256` hashes these very
+    # inputs, so it is fingerprinted too and rerun-equality reads it.
+    "maps": [
+        "maps/coordinate_law.json,
+        "maps/loadassets_read.json,
+        "maps/levels.jsonl,
+        "maps/scenarios.jsonl,
+        "maps/plots.jsonl,
+        "maps/plots_tiletypes.jsonl,
+        "maps/rooms.jsonl,
+        "maps/rooms_tiles.jsonl,
+        "maps/item_placements.jsonl,
+        "maps/students.jsonl,
+        "maps/staff_records.jsonl,
+        "maps/landscape_layers.jsonl,
+        "maps/landscape_maps.jsonl,
+        "maps/terrain_decode.json,
+        "maps/door_validators.jsonl,
+        "maps/door_placement_index.jsonl,
+        "maps/door_id_space.json,
+        "maps/named_plots.jsonl,
+        "maps/imagery_candidates.jsonl,
+        "maps/imagery_predicates.json,
+        "maps/join_report.json,
+        "maps/_manifest.sha256,
+        "maps/_absences.jsonl,
+        "maps/_unresolved_placements.jsonl,
+    ],
 }
 
 
