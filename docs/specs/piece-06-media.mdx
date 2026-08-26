@@ -7,18 +7,24 @@ the media export piece. Facts are grounded in
 ([verifyA](../verifications/verifyA-scout-piece06.mdx),
 [verifyB](../verifications/verifyB-scout-piece06.mdx) — both
 PASS-WITH-CORRECTIONS, corrections already folded into the scout file
-this spec cites). Where a number here conflicts with scout or verifier
-prose, **this file wins**; where this file is silent, the scout file
-wins. Orchestrator pre-rulings baked in: stage index **11**
+this spec cites), tightened by
+[`../reviews/reviewer-piece06-spec-r1.mdx`](../reviews/reviewer-piece06-spec-r1.mdx)
+(FIX-REQUIRED, F1–F11 — all applied in Revision 2). Where a number here
+conflicts with scout or verifier prose, **this file wins**; where this
+file is silent, the scout file wins. Orchestrator pre-rulings baked in:
+stage index **11**
 (canonical registry relink=6 · maps=7 · logic=8 · locale-proof=9 ·
 contracts=10 · **media=11** · search-corpus=12); scratch/temp decoding
 on **D:/A: only, never C:**; scope ladder entity-icons → UI chrome →
 never corpus-wide; **WebP lossy q80 primary + PNG fallback**, AVIF
 NOT-NOW; naming keys on game-canonical `subObjectName` (slugs are 100%
-null pack-wide; the slug alias map is a later pure rename index when
-question-queue #55 lands). Generative/site-chrome art (codex imagegen,
-promptForDB #5) is a SEPARATE later piece — this piece exports
-CLIENT-owned game art only.
+null pack-wide; a slug alias map is a LATER pure rename index once an
+owner-routed slug pass exists — routing TBD, this piece leaves
+`namedBy` breadcrumbs); commit policy SETTLED by pre-ruling (see §4
+Ownership — tracked layer = `MEDIA-EXPORT.md` only, everything else
+stays gitignored-local, no `.gitignore` edit anywhere). Generative/
+site-chrome art (codex imagegen, promptForDB #5) is a SEPARATE later
+piece — this piece exports CLIENT-owned game art only.
 
 ---
 
@@ -47,7 +53,9 @@ exports the web-ready icon/art layer:
   (flag-gated, scope-ladder second step);
 - **E4**: the render-data pairing rule (≈46% NULL texture pointers)
   plus the pixel-exact AssetStudioModCLI cross-check lane;
-- **E5** (optional, report-only): the course-icon carrier probe.
+- **E5**: the course-icon carrier probe (optional, report-only);
+- **E6**: the icon PPtr residue scan (canonical 122-basis ledger,
+  always-on).
 
 Everything runs through the single entrypoint ([DR-2026-08-18-pipeline]):
 `python run_all.py <game-dir> --only media` reproduces every declared
@@ -66,23 +74,23 @@ prints `DRIFT:` and the fresh number wins (never a stale constant).
 | M1 | Client | buildId 20226581 · Unity 2020.3.47f1 · 176 roster bundles (96 texture-bearing, 2,420,511,413 B) · install `A:\SteamLibrary\steamapps\common\Two Point Campus` |
 | M2 | Media catalogue (schema FROZEN — extend downstream, never upstream) | `media-catalogue.jsonl` 47,939 rows `{class, bundle, name, pathId, bytesEstimate, contentAxis}`; Sprite **6,789** · SpriteAtlas **47** · Texture2D **7,977**; `bytesEstimate` is serialized size, NOT art bytes (GPU payload ≈ 4.49 GiB no-mip) |
 | M3 | Join inputs (all landed) | `addressables/catalog.json` (54,143 distinct guids) · `relinks/bridges/container_index.jsonl` (49,855 addresses) · catalogue Sprite name index (12,857 distinct names) · `relinks/entity_asset_guid.jsonl` (15,630 rows; CROSS-CHECK surface only, see E1) |
-| M4 | Join result (PRIMARY basis: fresh stub-side walk) | **2,158 distinct referenced sprite names; 2,151 resolved = 99.676%**; unresolved = exactly 7 names (M16). Dual-basis footnote: counting distinct `subObjectName` values instead of resolved sprite rows yields **2,146/2,153** — state the basis in any derived artifact; the export stage reports BOTH |
+| M4 | Join result (PRIMARY basis: fresh stub-side walk) | **2,158 distinct referenced sprite names; 2,151 resolved = 99.676%**; unresolved = exactly 7 names (M16). Resolution predicate PINNED in E1: name-presence among catalogue Sprite rows, chain steps as evidence. Dual-basis footnote: counting distinct `subObjectName` values instead of resolved sprite rows yields **2,146/2,153** — state the basis in any derived artifact; the export stage reports BOTH |
 | M5 | Per-kind join table (rows / rows w/ non-empty refs / GUID refs / sprite-typed targets / dangling) | items 3,885/3,875/8,140/**1,919**/363 (351 `EditorFallbackIconReference` + 12 `VisualsPrefab`) · configs 8,430/3,406/11,422/**1,412 atlasv2 + 153 plain-Sprite**/3,664 · metagame-nodes 454/344/202/**202**/0 · rooms 116/106/115/**115**/0 · student-types 54/27/27/**27**/0 · staff 3/3/15/**9**/0 · unlockables 415/63/201/**33**/26 (`Meshes[0]`) · courses 69/0/0/**0**/0 · campus-levels 17/13/20/0/7 (`LevelConfig`). Sprite-targeted refs sum **3,870** |
 | M6 | Atlas route share | **3,717/3,870** sprite-typed refs target `.spriteatlasv2` with non-empty `m_SubObjectName`; **~153 refs target plain `Sprite` assets, 150 of them with EMPTY sub** (E2). verifyB decomposition note kept honest: it measures the configs cell 1,412–1,423 and a 3,728 sprite-typed total — the stage re-measures and reports its own fresh split, never pins either |
 | M7 | Referenced-set geometry | source crop area **108,445,749 px** (pixel-exact, cross-validated vs AssetStudioModCLI) · median max-dim **≈233 px** · ≤64 px **29 (1.3%)** · >512 px **4** (largest the 2048² `TPC_DLC2_Student_Ghost`) |
 | M8 | Sprite population | **6,787/6,789 carry a usable rect**; median area 34,939 px²; **492 sprites cover their entire own texture** (pass-through candidates); **3,460 carry fractional rects**; **3,140 (≈46%) carry NULL `m_RD.texture` pointers**; 3,157 direct-pointer subrect |
-| M9 | Render-data pairing rule | `m_RenderDataMap` entries are **NOT index-aligned** with `m_PackedSpriteNamesToIndex` (0/352 rect agreement on `UI_Icons`) — the working rule is: take the Sprite object's OWN `m_RD.textureRect` SIZE and match it against its atlas's render-data entries; validated pixel-exact (0 differing pixels, maxDelta 0) vs independent AssetStudioModCLI exports on `DLC2_Qualifications_janitor_SML` (100×116) and `_LRG` (211×243) |
+| M9 | Render-data pairing rule | `m_RenderDataMap` entries are **NOT index-aligned** with `m_PackedSpriteNamesToIndex` (0/352 rect agreement on `UI_Icons`) — the working rule is: take the Sprite object's OWN `m_RD.textureRect` SIZE and match it against its atlas's render-data entries, with the pinned duplicate-size tiebreak (E4); validated pixel-exact (0 differing pixels, maxDelta 0) vs independent AssetStudioModCLI exports on `DLC2_Qualifications_janitor_SML` (100×116) and `_LRG` (211×243) |
 | M10 | Cross-bundle placement | for **2,059 refs / 820 distinct names** the named Sprite object does NOT live in the targeted atlas's bundle (homes: `ui-icons-atlased-assets_assets_all` 960 refs, `ui-art-icons` 593, `dlc-space-ui` 271, `dlc-ghost-ui` 115, `ui-art-ingame` 93, others small). Resolution MUST go name → `container_index`, NEVER bundle-local. Worked instance: `AdvisorHuski` (93 refs → atlas `UI_Icons.spriteatlasv2` in `ui-spriteatlas_assets_all.bundle`) exists only in `ui-icons-atlased-assets_assets_all.bundle`; its rect is fractional 337.93×509.97 |
-| M11 | Format census (whole corpus, zero ASTC/ETC2) | DXT1 4,504 · DXT5 2,793 · BC4 314 · RGBA32 141 · RGB24 64 · BC7 90 · Alpha8 71; serialized total 209,500,704 B (= catalogue figure). Exactly ONE BC7 atlas page corpus-wide (`sactx-0-2048x2048-BC7-UI_MenuCommon-…`, ≤1 referenced name) — special case, not a lane. All decode via UnityPy+Pillow; no codec plugins needed |
-| M12 | Atlas topology | 47 SpriteAtlas objects / **3,154 packed slots** / 125 pages named `sactx-{page}-{W}x{H}-{fmt}-{AtlasName}-{hash}`; largest 4096×4096 DXT5 (`UI_Items_New` 3×4096² + 4096×2048 tail; `UI_Icons` 4096² + 2048×4096; `UI_Costumisation` 4096² + 2048²); top atlases by slots: UI_Items_New 1,099 · UI_Costumisation 400 · UI_Icons 352 · UI_DLC1_Items 169 · UI_MenuCommon 131 · UI_HUD_Icons 128. Layout is **NOT a grid** — per-sprite rects only. Pages serialize `byte_size≈0` (pixels stream from bundle blocks). `m_IsVariant=false` on all 47. Worked rect (byte-checkable, reproduced by verifyA): `UI_Generic_T_Spritesheet_Icons_InGame_ItemsList_Tabs_Main_DLC` → `textureRect = (x 227, y 31, w 70, h 70)` |
+| M11 | Format census (whole corpus, zero ASTC/ETC2) | DXT1 4,504 · DXT5 2,793 · BC4 314 · RGBA32 141 · RGB24 64 · BC7 90 · Alpha8 71; serialized total **209,500,708 B** (= the landed catalogue figure; both verifiers' sweeps agree). Exactly ONE BC7 atlas page corpus-wide (`sactx-0-2048x2048-BC7-UI_MenuCommon-…`, ≤1 referenced name) — special case, not a lane. All decode via UnityPy+Pillow; no codec plugins needed |
+| M12 | Atlas topology | 47 SpriteAtlas objects / **3,154 packed slots** / 125 pages named `sactx-{page}-{W}x{H}-{fmt}-{AtlasName}-{hash}`; largest 4096×4096 DXT5 (`UI_Items_New` **3 same-size 4096² pages** + 4096×2048 tail hosting 1,099 slots; `UI_Icons` 4096² + 2048×4096; `UI_Costumisation` 4096² + 2048²); top atlases by slots: UI_Items_New 1,099 · UI_Costumisation 400 · UI_Icons 352 · UI_DLC1_Items 169 · UI_MenuCommon 131 · UI_HUD_Icons 128. Layout is **NOT a grid** — per-sprite rects only, and SAME-SIZE collisions across pages are the norm (dozens of 70×70 tab icons), so page disambiguation is a first-order mechanism (E4 tiebreak), not an edge case. Pages serialize `byte_size≈0` (pixels stream from bundle blocks). `m_IsVariant=false` on all 47. Worked rect (byte-checkable, reproduced by verifyA): `UI_Generic_T_Spritesheet_Icons_InGame_ItemsList_Tabs_Main_DLC` → `textureRect = (x 227, y 31, w 70, h 70)` |
 | M13 | Shipped-volume bands (validated bpp: WebP q80 0.54–1.91, WebP lossless 0.82–4.56, PNG 1.64–7.74 bits/px on real crops) | default set ≈ **8–25 MiB** WebP q80 · ≈10–60 MiB lossless · ≈21–100 MiB PNG. Decision-read: megabytes, not gigabytes; the multi-GiB numbers exist only to forbid corpus-wide decode |
-| M14 | Icon PPtr residue (both bases labeled) | verifier external-pointer scan: **24 non-null EXTERNAL PPtr icon slots (fileId 14)** with empty paired References; scout broader icon-name scan: **122 nonzero icon-named PPtr slots** across kinds (`BadgeIcon` ×67, `RivalIcon`, `InboxTrayIcon_*`, fileId spread incl. 14), all with empty paired References. Dead-weight framing survives elsewhere (683/707-style null bare slots). CANONICAL RULE (this spec): ledger universe = the **broader 122-basis** — every icon-named PPtr slot that is non-null with an empty paired `*Reference` GUID field; each row carries `slotClass: external\|same-file`, so the 24-row external subset stays visible inside it. Under-ledgering is the defect mode, never over-ledgering |
+| M14 | Icon PPtr residue (both bases labeled; CANONICAL RULE = broader scan, operationalized in E6) | verifier external-pointer scan: **24 non-null EXTERNAL PPtr icon slots (fileId 14)** with empty paired References; scout broader icon-name scan: **122 nonzero icon-named PPtr slots** across kinds (`BadgeIcon` ×67, `RivalIcon`, `InboxTrayIcon_*`, fileId spread incl. 14), all with empty paired References. Dead-weight framing survives elsewhere (683/707-style null bare slots). CANONICAL: ledger universe = the broader scan over a PINNED vocabulary (E6); each row carries `slotClass: external\|same-file`, so the 24-row external subset stays visible inside it. Under-ledgering is the defect mode, never over-ledgering |
 | M15 | Courses hole | all **69** course rows (28 `TPC.CourseDefinition` + 41 `TPC.MarketingCourseDefinition`) carry ZERO visual/icon fields; `Qualification` PPtr populated **28/69**; strict name-convention `Course_X → UI_InGame_Courses_T_Icon_X` resolves **9/69**; **42** `*_Courses_T_Icon_*` sprites exist; **24 config-side refs already point at the Courses-Qualifications sprite family**; `relinks/course_config.jsonl` holds 652 edges |
 | M16 | Absence ledger seed (exactly 7) | `DLC3_UI_Icons_Objective_Pirates` · `DLC3_UI_Icons_Objective_Volcano` · `Gorge_UI_Icons_Objectives_DLC3_Emergency` · `UI_HUD_Room_T_Icon_DLC3_plot` · `UI_InGame_DLC3_Icon_studentArchetype_Doctors` · `UI_InGame_DLC3_Icon_studentArchetype_Nurses` (unowned DLC 2195430 content; GUIDs hit catalog addresses with no container row) · `UI_InGame_T_Icon_Item_Teamsports_Cheeseball` (stale name in an unused BASE-game event config targeting an INSTALLED atlas). Honest missing states, not defects |
 | M17 | Toolchain | UnityPy **1.25.3** + Pillow **12.3.0** in the pack `.venv` (`features.check('webp')=True`; pillow-avif ABSENT → AVIF NOT-NOW); fallback seeding via `tools/unitypy_util.py` `seed_fallback_unity_version` — all 176 bundles carry header `0.0.0`, and `UnityPy.config.FALLBACK_UNITY_VERSION` must be ASSIGNED (env var alone is insufficient in 1.25.3). AssetStudioModCLI **v0.19.0 net8 portable** staged at `C:\_reps\game-databases\zero-parades\work\_tooling\AssetStudioModCLI\AssetStudioModCLI_net8_portable\AssetStudioModCLI.exe`; `--unity-version 2020.3.47f1` REQUIRED; it cannot express the join (name filter outside the opened bundle returns `Found [0/1650]`) → cross-check lane ONLY. ffmpeg 7.1 present; `cwebp`/`avifenc`/ImageMagick absent |
-| M18 | Host reality | C: free space measured **~0.07–0.36 GiB** during the verification round (was 84.77 GiB at last record) — decode scratch on C: is forbidden outright (§3 S0); D:/A: hold hundreds of GB |
+| M18 | Host reality | C: free space measured **~0.07–0.36 GiB** during the verification round (was 84.77 GiB at last record) — decode scratch on C: is forbidden outright (§3 S0); D:/A: hold hundreds of GB. On this host the OUTPUT root (`extracted/media/` in-repo on C:) is as likely as the temp leg to trip a floor — S0's refusal text names both levers |
 | M19 | Type-filter census | container-visible but catalogue-uncarved: `Cubemap` **138**, `Texture2DArray` **9** (census values; the scout's 152/19 superseded); plus **29 zero-size font-atlas Texture2D rows** (pixel data streamed; fonts out of scope) |
-| M20 | Wide-universe context | sweeping all 167,069 harvest dumps finds 2,687 distinct referenced names (529 beyond stubs, 525 resolvable = 99.59%) and 4 extra missing states (empty string + three `ANIM_M/F_Advisor_Chat_*` mis-typed as Sprite subtype). Context only — E1's universe stays the stub fields |
+| M20 | Wide-universe context | sweeping all 167,069 harvest dumps finds 2,687 distinct referenced names — whole-universe rate **2,676/2,687 = 99.59%** — of which **529 lie beyond the stub universe, 525 resolvable (99.24% of that slice)**; 4 extra missing states (empty string + three `ANIM_M/F_Advisor_Chat_*` mis-typed as Sprite subtype). Context only — E1's universe stays the stub fields |
 | M21 | Carve-out guard interaction | piece-1 §5 AC6 greps `extracted/` for image extensions and demands zero hits outside `media-catalogue.*`; `.png` is in that list, `.webp` is not. This piece AMENDS the guard (§5 AC9): image hits become legal ONLY under `extracted/media/**`; audio/video extensions remain absolute-zero |
 
 ## 3. Stage 11 — `media`
@@ -96,10 +104,11 @@ prints `DRIFT:` and the fresh number wins (never a stale constant).
   drafts numbered the locale-proof script `stage7_locale_proof.py`;
   that predates the re-based registry — cosmetic rename, routed §7 Q3.)
 - **Scripts:** `tools/stage11_media.py` + shared
-  `tools/media_util.py` (rect grammar + rounding, pairing matcher,
-  naming, manifest/hash writers, crosscheck driver). Registered with
-  script-hash deps `["stage11_media.py", "media_util.py",
-  "unitypy_util.py", "tpc_common.py", "log_util.py"]`.
+  `tools/media_util.py` (rect grammar + rounding, pairing matcher +
+  tiebreak, naming, manifest/hash writers, crosscheck driver, residue
+  scanner). Registered with script-hash deps
+  `["stage11_media.py", "media_util.py", "unitypy_util.py",
+  "tpc_common.py", "log_util.py"]`.
 - **Inputs (upstream set):** `stubs/<kind>.jsonl` ×9;
   `media-catalogue.jsonl`; `relinks/bridges/container_index.jsonl`;
   `addressables/catalog.json`; `bundle-roster.jsonl`;
@@ -107,9 +116,21 @@ prints `DRIFT:` and the fresh number wins (never a stale constant).
   reconciliation only — E1 walks stubs directly, see below). PLUS the
   game dir (like stages 3/6): every referenced sprite's HOME bundle and
   every hosting atlas-page bundle opens read-only under the shared
-  fallback-version seeding. Missing upstream artifact ⇒ exit 3 naming
-  it (runner pre-check, piece-1 pattern). Hostless testing goes through
-  the fixture/unit lane (§8), never a degraded real run.
+  fallback-version seeding. Missing upstream ARTIFACT ⇒ exit 3 naming
+  it (runner pre-check, piece-1 pattern).
+- **Hostless end-state (PINNED — closes the piece-02 F13/CR6 gap up
+  front):** `media` is CLIENT-GATED WHOLESALE. When neither
+  `TPC_GAME_DIR` nor the default install resolves, the runner auto-SKIPs
+  the stage (client-gated-integration semantics — NOT exit 3, NOT a
+  degraded join-only run) and stamps the skip in
+  `.pipeline-meta.json`; a missing upstream ARTIFACT while the game
+  dir EXISTS is the exit-3 case. The hostless lane proves the piece
+  exclusively through §8's unit validators over synthetic
+  stub/catalog/container/canned-pixel fixtures; its black-box assertion
+  standing in for decode is: the 7-name seed fixture drives
+  `_missing_icons.jsonl` + `index.jsonl` end-to-end (`resolved:false`
+  rows present) without opening ANY bundle. Hostless testing NEVER
+  goes through a degraded real run.
 - **Console/write discipline:** inherited unchanged from piece-1 §4 —
   UTF-8 stdout/stderr, explicit `encoding="utf-8"` + `newline="\n"`,
   sorted enumeration + sorted JSON keys, no wall-clock timestamps inside
@@ -125,6 +146,9 @@ prints `DRIFT:` and the fresh number wins (never a stale constant).
   steady state while M16's absences stand) · `3` environment/gate
   refusal. Per-condition mapping pinned in §3 EC.
 
+Sub-passes run in order; each appends its counters to the EXTRACTION-LOG
+run section (key names pinned per pass).
+
 ### S0 — Scratch discipline (hard preflight, runs FIRST)
 
 ALL decode scratch — page decode buffers (worst page 4096²×RGBA =
@@ -136,13 +160,16 @@ to a temp root on **D: or A:. NEVER C:.**
   resolution the stage resolves the drive letter of the temp root and
   of the output root.
 - **Hard gate:** resolved temp root on drive `C:` ⇒ **exit 3** printing
-  the resolved path + remediation (`set TPC_MEDIA_TMP=D:\...`). No
-  override flag exists — a C:-temp run is not runnable, by contract.
+  the resolved path + BOTH levers by leg: temp leg →
+  `set TPC_MEDIA_TMP=D:\…` (or `TPC_TEMP_ROOT`); output leg (free-space
+  floor unmet on the output drive) → `set TPC_EXTRACTED_ROOT=D:\…`
+  (piece-1 §1 knob) or free C: space. No override flag exists — a
+  C:-temp run is not runnable, by contract.
 - Free-space floors, measured and printed: temp root ≥ **4 GiB** free,
   output root ≥ **2 GiB** free; below floor ⇒ exit 3 with measured
-  numbers (M18: C: sat at 0.07–0.36 GiB mid-session; the floors exist
-  so a sibling-pressure crash is a clean refusal, not a half-written
-  tree).
+  numbers (M18: C: sat at 0.07–0.36 GiB mid-session, so on this host
+  EITHER refusal path may fire first — the message must point at the
+  right dial).
 - Every scratch path the stage creates is logged in the run section
   (`tempRoot`, `tempRootDrive`, `outputRootDrive`, free-GiB readings)
   and REMOVED on completion (scratch is never a declared output).
@@ -159,7 +186,7 @@ sprite-shaped refs found by the E1 walk vs rows persisted by stage-6
 are counted both ways; a delta ⇒ `DRIFT:` line + both counts in the run
 section (never a failure — that file is another stage's artifact).
 
-Join ladder per ref (all steps landed artifacts; nothing re-derived):
+Join ladder per ref:
 
 ```
 stub.fields.*Reference.m_AssetGUID
@@ -167,6 +194,15 @@ stub.fields.*Reference.m_AssetGUID
   → container_index address → (bundle, class, pathId)
   → media-catalogue Sprite row by subObjectName    (name index)
 ```
+
+**Resolution predicate (pinned):** `resolved:true` ⟺ the ref's
+`m_SubObjectName` matches a catalogue Sprite-row name (the verified
+predicate — this is what produces 2,151/2,158 on both verification
+passes). The catalog/container steps are EVIDENCE recorded on the row
+(`chainBreak: none|guid|address|container`), never additional gates —
+so a future client patch that dangles a GUID while the name remains
+known shifts nothing semantically; AC2 prints `DRIFT:` instead of
+flipping meaning.
 
 Rules pinned:
 
@@ -196,11 +232,12 @@ Rules pinned:
    `_missing_icons.jsonl` with `reason: dlc-content-absent` (6) /
    `stale-name` (Cheeseball) + ≤5 sampleRefs each — exit-2 ledger
    material, never silence, never a hard failure.
-7. `EditorFallbackIconReference` (351, editor-only; GUIDs absent from
-   runtime catalog AND containers) and the non-icon danglings
-   (`VisualsPrefab` 12, `Meshes[0]` 26, `LevelConfig` 7) are
-   LEDGERED-SKIP rows in `_missing_icons.jsonl` with their own
-   `reason` values — counted, never dropped silently.
+7. **Ledgered skips:** `EditorFallbackIconReference` (351,
+   editor-only; GUIDs absent from runtime catalog AND containers) and
+   the non-icon danglings (`VisualsPrefab` 12, `Meshes[0]` 26,
+   `LevelConfig` 7) are LEDGERED-SKIP rows in `_missing_icons.jsonl`
+   with the pinned reason values of §4's reason enum — counted, never
+   dropped silently.
 
 ### E2 — Standalone-Sprite route
 
@@ -225,7 +262,7 @@ bundles), 150 with EMPTY `m_SubObjectName`.
 
 ### E3 — UI-chrome atlas crops (scope-ladder second step, flag-gated)
 
-`--include-ui-chrome` (default OFF; the default run ships E1+E2+E4
+`--include-ui-chrome` (default OFF; the default run ships E1+E2+E4+E6
 only, ≈8–25 MiB). When ON: iterate all **47** SpriteAtlas objects →
 their **3,154** packed slots, crop every slot from its page via the
 same E4 machinery. Sprites already emitted by E1/E2 are skipped
@@ -243,8 +280,19 @@ The mechanism sub-pass every route depends on:
    (3,140 ≈ 46%), resolve the home page through the OWNING ATLAS's
    `m_RenderDataMap`, matching entries to the sprite's OWN
    `m_RD.textureRect` SIZE. Never assume index alignment
-   (`m_PackedSpriteNamesToIndex` — provably wrong, 0/352). Match
-   failures on a referenced sprite ⇒ exit 1 naming the sprite (a
+   (`m_PackedSpriteNamesToIndex` — provably wrong, 0/352).
+   **Duplicate-size tiebreak (CONTRACT, deterministic — M12 makes
+   same-size collisions the norm: UI_Items_New packs 1,099 slots
+   across three identical 4096² pages):** candidates = renderdata
+   entries whose size equals the sprite's rounded rect size; then
+   (a) if >1 candidate and the renderdata entry carries its page
+   texture pointer, prefer candidates whose page lives in the sprite's
+   HOME-bundle evidence (container_index-derived); (b) if still >1,
+   order candidates by `(pagePathId ASC, entryIndex ASC)` and take the
+   FIRST. Every multi-candidate resolution increments
+   `ambiguousPairings` and the chosen page is stamped on the manifest
+   row (`pageName`/`pagePathId`), so a wrong pick is always auditable.
+   Match failures on a referenced sprite ⇒ exit 1 naming the sprite (a
    referenced sprite with no locatable page means the grammar model is
    broken, not that art is missing).
 2. **Decode breadth:** pages are decoded ONCE per run, cached in the
@@ -254,28 +302,38 @@ The mechanism sub-pass every route depends on:
 3. **Cross-check lane (acceptance surface):** export a deterministic
    sample of **≥20 referenced sprites** through AssetStudioModCLI
    (`--unity-version 2020.3.47f1`, exports into the temp root — never
-   the repo), then compare OUR decoded crop vs the CLI export:
-   identical dimensions AND 0 differing pixels (maxDelta 0) required.
-   Sample composition pinned: ≥1 per route (`atlas-pair`,
-   `standalone-pass-through`, `direct-pointer-subrect`), ≥2
-   fractional-rect sprites, the BC7-page sprite if referenced, both
-   probe anchors `DLC2_Qualifications_janitor_SML` + `_LRG`, remainder
+   the repo), then compare OUR decoded crop vs the CLI export.
+   **Comparator path (pinned):** CLI export loaded via PIL and
+   converted with a single `convert("RGBA")` to an RGBA8 array;
+   compared ELEMENTWISE against our crop's RGBA8 array (already the
+   decode output — no premultiplied step, no lossy intermediate, no
+   second color conversion on either side). Required: identical
+   dimensions AND 0 differing pixels (`maxDelta == 0`). Sample
+   composition quotas (all mandatory): ≥1 per route (`atlas-pair`,
+   `standalone-pass-through`, `direct-pointer-subrect`); **≥3 sprites
+   whose size-match was ambiguous (tiebreak exercised)**; ≥2
+   fractional-rect sprites; the BC7-page sprite if referenced; both
+   probe anchors `DLC2_Qualifications_janitor_SML` + `_LRG`; remainder
    filled by deterministic stride over the sorted name list. Result
-   emitted to `crosscheck-report.json`; `pixelMatchRate < 1.0` ⇒
-   exit 1. Comparison runs on PIL/numpy stats — **never Read a binary
-   image into agent context** (house rule; validate numerically).
+   emitted to `crosscheck-report.json`; `pixelMatchRate < 1.0` OR
+   `maxDelta != 0` ⇒ **exit 1** (EC table row). Comparison runs on
+   PIL/numpy stats — **never Read a binary image into agent context**
+   (house rule; validate numerically). A genuine off-by-one
+   decoder-divergence finding routes as an exit-1 investigation with
+   the diagnostic pair (our array + CLI export) written to the temp
+   root — never a silent retry.
 
-### E5 — Course-icon carrier probe (OPTIONAL, report-only — recommended shape)
+### E5 — Course-icon carrier probe (OPTIONAL, report-only)
 
-Recommendation, ruled here so the builder doesn't improvise: E5 exists
-as a **default-OFF, report-only probe** (`--probe-course-carrier`),
-scoped to answer scout §9 Q1 from landed artifacts — it NEVER emits an
-icon and NEVER writes outside `extracted/media/`. Why report-only
-rather than a full sub-pass: the carrier is a RELINK-layer question
-(the chain runs course → Qualification → config → Courses-Qualifications
-sprites; `relinks/course_config.jsonl` already holds 652 edges), while
-this piece's emission set is hard-join only — wiring in the 9/69
-name-convention guess would put `inferred:true` art into a
+Ruled here so the builder doesn't improvise: E5 exists as a
+**default-OFF, report-only probe** (`--probe-course-carrier`), scoped
+to answer scout §9 Q1 from landed artifacts — it NEVER emits an icon
+and NEVER writes outside `extracted/media/`. Why report-only rather
+than a full sub-pass: the carrier is a RELINK-layer question (the chain
+runs course → Qualification → config → Courses-Qualifications sprites;
+`relinks/course_config.jsonl` already holds 652 edges), while this
+piece's emission set is hard-join only — wiring in the 9/69
+name-convention guess would put `inferred:true` art into an
 `inferred:false` plane. The probe emits
 `course-icon-carrier-report.json`: the qualification-chain walk results,
 the 42-sprite inventory, the strict-convention yield (seed 9/69), and
@@ -285,40 +343,91 @@ rejected because AGENTS rule 8 puts this question in the data layer and
 the probe is cheap; making it a full emission pass was rejected for the
 plane-mixing reason above.
 
-### EC — Exit-code mapping (pinned)
+### E6 — Icon PPtr residue scan (canonical 122-basis, always-on)
 
-| Code | Conditions |
-|---|---|
-| `0` | E1+E2+E4 complete; `_missing_icons.jsonl` AND `_pptr_residue.jsonl` empty; crosscheck 100% |
-| `2` | completed-with-ledger: ledgers non-empty but every row within the declared `reason`/`slotClass` vocabularies (EXPECTED steady state while M16 stands — the 7 DLC3/stale names guarantee exit 2 today) |
-| `1` | any MECHANISM failure, loud and named: WebP/PNG encode exception on valid pixels; missing atlas page (referenced sprite, no locatable page via the pairing rule); rect-out-of-bounds after pinned rounding; pairing match failure on a referenced sprite; manifest/file-count mismatch; hash mismatch on rewrite; scope-ceiling breach (§5 AC7); schema violation in any emitted artifact |
-| `3` | environment/gate refusal: missing game dir or upstream artifact; temp root resolves to C:; free-space floor unmet; `features.check('webp')` false at preflight (AVIF stays NOT-NOW — no plugin install inside the stage) |
+Operationalizes M14. Runs on EVERY default run (after E1/E2, reusing
+their walk machinery):
+
+1. **Scan population:** all NINE stub kinds × ALL fields — the E1
+   recursive `fields.*` walk WITHOUT the sprite-type filter. A slot
+   candidate is a PPtr leaf `{m_FileID, m_PathID}` whose field-path
+   LEAF NAME matches the vocabulary below.
+2. **Icon-name vocabulary (pinned):** case-insensitive substring match
+   on `icon` (catches `BadgeIcon` ×67, `RivalIcon`,
+   `InboxTrayIcon_*`, `ItemsMenuIcon`, `SwatchMenuIcon`,
+   `IconReference`, `_iconReference`, `OverlayIcon*` — i.e. the union
+   of both measured scans' populations). The RULE is canonical; the
+   NUMBER follows the rule: seed reconciliation count **122 nonzero
+   icon-named slots** on buildId 20226581; a fresh implementation of
+   this rule measuring differently on the current corpus reports its
+   number in the run section and that number becomes the recorded seed
+   going forward (EXTRACTION-LOG), with `DRIFT:` against the prior
+   seed — never a silent constant, never a failure.
+3. **Admission:** slot NON-null (`m_PathID != 0`, or a non-empty
+   external pointer) AND paired `*Reference` GUID field empty/absent.
+   Null bare slots are counted (`pptrSlotsNullSkipped`), never rowed —
+   they are the dead-weight majority, not residue.
+4. **Enums (frozen):** `slotClass`: `external` iff `m_FileID != 0`,
+   else `same-file`. `basis`: literal `"122-basis"` on every row.
+   `targetResolution` (resolution attempt per admitted slot; piece-02
+   §R3 dangling-verdict vocabulary plus its non-entity address
+   termination): `resolved-address | unresolved-open | resolved-scene |
+   resolved-editor-only | removed-content`.
+5. **Emission:** `_pptr_residue.jsonl` rows per §4; sorted by
+   `(kind, srcId, fieldPath)`.
+6. **Exit contribution:** residue rows never fail the stage. A row
+   whose value falls outside ANY declared enum is still LEDGERED under
+   the explicit escape values (`uncategorized-slot` /
+   `uncategorized-reason` in `_missing_icons.jsonl`) each accompanied
+   by a `DRIFT:` line and contributing to exit 2 — never exit 1
+   (under-ledgering is the defect mode, M14).
+
+### Run-section keys (pinned, appended per pass)
+
+```
+S0: tempRoot / tempRootDrive / outputRootDrive / tempFreeGiB / outputFreeGiB
+E1: refsTotal / distinctNames / resolvedNames / unresolvedNames /
+    perKindCells:{…} / spritesEmitted / pngTwins / alphaSanityFallbacks /
+    entityAssetGuidWalkVsPersisted:{walk, persisted}
+E2: standaloneRefs / passThroughSprites / subrectSprites / emptySubNamedByAddress
+E3: atlasesProcessed / pagesDecoded / cropsEmitted / skippedAsAlreadyEmitted
+E4: nullTexturePointersPaired / ambiguousPairings / pairingFailures /
+    crossCheckSample / pixelMatchRate / maxDelta / cliVersion /
+    cliUnityVersion
+E5: courseRowsWalked / qualificationChainHits / conventionYield /
+    pptrPopulated / reportPath                      (flag-gated runs only)
+E6: pptrSlotsScanned / pptrSlotsNullSkipped / pptrResidueRows /
+    pptrResidueExternalSubset / pptrResidueSameFileSubset /
+    pptrTargetResolved / pptrTargetUnresolved
+env: pillowVersion / webpFeatureVersion / fallbackVersionUsedBundles
+```
 
 ## 4. Output contracts (additions under `extracted/`)
 
 ```
 extracted/media/
-├── web/                               # BINARY PAYLOAD — gitignored-local (§7 Q1)
+├── web/                               # binary payload — LOCAL, gitignored (Ownership)
 │   ├── icons/<subObjectName>.webp     # E1/E2 canonical native-res assets (q80 + alpha)
 │   ├── icons/<subObjectName>.png      # PNG twins per the fallback rule below
 │   ├── thumbs/<subObjectName>.webp    # ONLY with --with-thumbs 96,128 (derived tier)
 │   └── ui/<AtlasName>/<subObjectName>.webp   # E3 flag-gated
-├── export-manifest.jsonl              # ONE row per emitted file (bijection, §5 AC3)
+├── export-manifest.jsonl              # ONE row per emitted file (bijection, AC3)
 ├── index.jsonl                        # per-REF join rows (many-to-one onto files)
 ├── hashes.sha256                      # "<sha256>  <relpath>" LF, sorted by relpath
 ├── crosscheck-report.json             # E4 verdict (sample, rates, CLI version/flags)
 ├── course-icon-carrier-report.json    # E5 flag-gated, report-only
 ├── _missing_icons.jsonl               # absence ledger (empty file valid iff none)
-├── _pptr_residue.jsonl                # M14 canonical 122-basis ledger (empty iff none)
+├── _pptr_residue.jsonl                # E6 canonical 122-basis ledger (empty iff none)
 ├── _skipped_classes.jsonl             # Cubemap 138 / Texture2DArray 9 / 29 zero-size
 │                                      # font atlases — skip policies as rows
-└── MEDIA-EXPORT.md                    # generated rollup (buildId header, deterministic)
+└── MEDIA-EXPORT.md                    # THE TRACKED ARTIFACT (see Ownership)
 ```
 
 - **Naming:** `{plane}/{subObjectName}.{ext}`, plane ∈ `icons | thumbs |
   ui`. `subObjectName` is the game-canonical sprite name (slugs are
-  100% null — M15/piece-02; the alias/rename map is a LATER pure index
-  once queue #55 lands; nothing here waits on slugs). Collision rule:
+  100% null — piece-02; a slug alias/rename map is a LATER pure index
+  once an owner-routed slug pass exists, routing TBD; nothing here
+  waits on slugs). Collision rule:
   `{subObjectName}_{pathId}` with the SIGNED int64 pathId (piece-1
   Revision 6 signed-stem contract — negative pathIds exist on this
   client). Empty-sub standalone sprites name by address basename (E2).
@@ -329,10 +438,13 @@ extracted/media/
 - **Format rule:** WebP lossy **q80** primary for everything; PNG twin
   additionally emitted for sprites with max-dim **≤ 64 px** (29 in the
   referenced set — flat glyphs where lossy artifacts are least
-  forgivable) and for any sprite whose encoded WebP fails alpha-roundtrip
-  sanity (decode-back alpha min/max drift beyond the pinned tolerance ⇒
-  PNG twin + counter, not a failure). `--png-all` escape hatch exists
-  for the site plane's worst case. AVIF: not emitted, not attempted.
+  forgivable) and for any sprite failing the alpha-roundtrip sanity
+  bound: encode→decode the WebP, compare the decoded alpha channel
+  against the source crop's alpha pixelwise, PINNED tolerance =
+  maximum per-pixel absolute difference **≤ 1/255 (one level on the
+  0–255 scale)**; beyond that ⇒ PNG twin + `alphaSanityFallbacks`
+  counter, not a failure. `--png-all` escape hatch exists for the site
+  plane's worst case. AVIF: not emitted, not attempted.
 - **Size ladder:** ONE canonical asset per sprite at NATIVE resolution
   (median max-dim ≈233 px; a fixed 16/32/64 ladder would destroy the
   median crop). Optional derived thumbnail tier `--with-thumbs <dims>`
@@ -365,102 +477,151 @@ extracted/media/
   the bottom-origin flip arithmetic — the E4 lane, not this example,
   is what proves the sign.)
 - **index.jsonl row:** `{kind, srcId, fieldPath, assetGuid,
-  subObjectName, resolved, file (null when unresolved),
-  reason (when unresolved), buildId}` — one row per REF (all 2,158
-  names' refs, resolved and not, so consumer joins see absences at
-  their own granularity). Sorted by `(kind, srcId, fieldPath)`.
-- **Ledgers:** `_missing_icons.jsonl` sorted by `subObjectName`
-  `{subObjectName, assetGuid, reason, sampleRefs[≤5], buildId}`;
-  `_pptr_residue.jsonl` sorted by `(kind, srcId, fieldPath)`
-  `{kind, srcId, fieldPath, pptr{fileId, pathID},
-  pairedReferenceEmpty:true, slotClass, targetResolution, basis,
-  buildId}`; `_skipped_classes.jsonl` one row per skip policy
-  `{class, censusCount, policy, buildId}`.
-- **Ownership:** every path above is written by `stage11_media.py`
-  alone. NOTHING upstream is mutated: `media-catalogue.jsonl` schema
-  stays frozen (dimensional/format facts the stage measures live in the
-  manifest, downstream only), no writes into `relinks/`, `stubs/`,
-  `RELATIONS.md`, or any other stage's artifacts. The binary tree is
-  gitignored-local (house precedent for decoded art payloads); the
-  committed layer is the six text artifacts + rollup. `.gitignore`
-  rules for `extracted/media/web/**` are added by the builder as part
-  of implementation.
+  subObjectName, resolved, chainBreak (none|guid|address|container),
+  file (null when unresolved), reason (when unresolved), buildId}` —
+  one row per REF (all 2,158 names' refs, resolved and not, so
+  consumer joins see absences at their own granularity). Sorted by
+  `(kind, srcId, fieldPath)`.
+- **Ledgers:**
+  - `_missing_icons.jsonl` sorted by `subObjectName`
+    `{subObjectName, assetGuid, reason, sampleRefs[≤5], buildId}`;
+    **reason enum (complete, frozen):** `dlc-content-absent` ·
+    `stale-name` · `empty-sub-name` · `editor-only-fallback`
+    (EditorFallbackIconReference ×351) · `visuals-prefab-target`
+    (VisualsPrefab ×12) · `mesh-list-target` (Meshes[0] ×26) ·
+    `level-config-target` (LevelConfig ×7) · `uncategorized-reason`
+    (escape value — always accompanied by a `DRIFT:` line; feeds exit
+    2, never exit 1).
+  - `_pptr_residue.jsonl` sorted by `(kind, srcId, fieldPath)`
+    `{kind, srcId, fieldPath, pptr{fileId, pathID},
+    pairedReferenceEmpty:true, slotClass, targetResolution,
+    basis:"122-basis", buildId}`.
+  - `_skipped_classes.jsonl` one row per skip policy
+    `{class, censusCount, policy, buildId}`.
+- **Ownership + commit policy (SETTLED — orchestrator pre-ruling
+  2026-08-26; supersedes Revision 1's commission):** every path above
+  is written by `stage11_media.py` alone. NOTHING upstream is mutated:
+  `media-catalogue.jsonl` schema stays frozen (dimensional/format facts
+  the stage measures live in the manifest, downstream only), no writes
+  into `relinks/`, `stubs/`, `RELATIONS.md`, or any other stage's
+  artifacts. **No `.gitignore` rule is added, needed, or permitted**:
+  the pack's standing `extracted/**` ignore already covers the ENTIRE
+  media tree — binaries (`web/**`) AND the local provenance artifacts
+  (`export-manifest.jsonl`, `index.jsonl`, `hashes.sha256`,
+  `crosscheck-report.json`, `course-icon-carrier-report.json`,
+  `_missing_icons.jsonl`, `_pptr_residue.jsonl`,
+  `_skipped_classes.jsonl`) all stay gitignored-local per pack doctrine
+  (game-derived data never enters git). The TRACKED layer is exactly
+  **`extracted/media/MEDIA-EXPORT.md`**, carried by the existing `.md`
+  carve-out (`!extracted/**/*.md` matches nested paths) — and because
+  it is the only thing a fresh clone receives, it MUST be
+  self-sufficient: generated deterministically with a buildId header,
+  encoder pins, per-kind/per-plane counts + bytes, ledger sizes WITH
+  their full enums, the ROW SCHEMA of every local artifact (key sets +
+  sort keys, so consumers know what to request), a hash SUMMARY
+  (per-artifact sha256 + row/file counts — enough to detect drift
+  between clones without shipping bytes), and the crosscheck verdict.
+  Nothing else under `extracted/media/` is committed, ever.
 - **Carve-out guard amendment (piece-1 §5 AC6):** image-extension hits
   become legal ONLY under `extracted/media/**`; audio/video extensions
   remain absolute-zero anywhere under `extracted/`. The guard's edit
   lives in the test suite + a one-line piece-1 revision note (routed
   §7 Q2 — outside this file's write scope).
 
-### Run-section keys (pinned, appended per run)
-
-```
-S0: tempRoot / tempRootDrive / outputRootDrive / tempFreeGiB / outputFreeGiB
-E1: refsTotal / distinctNames / resolvedNames / unresolvedNames /
-    perKindCells:{…} / spritesEmitted / pngTwins / alphaSanityFallbacks /
-    entityAssetGuidWalkVsPersisted:{walk, persisted}
-E2: standaloneRefs / passThroughSprites / subrectSprites / emptySubNamedByAddress
-E3: atlasesProcessed / pagesDecoded / cropsEmitted / skippedAsAlreadyEmitted
-E4: nullTexturePointersPaired / pairingFailures / crossCheckSample /
-    pixelMatchRate / maxDelta / cliVersion / cliUnityVersion
-env: pillowVersion / webpFeatureVersion / fallbackVersionUsedBundles
-```
-
 ## 5. Acceptance criteria (mechanical, whole piece)
 
 1. **Entrypoint:** `python run_all.py --list` enumerates `media` at its
    canonical position with tool/version/status columns; `make list`
-   equivalent; `--only media` isolates on a prepared tree (client mode:
-   `--skip media` then `--only media`; hostless smoke materializes the
-   §3 upstream set via `tests/build_fixture_tree.py --stage media`,
-   with the piece-02 AC1 caveat honored — synthetic bundles carry no
-   object tables, so decode legs stay client-gated, §8).
+   equivalent; `--only media` isolates on a prepared tree IN CLIENT
+   MODE (game dir resolving: `--skip media` then `--only media`);
+   **hostless end-state (pinned §3):** with no game dir resolving the
+   runner auto-SKIPs `media` wholesale (client-gated semantics — no
+   exit 3, no degraded run, skip stamped), and the hostless lane proves
+   the piece through §8's unit validators, whose black-box leg drives
+   the 7-name seed fixture through `_missing_icons.jsonl` +
+   `index.jsonl` end-to-end without opening any bundle. A missing
+   upstream ARTIFACT with the game dir present remains the exit-3 case.
 2. **Join reconciliation (vs cited artifacts):** fresh walk yields
    `distinctNames == 2158`, `resolvedNames == 2151`, and the unresolved
-   set EQUALS the 7 verbatim M16 names (byte-for-byte); per-kind cells
-   reconcile against M5 (fresh numbers win over the seeds on drift,
-   `DRIFT:` printed); the atlas-route split (M6) reported fresh, both
-   decompositions labeled.
+   set EQUALS the 7 verbatim M16 names (byte-for-byte, under the pinned
+   name-presence predicate — chain evidence never gates); per-kind
+   cells reconcile against M5 (fresh numbers win over the seeds on
+   drift, `DRIFT:` printed); the atlas-route split (M6) reported
+   fresh, both decompositions labeled.
 3. **Bijection:** `export-manifest.jsonl` row count == file count under
    `extracted/media/web/` (every row's `sha256` recomputes to the file's
    bytes; every file has exactly one row); `hashes.sha256` regenerates
    identically from the tree.
-4. **Pixel-exactness:** cross-check lane sample ≥20, composition per
-   E4(3), `pixelMatchRate == 1.0`, `maxDelta == 0`; CLI invoked with
-   `--unity-version 2020.3.47f1` and its banner version stamped; CLI
-   exports confined to the temp root.
+4. **Pixel-exactness:** cross-check lane sample ≥20 with ALL composition
+   quotas met (routes; ≥3 ambiguous-tiebreak; ≥2 fractional; BC7-page
+   sprite if referenced; both probe anchors), `pixelMatchRate == 1.0`,
+   `maxDelta == 0`; comparator traverses the pinned RGBA8 conversion
+   path; CLI invoked with `--unity-version 2020.3.47f1`, banner version
+   stamped; CLI exports confined to the temp root.
 5. **Determinism:** rerunning `--only media` twice yields
-   byte-identical declared outputs (hash-manifest comparison over
-   web/** + the six text artifacts; EXTRACTION-LOG, `.stage-stamps/`,
-   `.pipeline-meta.json` excluded; SAME-ENVIRONMENT scoping per §3).
-   Interrupted-run convergence holds (temp+rename everywhere).
-6. **Absence honesty:** `_missing_icons.jsonl` contains the 7 M16 names
-   with correct reasons; `_pptr_residue.jsonl` implements the
-   canonical 122-basis rule with `slotClass` splitting out the 24-row
-   external subset; `_skipped_classes.jsonl` carries 138/9/29; every
-   unresolved ref appears in BOTH `index.jsonl` (`resolved:false`) and
-   the ledger.
+   byte-identical declared outputs — hash-manifest comparison over
+   `web/**` PLUS the enumerated text set: `export-manifest.jsonl`,
+   `index.jsonl`, `hashes.sha256`, `crosscheck-report.json`,
+   `_missing_icons.jsonl`, `_pptr_residue.jsonl`,
+   `_skipped_classes.jsonl`, `MEDIA-EXPORT.md` (+ the E5
+   `course-icon-carrier-report.json` when its flag is on);
+   EXTRACTION-LOG, `.stage-stamps/`, `.pipeline-meta.json` excluded;
+   SAME-ENVIRONMENT scoping per §3. Interrupted-run convergence holds
+   (temp+rename everywhere).
+6. **Absence + residue honesty:** `_missing_icons.jsonl` contains the
+   7 M16 names with correct reasons; `_pptr_residue.jsonl` implements
+   the E6 scan (population = nine kinds × all fields; `icon`
+   substring vocabulary) with the 122-basis seed reconciled (`DRIFT:`
+   on movement; rule-canonical / number-follows-rule per E6(2)) and
+   `slotClass` splitting out the external subset (24-row seed);
+   `_skipped_classes.jsonl` carries 138/9/29; every unresolved ref
+   appears in BOTH `index.jsonl` (`resolved:false`) and the ledger;
+   out-of-enum values appear ONLY as the declared `uncategorized-*`
+   escapes with `DRIFT:` lines (exit 2, never exit 1).
 7. **Scope guards:** default run's `web/` totals ≤ **256 MiB** and
    `--include-ui-chrome` runs ≤ **512 MiB** (scope-breach detectors ⇒
    exit 1 — guards against accidental bulk decode, not estimate gates);
-   manifest `source.bundles` ⊆ referenced-home ∪ atlas-page bundles
-   (proves no corpus-wide sweep slipped in); E3 emits nothing when the
-   flag is off; E5 writes nothing when its flag is off.
+   every manifest row's `source.bundle` ∪ `source.pageBundle` ⊆ the
+   referenced-home ∪ atlas-page bundle set (proves no corpus-wide sweep
+   slipped in); E3 emits nothing when its flag is off; E5 writes
+   nothing when its flag is off.
 8. **Scratch discipline:** S0 gates fire correctly — a temp root on C:
-   refuses with exit 3 (tested by pointing `TPC_MEDIA_TMP` at a C:
-   path in the hostless lane); free-space floors checked and printed;
-   temp tree removed on completion.
+   refuses with exit 3 printing the TEMP-leg lever
+   (`TPC_MEDIA_TMP`/`TPC_TEMP_ROOT`); an output-root floor breach
+   refuses with exit 3 printing the OUTPUT-leg lever
+   (`TPC_EXTRACTED_ROOT` or free C:) — both branches tested in the
+   hostless lane over monkeypatched statfs; free-space floors checked
+   and printed; temp tree removed on completion.
 9. **Carve-out guard (amended, M21):** the extended grep passes with
    image extensions legal only under `extracted/media/**`; audio/video
    extensions still zero hits anywhere; guard runs green on a tree
    that includes a media export.
-10. **Naming + provenance:** every emitted filename conforms to §4
+10. **Commit surface:** on a built tree,
+    `git status --porcelain -- extracted/media/` lists exactly
+    `extracted/media/MEDIA-EXPORT.md` and nothing else (binaries AND
+    provenance artifacts ignored by the standing `extracted/**` rule —
+    no `.gitignore` change made or required); `MEDIA-EXPORT.md` carries
+    the self-sufficiency payload (schemas + counts + hash summary per
+    §4 Ownership).
+11. **Naming + provenance:** every emitted filename conforms to §4
     (subObjectName-keyed; collision suffix signed pathId; empty-sub
     address-basename with `namedBy` stamped); `buildId` on 100% of
     manifest/index/ledger rows; `contentAxis` ∈ the piece-1 enum on
     every manifest row; encoder pins stamped in the run section.
-11. **Exit codes:** the §3 EC table holds on injected failures (hostless
-    lane: forced encode exception → 1; forced missing-page fixture → 1;
-    C: temp root → 3; ledger-only absences → 2).
+12. **Exit codes:** the EC table holds on injected failures (hostless
+    unit lane: forced encode exception → 1; forced missing-page fixture
+    → 1; forced crosscheck perturbation → 1; C: temp root → 3;
+    output-floor breach → 3; ledger absences incl. `uncategorized-*`
+    escapes → 2).
+
+### EC — Exit-code mapping (pinned)
+
+| Code | Conditions |
+|---|---|
+| `0` | E1+E2+E4+E6 complete; `_missing_icons.jsonl` AND `_pptr_residue.jsonl` empty; crosscheck 100% |
+| `2` | completed-with-ledger: either ledger non-empty with every row inside its declared enum (EXPECTED steady state while M16 stands — the 7 DLC3/stale names guarantee exit 2 today), or rows carrying the explicit `uncategorized-*` escape values, each accompanied by a `DRIFT:` line |
+| `1` | any MECHANISM failure, loud and named: WebP/PNG encode exception on valid pixels; missing atlas page (referenced sprite, no locatable page via the pairing rule); rect-out-of-bounds after pinned rounding; pairing match failure on a referenced sprite; cross-check lane verdict `pixelMatchRate < 1.0` OR `maxDelta != 0`; manifest/file-count mismatch; hash mismatch on rewrite; scope-ceiling breach (AC7); schema violation in any emitted artifact |
+| `3` | environment/gate refusal: missing game dir or missing upstream artifact (with the game dir expected/resolving); temp root resolves to C:; free-space floor unmet on either leg; `features.check('webp')` false at preflight (AVIF stays NOT-NOW — no plugin install inside the stage) |
 
 ## 6. Explicit non-goals (later pieces own these)
 
@@ -478,8 +639,11 @@ env: pillowVersion / webpFeatureVersion / fallbackVersionUsedBundles
 - Course-icon WIRING (beyond the E5 report) — a relink-piece revision
   once the carrier is proven; unlockable-art routing (352 rows without
   non-empty refs) likewise.
-- Slug generation/rename execution — the pure rename index is authored
-  when queue #55 lands; this piece only leaves `namedBy` breadcrumbs.
+- Slug generation/rename execution — a pure rename index is authored
+  by a later owner-routed slug pass (routing TBD); this piece only
+  leaves `namedBy` breadcrumbs.
+- Git plumbing of any kind — commit policy is settled (§4 Ownership):
+  no `.gitignore` edits, no negation rules, no new tracked paths.
 - `PROOF.md` reconciliation, VALIDATION-REPORT derivation, RELATIONS.md
   content.
 - Acquiring DLC 2195430 (QUESTION-QUEUE #3): the 6 DLC3 absences stay
@@ -491,9 +655,9 @@ env: pillowVersion / webpFeatureVersion / fallbackVersionUsedBundles
 
 | Question | Resolution route |
 |---|---|
-| Q1 — Commit policy for `extracted/media/web/**` binaries. Pinned here: gitignored-local (DD matrixfix precedent; AGENTS rule 5 bans client-derived binaries in git; committed layer = manifests/ledgers/index/rollup). Owner may prefer committing ~8–25 MiB of webp for reproducible deploys | Owner confirms at review; reversal is a `.gitignore` edit, cheap |
+| Q1 — Commit policy: **SETTLED** (orchestrator pre-ruling 2026-08-26): binaries + provenance artifacts gitignored-local; tracked layer = `MEDIA-EXPORT.md` only; no `.gitignore` edit anywhere. Reversal, if ever wanted, is an owner decision = `.gitignore` edit + re-seat — not a pending confirmation | Closed; encoded §4 Ownership + AC10 |
 | Q2 — piece-1 carve-out-guard amendment (§4, M21): one-line Revision note + suite guard change live in piece-01's file/suite, outside this piece's write scope | Documentator/orchestrator seat lands piece-01 Revision alongside this piece (piece-02 Rev-7 precedent) |
-| Q3 — Legacy script name `stage7_locale_proof.py` (piece-07 draft) vs canonical registry locale-proof=9. Cosmetic; this piece claims 11 regardless | Orchestrator rules whether older specs renumber on their next revision |
+| Q3 — Legacy script name `stage7_locale_proof.py` (piece-07 draft) vs canonical registry locale-proof=9. Verified cosmetic: no such script exists on disk today; collision only if the unbuilt draft ships unrenamed (would clash with piece-03's canonical `stage7_maps.py`) | Orchestrator rules whether the piece-07 draft renumbers at its next revision |
 | Q4 — E3 timing: pinned flag-off in v1 (scope ladder: entity icons first). When the site wants UI chrome, flipping `--include-ui-chrome` on is a run-parameter change, not a code change | Owner flips when wanted; no blocker |
 | Q5 — E5 findings → who owns the eventual course-icon wiring | Routed: relink-piece revision consuming `course-icon-carrier-report.json`; orchestrator seats it |
 | Q6 — `UI_InGame_T_Icon_Item_Teamsports_Cheeseball` stale-name row (unused BASE event config targeting an installed atlas): candidate residue note for the stub/relink owner | Routed with E5/Q5; the media side keeps it ledgered `stale-name` |
@@ -504,7 +668,9 @@ env: pillowVersion / webpFeatureVersion / fallbackVersionUsedBundles
 NEVER real game binaries, NEVER binary Reads into context):**
 
 - S0: temp-root resolver precedence chain; C:-refusal branch (exit 3,
-  remediation text); free-space floor checks over monkeypatched statfs.
+  TEMP-lever remediation text) and output-floor branch (exit 3,
+  OUTPUT-lever text naming `TPC_EXTRACTED_ROOT`) over monkeypatched
+  statfs; free-space floors checked and printed.
 - Rect grammar: parser over synthetic `textureRect` dicts — integral,
   fractional (337.93×509.97 shape), zero-size; rounding rule
   (half-away-from-zero, NOT banker's — assert `0.5` and `2.5` cases);
@@ -512,30 +678,47 @@ NEVER real game binaries, NEVER binary Reads into context):**
   page heights; post-rounding bounds checker (in/out boundary rows).
 - Pairing matcher: synthetic atlas with `m_RenderDataMap` DELIBERATELY
   mis-ordered vs `m_PackedSpriteNamesToIndex` (the M9 trap) — size-match
-  resolves, index-alignment provably fails; duplicate-size ambiguity →
-  deterministic tiebreak + counter; no-match → exit-1 condition.
+  resolves, index-alignment provably fails; **duplicate-size fixture
+  asserting the PINNED tiebreak order** (multi-candidate → home-bundle
+  preference → `(pagePathId, entryIndex)` ASC first-wins) with
+  `ambiguousPairings` incremented; no-match → exit-1 condition.
 - Crop compositor: numpy-array "pages" + rounded rects → expected
   subarrays byte-equal; pass-through detection (rect covers texture).
 - Naming: subObjectName keying; signed-pathId collision suffix
   (negative id fixture); empty-sub address-basename ladder; `namedBy`
   stamping.
-- Manifest/hash tooling: row-schema validator (exact key sets); sha256
-  recompute; bijection assert; `hashes.sha256` format + sort; sorted-
-  JSON/LF discipline on every text artifact.
-- Ledger validators: `_missing_icons` reasons enum (incl. the 7-name
-  seed fixture); `_pptr_residue` 122-basis rule with `slotClass` split
-  on a synthetic 26-row mix (24 external + 2 same-file);
-  `_skipped_classes` 138/9/29 seeds.
-- Cross-check comparator: two canned byte buffers identical → rate 1.0;
-  one-pixel perturbation → rate < 1.0 and exit-1 mapping; sample
-  composer honors the pinned composition quotas deterministically.
-- Guards: 256/512 MiB ceilings; bundle-set containment; flag-gating
-  (E3/E5 emit nothing when off); exit-code table (EC) end-to-end on
-  injected failures; carve-out-guard amendment green on a media-bearing
-  tree.
-- Runner: `--list` ordering; `--only media` isolation; prepared-tree
-  upstream set; interrupted-run convergence (kill mid-encode, rerun,
-  hash-equal final tree); stamp invalidation on script-hash change.
+- Manifest/hash tooling: row-schema validator (exact key sets incl.
+  `chainBreak` on index rows); sha256 recompute; bijection assert;
+  `hashes.sha256` format + sort; sorted-JSON/LF discipline on every
+  text artifact; `MEDIA-EXPORT.md` generator determinism (two builds
+  byte-equal) + self-sufficiency payload present (schemas + counts +
+  hash-summary sections).
+- Ledger validators: `_missing_icons` FULL reason enum (incl. the four
+  ledgered-skip values and the `uncategorized-reason` escape → exit-2
+  + DRIFT assertion, never exit 1); `_pptr_residue` E6 scan over a
+  synthetic nine-kind stub mix — `icon`-substring admission,
+  null-slot skip counting, `slotClass` derivation (fileId≠0 ⇒
+  external), `basis:"122-basis"` literal, `targetResolution` enum
+  membership, escape-value routing; `_skipped_classes` 138/9/29 seeds.
+- Join predicate: name-presence resolution with `chainBreak`
+  classification (guid/address/container-break fixtures) proving chain
+  breaks are evidence-only (row stays `resolved:true` when the name
+  hits).
+- Cross-check comparator: two canned RGBA8 buffers identical → rate
+  1.0; one-pixel perturbation → rate < 1.0 AND exit-1 mapping; the
+  pinned conversion path exercised (CLI-side PIL `convert("RGBA")`
+  simulated on a fixture buffer); sample composer honors ALL
+  composition quotas deterministically (incl. ≥3 ambiguous-tiebreak).
+- Guards: 256/512 MiB ceilings; `source.bundle` ∪ `source.pageBundle`
+  containment; flag-gating (E3/E5 emit nothing when off); exit-code
+  table (EC) end-to-end on injected failures; carve-out-guard amendment
+  green on a media-bearing tree; commit-surface check (porcelain lists
+  only `MEDIA-EXPORT.md`).
+- Runner: `--list` ordering; `--only media` isolation in client mode;
+  **wholesale auto-SKIP when no game dir resolves** (asserted: no
+  partial outputs, skip stamped); prepared-tree upstream set;
+  interrupted-run convergence (kill mid-encode, rerun, hash-equal final
+  tree); stamp invalidation on script-hash change.
 
 **Client-gated integration (auto-SKIP without `TPC_GAME_DIR`/default
 install):**
@@ -544,31 +727,102 @@ install):**
   names), M5 per-kind cells, M6 split reported fresh, M7 area recomputes
   within tolerance of 108,445,749 px, M8 counters populated.
 - E4 on real bytes: ≥20-sample cross-check at `pixelMatchRate == 1.0`,
-  `maxDelta == 0`, both probe anchors present; the BC7 page decodes
-  through the shared path; fallback-version usage recorded > 0.
+  `maxDelta == 0`, both probe anchors present, ≥3 ambiguous-tiebreak
+  samples drawn from real collisions; the BC7 page decodes through the
+  shared path; fallback-version usage recorded > 0.
 - Byte-stability: `--only media` double-run hash-equal on the real tree
-  (web/ + text artifacts).
+  (web/ + enumerated text set).
 - Ledger reality: the 7-name absence set verbatim; `_pptr_residue`
-  reconciles to the fresh 122-basis scan (`DRIFT:` on movement);
-  `index.jsonl` covers every walked ref.
+  reconciles to the fresh E6 scan (122-basis seed; `DRIFT:` on
+  movement); `index.jsonl` covers every walked ref.
 
 ---
 
-## Revision 1 (registration)
+## Revision history
+
+### Revision 2 (reviewer-piece06-spec-r1 round — all findings applied)
+
+Grounded in [`../reviews/reviewer-piece06-spec-r1.mdx`](../reviews/reviewer-piece06-spec-r1.mdx)
+(FIX-REQUIRED: 0 CRITICAL / 4 MAJOR / 7 MINOR) + the orchestrator
+pre-ruling settling F3's disposition. Changes in finding order:
+
+1. **F1:** new §3 **E6** subsection operationalizes the 122-basis
+   residue scan — population (nine kinds × ALL fields, E1 walk minus
+   the type filter), pinned case-insensitive `icon`-substring
+   vocabulary with the rule-canonical / number-follows-rule seed policy
+   (122 on 20226581), admission rule, frozen
+   `slotClass`/`basis`/`targetResolution` enums (verdict vocabulary
+   reused from piece-02 §R3 + its address termination), six E6
+   run-section counters, and the COMPLETE `_missing_icons` reason enum
+   incl. the four ledgered-skip values (`editor-only-fallback` /
+   `visuals-prefab-target` / `mesh-list-target` /
+   `level-config-target`); unknown values route to `uncategorized-*`
+   escapes at exit 2 + `DRIFT:`, never exit 1 (EC exit-2 row rewritten).
+2. **F2:** E4(1) pins the duplicate-size tiebreak as CONTRACT —
+   size-filtered candidates → home-bundle preference →
+   `(pagePathId ASC, entryIndex ASC)` first-wins — with
+   `ambiguousPairings` counter and chosen-page stamping on manifest
+   rows; E4(3) adds the **≥3 ambiguous-tiebreak samples** composition
+   quota; §8's duplicate-size fixture asserts the pinned order.
+3. **F3:** RESOLVED BY PRE-RULING, superseding the reviewer's negation
+   fix shape: NO `.gitignore` edit anywhere; the whole media tree stays
+   gitignored-local via standing `extracted/**`; TRACKED layer =
+   `extracted/media/MEDIA-EXPORT.md` only (existing `.md` carve-out),
+   upgraded to self-sufficiency duty (per-run schemas + counts + hash
+   summaries); new AC10 porcelain check; §6 gains the no-git-plumbing
+   non-goal; Revision 1's web/** commission deleted.
+4. **F4:** §3 pins the HOSTLESS END-STATE — `media` is client-gated
+   WHOLESALE (auto-SKIP without a game dir; exit 3 reserved for
+   missing artifacts when the dir resolves); hostless proof = §8 unit
+   validators + the 7-name seed-fixture black-box driving
+   `_missing_icons.jsonl`/`index.jsonl` with zero bundle opens;
+   mirrored in AC1 and the runner tests.
+5. **F5:** M11 serialized total 209,500,704 → **209,500,708 B**;
+   M20's 99.59% reattached to the whole-universe reading
+   (2,676/2,687) with the beyond-stub slice stated separately
+   (525/529 = 99.24%).
+6. **F6:** the "six text artifacts" miscount killed everywhere — AC5
+   and §4 enumerate the set (seven always-on + flag-gated carrier
+   report + `MEDIA-EXPORT.md`, all included in the byte-stability
+   comparison).
+7. **F7:** crosscheck mismatch (`pixelMatchRate < 1.0` OR
+   `maxDelta != 0`) added to the EC exit-1 row; comparator conversion
+   path pinned (single PIL `convert("RGBA")`, elementwise RGBA8, no
+   premultiplied/lossy intermediates; divergence ⇒ exit-1
+   investigation with diagnostics written to the temp root).
+8. **F8:** all four dead `question-queue #55` citations replaced with
+   "a later owner-routed slug pass (routing TBD)" (header, §4 naming,
+   §6 non-goals, Rev-1 note); QUESTION-QUEUE #3's real DLC citation
+   kept untouched.
+9. **F9:** alpha-roundtrip tolerance PINNED (≤ 1/255 maximum per-pixel
+   absolute alpha delta post-roundtrip); E5 run-section keys added
+   (`courseRowsWalked / qualificationChainHits / conventionYield /
+   pptrPopulated / reportPath`); AC7 rewritten against the real row
+   keys (`source.bundle` ∪ `source.pageBundle`).
+10. **F10:** Q1 rewritten SETTLED-per-pre-ruling (confirmation posture
+    removed); S0 refusal text names BOTH legs' levers
+    (`TPC_MEDIA_TMP`/`TPC_TEMP_ROOT` for temp;
+    `TPC_EXTRACTED_ROOT`/free-C: for output), tested per-branch in §8;
+    M18 notes the output leg is equally likely to trip first on this
+    host.
+11. **F11:** E1 pins the resolution predicate — `resolved:true` ⟺
+    catalogue Sprite-row name presence; chain steps recorded as
+    `chainBreak` evidence on `index.jsonl` rows, never gates (AC2
+    stays byte-exact under future drift).
+
+### Revision 1 (registration)
 
 Spec registered 2026-08-26 from scout-report-piece-06 revision 2
 (P1–P8 applied) + verifyA/verifyB PASS-WITH-CORRECTIONS verdicts, all
-corrections already folded into the cited scout file. Ground truth for
-every number: §2 M1–M21. Orchestrator pre-rulings enforced: stage index
-11; D:/A:-only decode scratch with hard C: refusal (S0); scope ladder
-entity-icons → UI chrome → never corpus-wide; WebP q80 + PNG fallback,
-AVIF NOT-NOW; `subObjectName` naming with slugs deferred to the #55
-rename index. Documentator recommendations pinned in-place: canonical
-PPtr-residue count rule = broader 122-basis (M14); course-icon carrier
-= E5 report-only optional, not a full sub-pass and not a silent
-non-goal (§3 E5). Routed outward: piece-1 carve-out-guard Revision
-note (Q2), binary commit policy (Q1), legacy stage-numbering cosmetics
-(Q3). Nothing in this revision blocks the build pipeline: the default
-run (E1+E2+E4) is fully specified from measured facts.
+corrections folded into the cited scout file. Ground truth: §2 M1–M21.
+Orchestrator pre-rulings enforced: stage index 11; D:/A:-only decode
+scratch with hard C: refusal (S0); scope ladder entity-icons → UI
+chrome → never corpus-wide; WebP q80 + PNG fallback, AVIF NOT-NOW;
+`subObjectName` naming with slugs deferred to a later owner-routed
+pass. Documentator recommendations pinned: canonical PPtr-residue
+count rule = broader 122-basis (M14, operationalized in Rev 2);
+course-icon carrier = E5 report-only optional. Default run
+(E1+E2+E4+E6) fully specified from measured facts; nothing blocks the
+pipeline.
 
 §END
