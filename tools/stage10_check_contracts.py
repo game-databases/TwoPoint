@@ -646,8 +646,9 @@ def vs8_report_shapes(ctx: Ctx) -> Outcome:
                           cov,
                           ["keysTotal", "distinctBundlesReferenced",
                            "bundlesUnreferenced", "danglingDependencyKeys",
-                           "outOfRosterFileReferences"], set(),
-                          "coverage field list")
+                           "outOfRosterFileReferences"], {CU_ADDITIVE_KEY},
+                          "coverage field list (+ counterUnits after "
+                          "RED-3)")
     if r:
         return r
     snap = ctx._load_json("addressables/settings.snapshot.json") or {}
@@ -729,8 +730,23 @@ def vs9_relation_ledger_rowshapes(ctx: Ctx) -> Outcome:
                                 "declared vocabulary / discriminator")
         return None
 
-    for rel, spec in specs.items():
-        r = check(rel, spec["required"], set(spec.get("optional", [])),
+    # Pins-slice consumption contract: an entry locates its file by its
+    # declared `path` when present, else its KEY is the extract-root-relative
+    # path; the rowshape it enforces is spelled under `required` or `keyset`
+    # (both generated spellings occur across the layer's slices). Either
+    # vocabulary yields the SAME checks over the SAME files.
+    pending_ledger = "relinks/_uncontained_addresses.jsonl"
+    for key, spec in specs.items():
+        rel = str(spec.get("path") or key)
+        if rel == pending_ledger or Path(rel).name == \
+                Path(pending_ledger).name:
+            continue  # RED-1-pending ledger: shape pin activates at the tail
+        required = spec.get("required") or spec.get("keyset")
+        if not required:
+            return fail(ctx, "V-S9", f"pins.families.relations[{key}]",
+                        "declared rowshape under required|keyset", "absent",
+                        "malformed pins slice")
+        r = check(rel, list(required), set(spec.get("optional", [])),
                   spec.get("predicate") and _make_predicate(spec["predicate"]))
         if r:
             return r
@@ -913,11 +929,31 @@ def vs11_enum_domains(ctx: Ctx) -> Outcome:
             add("catalog.kind", k)
 
     failures: list[str] = []
+    grown: list[str] = []
     for family, values in sorted(occ.items()):
-        domain = set(declared_all.get(family, []))
+        domain = list(declared_all.get(family, []))
         rendered_domain = {json.dumps(v, ensure_ascii=False, sort_keys=True)
                            for v in domain}
-        off = sorted(values - rendered_domain)
+        # Templated arms ("name-convention:<rule>") grow by PREFIX: an
+        # instance of a declared template is arm growth (INFO below), never
+        # an off-vocabulary violation; anything outside every declared arm
+        # still FAILS.
+        templates = [t.split("<", 1)[0] for t in domain
+                     if isinstance(t, str) and t.endswith(">") and "<" in t]
+        off = []
+        for vj in sorted(values):
+            if vj in rendered_domain:
+                continue
+            try:
+                raw = json.loads(vj)
+            except ValueError:
+                raw = None
+            if any(isinstance(raw, str) and raw.startswith(p)
+                   for p in templates):
+                grown.append(f"{family}: grew into templated arm "
+                             f"{raw!r} — update pins.coldArms")
+                continue
+            off.append(vj)
         if off:
             failures.append(f"{family}: off-vocabulary {off[:3]}")
     if failures:
@@ -948,6 +984,8 @@ def vs11_enum_domains(ctx: Ctx) -> Outcome:
                      f"{len(occ)} enum families within declared domains")
     for text in infos:
         out.info("V-S11", text)
+    for text in grown:
+        out.info("V-S11", f"arm growth: {text}")
     return out
 
 
@@ -1463,8 +1501,13 @@ def _computed_contributor_sizes(ctx: Ctx) -> dict[str, int]:
 
 
 def vi9_ownership_exactly_one_writer(ctx: Ctx) -> Outcome:
+    # The swept writer universe is whatever pins declares (default "tools"):
+    # fixture worlds sweep a dedicated miniature directory the runner never
+    # copies over; the pack sweeps its own tools/ unchanged.
+    sweep_rel = ctx.pins["pathOwner"].get("toolsDir", "tools")
+    sweep_dir = ctx.pack_dir / sweep_rel
     sources: dict[str, str] = {}
-    for path in sorted(ctx.tools_dir.glob("stage*.py")):
+    for path in sorted(sweep_dir.glob("*.py")):
         try:
             sources[path.name] = path.read_text(encoding="utf-8")
         except OSError:
@@ -1832,12 +1875,14 @@ def vu2_duplicate_keys_printed_and_persisted(ctx: Ctx) -> Outcome:
     evidence = overlay.get("evidence") or {}
     persisted = evidence.get("duplicateKeysOverwritten")
     if not isinstance(persisted, dict) or \
-            "byLocale" not in persisted or "total" not in persisted:
+            "perLocale" not in persisted or "total" not in persisted:
         problems.append("base-overlay-report.evidence."
                         "duplicateKeysOverwritten (per-locale map + total) "
                         "not persisted")
     else:
-        by_locale = persisted["byLocale"]
+        # "per-locale map + total" (§6 item 3): the map rides under
+        # `perLocale` — the same spelling the client-gated suite leg reads.
+        by_locale = persisted["perLocale"]
         for label in tc.EMITTED_LOCALES:
             want = printed.get(label, {}).get("dup")
             got = by_locale.get(label)
@@ -1928,6 +1973,13 @@ def vl1_uncontained_address_ledger(ctx: Ctx) -> Outcome:
     if not addrs <= ledger_addrs:
         problems.append("some uncontained address lacks its ledger row")
     fam = ctx.pins["families"]["stage6"].get("uncontainedCarveOut", {})
+    if problems:
+        # substantive breaks outrank the build-scoped constant drift they
+        # incidentally cause (population/reason are the RED-1 contract)
+        return fail(ctx, "V-L1", ledger_rel,
+                    f"{fam.get('addresses')} rows covering "
+                    f"{fam.get('edgeRows')} edges, reason pinned",
+                    "; ".join(problems[:3]), "RED-1 green condition")
     if fam:
         if len(rows) != fam.get("addresses") or \
                 len(edges) != fam.get("edgeRows"):
@@ -1936,11 +1988,6 @@ def vl1_uncontained_address_ledger(ctx: Ctx) -> Outcome:
                                 f'rows={fam.get("addresses")} '
                                 f'edges={fam.get("edgeRows")}',
                                 f"rows={len(rows)} edges={len(edges)}")
-    if problems:
-        return fail(ctx, "V-L1", ledger_rel,
-                    f"{fam.get('addresses')} rows covering "
-                    f"{fam.get('edgeRows')} edges, reason pinned",
-                    "; ".join(problems[:3]), "RED-1 green condition")
     return ok(ctx, "V-L1", ledger_rel,
               f"{len(rows)} rows cover {len(edges)} edge rows over "
               f"{len(addrs)} addresses ({len(null_bundle)} null-bundle "
@@ -1952,8 +1999,35 @@ def vl2_ledger_sorts_and_shapes(ctx: Ctx) -> Outcome:
     if o:
         return o
     pin = ctx.pins["families"]["stage6"]["ledgers"]
+    # V-L2 owns the ledger sort legs (spec: "sorts per V-S13" applied to all
+    # ledgers), not just the enum/counter arithmetic
+    ledger_sorts = [
+        ("relinks/_unresolved_pptrs.jsonl",
+         lambda r: (str(r["srcKind"]), str(r["srcId"]), str(r["fieldPath"]),
+                    str(r["extPath"]), int(r["m_PathID"]))),
+        ("relinks/_dangling_guids.jsonl", lambda r: str(r["assetGuid"])),
+    ]
+    if ctx.has("relinks/_uncontained_addresses.jsonl"):
+        ledger_sorts.append(("relinks/_uncontained_addresses.jsonl",
+                             lambda r: str(r["address"])))
+    for rel, fn in ledger_sorts:
+        keys = [fn(r) for r in ctx.jlines(rel)]
+        if keys != sorted(keys):
+            return fail(ctx, "V-L2", rel,
+                        "lexicographic by pinned key", "unsorted",
+                        "ledger sort pin")
+    pptr_rows = ctx.jlines("relinks/_unresolved_pptrs.jsonl")
+    reason_vocab = set(ctx.pins["enums"]["pptrs.reason"])
+    off_vocab = sorted({r["reason"] for r in pptr_rows} - reason_vocab)
+    if off_vocab:
+        # a reason outside the declared 2-string domain is an enum
+        # violation (FAIL), never a mere constant drift
+        return fail(ctx, "V-L2", "relinks/_unresolved_pptrs.jsonl",
+                    f"reasons ⊆ {sorted(reason_vocab)}",
+                    f"off-vocabulary {off_vocab[:3]}",
+                    "declared 2-string domain")
     reasons: dict[str, int] = {}
-    for r in ctx.jlines("relinks/_unresolved_pptrs.jsonl"):
+    for r in pptr_rows:
         reasons[r["reason"]] = reasons.get(r["reason"], 0) + 1
     want_reasons = pin["pptrReasonCounts"]
     if reasons != want_reasons:
@@ -2008,6 +2082,23 @@ def vl3_registry_misses_exit2_contributor(ctx: Ctx) -> Outcome:
         return fail(ctx, "V-L3", "pins.exitCodeContributors.members",
                     "registry-misses inventoried as a §7 contributor",
                     "absent", "surfaced via locale_join_report.json")
+    section = ctx.last_run_section("relink")
+    line_present = False
+    spelled = False
+    if section is not None:
+        for line in section[0]:
+            if line.strip().startswith("- LEDGER-CONTRIBUTORS"):
+                line_present = True
+                if "registryMisses" in line:
+                    spelled = True
+    if line_present and int(join.get("registryMisses") or 0) > 0 \
+            and not spelled:
+        return fail(ctx, "V-L3", "EXTRACTION-LOG relink section",
+                    "registry-misses named among the LEDGER-CONTRIBUTORS",
+                    "absent from the contributor line",
+                    "surfaced via locale_join_report.json AND the "
+                    "contributor line (§7; watch item 1 gates on the line "
+                    "existing)")
     return ok(ctx, "V-L3", "relinks/locale_join_report.json",
               f'registryMisses={pin["registryMisses"]} counted as exit-2 '
               "contributor")
@@ -2353,6 +2444,17 @@ def vr8_guid_bridge_replay(ctx: Ctx) -> Outcome:
                     "assetGuid": guid,
                     **({"subObjectName": sub} if sub else {}),
                 })
+    if not refs:
+        # CLIENT-GATED lane (spec §14): the replay needs a ref universe to
+        # reproduce. A corpus whose stubs carry zero AssetGUID-bearing fields
+        # (hostless synthetic worlds) cannot exercise it — skip loudly, the
+        # same posture as V-R7's missing game dir, never a fake FAIL.
+        out = Outcome()
+        out.info("V-R8", "client-gated replay lane skipped hostless: stub "
+                         "fields carry zero AssetGUID references, so there "
+                         "is no ref universe to replay")
+        out.primary = Ev("PASS", "V-R8", "guid-bridge replay (hostless skip)")
+        return out
     catalog_keys = [
         {"key": g, "kind": "guid", "address": e.get("address"),
          "bundle": None}
@@ -2697,8 +2799,23 @@ def main(argv=None) -> int:
 
     dispatch = build_dispatch()
     outcomes: list[tuple[str, Outcome]] = []
+    crashed: set[str] = set()
     for vid in VALIDATOR_IDS:
-        outcomes.append((vid, dispatch[vid](ctx)))
+        try:
+            outcomes.append((vid, dispatch[vid](ctx)))
+        except Exception as exc:  # noqa: BLE001 - containment IS the contract
+            # One validator's exception fails THAT validator loudly with the
+            # standard failure payload; it must never abort the run (a
+            # traceback before the report would silence all 43 others).
+            crashed.add(vid)
+            o = Outcome()
+            o.primary = Ev(
+                "FAIL", vid,
+                f"internal-error expected=clean pass "
+                f"measured={type(exc).__name__}: {exc} "
+                "hint=validator raised — loud per-validator failure; the run "
+                "continues")
+            outcomes.append((vid, o))
     for vid, outcome in outcomes:
         if outcome.primary is not None:
             events.append(outcome.primary)
@@ -2711,7 +2828,9 @@ def main(argv=None) -> int:
     passed = failed = expected_red = stale_n = info_n = 0
     hard_fail = False
     for ev in events:
-        if ev.kind == "FAIL" and ev.vid in registry:
+        if ev.kind == "FAIL" and ev.vid in registry and ev.vid not in crashed:
+            # a crashed validator is NEVER masked as EXPECTED-RED — a crash
+            # is not the registered break, it is a defect of the validator
             entry = registry[ev.vid]
             ev.kind = "EXPECTED-RED"
             ev.body = (f"red-registry entry={entry.get('key')} "

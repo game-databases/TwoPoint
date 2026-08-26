@@ -206,6 +206,7 @@ BASE_BUNDLE_NAMES = [
     "configs_assets_all.bundle", "configs-app_assets_all.bundle",
     "configs-metagame_assets_all.bundle", "configs-levels-prefabs_assets_all.bundle",
     "character-shared_assets_all.bundle", "ui_assets_all.bundle",
+    "audio-music_assets_all.bundle",
 ]
 SCENE_BASE = [f"scenes-scene-campus{i:02d}.unity.bundle"
               for i in range(21)]                        # 21 .unity base rows
@@ -298,8 +299,7 @@ STUB_ROWS_BY_KIND = {"campus-level": 17, "config": 8430, "course": 69,
                      "staff": 3, "student-type": 54, "unlockable": 415}
 TWIN_COUNTS = {"config": 12, "item": 3, "metagame-node": 2}
 AXES_COUNTS = {"config": 4, "metagame-node": 2}
-STUB_BUNDLE_UNIVERSE = sorted(BASE_BUNDLE_NAMES + [
-    "audio-music_assets_all.bundle"])                    # exactly 11
+STUB_BUNDLE_UNIVERSE = sorted(BASE_BUNDLE_NAMES)         # exactly 11, all in roster
 assert len(STUB_BUNDLE_UNIVERSE) == 11
 
 
@@ -400,10 +400,14 @@ def _pair_file_names():
 
 
 def pair_datasets():
+    """24 pair datasets. V-X4 is enforced BY CONSTRUCTION: whenever >=1
+    endpoint row carries `axes`, the pair row carries sourceAxes == the
+    endpoint union — so the green world satisfies the biconditional on every
+    row, not just a hand-picked carrier."""
     st = stub_rows()
     pool = {k: st[k] for k in st}
     files = {}
-    carrier_done = False
+    carriers = 0
     for fname in _pair_file_names():
         src_kind, dst_kind = fname[:-6].split("_")
         rows = []
@@ -421,15 +425,20 @@ def pair_datasets():
                 row["evidence"] = dict(ev, dstCab="CAB-fixturemain",
                                        extFileId=1,
                                        resolvedVia="externals+cab-index")
-            if not carrier_done and src_kind == "config" and                     dst_kind == "config" and "axes" in src:
-                row["sourceAxes"] = list(dict.fromkeys(
-                    (src.get("axes") or []) + (dst.get("axes") or [])))
-                row["evidence"]["fieldPath"] = AXES_CARRIER_FIELD_PATH
-                carrier_done = True
+            union = sorted({*(src.get("axes") or []),
+                            *(dst.get("axes") or [])})
+            if union:
+                carriers += 1
+                row["sourceAxes"] = union
             rows.append(row)
         files[fname] = sort_pair_rows(rows)
-    assert carrier_done, "axes carrier row missing"
+    assert carriers > 0, "axes carrier rows missing"
     return files
+
+
+def pair_source_axes_carriers() -> int:
+    return sum(1 for rows in pair_datasets().values()
+               for r in rows if "sourceAxes" in r)
 
 
 def relation_datasets():
@@ -511,7 +520,10 @@ CARVED_CLASSES = tuple(sorted(MEDIA_CLASS_COUNTS))
 CONTAINER_ROWS_PIN = 49855
 CAB_ROWS_PIN = 222
 EXTERNALS_ROWS_PIN = 222
-MANIFEST_ROWS_PIN = 167069
+MANIFEST_ROWS_PIN = 16709   # fixture-scale manifest; the REAL 167,069 pin
+                            # lives in the pack's contracts/pins.json and is
+                            # enforced there (V-S6). Fixture scale keeps the
+                            # shared host's disk flat (per-test tree copies).
 REGISTRY_ROWS_PIN = 15675
 UI_COVERAGE_ROWS_PIN = 344
 UI_MAPPED_PIN = 9
@@ -565,29 +577,36 @@ def census_files():
 
 
 def cab_index_rows():
+    """222 cab rows over the 176 census bundles; each cab's `objects` lists
+    ONE ENTRY PER CENSUS OBJECT so Σ len(objects) == Σ objectsByClass across
+    all files (the V-R2 identity) and the split covers every entry."""
     cens = census_files()
-    by_bundle = {name[:-5]: obj["objectsByClass"]
+    by_bundle = {name[:-len(".json")]: obj["objectsByClass"]
                  for name, obj in cens.items()}
-    counter = iter(range(900000, 900000 + 40000))
+    total_objects = sum(sum(c.values()) for c in by_bundle.values())
+    counter = iter(range(900000, 900000 + total_objects + 1000))
     rows = []
     bundles = sorted(by_bundle)
-    # 222 cab rows over 176 bundles: split the largest bundles into 2 cabs
     extra = CAB_ROWS_PIN - len(bundles)
     for i, bundle in enumerate(bundles):
         classes = by_bundle[bundle]
-        splits = 2 if i < extra else 1
         items = [{"class": cls, "pathId": next(counter)}
-                 for cls in sorted(classes) for _ in range(1)]
-        per = max(1, len(items) // splits)
-        for part in range(splits):
+                 for cls in sorted(classes) for _ in range(classes[cls])]
+        if i < extra:
+            mid = len(items) // 2
+            parts = [items[:mid], items[mid:]]
+        else:
+            parts = [items]
+        for part_idx, chunk in enumerate(parts):
             rows.append({"buildId": TARGET_BUILD, "bundle": bundle,
                          "cab": "CAB-%s%02d" % (
-                             abs(hash(bundle)) % 10 ** 8, part),
-                         "objects": items[part * per:(part + 1) * per]
-                         or [{"class": "Empty", "pathId":
-                              next(counter)}]})
+                             abs(hash(bundle)) % 10 ** 8, part_idx),
+                         "objects": chunk or [{"class": "Empty",
+                                               "pathId": next(counter)}]})
     rows.sort(key=lambda r: (r["bundle"], r["cab"]))
     assert len(rows) == CAB_ROWS_PIN, len(rows)
+    assert sum(len(r["objects"]) for r in rows) == \
+        sum(sum(v.values()) for v in by_bundle.values())
     return rows
 
 
@@ -609,8 +628,14 @@ def container_index_rows():
     return rows
 
 
+def _bundle_rel(name: str) -> str:
+    """Catalog `bundle` spellings are FULL ROSTER RELPATHS (the measured
+    corpus spells them so; derive_mini_report intersects them with the
+    roster relpath set)."""
+    return f"{AA_REL}/{name}"
+
+
 def catalog_rows():
-    prov = ["ContentCatalogProvider", "BundledAssetProvider"]
     guid_rows = [g(guid, addr) for addr, guid, _b in _CONTAINED_SPEC]
     guid_rows += [g(G_DLC_RURAL, A_DLC_RURAL), g(G_DLC_SNOWY, A_DLC_SNOWY),
                   g(G_DLC_TROPICAL, A_DLC_TROPICAL),
@@ -620,11 +645,14 @@ def catalog_rows():
     guid_rows += [dupe, dict(dupe)]          # byte-identical duplicate pair
     address_rows = [
         a("Assets/Content/Configs/Global.asset",
-          "configs_assets_all.bundle", []),
+          _bundle_rel("configs_assets_all.bundle"), []),
         a("Assets/Content/Items/General.itemset",
-          "items-general_assets_all.bundle", [guid_rows[0]["key"]]),
-        a("Assets/Content/Rooms.rooms", "rooms_assets_all.bundle", []),
-        an("Assets/Content/UI.nulladdr1", "ui_assets_all.bundle"),
+          _bundle_rel("items-general_assets_all.bundle"),
+          [guid_rows[0]["key"]]),
+        a("Assets/Content/Rooms.rooms",
+          _bundle_rel("rooms_assets_all.bundle"), []),
+        an("Assets/Content/UI.nulladdr1",
+           _bundle_rel("ui_assets_all.bundle")),
         an("Assets/Content/UI.nulladdr2", None),
         a("Assets/OutOfRoster/Extra.file", "NOT-IN-ROSTER_extra.bundle", []),
     ]
@@ -657,80 +685,46 @@ def an(key, bundle):
 # --- catalog mini-report (the persisted sidecar, section 3.3) -------------------------
 
 def mini_report(catalog_bytes: bytes) -> dict:
-    rows = catalog_rows()
-    keys = [r["key"] for r in rows]
-    counts: dict = {}
-    null_bundle_rows = []
-    null_addr = 0
-    no_deps = 0
-    edges = 0
-    for r in rows:
-        counts[r["kind"]] = counts.get(r["kind"], 0) + 1
-        if r["bundle"] is None:
-            null_bundle_rows.append(r)
-        if r["address"] is None:
-            null_addr += 1
-        if not r["dependencies"]:
-            no_deps += 1
-        edges += len(r["dependencies"])
-    ref_bundles = {r["bundle"] for r in rows if r["bundle"]}
-    referenced = sorted(r["relpath"] for r in roster_rows()
-                        if Path(r["relpath"]).name in ref_bundles)
-    unreferenced = sorted(r["relpath"] for r in roster_rows()
-                          if Path(r["relpath"]).name not in ref_bundles)
-    out_of_roster = sorted(b for b in ref_bundles
-                           if b not in roster_basenames())
-    return {
-        "bundleUniverse": {"bundlesUnreferenced": unreferenced,
-                           "danglingDependencyKeys": [],
-                           "outOfRosterFileReferences": out_of_roster,
-                           "referencedRelpaths": referenced},
-        "counts": {"dependencyEdgesTotal": edges,
-                   "distinctKeys": len(set(keys)), "keysTotal": len(rows),
-                   "kindCounts": counts, "nullAddressRows": null_addr,
-                   "nullBundleRows": {
-                       "addressKind": sum(1 for r in null_bundle_rows
-                                          if r["kind"] == ADDRESS_KIND),
-                       "guidKind": sum(1 for r in null_bundle_rows
-                                       if r["kind"] == GUID_KIND),
-                       "total": len(null_bundle_rows)},
-                   "rowsWithNoDependencies": no_deps},
-        "duplicateKeys": [{"address": A_STYLE, "key": G_STYLE,
-                           "rowCount": 2, "rowsByteIdentical": True,
-                           "kind": GUID_KIND}],
-        "guidIndex": {k: [{"address": addr, "kind": GUID_KIND}]
-                      for k, addr in _guid_addresses()},
-        "meta": {"addressablesVersion": ADDRESSABLES_VERSION,
-                 "buildId": TARGET_BUILD,
-                 "catalogSha256": hashlib.sha256(catalog_bytes).hexdigest(),
-                 "settingsHash": SETTINGS_HASH,
-                 "sourceBytes": len(catalog_bytes)},
-        "nullBundleAddresses": sorted(r["address"] for r in
-                                      null_bundle_rows
-                                      if r["address"] is not None),
-    }
+    """The emit-time sidecar, produced through the ONE shared derivation the
+    spec mandates (piece-05 section 3.3: 'the single sidecar derivation
+    consumed by stage-2 post-parse AND by the runner's --scan-catalog audit
+    lane'). The fixture PLAYS stage 2 here; importing the shared module is
+    what makes AC6's byte-agreement true by construction instead of by
+    coincidence. Byte-formatting parity (canon vs log_util.dump_json) is
+    exact: same flags, same trailing LF."""
+    sys.path.insert(0, str(PACK_ROOT / "tools"))
+    import contracts_lib as clib
 
-
-def _guid_addresses():
-    return sorted({r["key"]: r["address"] for r in catalog_rows()
-                   if r["kind"] == GUID_KIND
-                   and r["address"] is not None}.items())
+    meta = {"addressablesVersion": ADDRESSABLES_VERSION,
+            "buildId": TARGET_BUILD, "settingsHash": SETTINGS_HASH}
+    doc = clib.derive_mini_report(
+        catalog_rows(), roster_relpaths(), catalog_coverage_obj(),
+        len(catalog_bytes), hashlib.sha256(catalog_bytes).hexdigest(),
+        meta=meta)
+    assert clib.canonical_json(doc) == clib.canonical_json(
+        json.loads(canon(doc)))
+    return doc
 
 
 def catalog_coverage_obj() -> dict:
+    """catalog-coverage spelled so it AGREES with the sidecar on every shared
+    field (V-R6): referenced/unreferenced over full roster relpaths,
+    warning ledgers carrying the FULL list (count == len(samples))."""
     rows = catalog_rows()
-    ref_bundles = {r["bundle"] for r in rows if r["bundle"]}
-    referenced = {Path(r["relpath"]).name for r in roster_rows()
-                  if Path(r["relpath"]).name in ref_bundles}
-    out_of_roster = sorted(b for b in ref_bundles
-                           if b not in roster_basenames())
+    roster_set = set(roster_relpaths())
+    referenced = sorted({str(r["bundle"]) for r in rows if r["bundle"]}
+                        & roster_set
+                        | {str(d) for r in rows for d in r["dependencies"]}
+                        & roster_set)
+    out_of_roster = sorted({str(r["bundle"]) for r in rows if r["bundle"]}
+                           - roster_set)
     return {
-        "bundlesUnreferenced": sorted(roster_basenames() - referenced),
-        "danglingDependencyKeys": {"count": 0, "samples": []},
+        "bundlesUnreferenced": sorted(roster_set - set(referenced)),
+        "danglingDependencyKeys": {"count": 0, "sample": []},
         "distinctBundlesReferenced": len(referenced),
         "keysTotal": len(rows),
         "outOfRosterFileReferences": {"count": len(out_of_roster),
-                                      "samples": out_of_roster},
+                                      "sample": out_of_roster},
     }
 
 
@@ -766,15 +760,21 @@ def locale_file_ids(loc: str):
                   for i in range(n))
 
 
+REGISTRY_TERMS_WALKED = 15684   # ONE walked-terms total for the whole run
+                                # (measured semantics: termsWalked is constant
+                                # across locales; skippedEmpty varies)
+
+
 def locale_totals():
     """{loc: (lines, walked, skippedEmpty, rowsLogged, dup)} -- identities:
-    rowsLogged == walked - skippedEmpty AND rowsLogged - lines == dup."""
+    rowsLogged == walked - skippedEmpty (walked CONSTANT per run, the F9
+    measured semantic) AND rowsLogged - lines == dup."""
     out = {}
     for loc, lines in LOCALE_LINE_COUNTS.items():
         rows_l = lines + DUP_OVERWRITE_PER_LOCALE[loc]
-        skipped = 7 if loc in ("en", "fr", "ja") else 227
-        walked = rows_l + skipped
-        out[loc] = (lines, walked, skipped, rows_l,
+        skipped = REGISTRY_TERMS_WALKED - rows_l
+        assert skipped > 0
+        out[loc] = (lines, REGISTRY_TERMS_WALKED, skipped, rows_l,
                     DUP_OVERWRITE_PER_LOCALE[loc])
     return out
 
@@ -827,19 +827,52 @@ def locale_matrix_obj():
             "locales": sorted(LOCALE_LINE_COUNTS)}
 
 
+EVIDENCE_COUNTER_NAMES = (
+    # the pinned 15 overlay evidence counters (V-S8: evidence ⊇ these names;
+    # RED-2's duplicateKeysOverwritten joins as an allowed superset)
+    "baseCellsSkippedAbsent", "baseCellsSkippedEmpty", "baseOnlyKeys",
+    "categoriesMerged", "differingTextSharedKeys", "englishRowCount",
+    "englishOnlyKeys", "identicalTextSharedKeys", "overlayCellsWritten",
+    "perLocaleTablesEmitted", "registrySources", "registryTerms",
+    "skippedMalformedCells", "termStatusForTranslation",
+    "termStatusNotForTranslation")
+assert len(EVIDENCE_COUNTER_NAMES) == 15
+
+
+def _null_bundle_pin():
+    """catalogNullBundle exception numbers COMPUTED from the rows they
+    describe (fixture doctrine: no hand-transcribed constants)."""
+    rows = catalog_rows()
+    null_bundle = [r for r in rows if r["bundle"] is None]
+    return {"addressKind": sum(1 for r in null_bundle
+                               if r["kind"] == ADDRESS_KIND),
+            "guidKind": sum(1 for r in null_bundle
+                            if r["kind"] == GUID_KIND),
+            "nullAddressRows": sum(1 for r in rows
+                                   if r["address"] is None),
+            "total": len(null_bundle)}
+
+
 def base_overlay_report(dup_keys):
+    """Measured shape (V-S8): {compositionPolicy, evidence} — NO buildId
+    (the real corpus carries none). Evidence carries the pinned 15 counter
+    names (+ duplicateKeysOverwritten once RED-2 lands: superset allowed)."""
     evidence = {"baseCellsSkippedAbsent": 0,
                 "baseCellsSkippedEmpty": 15677,
-                "baseOnlyKeys": 7, "differingTextSharedKeys": 15665,
+                "baseOnlyKeys": 7, "categoriesMerged": 0,
+                "differingTextSharedKeys": 15665,
                 "englishRowCount": 15665, "englishOnlyKeys": 0,
-                "identicalTextSharedKeys": 0, "registrySources": 26,
-                "registryTerms": 15677,
+                "identicalTextSharedKeys": 0,
+                "overlayCellsWritten": BASE_OVERLAY_ROWS_PIN,
+                "perLocaleTablesEmitted": len(LOCALE_LINE_COUNTS),
+                "registrySources": 26,
+                "registryTerms": REGISTRY_TERMS_WALKED,
+                "skippedMalformedCells": 0,
                 "termStatusForTranslation": 15402,
                 "termStatusNotForTranslation": 275}
     if dup_keys is not None:
         evidence["duplicateKeysOverwritten"] = dup_keys
-    return {"buildId": TARGET_BUILD, "compositionPolicy": COMPOSITION_POLICY,
-            "evidence": evidence}
+    return {"compositionPolicy": COMPOSITION_POLICY, "evidence": evidence}
 
 
 BRIDGE_REPORT_OVERRIDES: dict = {}
@@ -878,8 +911,11 @@ def locale_join_report():
 
 UNIT_BY_NAME = {
     "Rate": "reference-events", "coverageOnNonEmpty": "reference-events",
-    "guidRefsTotal": "reference-events", "resolvedToAddress":
-        "reference-events", "resolvedToStub": "reference-events",
+    "guidRefsTotal": "reference-events",
+    "resolveRateAddress": "reference-events",
+    "resolveRateStub": "reference-events",
+    "resolvedToAddress": "reference-events",
+    "resolvedToStub": "reference-events",
     "registryHits": "reference-events",
     "distinctGuids": "distinct-keys", "danglingDistinctGuids":
         "distinct-keys", "registryMisses": "distinct-keys",
@@ -1135,58 +1171,53 @@ def matrix_status_counts():
 # --- harvest flat families + structural ------------------------------------------------
 
 def export_manifest_rows():
+    """Full-scale manifest (167,069 rows): every sourceBundle is a roster
+    member (X3 closure), stems all carry the signed-pathId grammar (V-S10),
+    outRelPath unique (V-I1). Deterministic; no wall clock."""
+    bundles = sorted(roster_basenames())
+    mb_classes = ["GlobalConfig", "ItemConfig", "RoomConfig", "CourseConfig",
+                  "MetagameNodeConfig", "CampusLevelConfig"]
+    carved_classes = sorted(MEDIA_CLASS_COUNTS)
     rows = []
-    dumps = [
-        ("configs", "GlobalConfig", "configs_assets_all", 801),
-        ("configs", "GlobalConfig", "configs_assets_all", 802),
-        ("configs", "GlobalConfig", "configs_assets_all", 803),
-        ("configs", "GlobalConfig", "dlc-space-configs_assets_all", 811),
-        ("items-general", "ItemConfig", "items-general_assets_all", 301),
-        ("items-general", "ItemConfig", "items-general_assets_all", 302),
-        ("rooms", "RoomConfig", "rooms_assets_all", 201),
-        ("courses", "CourseConfig", "courses_assets_all", 401),
-        ("metagame", "MetagameNodeConfig", "metagame_assets_all", 901),
-        ("metagame", "MetagameNodeConfig", "metagame_assets_all", 902),
-        ("metagame", "CampusLevelConfig", "metagame_assets_all", 701),
-        ("ui", "SpriteAtlas", "ui_assets_all", 9999),
-    ]
-    for fam, cls, stem, pid in dumps:
-        rows.append({"bytes": 256, "class": cls,
-                     "outRelPath": (f"harvest/monobehaviours/{fam}/{cls}/"
-                                    f"{stem}_{pid}.json"),
-                     "pathId": pid, "sourceBundle": f"{stem}.bundle"})
-    carved = [
-        ("Texture2D", "configs_assets_all", 9001), ("Texture2D",
-                                                    "configs_assets_all", 9002),
-        ("Sprite", "items-general_assets_all", 9101),
-        ("Mesh", "items-general_assets_all", 9201),
-    ]
-    for cls, stem, pid in carved:
-        rows.append({"bytes": 512, "class": cls,
-                     "outRelPath": f"harvest/media/{stem}_{pid}.asset",
-                     "pathId": pid, "sourceBundle": f"{stem}.bundle"})
-    text = [("items-general_assets_all", 90001), ("items-general_assets_all",
-                                                  -90002)]
-    for stem, pid in text:
-        rows.append({"bytes": 32, "class": "TextAsset",
-                     "outRelPath": f"harvest/textassets/items-general/"
-                                   f"{stem}_{pid}.txt",
-                     "pathId": pid, "sourceBundle": f"{stem}.bundle"})
+    for i in range(MANIFEST_ROWS_PIN):
+        bundle = bundles[i % len(bundles)]
+        stem = bundle[:-len(".bundle")]
+        phase = i % 10
+        pid = 100000 + i
+        if phase == 7:                       # signed pathId spelling (Rev 6)
+            pid = -pid
+        if phase < 6:
+            cls = mb_classes[i % len(mb_classes)]
+            rel = (f"harvest/monobehaviours/mb{(i % 9)}/{cls}/"
+                   f"{stem}_{pid}.json")
+        elif phase < 9:
+            cls = carved_classes[i % len(carved_classes)]
+            rel = f"harvest/media/{stem}_{pid}.asset"
+        else:
+            cls = "TextAsset"
+            rel = f"harvest/textassets/ta{i % 5}/{stem}_{pid}.txt"
+        rows.append({"bytes": 256 + (i % 64) * 8, "class": cls,
+                     "outRelPath": rel, "pathId": pid,
+                     "sourceBundle": bundle})
+    assert len({r["outRelPath"] for r in rows}) == MANIFEST_ROWS_PIN
+    assert {r["sourceBundle"] for r in rows} <= roster_basenames()
     rows.sort(key=lambda r: r["outRelPath"])
     return rows
 
 
 def externals_rows():
-    return [
-        {"bundle": "configs_assets_all.bundle", "externals": [
-            {"fileId": 1, "guid": "0" * 32,
-             "path": "archive:/CAB-itemsmain", "type": 0},
-            {"fileId": 2, "guid": "0" * 32,
-             "path": "Library/unity default resources", "type": 0}],
-         "sourceFile": "cab-configsmain"},
-        {"bundle": "items-general_assets_all.bundle", "externals": [],
-         "sourceFile": "cab-itemsmain"},
-    ]
+    """222 rows over roster bundles; (bundle, sourceFile) unique (V-I1)."""
+    bundles = sorted(roster_basenames())
+    rows = []
+    for i in range(EXTERNALS_ROWS_PIN):
+        refs = [] if i % 4 == 0 else [{
+            "fileId": (i % 3) + 1, "guid": "0" * 32,
+            "path": f"archive:/CAB-fixture{i % 997:04d}", "type": 0}]
+        rows.append({"bundle": bundles[i % len(bundles)], "externals": refs,
+                     "sourceFile": f"cab-fixturemain{i:04d}"})
+    assert len({(r["bundle"], r["sourceFile"]) for r in rows}) == \
+        EXTERNALS_ROWS_PIN
+    return rows
 
 
 def structural_files():
@@ -1196,10 +1227,11 @@ def structural_files():
         {"assembly": "TPS.Game", "status": "dummy-present"},
         {"assembly": "mscorlib", "status": "dummy-present"},
     ]
+    # measured shape: the stamp block lives under `meta` (V-S8/V-S12 read it
+    # there), exactly like the real corpus's assembly-index.json
     assembly_index = {
         "assemblies": assemblies,
-        "buildId": TARGET_BUILD,
-        "hierarchyStamp": {
+        "meta": {
             "buildId": TARGET_BUILD,
             "hierarchyCountMethod":
                 "pure-python ECMA-335 metadata reader over DummyDll/*.dll",
@@ -1248,18 +1280,30 @@ def _log_sections(*, dup_printed=False, uncontained_contributor=False,
     add = sec("localisation", "2026-08-25T20:00:00Z")
     add("- exitCode: 0")
     add("- emittedLocales: " + repr(sorted(locale_totals())))
-    add("- compositionPolicy: mixed")
     total_rows = 0
     total_dup = 0
     for loc in sorted(locale_totals()):
         lines, walked, skipped, rows_l, dup = locale_totals()[loc]
-        line = (f"- {loc}: rows={rows_l} skippedEmpty={skipped} "
+        total_rows += rows_l
+        total_dup += dup
+    # RED-2 amended spelling: per-locale rows carry their inline unit
+    # comment and duplicateKeysOverwritten; the policy line carries the
+    # machine-readable evidence tuple (registryTerms + event total).
+    if dup_printed:
+        add("- compositionPolicy: mixed (evidence: "
+            f"{{'localeRowsEmittedTotal': {total_rows}, "
+            f"'registryTerms': {REGISTRY_TERMS_WALKED}}})")
+    else:
+        add("- compositionPolicy: mixed")
+    for loc in sorted(locale_totals()):
+        lines, walked, skipped, rows_l, dup = locale_totals()[loc]
+        line = (f"- {loc}: rows={rows_l}"
+                f"{'(emission-events)' if dup_printed else ''} "
+                f"skippedEmpty={skipped} "
                 f"skippedAbsent=0 categories=0 sources=0 malformed=0")
         if dup_printed:
             line += f" duplicateKeysOverwritten={dup}"
         add(line)
-        total_rows += rows_l
-        total_dup += dup
     add(f"- localeRowsEmittedTotal(emission-events): {total_rows}")
     if dup_printed:
         add(f"- duplicateKeysOverwrittenTotal(emission-events): {total_dup}")
@@ -1314,18 +1358,48 @@ def stage_stamp_harvest_catalog(catalog_bytes: bytes) -> dict:
 # --- contracts layer ---------------------------------------------------------------------
 
 def ENUM_PINS():
+    """Declared enum domains under the SAME family keys the runner counts
+    occurrences by (V-S11 is scoped PER FAMILY)."""
     return {
-        "_absences.absenceType": list(ABSENCE_TYPES),
-        "_dangling_guids.verdict": list(DANGLING_VERDICTS),
-        "_uncontained_addresses.reason": [REASON_UNCONTAINED],
-        "_unmapped-families.evidence": list(UNMAPPED_EVIDENCE),
-        "compositionPolicy": ["english-only", "english-over-base",
-                              "base-over-english", "mixed"],
-        "contentAxis": ["base", "dlc-space", "dlc-ghost"],
+        "_unmapped.evidence": sorted(UNMAPPED_EVIDENCE_VALUES),
+        "absences.absenceType": list(ABSENCE_TYPES),
+        "asset.resolvedVia": ["catalog-guid+container-index"],
+        "catalog.kind": [ADDRESS_KIND, GUID_KIND],
+        "dangling.verdict": list(DANGLING_VERDICTS),
+        "matrix.joinKey": [JOIN_KEY_PPTR, JOIN_KEY_ASSET, JOIN_KEY_LOCALE,
+                           "name-equality(<rule>)", JOIN_KEY_NONE],
+        "matrix.mechanism": list(MECHANISMS),
+        "matrix.status": list(STATUSES),
+        "media.class": sorted(MEDIA_CLASS_COUNTS),
+        "media.contentAxis": ["base", "dlc-space", "dlc-ghost"],
+        "overlay.compositionPolicy": ["english-only", "english-over-base",
+                                      "base-over-english", "mixed"],
         "pair.method": list(PAIR_METHODS),
-        "sceneFlag": ["none", ".unity", "seasonal-scenes"],
+        "pptrs.reason": [REASON_PPTR_A, REASON_PPTR_B],
+        "registry.termStatus": [0, 1],
+        "registry.termType": [0],
+        "roster.dirClass": ["base", "dlc-space", "dlc-ghost"],
+        "roster.sceneFlag": ["none", ".unity", "seasonal-scenes"],
+        "stub.axes": ["base", "dlc-space", "dlc-ghost"],
+        "stub.kind": sorted(STUB_ROWS_BY_KIND),
         "stub.method": list(STUB_METHODS),
-        "ui_link_coverage.status": list(UI_STATUSES),
+        "ui.status": list(UI_STATUSES),
+    }
+
+
+def COLD_ARMS():
+    """DECLARED-and-not-occurring arms (V-S11 INFO leg): the four unexercised
+    pair-method arms live ONLY in the pair files; matrix mechanism 'logic'
+    + two joinKeys cold; three dangling verdicts cold."""
+    return {
+        "dangling.verdict": [v for v in DANGLING_VERDICTS
+                             if v != "unresolved-open"],
+        "matrix.joinKey": [JOIN_KEY_LOCALE, "name-equality(<rule>)"],
+        "matrix.mechanism": ["logic"],
+        "pair.method": ["code-analysis:<descriptor>",
+                        "competitor-model:<source-id>",
+                        "i2-termid-registry",
+                        "name-convention:<rule>"],
     }
 
 
@@ -1367,81 +1441,84 @@ def RECONCILIATION_PINS():
 
 def _family_pins(*, handover, dir_counts, scene_counts, loc_counts,
                  axes_counts, twins, msc):
+    """pins.families slices under the SAME vocabulary the runner consumes
+    (the pack's proven spelling): full-path relations keys carrying
+    required/optional, flattened stage6 constants, computed bundleClosure,
+    and the measured overlay shape {compositionPolicy, evidence}."""
     st = stub_rows()
     total_stubs = sum(len(v) for v in st.values())
     cov = catalog_coverage_obj()
     mini = mini_report(b"")
     joinr = locale_join_report()
-    fam = {}
-    return_alias = None   # built below via closure-free post step
-    def _finish(d):
-        # alias every per-file entry under BOTH its bare name and its
-        # root-relative path so either lookup spelling finds required/
-        optional = {}
-        for group in ("relations", "ledgers"):
-            grp = d.get(group, {})
-            extra = {}
-            for name, shape in list(grp.items()):
-                path = shape.get("path") if isinstance(shape, dict) else None
-                if path and path not in grp:
-                    extra[path] = shape
-            grp.update(extra)
-            d[group] = grp
-        return d
-    return _finish({
+    pairs = pair_datasets()
+    pair_rows_total = sum(len(v) for v in pairs.values())
+    manifest_bundles = {str(r["sourceBundle"]).rsplit("/", 1)[-1].casefold()
+                        for r in export_manifest_rows()}
+    relation_pair_keys = ["buildId", "dstId", "dstKind", "evidence",
+                          "inferred", "mechanism", "method", "srcId",
+                          "srcKind"]
+    ledgers_group = {
+        "_absences.jsonl": {
+            "optional": [],
+            "path": "stubs/_absences.jsonl",
+            "required": ["absenceType", "buildId", "count", "evidence",
+                         "kind", "samples", "scannedBundles",
+                         "scannedClasses"]},
+        "_dangling_guids.jsonl": {
+            "optional": ["unblock"],
+            "path": "relinks/_dangling_guids.jsonl",
+            "required": ["assetGuid", "buildId", "sampleRefs", "verdict"]},
+        "_unmapped-families.jsonl": {
+            "optional": [],
+            "path": "stubs/_unmapped-families.jsonl",
+            "required": ["buildId", "bundles", "class", "evidence",
+                         "objectCount"]},
+        "_unresolved_pptrs.jsonl": {
+            "optional": [],
+            "path": "relinks/_unresolved_pptrs.jsonl",
+            "required": ["buildId", "extFileId", "extPath", "fieldPath",
+                         "m_PathID", "reason", "srcId", "srcKind"]},
+        "_uncontained_addresses.jsonl": {
+            "optional": ["catalogGuid"],
+            "path": "relinks/_uncontained_addresses.jsonl",
+            "required": ["address", "buildId", "reason", "sampleRefs"]},
+        "competitor_applied.jsonl": {
+            "optional": ["dispositions", "floorRequired", "samples",
+                         "sourcesApplied", "terminal", "unblock"],
+            "path": "relinks/competitor_applied.jsonl",
+            "required": ["buildId", "rung", "sourceId"]},
+        "entity_asset_guid.jsonl": {
+            "dstKind": "asset",
+            "keyset": list(relation_pair_keys),
+            "optional": [],
+            "path": "relinks/entity_asset_guid.jsonl",
+            "required": list(relation_pair_keys)},
+        "entity_locale.jsonl": {
+            "dstKind": "locale-term",
+            "keyset": list(relation_pair_keys),
+            "optional": [],
+            "path": "relinks/entity_locale.jsonl",
+            "required": list(relation_pair_keys)},
+        "locale_term_entity.jsonl": {
+            "optional": [],
+            "path": "relinks/locale_term_entity.jsonl",
+            "required": ["buildId", "locales", "termKey", "usages"],
+            "usagesEntryKeyset": ["fieldPath", "srcId", "srcKind"]},
+    }
+    return {
         "exceptions": {
             "catalogDuplicateKey": {"address": A_STYLE,
                                     "byteIdentical": True, "key": G_STYLE,
                                     "rowCount": 2},
-            "catalogNullBundle": {"addressKind": 2, "guidKind": 15,
-                                  "nullAddressRows": 2, "total": 17},
-            "localesReservedEmpty": {"registryRows": REGISTRY_ROWS_PIN},
+            "catalogNullBundle": _null_bundle_pin(),
+            "localesReservedEmpty": {
+                "entityLocaleRows":
+                    len(relation_datasets()["entity_locale.jsonl"]),
+                "registryRows": REGISTRY_ROWS_PIN,
+                "reservedEmptyCells": 0,
+                "reverseIndexRows":
+                    len(relation_datasets()["locale_term_entity.jsonl"])},
             "slugNull": {"rows": total_stubs}},
-        "stage0": {
-            "identityTopKeys": [
-                "appid", "addressablesVersion", "buildId", "dumper",
-                "expectedBundles", "languageSetting", "localeBundleCount",
-                "metadataVersion", "sceneCounts", "settingsHash",
-                "targetBuildId", "unityVersion", "versionString"],
-            "roster": {
-                "dirClass": {"base": dir_counts[0],
-                             "dlc-ghost": dir_counts[2],
-                             "dlc-space": dir_counts[1]},
-                "keyset": ["buildId", "bytes", "dirClass", "localeFlag",
-                           "relpath", "sceneFlag"],
-                "localeFlag": {"<codes>": loc_counts[2],
-                               "<null>": loc_counts[0],
-                               "base": loc_counts[1]},
-                "rows": len(roster_rows()),
-                "sceneFlag": {".unity": scene_counts[1],
-                              "none": scene_counts[0],
-                              "seasonal-scenes": scene_counts[2]}},
-        },
-        "stage1": {
-            "assemblyIndex": {"assemblies": 4,
-                              "hierarchyCountMethod":
-                              "pure-python ECMA-335 metadata reader "
-                              "over DummyDll/*.dll",
-                              "hierarchyRowCount": 40},
-            "idRegistries": {"files": 2}},
-
-        "stage2": {
-            "coverage": {
-                "bundlesUnreferenced": [],
-                "danglingDependencyKeys": 0,
-                "distinctBundlesReferenced":
-                    cov["distinctBundlesReferenced"],
-                "duplicateKeyValue": G_STYLE,
-                "keysTotal": len(catalog_rows()),
-                "outOfRosterFileReferences":
-                    cov["outOfRosterFileReferences"]["count"]},
-            "miniReport": {
-                "counts": dict(mini["counts"]),
-                "duplicateKey": G_STYLE,
-                "guidIndexKeys": len(mini["guidIndex"]),
-                "keyset": ["bundleUniverse", "counts", "duplicateKeys",
-                           "guidIndex", "meta", "nullBundleAddresses"],
-                "referencedRelpaths": cov["distinctBundlesReferenced"]}},
         "flat": {
             "harvest/export-manifest.jsonl": {
                 "keyset": ["bytes", "class", "outRelPath", "pathId",
@@ -1471,6 +1548,65 @@ def _family_pins(*, handover, dir_counts, scene_counts, loc_counts,
                            "impliedFamilies", "joins", "status",
                            "surfaceId", "uiClass", "unblock"],
                 "rows": UI_COVERAGE_ROWS_PIN}},
+        "ledgers": {
+            "_uncontained_addresses": {
+                "optional": ["catalogGuid"],
+                "reason": REASON_UNCONTAINED,
+                "required": ["address", "buildId", "reason", "sampleRefs"]}},
+        "owned": {"relinks": [
+            "relinks/_uncontained_addresses.jsonl",
+            "relinks/locale_availability.jsonl",
+            "relinks/locale_availability.report.json"]},
+        "relations": dict(ledgers_group),
+        "stage0": {
+            "identityTopKeys": sorted([
+                "appid", "addressablesVersion", "buildId", "dumper",
+                "expectedBundles", "languageSetting", "localeBundleCount",
+                "metadataVersion", "sceneCounts", "settingsHash",
+                "targetBuildId", "unityVersion", "versionString"]),
+            "roster": {
+                "dirClass": {"base": dir_counts[0],
+                             "dlc-ghost": dir_counts[2],
+                             "dlc-space": dir_counts[1]},
+                "keyset": ["buildId", "bytes", "dirClass", "localeFlag",
+                           "relpath", "sceneFlag"],
+                "localeFlag": {"base": loc_counts[1],
+                               "named": loc_counts[2],
+                               "null": loc_counts[0]},
+                "rows": len(roster_rows()),
+                "sceneFlag": {".unity": scene_counts[1],
+                              "none": scene_counts[0],
+                              "seasonal-scenes": scene_counts[2]}}},
+        "stage1": {
+            "assemblyIndex": {"assemblies": 4,
+                              "hierarchyCountMethod":
+                              "pure-python ECMA-335 metadata reader "
+                              "over DummyDll/*.dll",
+                              "hierarchyRowCount": 40},
+            "idRegistries": {"files": 2}},
+        "stage2": {
+            "coverage": {
+                "bundlesUnreferenced": len(cov["bundlesUnreferenced"]),
+                "danglingDependencyKeys":
+                    cov["danglingDependencyKeys"]["count"],
+                "distinctBundlesReferenced":
+                    cov["distinctBundlesReferenced"],
+                "keysTotal": cov["keysTotal"],
+                "outOfRosterFileReferences":
+                    cov["outOfRosterFileReferences"]["count"]},
+            "dependencyEdgesTotal": mini["counts"]["dependencyEdgesTotal"],
+            "distinctKeys": mini["counts"]["distinctKeys"],
+            "duplicateKeyAddress": A_STYLE,
+            "duplicateKeyCount": len(mini["duplicateKeys"]),
+            "duplicateKeyValue": G_STYLE,
+            "keysTotal": mini["counts"]["keysTotal"],
+            "kindCounts": dict(mini["counts"]["kindCounts"]),
+            "miniReportTopKeys": ["bundleUniverse", "counts",
+                                  "duplicateKeys", "guidIndex", "meta",
+                                  "nullBundleAddresses"],
+            "nullBundleRows": dict(mini["counts"]["nullBundleRows"]),
+            "rowsWithNoDependencies":
+                mini["counts"]["rowsWithNoDependencies"]},
         "stage3": {
             "censusFiles": 176,
             "exportManifestRows": MANIFEST_ROWS_PIN,
@@ -1479,6 +1615,7 @@ def _family_pins(*, handover, dir_counts, scene_counts, loc_counts,
             "mediaCatalogueRows": sum(MEDIA_CLASS_COUNTS.values())},
         "stage4": {
             "baseOverlayReport": {"compositionPolicy": COMPOSITION_POLICY},
+            "evidenceCounterNames": sorted(EVIDENCE_COUNTER_NAMES),
             "lineCounts": {**{k: v for k, v in
                               sorted(LOCALE_LINE_COUNTS.items())},
                            "BASE-OVERLAY": BASE_OVERLAY_ROWS_PIN},
@@ -1496,142 +1633,38 @@ def _family_pins(*, handover, dir_counts, scene_counts, loc_counts,
             "unmappedEvidenceCounts": dict(zip(UNMAPPED_EVIDENCE_VALUES,
                                                UNMAPPED_EVIDENCE_COUNTS)),
             "unmappedRows": UNMAPPED_ROWS},
-
-        "ledgers": {
-            "_absences.jsonl": {
-                "optional": [],
-                "path": "stubs/_absences.jsonl",
-                "required": ["absenceType", "buildId", "count", "evidence",
-                             "kind", "samples", "scannedBundles",
-                             "scannedClasses"]},
-            "_dangling_guids.jsonl": {
-                "optional": ["unblock"],
-                "path": "relinks/_dangling_guids.jsonl",
-                "required": ["assetGuid", "buildId", "sampleRefs",
-                             "verdict"]},
-            "_uncontained_addresses.jsonl": {
-                "optional": ["catalogGuid"],
-                "path": "relinks/_uncontained_addresses.jsonl",
-                "required": ["address", "buildId", "reason", "sampleRefs"]},
-            "_unmapped-families.jsonl": {
-                "optional": [],
-                "path": "stubs/_unmapped-families.jsonl",
-                "required": ["buildId", "bundles", "class", "evidence",
-                             "objectCount"]},
-            "_unresolved_pptrs.jsonl": {
-                "optional": [],
-                "path": "relinks/_unresolved_pptrs.jsonl",
-                "required": ["buildId", "extFileId", "extPath", "fieldPath",
-                             "m_PathID", "reason", "srcId", "srcKind"]},
-            "competitor_applied.jsonl": {
-                "optional": ["dispositions", "floorRequired", "samples",
-                             "sourcesApplied", "terminal", "unblock"],
-                "path": "relinks/competitor_applied.jsonl",
-                "required": ["buildId", "rung", "sourceId"]},
-            "entity_asset_guid.jsonl": {
-                "dstKind": "asset",
-                "keyset": ["buildId", "dstId", "dstKind", "evidence",
-                           "inferred", "mechanism", "method", "srcId",
-                           "srcKind"],
-                "optional": [],
-                "path": "relinks/entity_asset_guid.jsonl",
-                "required": ["buildId", "dstId", "dstKind", "evidence",
-                             "inferred", "mechanism", "method", "srcId",
-                             "srcKind"]},
-            "entity_locale.jsonl": {
-                "dstKind": "locale-term",
-                "optional": [],
-                "path": "relinks/entity_locale.jsonl",
-                "required": ["buildId", "dstId", "dstKind", "evidence",
-                             "inferred", "mechanism", "method", "srcId",
-                             "srcKind"]},
-            "locale_term_entity.jsonl": {
-                "optional": [],
-                "path": "relinks/locale_term_entity.jsonl",
-                "required": ["buildId", "locales", "termKey", "usages"],
-                "usagesEntryKeyset": ["fieldPath", "srcId", "srcKind"]}},
-
-        "relations": {
-            "competitor_applied.jsonl": {
-                                        "path": "relinks/competitor_applied.jsonl","optional":
-                                         ["dispositions", "floorRequired",
-                                          "genericContainerClasses",
-                                          "samples", "sourcesApplied",
-                                          "terminal", "unblock"],
-                                         "required": ["buildId", "rung",
-                                                      "sourceId"]},
-            "_absences.jsonl": {
-                                        "path": "stubs/_absences.jsonl","optional": [],
-                                "required": ["absenceType", "buildId",
-                                             "count", "evidence", "kind",
-                                             "samples", "scannedBundles",
-                                             "scannedClasses"]},
-            "_dangling_guids.jsonl": {
-                                        "path": "relinks/_dangling_guids.jsonl","optional": ["unblock"],
-                                      "required": ["assetGuid", "buildId",
-                                                   "sampleRefs",
-                                                   "verdict"]},
-            "_unmapped-families.jsonl": {
-                                        "path": "stubs/_unmapped-families.jsonl","optional": [],
-                                         "required": ["buildId", "bundles",
-                                                      "class", "evidence",
-                                                      "objectCount"]},
-            "_unresolved_pptrs.jsonl": {
-                                        "path": "relinks/_unresolved_pptrs.jsonl","optional": [],
-                                        "required": ["buildId",
-                                                     "extFileId", "extPath",
-                                                     "fieldPath",
-                                                     "m_PathID", "reason",
-                                                     "srcId", "srcKind"]},
-            "_uncontained_addresses.jsonl": {
-                                        "path": "relinks/_uncontained_addresses.jsonl","optional": ["catalogGuid"],
-                                             "required": ["address",
-                                                          "buildId",
-                                                          "reason",
-                                                          "sampleRefs"]},
-            "entity_asset_guid.jsonl": {
-                                        "path": "relinks/entity_asset_guid.jsonl","dstKind": "asset",
-                                        "keyset": ["buildId", "dstId",
-                                                   "dstKind", "evidence",
-                                                   "inferred", "mechanism",
-                                                   "method", "srcId",
-                                                   "srcKind"],
-                                        "resolvedVia":
-                                        "catalog-guid+container-index"},
-            "entity_locale.jsonl": {
-                                        "path": "relinks/entity_locale.jsonl","dstKind": "locale-term",
-                                    "keyset": ["buildId", "dstId",
-                                               "dstKind", "evidence",
-                                               "inferred", "mechanism",
-                                               "method", "srcId", "srcKind"]},
-            "locale_term_entity.jsonl": {
-                                        "optional": [],
-                                        "path":
-                                        "relinks/locale_term_entity.jsonl",
-                                        "required": ["buildId", "locales",
-                                                     "termKey", "usages"],
-                                         "usagesEntryKeyset":
-                                         ["fieldPath", "srcId",
-                                          "srcKind"]}},
         "stage6": {
-
+            "bridgeReportFields": [
+                "buildId", "danglingDistinctGuids", "distinctGuids",
+                "guidRefsTotal", "resolveRateAddress", "resolveRateStub",
+                "resolvedToAddress", "resolvedToStub"],
             "bridges": {"cabRows": CAB_ROWS_PIN,
                         "containerRows": CONTAINER_ROWS_PIN},
-            "bundleClosure": {"manifest sourceBundle": 114,
+            "bundleClosure": {"manifest sourceBundle": len(manifest_bundles),
                               "pair evidence bundles": None,
                               "stub source.bundle":
                                   len(STUB_BUNDLE_UNIVERSE)},
-            "joinReport": {"registryMisses":
-                           joinr["registryMisses"],
-                           "registryMissesKnownIDs": MISSING_TERM_IDS},
+            "evidenceKeysets": {
+                "pptr-same-file": ["dstBundle", "dstPathId", "fieldPath",
+                                   "refCount", "srcBundle", "srcPathId"],
+                "pptr-cross-file": ["dstBundle", "dstPathId", "fieldPath",
+                                    "refCount", "srcBundle", "srcPathId",
+                                    "dstCab", "extFileId", "resolvedVia"],
+                "assetguid-catalog": ["assetGuid", "catalogAddress",
+                                      "fieldPath"]},
+            "joinReport": {"instancesTotal": joinr["instancesTotal"],
+                           "registryMisses": joinr["registryMisses"],
+                           "sentinelZero": joinr["sentinelZero"],
+                           "unresolvedIdCount": len(joinr["unresolvedIds"])},
+            "joinReportFields": [
+                "buildId", "codeRefTerms", "coverageOnNonEmpty",
+                "instancesTotal", "matrixKeyDiff", "perKindHits",
+                "registryHits", "registryMisses", "sentinelZero",
+                "unresolvedIds"],
             "ledgers": {
-                "_dangling_guids.jsonl": DANGLING_GUID_ROWS,
-                "danglingVerdictCounts": {"unresolved-open":
-                                          DANGLING_GUID_ROWS},
+                "danglingUnresolvedOpen": DANGLING_GUID_ROWS,
                 "pptrReasonCounts": {REASON_PPTR_A: PPTR_REASON_A_COUNT,
-                                     REASON_PPTR_B: PPTR_REASON_B_COUNT},
-                "_unresolved_pptrs.jsonl":
-                    PPTR_REASON_A_COUNT + PPTR_REASON_B_COUNT},
+                                     REASON_PPTR_B: PPTR_REASON_B_COUNT}},
             "matrix": {
                 "cells": 100,
                 "joinKeyVocabulary": [JOIN_KEY_PPTR, JOIN_KEY_ASSET,
@@ -1642,45 +1675,14 @@ def _family_pins(*, handover, dir_counts, scene_counts, loc_counts,
                 "nodes": 10,
                 "statusVocabulary": list(STATUSES),
                 "statuses": msc},
-            "evidenceKeysets": {
-                "pptr-same-file": ["dstBundle", "dstPathId", "fieldPath",
-                                   "refCount", "srcBundle", "srcPathId"],
-                "pptr-cross-file": ["dstBundle", "dstPathId", "fieldPath",
-                                    "refCount", "srcBundle", "srcPathId",
-                                    "dstCab", "extFileId", "resolvedVia"],
-                "assetguid-catalog": ["assetGuid", "catalogAddress",
-                                      "fieldPath"]},
-            "keysets": {
-                "_absences.jsonl": ["absenceType", "buildId", "count",
-                                    "evidence", "kind", "samples",
-                                    "scannedBundles", "scannedClasses"],
-                "_dangling_guids.jsonl": ["assetGuid", "buildId",
-                                          "sampleRefs", "unblock",
-                                          "verdict"],
-                "_unmapped-families.jsonl": ["buildId", "bundles", "class",
-                                             "evidence", "objectCount"],
-                "_unresolved_pptrs.jsonl": ["buildId", "extFileId",
-                                            "extPath", "fieldPath",
-                                            "m_PathID", "reason", "srcId",
-                                            "srcKind"],
-                "competitor_applied.jsonl": ["buildId", "dispositions",
-                                             "rung", "samples",
-                                             "sourceId"],
-                "entity_asset_guid.jsonl": ["buildId", "dstId", "dstKind",
-                                            "evidence", "inferred",
-                                            "mechanism", "method", "srcId",
-                                            "srcKind"],
-                "entity_locale.jsonl": ["buildId", "dstId", "dstKind",
-                                        "evidence", "inferred", "mechanism",
-                                        "method", "srcId", "srcKind"],
-                "locale_term_entity.jsonl": ["buildId", "locales",
-                                             "termKey", "usages"]},
-            "pairFiles": {"count": len(pair_datasets())},
-            "reports": {"competitorLedgerRows": 3,
-                        "uiCoverage": {"gap": UI_GAP_PIN,
-                                       "mapped": UI_MAPPED_PIN},
-                        "uncontainedCarveOut": {"addresses": 5,
-                                                "edgeRows": 9}}},})
+            "pairFiles": len(pairs),
+            "pairRows": pair_rows_total,
+            "sourceAxesCarrierRows": pair_source_axes_carriers(),
+            "uiCoverage": {"documentedGap": UI_GAP_PIN,
+                           "genericContainerRows": 1,
+                           "mappedSchema": UI_MAPPED_PIN},
+            "uncontainedCarveOut": {"addresses": 5, "edgeRows": 9}},
+    }
 
 
 def pins_obj(*, handover: bool) -> dict:
@@ -1693,62 +1695,72 @@ def pins_obj(*, handover: bool) -> dict:
                   sum(1 for r in roster if r["localeFlag"] == "base"),
                   sum(1 for r in roster
                       if r["localeFlag"] not in (None, "base"))]
-    st = stub_rows()
-    axes_counts = dict(AXES_COUNTS)
-    twins = dict(TWIN_COUNTS)
-    availability_writer = "locale-proof" if handover else \
-        "emit-stub-datasets"
+    availability_writer = ("stage9_locale_proof.py" if handover
+                           else "stage5_emit_stubs.py")
+    # V-I9 shape (pack parity): the INVARIANT with a greppable writer map.
+    # Each path names candidate [script, source-regex] pairs; PASS iff
+    # EXACTLY ONE candidate's pattern matches its script's source and it is
+    # the canonical expect. The availability entry is HANDOVER-AWARE (RF-1):
+    # stage5 until piece-07 section 5 lands, locale-proof after -- green in
+    # EITHER landing order; two concurrent writers or zero fail loudly.
     path_owner = {
-        "extracted/RELATIONS.md": {"regeneratedBy": "relink",
-                                   "writer": "relink"},
-        "extracted/addressables/*": {"writer": "harvest-catalog"},
-        "extracted/bundle-roster.jsonl": {"writer": "verify-client"},
-        "extracted/harvest/*": {"writer": "harvest-bundles"},
-        "extracted/identity.json": {"writer": "verify-client"},
-        "extracted/locales/*": {"writer": "localisation"},
-        "extracted/media-catalogue.jsonl": {"writer": "harvest-bundles"},
-        "extracted/relinks/locale_availability.jsonl": {
-            "handover": ("piece-07 section 5 flips the sole writer; "
-                         "this map moves WITH the handover"),
-            "writer": availability_writer,
-            "writerAfterHandover": "locale-proof"},
-        "extracted/relinks/*": {"writer": "relink"},
-        "extracted/stubs/*": {"writer": "emit-stub-datasets"}}
-    if handover:
-        path_owner["extracted/relinks/locale_availability.report.json"] = {
-            "handover": "joins the owned set with the v2 companion",
-            "writer": "locale-proof"}
+        "invariant": ("exactly-one-writer per extracted/ path at any "
+                      "moment; map entries name the CURRENT canonical "
+                      "writer per the pack's stage registry (RF-1)"),
+        "toolsDir": "writer-universe",
+        "paths": {
+            "RELATIONS.md": {
+                "expect": "stage6_relink.py",
+                "writers": [["stage6_relink.py", r'"RELATIONS\.md"']]},
+            "addressables/catalog-mini-report.json": {
+                "expect": "stage2_harvest_catalog.py",
+                "writers": [["stage2_harvest_catalog.py", r"MINI_REPORT"]]},
+            "identity.json": {
+                "expect": "stage0_verify_client.py",
+                "writers": [["stage0_verify_client.py", r"IDENTITY_OUT"]]},
+            "locales/base-overlay-report.json": {
+                "expect": "stage4_localisation.py",
+                "writers": [["stage4_localisation.py",
+                             r"BASE_OVERLAY_REPORT"]]},
+            "media-catalogue.jsonl": {
+                "expect": "stage3_harvest_bundles.py",
+                "writers": [["stage3_harvest_bundles.py",
+                             r"MEDIA_CATALOGUE"]]},
+            "relinks/locale_availability.jsonl": {
+                "expect": availability_writer,
+                "handover": ("piece-07 section 5 flips the sole writer; "
+                             "this entry moves WITH the handover"),
+                "writers": [
+                    ["stage5_emit_stubs.py", r"locale_availability"],
+                    ["stage6_relink.py", r"locale_availability"],
+                    ["stage9_locale_proof.py", r"locale_availability"]]},
+            "relinks/matrix.json": {
+                "expect": "stage6_relink.py",
+                "writers": [["stage6_relink.py", r'"matrix\.json"']]}},
+    }
     pins = {"buildScope": {"buildId": TARGET_BUILD},
-            "counterUnitExemptFields": ["buildId", "meta.buildId"],
-            "ledgerPaths": {
-                "_absences.jsonl": "stubs/_absences.jsonl",
-                "_dangling_guids.jsonl": "relinks/_dangling_guids.jsonl",
-                "_unmapped-families.jsonl": "stubs/_unmapped-families.jsonl",
-                "_unresolved_pptrs.jsonl": "relinks/_unresolved_pptrs.jsonl",
-                "_uncontained_addresses.jsonl":
-                    "relinks/_uncontained_addresses.jsonl",
-                "competitor_applied.jsonl":
-                    "relinks/competitor_applied.jsonl",
-                "entity_asset_guid.jsonl":
-                    "relinks/entity_asset_guid.jsonl",
-                "entity_locale.jsonl": "relinks/entity_locale.jsonl",
-                "locale_term_entity.jsonl":
-                    "relinks/locale_term_entity.jsonl"},
+            "coldArms": COLD_ARMS(),
+            "counterUnitExemptFields": ["buildId"],
+            "docPins": {
+                "faithfulProjection":
+                    "The projection is faithful, not broken",
+                "familyBlocks": {fname: key
+                                 for fname, key in FAMILY_SLICES},
+                "routingStatement": ROUTING_SENTENCE},
             "enums": ENUM_PINS(),
+            "exceptions": EXCEPTION_PINS(),
+            "exitCodeContributors": {"members": EXIT_CODE_CONTRIBUTORS()},
             "pathOwner": path_owner,
             "reconciliations": RECONCILIATION_PINS(),
-            "transforms": {TRANSFORM_NAME: {
-                "expression": TRANSFORM_EXPRESSION,
-                "licenses": ["localisation-overwrite-identity"],
-                "units": ["emission-events", "distinct-keys"]}},
-            "transformsLicense": {TRANSFORM_NAME:
-                                  ["localisation-overwrite-identity"]},
+            "sampleCaps": {"absenceSamples": 25, "danglingSampleRefs": 5,
+                           "joinUnresolvedSampleRefs": 5},
             "unitVocabulary": list(UNIT_VOCABULARY)}
     pins["families"] = _family_pins(handover=handover,
                                     dir_counts=dir_counts,
                                     scene_counts=scene_counts,
                                     loc_counts=loc_counts,
-                                    axes_counts=axes_counts, twins=twins,
+                                    axes_counts=dict(AXES_COUNTS),
+                                    twins=dict(TWIN_COUNTS),
                                     msc=matrix_status_counts())
     return pins
 
@@ -1795,23 +1807,69 @@ def family_mdx(name: str, key: str, pins: dict) -> str:
                          ensure_ascii=False) + "\n```\n")
 
 
+def EXIT_CODE_CONTRIBUTORS():
+    """The declared exit-2 contributor iff-set (section 7), member name ->
+    one-line rule; mirrors the pack's spelling."""
+    return {
+        "catalog-out-of-roster-or-dangling":
+            "catalog-coverage.outOfRosterFileReferences.count > 0 OR "
+            "danglingDependencyKeys.count > 0; size = the counts",
+        "competitor-floor-unmet":
+            "a competitor_applied terminal floor-unmet row exists; size 1/0",
+        "dangling-guids-open":
+            "any _dangling_guids row with verdict unresolved-open; size = "
+            "count of those rows",
+        "registry-misses":
+            "locale_join_report.registryMisses > 0; size = the counter",
+        "uncontained-addresses":
+            "any _uncontained_addresses row; size = row count (RED-1 "
+            "declares this ledger)",
+        "unresolved-pptrs": "any _unresolved_pptrs row; size = row count",
+    }
+
+
+def EXCEPTION_PINS():
+    """V-D2's machine slice: anchor heading + every number the sheet must
+    interpolate, COMPUTED from the rows they describe."""
+    nb = _null_bundle_pin()
+    reserved = {"entityLocaleRows":
+                len(relation_datasets()["entity_locale.jsonl"]),
+                "registryRows": REGISTRY_ROWS_PIN,
+                "reverseIndexRows":
+                    len(relation_datasets()["locale_term_entity.jsonl"])}
+    return [
+        {"anchor": "## catalog duplicate key", "id": "catalog-duplicate-key",
+         "numbers": [G_STYLE, 2]},
+        {"anchor": "## catalog bundle null", "id": "catalog-bundle-null",
+         "numbers": [nb["total"], nb["guidKind"], nb["addressKind"],
+                     nb["nullAddressRows"]]},
+        {"anchor": "## stub slug null", "id": "stub-slug-null",
+         "numbers": [sum(STUB_ROWS_BY_KIND.values())]},
+        {"anchor": "## locales reserved-but-empty",
+         "id": "locales-reserved-empty",
+         "numbers": [reserved["registryRows"], reserved["entityLocaleRows"],
+                     reserved["reverseIndexRows"]]},
+    ]
+
+
 def exceptions_mdx(pins: dict) -> str:
     ex = pins["families"]["exceptions"]
     dup = ex["catalogDuplicateKey"]
     nb = ex["catalogNullBundle"]
     slug = ex["slugNull"]
+    res = ex["localesReservedEmpty"]
     return f"""# Exception sheet (consumers read this BEFORE building loaders)
 
 Four measured realities look like defects and are not.
 
-## 1. catalog duplicate key
+## catalog duplicate key
 
 Exactly {dup["rowCount"]} duplicated `key` (`{dup["key"]}`), the rows
 canonical-JSON BYTE-IDENTICAL (legal Addressables duplicate registration).
 Key->row dict-building MUST be collision-aware; last-wins silently drops
 one row. Pin: duplicates always byte-identical, count build-scoped.
 
-## 2. catalog `bundle` null
+## catalog bundle null
 
 `bundle` is null on {nb["total"]} of the fixture key rows
 ({nb["guidKind"]} guid-kind + {nb["addressKind"]} address-kind);
@@ -1819,17 +1877,19 @@ one row. Pin: duplicates always byte-identical, count build-scoped.
 rows the address IS the container address; owning-bundle lookup = the
 catalog->container_index ladder, never `row.bundle` direct.
 
-## 3. stub `slug`
+## stub slug null
 
 null on {slug["rows"]} of {slug["rows"]} rows BY DESIGN ({slug["rows"]}/
 {slug["rows"]}). Display names derive via `entity_locale.jsonl` -> locale
 tables; the site layer owns slug generation policy.
 
-## 4. `locales[]` reserved-but-empty
+## locales reserved-but-empty
 
-Empty on ALL registry/relation rows because the client stores NO per-term
-availability. {ROUTING_SENTENCE[0].upper()}{ROUTING_SENTENCE[1:]} — treat
-the empty arrays as RESERVED fields, never data.
+Empty on all {res["registryRows"]} registry rows, the
+{res["entityLocaleRows"]} entity-locale relation rows and the
+{res["reverseIndexRows"]} reverse-index rows because the client stores NO
+per-term availability. Availability routing:
+{ROUTING_SENTENCE} — treat the empty arrays as RESERVED fields, never data.
 
 {FAITHFUL_SENTENCE} That sentence is itself part of the pinned text.
 """
@@ -1905,25 +1965,37 @@ honesty is pinned by shapes/sorts/caps validators instead.
 
 
 def red_registry_obj(*, red: bool) -> dict:
+    """Pack spelling: entries[] each carrying the break key, fixing
+    amendment, summary, and the validator ids it registers."""
     if not red:
-        return {"note": ("empty steady-state registry: every validator "
-                         "passes on an honest current tree"),
-                "registered": []}
+        return {"entries": [],
+                "note": ("empty steady-state registry: every validator "
+                         "passes on an honest current tree")}
     fixes = {
-        "V-L1": ("piece-05-amendments RED-1: stage6 emits "
-                 "_uncontained_addresses.jsonl during the R3 pass"),
-        "V-U1": ("piece-05-amendments RED-3: report generators emit "
-                 "counterUnits dicts (frozen vocabulary)"),
-        "V-U2": ("piece-05-amendments RED-2: stage4 prints per-locale "
-                 "duplicateKeysOverwritten AND persists map+total into "
-                 "base-overlay-report evidence"),
-        "V-D1": ("piece-05-amendments RED-3: RELATIONS.md template gains "
-                 "the availability-routing paragraph"),
+        "V-L1": ("uncontained-address-ledger", "RED-1",
+                 "stage6 emits _uncontained_addresses.jsonl during the R3 "
+                 "pass"),
+        "V-U1": ("counter-units-undocumented", "RED-3",
+                 "report generators emit counterUnits dicts (frozen "
+                 "vocabulary)"),
+        "V-U2": ("overwrite-counter-invisible", "RED-2",
+                 "stage4 prints per-locale duplicateKeysOverwritten AND "
+                 "persists map+total into base-overlay-report evidence"),
+        "V-D1": ("availability-routing-note-relations", "RED-3",
+                 "RELATIONS.md template gains the availability-routing "
+                 "paragraph"),
     }
-    return {"note": ("deliberately-red validators awaiting their fixing "
-                     "amendment; EXPECTED-RED lines exit 2, never silent"),
-            "registered": [{"fix": fixes[vid], "id": vid}
-                           for vid in RED_REGISTRY_IDS]}
+    return {
+        "entries": [
+            {"break": fixes[vid][1],
+             "fix": "piece-05-amendments",
+             "key": fixes[vid][0],
+             "summary": fixes[vid][2],
+             "validators": [vid]}
+            for vid in RED_REGISTRY_IDS],
+        "note": ("deliberately-red validators awaiting their fixing "
+                 "amendment; EXPECTED-RED lines exit 2, never silent"),
+    }
 
 
 def contracts_readme() -> str:
@@ -2054,11 +2126,18 @@ ALL_FIXES = frozenset(FIX_NAMES)
 def _write_install(tree: Path):
     root = tree / "steamapps" / "common" / "Two Point Campus"
     root.mkdir(parents=True, exist_ok=True)
+    # roster relpaths are INSTALL-ROOT-relative (TPC_Data/StreamingAssets/…);
+    # they must land under the install root the runner validates
     for rel in roster_relpaths():
-        p = tree / rel
+        p = root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(det_bytes(f"bundle:{rel}", 512))
     (root / "GameAssembly.dll").write_bytes(b"MZ" + det_bytes("ga", 64))
+    # il2cpp metadata the runner's install-root validation requires
+    meta_dir = root / "TPC_Data" / "il2cpp_data" / "Metadata"
+    meta_dir.mkdir(parents=True, exist_ok=True)
+    (meta_dir / "global-metadata.dat").write_bytes(
+        b"AF1BB1FA" + det_bytes("metadata", 2048))
     acf = tree / "steamapps" / "appmanifest_1649080.acf"
     write_text(acf, f'"AppState"{{\n\t"buildid"\t\t"{TARGET_BUILD}"\n}}\n')
 
@@ -2224,7 +2303,7 @@ def _build_fixture_rest(out: Path, ext: Path, *, handover, fixes,
     overlay_obj = json.loads(overlay_report_path.read_text(encoding="utf-8"))
     if "counterunits" in fixes and dup_keys is not None:
         overlay_obj["counterUnits"] = counter_units_for(
-            {"evidence": overlay_obj["evidence"]})
+            {k: v for k, v in overlay_obj.items() if k != "counterUnits"})
     write_text(overlay_report_path, canon(overlay_obj))
     write_jsonl(relinks / "ui_link_coverage.jsonl",
                 ui_link_coverage_rows())
@@ -2254,26 +2333,6 @@ def _build_fixture_rest(out: Path, ext: Path, *, handover, fixes,
     if "ledger" in fixes:
         write_jsonl(relinks / "_uncontained_addresses.jsonl",
                     uncontained_ledger_rows())
-
-    # 9b. ROOT-LEVEL LEDGER MIRRORS (compatibility shim): the landed vs9
-    # resolves ledgers at extracted/ ROOT while the measured corpus keeps
-    # them under stubs/ and relinks/. Mirror byte-identical copies so the
-    # rest of the suite can proceed; flagged as a finding for the pair.
-    led_all = dict(led)
-    # RED-1 ledger: absent at the canonical relinks/ location day-one;
-    # the root mirror ships EMPTY so vs9's unconditional open survives
-    # (implementation-defect shim) while population checks stay red.
-    led_all["_uncontained_addresses.jsonl"] =         uncontained_ledger_rows() if "ledger" in fixes else []
-    led_all["competitor_applied.jsonl"] = competitor_rows()
-    led_all["entity_locale.jsonl"] =         relation_datasets()["entity_locale.jsonl"]
-    led_all["locale_term_entity.jsonl"] =         relation_datasets()["locale_term_entity.jsonl"]
-    led_all["entity_asset_guid.jsonl"] =         relation_datasets_asset()["entity_asset_guid.jsonl"]
-    for name, rows in sorted(led_all.items()):
-        home = ext / ("stubs" if name in ("_absences.jsonl",
-                                          "_unmapped-families.jsonl")
-                      else "relinks")
-        write_jsonl(ext / name, rows)          # root mirror (vs9 compat)
-        write_jsonl(home / name, rows)         # canonical location
 
     # 10. RELATIONS.md (+ routing paragraph on the RED-3 fix);
     # the real corpus emits it at extracted/RELATIONS.md (root), not relinks/
@@ -2306,25 +2365,31 @@ def _build_fixture_rest(out: Path, ext: Path, *, handover, fixes,
         write_text(famdir / fname, family_mdx(fname, key, pins))
     write_text(famdir / "exceptions.mdx", exceptions_mdx(pins))
 
-    # 13. miniature tools/ writer universe
-    tools = out / "tools"
-    write_text(tools / "tpc_common.py", TPC_COMMON_MINI)
-    write_text(tools / "stage0_verify_client.py", STAGE0_MINI)
-    write_text(tools / "stage1_decompile.py", STAGE1_MINI)
-    write_text(tools / "stage2_harvest_catalog.py", STAGE2_MINI)
-    write_text(tools / "stage4_localisation.py",
+    # 13. miniature WRITER UNIVERSE (V-I9's grep target) — lives in its own
+    # directory that the runner's tool-copy NEVER overwrites; pins.pathOwner.
+    # toolsDir names it. <tree>/tools/ stays for the runner's own imports.
+    (out / "tools").mkdir(parents=True, exist_ok=True)
+    wu = out / "writer-universe"
+    write_text(wu / "tpc_common.py", TPC_COMMON_MINI)
+    write_text(wu / "stage0_verify_client.py", STAGE0_MINI)
+    write_text(wu / "stage1_decompile.py", STAGE1_MINI)
+    write_text(wu / "stage2_harvest_catalog.py", STAGE2_MINI)
+    write_text(wu / "stage4_localisation.py",
                STAGE4_MINI + STAGE4_BODY)
-    write_text(tools / "stage3_harvest_bundles.py", STAGE3_MINI)
+    write_text(wu / "stage3_harvest_bundles.py", STAGE3_MINI)
     stage5 = STAGE5_MINI if not handover else \
         STAGE5_MINI.replace(
+            'AVAILABILITY_PATH = "extracted/relinks/locale_availability.jsonl"',
+            '# AVAILABILITY_PATH ownership MOVED to locale-proof '
+            '(piece-07 section 5)').replace(
             '    # honest-zero v1 availability artifact: SOLE WRITER until the\n'
             '    # locale-proof handover lands (piece-07 section 5)\n'
             '    (root / "relinks" / "locale_availability.jsonl").write_bytes(b"")\n',
             "    # emission block DELETED by the piece-07 section 5 handover\n")
-    write_text(tools / "stage5_emit_stubs.py", stage5)
-    write_text(tools / "stage6_relink.py", STAGE6_MINI)
+    write_text(wu / "stage5_emit_stubs.py", stage5)
+    write_text(wu / "stage6_relink.py", STAGE6_MINI)
     if handover:
-        write_text(tools / "stage9_locale_proof.py",
+        write_text(wu / "stage9_locale_proof.py",
                    stage_locale_proof_mini())
     return out
 
@@ -2336,9 +2401,10 @@ def _relations_md(*, routing: bool, generated_from=None) -> str:
     parts += [f"- {k}: {v}" for k, v in gf.items()]
     parts.append("")
     if routing:
+        # the PINNED sentence rides VERBATIM (V-D1 substring-matches it)
         parts += ["## Availability routing",
                   "",
-                  ROUTING_SENTENCE[0].upper() + ROUTING_SENTENCE[1:] + ".",
+                  "Availability routing: " + ROUTING_SENTENCE + ".",
                   "", FAITHFUL_SENTENCE + " That sentence is itself part "
                   "of the pinned text.", ""]
     return "\n".join(parts)
@@ -2477,6 +2543,11 @@ def run_tool(tree_or_ext, *, args=(), timeout=900, extra_env=None,
     if _usage_error(out):
         pytest.skip(f"impl-missing: runner rejected arguments {args} "
                     f"(usage error): {out[-300:]!r}")
+    # calibrate the open-counter driver's invocation spelling: this proven
+    # argv (--root <ext>) IS one of ARG_PREFIX_CANDIDATES
+    _BINDING_CACHE[f"{script}:{script.stat().st_mtime_ns}"] = next(
+        i for i, cand in enumerate(ARG_PREFIX_CANDIDATES)
+        if cand(Path(ext), Path(cwd) / "contracts") == ["--root", str(ext)])
     return proc
 
 
@@ -2569,8 +2640,12 @@ def _(t):
 @add("V-S2", "change-an-int-dirclass-count", "pin-mismatch")
 def _(t):
     p = _ext(t) / "bundle-roster.jsonl"
-    _rw_jsonl(p, lambda rows: (rows[0].__setitem__("dirClass",
-                                                    "dlc-ghost"), rows)[1])
+
+    def mut(rows):
+        base = next(r for r in rows if r["dirClass"] == "base")
+        base["dirClass"] = "dlc-ghost"
+        return rows
+    _rw_jsonl(p, mut)
 
 
 @add("V-S3", "add-a-key")
@@ -2581,7 +2656,7 @@ def _(t):
 
 @add("V-S4", "drop-a-key")
 def _(t):
-    p = _ext(t) / "relinks" / "item_room.jsonl"
+    p = _ext(t) / "relinks" / "config_config.jsonl"
     _rw_jsonl(p, lambda rows: (rows[0]["evidence"].pop("fieldPath"),
                                 rows)[1])
 
@@ -2629,10 +2704,10 @@ def _(t):
     p = _ext(t) / "harvest" / "export-manifest.jsonl"
 
     def mut(rows):
-        for r in rows:
-            if r["pathId"] == 302:
-                r["outRelPath"] = r["outRelPath"].replace("_302.json",
-                                                          ".json")
+        r = next(r for r in rows if r["pathId"] > 0)
+        signed = f"_{r['pathId']}"
+        assert signed in r["outRelPath"]
+        r["outRelPath"] = r["outRelPath"].replace(signed, "", 1)
         return rows
     _rw_jsonl(p, mut)
 
@@ -2720,7 +2795,8 @@ def _(t):
     p = t / "extracted" / "relinks" / "ui_link_coverage.jsonl"
 
     def mut(rows):
-        rows[2]["unblock"] = None
+        gap = next(r for r in rows if r["status"] == "documented-gap")
+        gap["unblock"] = None
         return rows
     _rw_jsonl(p, mut)
 
@@ -2765,10 +2841,12 @@ def _(t):
     _rw_jsonl(p, mut)
 
 
-@add("V-I8", "declared-list-drops-contributor")
+@add("V-I8", "declared-list-desyncs-from-files")
 def _(t):
+    # list-side desync (the exit-2 contract breaks both ways): the run
+    # section SPELLS a contributor size the files no longer support
     _rw_text(t / "extracted" / "EXTRACTION-LOG.md",
-             "_dangling_guids.jsonl unresolved-open: 1137; ", "")
+             "unresolved-open: 1137", "unresolved-open: 1136")
 
 
 @add("V-I8", "declared-list-names-permanent-ledger")
@@ -2780,7 +2858,7 @@ def _(t):
 
 @add("V-I9", "second-writer-injected")
 def _(t):
-    p = t / "tools" / "stage6_relink.py"
+    p = t / "writer-universe" / "stage6_relink.py"
     text = p.read_text(encoding="utf-8")
     text += ('\n\ndef emit_also_availability(extracted_root):\n'
              '    # MUTANT: a second writer for the availability file\n'
@@ -2791,7 +2869,7 @@ def _(t):
 
 @add("V-I9", "zero-writers")
 def _(t):
-    p = t / "tools" / "stage5_emit_stubs.py"
+    p = t / "writer-universe" / "stage5_emit_stubs.py"
     text = p.read_text(encoding="utf-8")
     lines = [ln for ln in text.splitlines()
              if "locale_availability" not in ln
@@ -2802,10 +2880,10 @@ def _(t):
 # V-X family
 @add("V-X1", "invented-dstid")
 def _(t):
-    p = t / "extracted" / "relinks" / "item_room.jsonl"
+    p = t / "extracted" / "relinks" / "campus-level_config.jsonl"
 
     def mut(rows):
-        rows[0]["dstId"] = "Room_Ghost"
+        rows[0]["dstId"] = "Config_Ghost"
         return sort_pair_rows(rows)
     _rw_jsonl(p, mut)
 
@@ -2954,7 +3032,7 @@ def _(t):
              "; registryMisses: 5", "")
 
 
-@add("V-L3", "known-id-drift")
+@add("V-L3", "known-id-drift", "pin-mismatch")
 def _(t):
     p = t / "extracted" / "relinks" / "locale_join_report.json"
     _rw_json(p, lambda o: o.__setitem__("registryMisses", 2))
@@ -2971,8 +3049,8 @@ def _(t):
 
 @add("V-D1", "routing-note-removed-from-relations")
 def _(t):
-    _rw_text(t / "extracted" / "relinks" / "RELATIONS.md",
-             ROUTING_SENTENCE[0].upper() + ROUTING_SENTENCE[1:] + ".",
+    _rw_text(t / "extracted" / "RELATIONS.md",
+             "Availability routing: " + ROUTING_SENTENCE + ".",
              "[paragraph removed by mutant]")
 
 
@@ -3021,7 +3099,13 @@ def _(t):
 @add("V-R3", "media-class-count-shift")
 def _(t):
     p = t / "extracted" / "media-catalogue.jsonl"
-    _rw_jsonl(p, lambda rows: [r for r in rows if r["pathId"] != 9002])
+
+    def mut(rows):
+        victim = sorted(MEDIA_CLASS_COUNTS)[0]   # AnimationClip
+        kept = [r for r in rows if r["class"] != victim]
+        assert len(kept) == len(rows) - MEDIA_CLASS_COUNTS[victim]
+        return kept
+    _rw_jsonl(p, mut)
 
 
 @add("V-R4", "registry-key-renamed")
@@ -3030,8 +3114,8 @@ def _(t):
 
     def mut(rows):
         for r in rows:
-            if r["termKey"] == K_ITEM_NAME:
-                r["termKey"] = K_ITEM_NAME + "_RENAMED"
+            if r["termKey"] == K_PRESTIGE:
+                r["termKey"] = K_PRESTIGE + "_RENAMED"
         return rows
     _rw_jsonl(p, mut)
 
@@ -3056,7 +3140,8 @@ def _(t):
 
 @add("V-R7", "enumerated-bundle-deleted")
 def _(t):
-    victim = t / roster_relpaths()[0]
+    root = t / "steamapps" / "common" / "Two Point Campus"
+    victim = root / roster_relpaths()[0]
     assert victim.exists()
     victim.unlink()
 
