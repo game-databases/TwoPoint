@@ -23,9 +23,14 @@ ONE additive entrypoint stage turns the verified locale inventory into
 the proof artifacts extraction-doctrine Principle two demands —
 completeness is PROVEN from primary artifacts, never claimed:
 
-- New stage id **`locale-proof`**, script `tools/stage7_locale_proof.py`,
-  registered ADDITIVELY in `tools/tpc_common.py::STAGES` AFTER `relink`
-  (eight stages total). Every existing stage byte-behaves identically
+- New stage id **`locale-proof`**, canonical registry index **9**
+  ([arbiter ruling](../rulings/arbiter-piece07-spec.mdx) R1; piece-04
+  AC1 pins the registry verbatim: relink=6, maps=7, logic=8,
+  **locale-proof=9**), script `tools/stage9_locale_proof.py`
+  (explicit-9 naming, piece-05's pattern), registered ADDITIVELY in
+  `tools/tpc_common.py::STAGES` after the LAST currently-registered
+  stage (today: after `relink`). Every existing stage byte-behaves
+  identically
   EXCEPT the two small code deltas this piece ITSELF lands for the §5
   amendment (CodeWriter deliverables, not routed doc wishes): stage 5's
   availability emission REMOVED (+ its two test assertions repointed),
@@ -126,11 +131,13 @@ lane's job; this piece ships the data layer that makes it provable.
 
 ## 4. Stage 7 — `locale-proof`
 
-- **Stage id:** `locale-proof` (entrypoint `--list` enumerates it AFTER
-  `relink`; eight stages total).
-- **Script:** `tools/stage7_locale_proof.py`. Registered in
+- **Stage id:** `locale-proof` — canonical registry index 9 (arbiter
+  R1). `--list` shows it appended after the last registered stage until
+  its canonical predecessors (maps=7, logic=8) land; ordering authority
+  is the canonical registry, not append accident.
+- **Script:** `tools/stage9_locale_proof.py`. Registered in
   `tools/tpc_common.py::STAGES` with script-hash deps
-  `["stage7_locale_proof.py", "tpc_common.py", "log_util.py"]`. No
+  `["stage9_locale_proof.py", "tpc_common.py", "log_util.py"]`. No
   UnityPy import anywhere in the stage.
 - **Inputs (upstream set — all committed artifacts; ANY missing ⇒ exit
   3 naming it, runner pre-check, piece-1 pattern):**
@@ -227,6 +234,17 @@ beside the tier so the 301−297 delta is data, not arithmetic);
 `keysHeld`: 905 in eleven locales, **897** in ja and ru (8 name-key
 holes). The field name `identicalButTranslatedElsewhere` from Rev 1 is
 RETIRED — it evaluated to 301, not the pinned 297.
+
+DECLARED-STRUCTURAL rows (arbiter R2 — EXPECTED under the frozen de
+comparator, never defects, unassertable as findings by any later
+reviewer): the **de** row carries `identicalAndDeDiffers` structurally
+**0** (self-comparison — `text(de) != text(en)` cannot hold where
+`byteIdenticalToEn(de)` does); the **en** row has `byteIdenticalToEn`
+== all held keys (trivially true) and its `identicalAndDeDiffers`
+reads as "keys where de differs from en" — informative, semantically
+different from the other eleven rows. CodeWriter emits both under the
+same rule; TestWriter may assert them on fixtures; no special-casing
+in code.
 
   `emptyCellsSkipped` MUST satisfy the F6 identity
   `registryKeys − rows(locale)` for all 13 locales (asserted — it is
@@ -471,14 +489,18 @@ defect, localization-architecture §4).
    an exit-1 validation failure, not a stale constant.
 2. `extracted/locales/proof/summary.json` — headline block (rates +
    counts mirrored from L1/L2/L3/L6) plus the flat INTEGER-only
-   `regressionVector`: pinned member list = unionKeys, allThirteenKeys,
-   per-locale rows ×13, per-locale unionHoles ×13, resolvedEdges,
-   registryMisses, coverageNumerator, availabilityRowCount,
-   per-kind joinedEntities ×9, per-kind availability rows ×9,
-   registryRows, registryDistinctKeys, matrixKeyDiff, orphansAKeys,
-   orphansB, uiReferenced, chromeSurfaces. Directions pinned per member
-   (coverage counts higher-better; hole counts and misses lower-better;
-   structural counts exact-match).
+   `regressionVector` with FLAT DOTTED-PATH member keys, spelling
+   PINNED (arbiter R3), **57 members**: `unionKeys`, `allThirteenKeys`,
+   `rows.<locale>` ×13, `holes.<locale>` ×13, `resolvedEdges`,
+   `registryMisses`, `coverageNumerator`, `availabilityRowCount`,
+   `joined.<kind>` ×9, `availRows.<kind>` ×9, `registryRows`,
+   `registryDistinctKeys`, `matrixKeyDiff`, `orphansAKeys`,
+   `orphansB`, `uiReferenced`, `chromeSurfaces`. Locale/kind spellings
+   are the pinned vocabularies verbatim (`pt-BR`, `zh-Hans`,
+   `metagame-node`, …). `.baseline.json` stores the SAME shape so
+   `REGRESSION:` lines print stable member paths old→new. Directions
+   pinned per member (coverage counts higher-better; hole counts and
+   misses lower-better; structural counts exact-match).
 3. `extracted/locales/proof/.baseline.json` — tripwire state
    `{buildId, vector, previousVerdict}`; EXCLUDED from `hashes.json`
    (same exclusion class as `.pipeline-meta.json`). Comparison rules:
@@ -501,15 +523,20 @@ defect, localization-architecture §4).
    comparing this manifest (AC9).
 5. `extracted/locales/proof/_ledger.jsonl` — one row per open gap:
    `{code, severity: "info"|"gap", detail, unblock, buildId}` sorted by
-   `(code, detail)`. Pinned codes: `registry-miss-dangling` (2 IDs) ·
-   `registry-miss-closable` (3, until the walk extends to code-ref
-   creation sites) · `entity-unjoined` (7,593, per-class breakdown in
+   `(code, detail)`. GRANULARITY PINNED (arbiter R3): ONE ROW PER
+   UNDERLYING OPEN ITEM for enumerable IDs; ONE AGGREGATE ROW for
+   counted populations — `registry-miss-dangling` = **2 rows** (one per
+   termId; detail carries termId/dev/srcKind/id) ·
+   `registry-miss-closable` = **1 row** (detail lists the 3 `Code/…`
+   keys) · `entity-unjoined` = **1 row** (per-class breakdown in
    detail) · `course-name-join-open` (names piece-08's shared alias
-   lever; absent when the alias input is present and total) ·
-   `alias-input-absent` · `dlc-out-of-install-scope` (G8, severity
+   lever; absent when the alias input is present and total),
+   `alias-input-absent`, `dlc-out-of-install-scope` (G8, severity
    info: `Items/DLC_Hospital/*` + `dlc-preorder-*` keys ship text for
-   uninstalled content; coverage claims state install scope). Empty
-   file valid iff nothing is open — unreachable on today's corpus
+   uninstalled content; coverage claims state install scope) = **1 row
+   each** ⇒ **`ledgerRows` == 7 on today's corpus**; the run section
+   names `code=rowcount` pairs so the split is verifiable. Empty file
+   valid iff nothing is open — unreachable on today's corpus
    (⇒ exit 2 is the honest steady state).
 
 ### Run-section keys (pinned, appended per pass)
@@ -526,7 +553,7 @@ L4: baseOverlayRows / baseOverlayEmptyTextRows / symbolCheck
 L5: uiRegistryKeys / uiReferenced / uiFree / localizeBindings /
     chromeSurfaces=16
 L6: registryRows / registryDistinctKeys / matrixKeyDiff / orphansAKeys /
-    orphansB / ledgerRows / regressionVerdict / baselineAction
+    orphansB / ledgerRows(=7 today) / regressionVerdict / baselineAction
 ```
 
 ## 5. Ownership amendment — `relinks/locale_availability.jsonl`
@@ -543,24 +570,42 @@ THIS piece — both classes enumerated below:**
   unblocks: regenerate from `entity_locale` + tables, or amend the pack
   spec to declare the substitution. Scout Q3 recommends regenerate
   INSIDE this piece "so the standard's file path stays true".
+- **RATIFIED (arbiter R4):** the ownership transfer is technically
+  forced — §5.4 names this path THE single source while it measures
+  0 bytes on disk; only a POST-relink stage can derive the relation;
+  stage 5's join procedure was REFUTED. This amendment SUPERSEDES two
+  prior ownership pins — piece-1 Revision 2/R3 ("stage 5 sole owner")
+  and piece-2 §R4 — through the ruled-amendment path those frameworks
+  themselves anticipate. The stage-6 RELATIONS.md generator edit is
+  RULED IN SCOPE (piece-05 already lands additive deltas inside
+  `stage6_relink.py`; piece-02's non-goals bind piece-02, not later
+  pieces); the fallback route below exists but is NOT taken.
 - **Decision: regenerate at the canonical path; stage `locale-proof`
   becomes its SOLE writer — and the handover happens IN CODE inside
-  this piece, not in docs alone** (reviewer F1). CodeWriter's
-  deliverable set therefore includes:
+  this piece, not in docs alone** (reviewer F1). Lane split follows
+  the repo map (arbiter-002: CODE = `tools/` + `run_all.py`; TEST =
+  `tests/`) — CodeWriter delivers items 1+3+4, TestWriter delivers
+  item 2, never both lanes editing `tests/`:
   1. REMOVE the availability-emission block from
-     `tools/stage5_emit_stubs.py` — its seeded join procedure was
-     REFUTED in piece-2 §R4 and honestly yields 0 rows (`joinEvidence`
-     in the stage-5 run sections already documents the zero-yield).
-     Stage 5's other outputs byte-behave identically.
-  2. Remove/repoint stage-5's TWO availability assertions in the test
-     suite (piece-1 §3 stage-5 acceptance "is regenerated on every
-     run…" + the §8 stage-5 fixture bullet) so no surviving test
-     demands the dead write.
-  3. A three-line REFUSAL GUARD on whatever shared write helper
-     remains reachable from stage 5: if the legacy write path is ever
-     invoked while the target holds NON-v1/non-empty content, stage 5
-     exits 1 NAMING the conflict instead of truncating — the patch-day
-     clobber window cannot exist even on a stale checkout.
+     `tools/stage5_emit_stubs.py` (write sites `build_locale_availability`
+     ~:337/:694, call ~:697) — its seeded join procedure was REFUTED in
+     piece-2 §R4 and honestly yields 0 rows (`joinEvidence` in the
+     stage-5 run sections already documents the zero-yield). Stage 5's
+     other outputs byte-behave identically.
+  2. [TEST lane] Remove/repoint stage-5's TWO availability assertions
+     in the test suite (piece-1 §3 stage-5 acceptance "is regenerated
+     on every run…" + the §8 stage-5 fixture bullet) so no surviving
+     test demands the dead write.
+  3. A REFUSAL GUARD, CALLER-SCOPED TO STAGE 5 (arbiter R4
+     implementation pin): condition on STAGE-5-ORIGINATED invocation of
+     the legacy path (caller flag or stage-5-local wrapper) writing a
+     target holding NON-v1/non-empty content → stage 5 exits 1 NAMING
+     the conflict. NEVER an unconditional check inside a helper shared
+     with stage 9's emitter — an unconditional "non-v1/non-empty ⇒
+     refuse" in e.g. `log_util.write_jsonl` would refuse stage 9's own
+     legitimate v2 rerun. The §10 stale-checkout fixture proves the
+     guard; the double-run hash-equality leg proves stage 9 unaffected.
+  4. The stage-6 RELATIONS.md GENERATOR-template line (below).
   After landing, NO stage-5 code path can write the file: an isolated
   `--only emit-stub-datasets` run leaves `relinks/
   locale_availability.jsonl` BYTE-UNTOUCHED whether it holds v2 rows or
@@ -569,20 +614,38 @@ THIS piece — both classes enumerated below:**
   window exists and none needs healing by a later full run.
 - Forward-only DAG preserved: `locale-proof` consumes stage-6 outputs
   and runs AFTER `relink`; stage 5 never depends on it.
-- Doc deltas ROUTED (not executed by stage code): piece-1 gains a
-  Revision note (§3 stage-5 outputs + §4 layout line lose the
-  availability clauses; §8's stage-5 fixture bullets likewise);
-  piece-2 §4/AC3 lose their `locale_availability.jsonl` exception
-  line. **RELATIONS.md is NOT among them**: it is a GENERATED artifact
-  (piece-2 §R7 — regenerated mechanically by `stage6_relink.py`,
-  byte-deterministic), so its R4 routing-note sentence is landed as a
-  GENERATOR-TEMPLATE DELTA inside this piece's code set (one line in
-  the RELATIONS.md section of `tools/stage6_relink.py` naming the
-  regenerated canonical file) — never a hand-edit that the next relink
-  run would silently revert. If the orchestrator rules the relink-side
-  edit out of scope, the fallback route is piece-02 prose only PLUS an
-  `availability-canonical-path` info row in `_ledger.jsonl` — still no
-  manual RELATIONS.md edit.
+- Doc deltas ROUTED (arbiter R5/R6 — owned by the documentator/
+  orchestrator seat; the piece-01/piece-02 files are outside this
+  build pair's write scope, piece-02 §7 precedent; they ride this
+  piece's landing, while the `tpc_common.py::STAGES` registration
+  itself needs no doc to execute):
+  - **piece-01 gains Revision 8** covering BOTH halves: (a) the
+    availability-clause retirement (§3 stage-5 acceptance sentence,
+    §4 layout line, §8 stage-5 fixture bullets, §8 client-gated
+    bullet); and (b) the locale-proof REGISTRATION entry (§5.1
+    `--list`, §5.2 prepared-tree upstream set for the new stage, §8
+    fixture bullet) written REGISTRY-AWARE per R1 — never as a
+    hardcoded count.
+  - **piece-02 delta extended by two supersession marks** (R6), one
+    line each: §R4's ownership pin ("stage 5 KEEPS sole ownership…")
+    gains a dated supersession note pointing at this spec's §5 + the
+    arbiter ruling — the OTHER half of that pin ("this piece NEVER
+    writes that file") remains true forever, stage 6 still never
+    touches the path; §7's endgame open-question row ("Full retirement…
+    Owner/orchestrator decides after this piece lands") is marked
+    RESOLVED via this spec's §5. Plus the standing delta: piece-2 §4/
+    AC3 lose their `locale_availability.jsonl` exception line.
+    Historical narrative (piece-2 §1's 0-byte description) stays
+    untouched — it was true when written.
+  - Until those revisions land, THE ARBITER RULING + THIS §5 govern
+    where the texts conflict.
+  - **RELATIONS.md is NOT among the routed doc deltas**: it is a
+    GENERATED artifact (piece-2 §R7 — regenerated mechanically by
+    `stage6_relink.py`, byte-deterministic), so its R4 routing-note
+    sentence is landed as a GENERATOR-TEMPLATE DELTA inside this
+    piece's code set (one line in the RELATIONS.md section of
+    `tools/stage6_relink.py` naming the regenerated canonical file) —
+    never a hand-edit that the next relink run would silently revert.
 - Schema: the v2 row shape of §L3 replaces the v1 shape outright; the
   v1 schema was "intentionally foreign" (piece-2 AC3 wording) and had
   zero rows, so no migration exists or is owed.
@@ -592,9 +655,9 @@ THIS piece — both classes enumerated below:**
 ```
 extracted/
 ├── relinks/
-│   ├── locale_availability.jsonl       # STAGE 7 owner (§5 amendment):
+│   ├── locale_availability.jsonl       # STAGE 9 owner (§5 amendment):
 │   │                                   #   5,850 v2 rows, sorted (kind,id)
-│   └── locale_availability.report.json # stage 7: schemaVersion/formula/counts
+│   └── locale_availability.report.json # stage 9: schemaVersion/formula/counts
 ├── locales/
 │   └── proof/                          # stage locale-proof ONLY (every file below)
 │       ├── summary.json                # L6: headlines + integer regressionVector
@@ -610,7 +673,7 @@ extracted/
 │       └── .baseline.json              # L6 tripwire state (hash-excluded)
 ```
 
-Ownership: EVERY path above is written by `stage7_locale_proof.py`
+Ownership: EVERY path above is written by `stage9_locale_proof.py`
 alone. No existing stage gains or loses a writer EXCEPT the §5
 amendment. EXTRACTION-LOG/.stage-stamps/.pipeline-meta stay runner-owned.
 All JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
@@ -619,15 +682,20 @@ only — AGENTS rule 3 two-class rule).
 
 ## 7. Acceptance criteria (mechanical, whole piece)
 
-1. **Entrypoint:** `python run_all.py --list` enumerates exactly
-   `verify-client, decompile, harvest-catalog, harvest-bundles,
-   localisation, emit-stub-datasets, relink, locale-proof` — eight
-   stages, that order; `make list` equivalent; `--only locale-proof`
-   runs in isolation on a prepared tree (client mode: `--skip
-   locale-proof` then `--only locale-proof`; hostless smoke:
-   `tests/build_fixture_tree.py --stage locale-proof` materializes §4's
-   upstream set synthetically — mini roster + tables + stubs + relink
-   JSONLs, no Unity bytes needed).
+1. **Entrypoint (registry-aware, arbiter R1 form):** `python run_all.py
+   --list` shows `locale-proof` at canonical index 9 — AFTER `relink`
+   and BEFORE any canonically-later sibling IF that sibling is
+   registered (`contracts`=10, `media`=11, `search-corpus`=12) — and
+   FAILS LOUDLY on any other position. Absolute stage COUNT is asserted
+   ONLY on the fixture tree the TestWriter controls (where the batch's
+   concurrent siblings cannot move it); on the real tree the assertion
+   is ORDER, never count — four W-C-tail pieces seat concurrently and
+   whichever pins first must not break the others. `make list`
+   equivalent; `--only locale-proof` runs in isolation on a prepared
+   tree (client mode: `--skip locale-proof` then `--only locale-proof`;
+   hostless smoke: `tests/build_fixture_tree.py --stage locale-proof`
+   materializes §4's upstream set synthetically — mini roster + tables +
+   stubs + relink JSONLs, no Unity bytes needed).
 2. **Upstream gate:** any missing input ⇒ exit 3 NAMING it; the stage
    never partially writes before the pre-check passes.
 3. **Headline reproduction (client-gated, exact):** union 15,666 ·
@@ -735,7 +803,7 @@ only — AGENTS rule 3 two-class rule).
 
 | Question | Resolution route |
 |---|---|
-| §5 ownership amendment (stage 7 takes the canonical availability path; stage-5 emission retired) — the alternative is a pack-spec substitution declaration naming `entity_locale.jsonl` authoritative | Orchestrator confirms at spec review; scout Q3 recommends regenerate (adopted here) |
+| §5 ownership amendment (stage 9 takes the canonical availability path; stage-5 emission retired) | **RESOLVED — RATIFIED** by [arbiter-piece07-spec](../rulings/arbiter-piece07-spec.mdx) R4, superseding piece-1 Rev 2/R3 + piece-2 §R4 ownership pins; execution pinned there (caller-scoped guard, lane split); piece-01 Revision 8 + piece-02 supersession marks routed per R5/R6 |
 | Link-row membership when a locale's cell is present-but-identical-to-English (scout Q2) — ADOPTED PROVISIONALLY: presence counts, identity surfaced per-row/per-cell so a policy flip is a one-rule change | Orchestrator / product-panel call under [DR-2026-08-17-closed-loop] (AGENTS rule 6 reserves owner Hard STOPs for domain/trademark, hub name, credentials, legality — this is not one; reviewer F13). Artifact unaffected structurally |
 | Internal-kernel page universe (scout Q1: `Item_Editor*` 713, `Unused_Item*` 231, variant kernels ≈275) and chrome rollout order (scout Q4: all-13 launch vs staged en/de/fr/es/ja) | Site IA lanes; consume `unjoined_entities.jsonl` classes + the manifest's shipRule; do not affect this stage |
 | Config name-identity tie-break (scout's 30.95/18.39 not reproducible under any tried rule — F13) | Closed for THIS piece: pinned rule wins, `DRIFT:` note preserves the discrepancy; re-derive only if the owner asks |
@@ -772,7 +840,10 @@ e.g. 3 locales + base, 2 kinds, hand-computed expectations):**
   ledger incl. the en.jsonl-presence check failing LOUDLY on a fixture
   that drops a `Code/…` key); hashes.json self-exclusion; ledger codes
   + sort.
-- Runner: `--list` shows eight stages in order; `--only locale-proof`
+- Runner: `--list` shows `locale-proof` after the last registered stage
+  and before any canonically-later sibling if present (registry-aware
+  order assertion; absolute count asserted only on fixtures — R1);
+  `--only locale-proof`
   isolation; prepared-tree builder covers the upstream set; exit-code
   mapping 0/1/2/3 incl. ledger enumeration AND the 1 > 2 > 0
   precedence (open ledger + injected regression → exit 1); stamp
@@ -780,7 +851,7 @@ e.g. 3 locales + base, 2 kinds, hand-computed expectations):**
   carve-out guard still green; **retirement deltas (reviewer F1)** — a fixture
   run of `--only emit-stub-datasets` leaves
   `relinks/locale_availability.jsonl` byte-unchanged (hash before ==
-  after) while stage-7 outputs persist, the refusal guard exits 1 on a
+  after) while stage-9 outputs persist, the refusal guard exits 1 on a
   synthetic stale-checkout invocation against a populated v2 file, and
   no surviving stage-5 test asserts the removed emission.
 
@@ -799,6 +870,48 @@ e.g. 3 locales + base, 2 kinds, hand-computed expectations):**
   manifest input) → same exit-1 treatment (reviewer F5).
 
 ## Revision registration
+
+**Revision 3 (arbiter addendum folded in), 2026-08-26.**
+[`../rulings/arbiter-piece07-spec.mdx`](../rulings/arbiter-piece07-spec.mdx)
+ruled Rev 2 SPEC-READY — all fifteen findings APPLIED-CORRECTLY, fact
+base independently reconciled (histogram Σ = per-locale-row Σ =
+200,912) — and issued a binding addendum, folded in here verbatim so
+the build pair seats against ONE contract:
+
+1. **R1 — renumber to the canonical registry:** script
+   `tools/stage7_locale_proof.py` → **`tools/stage9_locale_proof.py`**
+   (canonical index **9**, explicit-9 naming; deps hash updated;
+   registration stays additive after the last currently-registered
+   stage). AC1 REWRITTEN registry-aware: order asserted (`locale-proof`
+   after `relink`, before any canonically-later sibling IF registered,
+   loud failure elsewhere), absolute count asserted ONLY on the fixture
+   tree — the exact-eight enumeration collided with piece-03/piece-04
+   in the concurrent batch. §4/§10/§6 comments renumbered.
+2. **R2 — metricRule accepted + two DECLARED-STRUCTURAL notes emitted:**
+   the de row's `identicalAndDeDiffers` is structurally 0 and the en
+   row's `byteIdenticalToEn` covers all held keys (its tier reads as
+   "de differs from en") — expected under the frozen comparator, never
+   defects, fixture-assertable, unassertable-as-finding later.
+3. **R3 — L6 pins:** ledger granularity bound (row-per-ID for
+   enumerable items, aggregate rows for counted populations ⇒
+   **`ledgerRows` == 7 today**, run section names `code=rowcount`
+   pairs); regressionVector spelled as FLAT DOTTED-PATH keys —
+   **57 members** — with `.baseline.json` storing the same shape.
+4. **R4 — §5 RATIFIED** (supersedes piece-1 Rev 2/R3 + piece-2 §R4
+   ownership pins; stage-6 generator edit ruled IN SCOPE); refusal
+   guard CALLER-SCOPED TO STAGE 5 explicitly (an unconditional
+   shared-helper guard would refuse stage 9's own legitimate v2
+   rerun); test-assertion repointing assigned to the TEST lane per the
+   arbiter-002 lane map.
+5. **R5/R6 — routed-out deltas recorded:** piece-01 gains **Revision 8**
+   (availability retirement AND the registry-aware locale-proof
+   registration entry), owned by the documentator/orchestrator seat;
+   piece-02's delta extends by two supersession marks (§R4 pin dated
+   note — its "stage 6 NEVER writes" half stands forever; §7 endgame
+   row RESOLVED). Until those land, the ruling + §5 govern conflicts.
+
+No data-layer change: the upstream set contains only stage ≤ 6
+artifacts, so R1's renumber touches naming/order only.
 
 **Revision 2 (reviewer round 1 applied in full), 2026-08-26.**
 Executes every finding in

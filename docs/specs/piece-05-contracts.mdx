@@ -76,7 +76,7 @@ are repeated here — the full census lives in the scout report §2–§4.
 | F10 | Registry/locale joins | `i2_term_registry.jsonl` 15,675 rows → 15,672 distinct termKeys, canonical true 15,672 / false 3, termType constant `0`, termStatus {1: 15,400 · 0: 275}, 25 source assets, **`locales[]` empty on ALL rows**; `entity_locale.jsonl` 10,964 rows (dev empty 3,429 = 31.28%; 903 fieldPaths); reverse index 6,526 rows, Σ usages == **10,964**; registry↔matrix key diff == **0** both directions |
 | F11 | GUID bridge | report `{guidRefsTotal 20170, distinctGuids 5584, resolvedToAddress 16110, resolvedToStub 3747, danglingDistinctGuids 1137, resolveRateAddress 0.7987109568666336, resolveRateStub 0.1857709469509172}` — counters count REFERENCES not rows; full replay from sibling artifacts reproduces all seven fields bit-exact plus universes (15,630 asset-row membership, 3,746 pair rows); `resolvedToStub − pairRows = 1` = exactly one collapsed dedup tuple (`Item_Union_Stage_Floor → ItemValidator_SinglePlace`, `Validators[]`). The ref unit is documented only in code docstrings |
 | F12 | Uncontained terminations (corrected G2) | `entity_asset_guid.jsonl` 15,630 rows / 4,447 distinct dstIds; **9 rows over 5 distinct addresses** absent from `container_index`, all catalog entries `bundle:null` under `Assets/Data/DLCs/DLC3_Hospital/*` = UNINSTALLED-DLC coverage (same family as F6's 19 out-of-roster references), NOT snapshot skew, NOT an id-closure break (piece-02 §R3 pins `dstId` as catalog-address-verbatim). Offenders: `Config_DLC3` `Levels[]` ×3 (Rural/Snowy/Tropical `Config_Level_*.prefab`), `Config_GameMode_IconGenerator` → `DB_DLC3_Hospital_Variations.asset`, `Config_UISprite` + `ObjectiveType_{PatientEmergency,PirateEmergency,PlotTropical,Volcano}` → shared atlas `Atlas_DLC3_Icons_Inspector.spriteatlasv2`. **No ledger row exists for any of them today** |
-| F13 | Ledgers | `_dangling_guids.jsonl` 1,137 rows, verdict `unresolved-open` on all (enum of 4, 3 arms unexercised), sampleRefs ≤5; `_unresolved_pptrs.jsonl` 2,391 rows, reason enum exactly 2 strings (2,284 + 107); stage-5 `_absences.jsonl` 2 rows (config 1, item 44; samples caps 1 & 25); `_unmapped-families.jsonl` 768 rows (evidence 677/43/47/1); `locale_availability.jsonl` EMPTY 0 bytes (stage-5-owned honest-zero v1; consumers routed to `entity_locale`) |
+| F13 | Ledgers | `_dangling_guids.jsonl` 1,137 rows, verdict `unresolved-open` on all (enum of 4, 3 arms unexercised), sampleRefs ≤5; `_unresolved_pptrs.jsonl` 2,391 rows, reason enum exactly 2 strings (2,284 + 107); stage-5 `_absences.jsonl` 2 rows (config 1, item 44; samples caps 1 & 25); `_unmapped-families.jsonl` 768 rows (evidence 677/43/47/1); `locale_availability.jsonl` EMPTY 0 bytes at this buildId (honest-zero v1; consumers routed to `entity_locale`; sole-writer handover to `locale-proof` DECIDED by piece-07 §5 — see V-I9/Q3) |
 | F14 | Reports | `locale_join_report.json`: instancesTotal 20,070 · sentinelZero 9,101 · registryHits 10,964 · **registryMisses 5** (an EXIT-2 CONTRIBUTOR per EXTRACTION-LOG) · coverageOnNonEmpty 0.99954 · matrixKeyDiff 0 · unresolvedIds[5] · codeRefTerms note; `ui_link_coverage.jsonl` 344 rows, mapped-schema 9 / documented-gap 335, XOR holds, `genericContainerClasses` on exactly 1 row; `competitor_applied.jsonl` 3 rows (fandom flagsMissing 383 · steam-guides flagsMissing 34 · terminal `~floor` floor-unmet sourcesApplied 0 + alias-input unblock) — measured shape carries `samples/terminal/floorRequired/sourcesApplied/unblock`, the spec'd `wall{…}` object occurs on 0 rows |
 | F15 | Stage 0/1 | `identity.json` **13** top-level keys; roster 176 rows, single keyset `{buildId,bytes,dirClass,localeFlag,relpath,sceneFlag}`, dirClass 158/10/8, sceneFlag 150/25/1 (= 26 scene ids), localeFlag null×162 + base×1 + 13 codes, relpath unique; decompile: 101 DummyDll images, assembly-index 148 entries + hierarchy stamp block (`hierarchyRowCount 20037` + counting-method inline), class-hierarchy 20,037 rows, id-registries **1,792 files** while EXTRACTION-LOG's `registryCount: 1900` counts covered CLASSES — a second units-should-be-inline case |
 
@@ -464,7 +464,7 @@ AC4). Expected values marked *(c)* are build-scoped constants
 | V-S7 | matrix-cellshape | `relinks/matrix.json` | meta blocks present; 100 cells; per-status required keys; enums ⊆ frozen vocabularies; `pairs[]` order == row-major over `meta.nodeUniverse.nodes` (programmatic permutation check) | 100 cells; 10 nodes *(c)* |
 | V-S8 | report-shapes | `addressables/catalog-mini-report.json` (§3.3 schema), catalog-coverage, settings.snapshot, base-overlay-report, guid_bridge_report, locale_join_report, assembly-index | exact field lists per artifact; mini-report top-level keys == `{meta,counts,duplicateKeys,bundleUniverse,guidIndex,nullBundleAddresses}` with `meta.catalogSha256` present; `compositionPolicy` ∈ 4-enum; overlay evidence counter COUNT == 15 names *(c)*; bridge report == 8 fields; join report field list; assembly-index stamp block carries `hierarchyRowCount` + counting-method string | as §3.3 + F6/F8/F11/F14/F15 *(c)* |
 | V-S9 | relation-and-ledger-rowshapes | ledgers `_absences`, `_unmapped-families`, `_dangling_guids`, `_unresolved_pptrs`, `_uncontained_addresses`; PLUS relation files `entity_locale.jsonl`, `entity_asset_guid.jsonl`, `locale_term_entity.jsonl`, and `competitor_applied.jsonl` | exact keysets per file (pair-schema rows for the two pair-shaped relations; `{termKey,usages[],locales,buildId}` reverse shape; competitor MEASURED shape — `samples/terminal/floorRequired/sourcesApplied/unblock` present where measured, spec'd `wall{}` object on 0 rows: G5 pinned HERE); `sampleRefs`/`samples` arrays present; `reason`/`evidence`/`verdict` ∈ declared vocabularies | shapes as F13/F14/§7 *(c)* |
-| V-S10 | filename-grammars | harvest trees, `harvest/export-manifest.jsonl`, `relinks/*` | every export stem matches signed-pathId grammar `_(\|-)\d+$` (Rev 6 lesson); `outRelPath` spellings conform; `relinks/` holds ONLY the owned file set (no strays) | 167,069 stems conform; owned-set equality *(c)* |
+| V-S10 | filename-grammars | harvest trees, `harvest/export-manifest.jsonl`, `relinks/*` | every export stem matches signed-pathId grammar `_(\|-)\d+$` (Rev 6 lesson); `outRelPath` spellings conform; `relinks/` holds ONLY the owned file set (no strays) — owned set = the stage-6 emission tree + `locale_availability.jsonl` +, once piece-07 §5 lands, its v2 companion `locale_availability.report.json` beside it; files owned by sibling-stage specs are never strays here | 167,069 stems conform; owned-set equality *(c)* |
 | V-S11 | enum-domains | all enum-bearing families, occurrence counted PER FAMILY | ∀ values ∈ declared domain; separately INFO-list DECLARED∧¬OCCURRING arms per family — pair files: methods `i2-termid-registry` / `name-convention:<rule>` / `code-analysis:<descriptor>` / `competitor-model:<source-id>` cold (the 4 unexercised arms live ONLY here); matrix: mechanism `logic` cold, joinKeys `LocalisedString(…)->I2-termID->Term-key` + `name-equality(<rule>)` cold; `_dangling_guids`: 3 verdict arms cold; `entity_locale`: method `i2-termid-registry` OCCURRING on all 10,964 rows — NEVER listed cold (F5); growth into an arm prints INFO, out-of-vocabulary FAILS | occurring sets as F3/F4/F13 *(c)* |
 | V-S12 | buildid-coverage | every family carrying `buildId` | ∀ rows/artifacts: present ∧ == `identity.buildId` | 100% everywhere |
 | V-S13 | sort-orders | pair files, `_unresolved_pptrs`, `_dangling_guids`, `_uncontained_addresses`, matrix, catalog mini-report, roster, container/cab indexes | lexicographic by pinned keys (pair = dedup tuple; pptr = 5-tuple; guids/address = their key; roster = relpath; container = (bundle,address)) | all sorted |
@@ -481,7 +481,7 @@ AC4). Expected values marked *(c)* are build-scoped constants
 | V-I6 | byte-match-nonempty | last emit-stubs run section | `identifierByteMatch.checked > 0 ∧ mismatches == 0` (Rev 6 amendment 3 incident guard) | checked 2,128 *(c)* |
 | V-I7 | sample-caps | `_dangling_guids.sampleRefs`, `locale_join_report.unresolvedIds[].sampleRefs`, `_absences.samples` | array lengths ≤ pinned caps | ≤5 · ≤5 · ≤25 *(c)* |
 | V-I8 | exitcode-ledger-contract | §7 DECLARED iff-set ↔ last relink run section ↔ actual ledger files | declared-contributor list == computed non-empty set OVER THE §7 SET ONLY (permanent-by-design ledgers excluded — F2); sizes match; last relink exitCode == 2 iff that set is non-empty; exit 0 stays reachable | contributors per §7 Today line *(c)* |
-| V-I9 | ownership-single-writer | `pins.pathOwner` map + grep over `tools/*.py` write targets | each extracted/ path has exactly one writing script; `locale_availability.jsonl` → stage5 only; rest of `relinks/` → stage6 only; RELATIONS.md regenerated by relink only | map satisfied |
+| V-I9 | ownership-exactly-one-writer | `pins.pathOwner` map + grep over `tools/*.py` write targets | INVARIANT, not incumbent: every extracted/ path has EXACTLY ONE writer at any moment; map entries name the CURRENT canonical writer per the pack's stage registry. The `locale_availability.jsonl` entry is HANDOVER-AWARE (decided by piece-07 §5): candidates = {stage-5 emitter UNTIL the locale-proof handover lands, stage id `locale-proof` AFTER} — PASS iff exactly one candidate writes it; two concurrent writers (the hazard piece-01 R3 cut) or zero (half-applied handover) FAIL loudly. Rest of `relinks/` → stage 6; RELATIONS.md regenerated by relink only (+ piece-07's additive template line composes, arbiter watch item 4) | exactly-one-writer holds on every mapped path — green at introduction in EITHER landing order |
 
 ### Cross-family pins (V-X)
 
@@ -587,7 +587,8 @@ tools/stage4_localisation.py        # += print+persist duplicateKeysOverwritten 
 tools/stage6_relink.py              # += _uncontained_addresses ledger + bridge/join-report counterUnits + RELATIONS.md routing paragraph
 README.md                           # layout row: contracts/ -> this piece
 docs/specs/piece-01-extraction-pipeline.mdx   # Revision 8 one-liner set (canonical stage-10 registration; layout note)
-docs/specs/piece-02-relinking.mdx             # Revision note (F10): §5.7 contributor iff-set per §7 resolution · §4 tree += _uncontained_addresses.jsonl · §R7 generator template += availability-routing paragraph · §R3 += counterUnits object
+docs/specs/piece-02-relinking.mdx             # Revision note (F10+RF-2): §5.7 contributor iff-set per §7 resolution · §4 tree += _uncontained_addresses.jsonl · §R6 competitor rowshape superseded-as-measured (V-S9; wall{} occurs on 0 rows) · §R7 generator template += availability-routing paragraph · §R3 += counterUnits object
+docs/specs/piece-07-locale-proof.mdx          # Revision note (RF-1): piece-05's pins.pathOwner entry + relinks owned set MOVE WITH the §5 handover — locale_availability.jsonl writer flips stage5→locale-proof; locale_availability.report.json joins the owned set; no other piece-05 edit required
 ```
 
 Provenance: `contracts/**` and `tools/**` are repo-plane; nothing in
@@ -667,11 +668,11 @@ else here stays repo-side).
 |---|---|
 | Q1 `duplicateKeysOverwritten` surface — DECIDED HERE pending arbiter: printed in the run section AND persisted in `base-overlay-report.json.evidence` (both surfaces serve different readers) | Reviewer/arbiter confirm; scout OQ1 closes with AC2 |
 | Q2 slug policy — contract pins `slug:null` allowed; generation is site-layer | Owner confirms adjacent to QUESTION-QUEUE standing items |
-| Q3 `locale_availability.jsonl` retirement — stays stage-5-owned honest-zero v1; consumers routed; retirement remains a piece-1 revision | Owner/orchestrator per piece-02 §7 |
+| Q3 `locale_availability.jsonl` handover — DECIDED by [piece-07 §5](piece-07-locale-proof.mdx) (ratified at that spec's review): stage `locale-proof` becomes SOLE WRITER, the stage-5 emission block is deleted in code, the file is regenerated at 5,850 v2 rows + `locale_availability.report.json`; canonical order locale-proof=9 < contracts=10 | Closed — no owner action; V-I9/V-S10 are handover-aware (RF-1) and order-robust in either landing sequence |
 | Q4 guid_bridge derivability — SETTLED by verification: replayable bit-exact, instrumentation semantics kept, `counterUnits` emitted (RED-3) | Closed; piece-02 §R3 field list unchanged, one additive object |
 | Q5 stage-2 mini-report extension touches piece-01 territory (emitter change) | Arbiter confirms additive scope; piece-01 Rev 8 note records it |
 | Q6 stage registration — RESOLVED by the orchestrator stage-index registry: canonical index **10** recorded (relink=6 · maps=7 · logic=8 · locale-proof=9 · contracts=10); piece-01 Rev 8 records the canonical registration, not a slot count | Closed here per PR-1/F1; arbiter countersigns the recording |
-| Q7 piece-02-owned surfaces amended by this piece — §5.7 contributor iff-set (§7 resolution), §4 tree += `_uncontained_addresses.jsonl`, §R7 generator template += routing paragraph, §R3 += counterUnits object | Arbiter confirms the delta set alongside Q5; mirrored into piece-02 as a revision note (§10, F10) |
+| Q7 piece-02-owned surfaces amended by this piece — §5.7 contributor iff-set (§7 resolution), §4 tree += `_uncontained_addresses.jsonl`, §R6 competitor rowshape superseded-as-measured (pointer V-S9; `wall{}` occurs on 0 rows), §R7 generator template += routing paragraph, §R3 += counterUnits object | CONFIRMED with the §R6 amendment (arbiter-piece05-spec RF-2); mirrored into piece-02 as a revision note (§10) |
 
 ## 14. Test obligations (TestWriter contract)
 
@@ -731,6 +732,43 @@ install; runs on NE8K against the real corpus):**
 - idempotence: `--only check-contracts` double-run hash-equal.
 
 ---
+
+## Revision 3 (arbiter-piece05-spec residuals applied)
+
+Applies exactly the two residuals in
+[`../rulings/arbiter-piece05-spec.mdx`](../rulings/arbiter-piece05-spec.mdx)
+(BOUNCE narrow: all ten reviewer findings verified APPLIED-CORRECTLY;
+fact base untouched; red→green set unchanged per PR-3), 2026-08-26:
+
+1. **RF-1 (MAJOR):** ownership pins aligned with piece-07 §5's DECIDED
+   `locale_availability.jsonl` handover and made order-robust across
+   the canonical sequence (locale-proof=9 < contracts=10):
+   - V-I9 restated as the EXACTLY-ONE-WRITER invariant — `pins.pathOwner`
+     names the CURRENT canonical writer per the stage registry, and the
+     `locale_availability.jsonl` entry is HANDOVER-AWARE: candidates are
+     {stage-5 emitter UNTIL piece-07 lands, stage id `locale-proof`
+     AFTER}; PASS iff exactly one candidate writes it; two concurrent
+     writers or zero = loud FAIL. Green at introduction in EITHER
+     landing order; catches broken mid-handover states.
+   - V-S10's owned set extended: `locale_availability.report.json`
+     (v2 companion, beside the v2 file, per piece-07 §5) joins once
+     landed; sibling-spec-owned files are never strays here.
+   - §2 F13 reframed as a buildId-scoped fact (no forward-looking
+     ownership claim); Q3 re-routed from "owner/orchestrator per
+     piece-02 §7" to DECIDED-BY-piece-07 §5.
+   - New §10 revision-note line routes the pins move to piece-07:
+     pathOwner flip + owned-set growth land WITH its handover.
+2. **RF-2 (MINOR):** the piece-02 revision note and Q7 gain the fifth
+   delta clause — §R6 competitor rowshape superseded-as-measured
+   (pointer to V-S9; `wall{}` occurs on 0 rows) — so no two binding
+   specs state different contracts for `competitor_applied.jsonl`.
+
+Arbiter watch items recorded for the build pair, no spec change owed:
+V-I8's run-section leg implements against the ACTUAL EXTRACTION-LOG
+spelling with a day-one-green fixture; AC2's red registry carries all
+four ids across the three breaks (incl. V-D1); reserved-family symmetry
+stands as ruled; RELATIONS.md template lines from this piece and
+piece-07 compose additively under AC8's self-adjusting baseline.
 
 ## Revision 2 (reviewer-piece05-spec-r1 fixes applied)
 
