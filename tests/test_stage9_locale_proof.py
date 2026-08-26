@@ -464,6 +464,27 @@ def test_C_identity_to_pivot_two_tier_framing(open_run):
     # Items/Library/Reception_Giant_Name == "Giant Library Reception")
 
 
+def test_C_hole_namespaces_bound_hostless(open_run):
+    """MINOR-4 (build fix round): key_plane.holeNamespaces must not be
+    droppable on a corpus-less host — bound here against the emitted hole
+    FILES (whose counts are pinned by test_C_hole_files_*), so dropping or
+    corrupting the field fails without the real corpus too."""
+    r, ext, _tree = open_run
+    require_completed(r)
+    hn = load_json(ext, f"{PROOF_DIR}/key_plane.json")["holeNamespaces"]
+    assert set(hn) == set(ALL_FIXTURE_LOCALES), (
+        f"holeNamespaces must cover every roster locale: {sorted(hn)}")
+    for loc in ALL_FIXTURE_LOCALES:
+        rows = load_jsonl(ext, f"{PROOF_DIR}/key_holes/{loc}.jsonl")
+        want = {}
+        for row in rows:
+            ns = row["namespace"]
+            want[ns] = want.get(ns, 0) + 1
+        assert hn[loc] == want, (
+            f"{loc}: holeNamespaces {hn[loc]} != namespace histogram of the "
+            f"emitted hole file {want}")
+
+
 def test_C_percent_formatting_rounds_half_up():
     """Rates round HALF-UP at 2 dp (spec §4 vocabularies). Unit probe with a
     true tie value: 1/160 = 0.625 % → half-up '0.63%' (banker's would give
@@ -600,8 +621,9 @@ def test_D_unjoined_entities_classified(open_run):
     assert bright["coincidesWithEnTermText"] is True, bright
     # the L2 row shape pins coincidesWithEnTermText as OPTIONAL (the "?"
     # keys: nameLiteral? / coincidesWithEnTermText? / kernelPrefix?) — a
-    # non-coinciding row OMITS it rather than emitting False
-    assert not cupid.get("coincidesWithEnTermText"), cupid
+    # non-coinciding row OMITS it rather than emitting False (strict
+    # optionality per build fix-round MINOR-3)
+    assert "coincidesWithEnTermText" not in cupid, cupid
     coincidence_rows = [r_ for r_ in rows if r_.get("coincidesWithEnTermText")]
     assert len(coincidence_rows) == 1, coincidence_rows
     # residue bucket: the spec's own 'everything else'; label must come from
@@ -897,6 +919,33 @@ def test_G_game_data_side_agrees_with_registry(open_run):
     assert isinstance(gd.get("localizeBindings"), int) \
         and gd["localizeBindings"] >= 0
     assert "never as site chrome" in gd["note"] or "site chrome" in gd["note"]
+
+
+def test_G_reusable_namespaces_bound_to_registry(open_run):
+    """T-1 (testreviewer MAJOR-1): gameDataSide.reusableNamespaces is a
+    COMPUTED block, not decorative — the three figures are derived here from
+    the fixture registry itself (Input/General prefix censuses + the
+    I2LS_UI_Settings sourceAsset count) and must equal the emitted block, so
+    deleting the block (or severing it from the registry walk) fails this
+    leg; client-gated, test_N pins the real 164 / 143 / 187."""
+    r, ext, _tree = open_run
+    require_completed(r)
+    reg = load_jsonl(ext, "relinks/i2_term_registry.jsonl")
+    keys = {r_["termKey"] for r_ in reg}
+    want = {
+        "Input": sum(1 for k in keys if k.startswith("Input/")),
+        "General": sum(1 for k in keys if k.startswith("General/")),
+        "UI_Settings_source": sum(1 for r_ in reg
+                                  if r_.get("sourceAsset") ==
+                                  "I2LS_UI_Settings"),
+    }
+    man = load_json(ext, f"{PROOF_DIR}/site_ui_gap_manifest.json")
+    rn = man["gameDataSide"]["reusableNamespaces"]
+    assert dict(rn) == want, (
+        f"reusableNamespaces must be computed from the registry: emitted "
+        f"{rn} vs fixture-derived {want}")
+    # the F20 vocabulary is pinned even where the fixture census is zero
+    assert set(rn) == {"Input", "General", "UI_Settings_source"}
 
 
 # ============================================================================
@@ -1277,7 +1326,11 @@ def test_K_stage9_rerun_does_not_refuse_on_populated_v2(tmp_path_factory):
     r = run9(tree, ext, "--force")
     require_completed(r)
     assert r.returncode in (0, 2)
-    assert "refus" in (r.stdout + r.stderr).lower() or True
+    # the rerun is a clean completion: no refusal, no PROBLEM: diagnostics
+    # (build fix-round T-2 — the former `... or True` could never fail)
+    combined = r.stdout + r.stderr
+    assert "refus" not in combined.lower(), combined[-600:]
+    assert "PROBLEM:" not in combined, combined[-600:]
 
 
 def test_K_emit_stubs_leaves_availability_byte_untouched(tmp_path_factory):
@@ -1353,6 +1406,48 @@ def test_K_refusal_guard_stale_checkout(tmp_path_factory):
     scratch_relinks = tmp_path_factory.mktemp("tw07_k3_ctl") / "relinks"
     legacy(rows, scratch_relinks)
     assert (scratch_relinks / AVAILABILITY_JSONL.split("/", 1)[1]).is_file()
+
+
+def test_K_relations_template_names_stage9():
+    """§5/item-4 template pin (build fix-round F1): the RELATIONS.md
+    GENERATOR delta must stay live in tools/stage6_relink.py — commit
+    9c7439c rebuilt that region from a stale buffer and silently restored
+    the superseded `STAGE-5 SOLE PROPERTY` pin. Asserted against the
+    GENERATOR'S OUTPUT (`_relations_lines`), not the source bytes, so any
+    future shared-file rebase that drops the routing bullet fails loudly
+    here instead of regenerating a contradicting RELATIONS.md."""
+    from _impl import load_tool
+
+    mod = load_tool("stage6_relink.py")
+    assert mod is not None, "impl-missing: tools/stage6_relink.py"
+    fn = getattr(mod, "_relations_lines", None)
+    assert fn is not None, (
+        "impl-missing: stage6_relink._relations_lines (RELATIONS.md "
+        "generator)")
+    try:
+        lines = fn(
+            matrix={"pairs": []}, unresolved=[], dangling_rows=[],
+            locale_report={"registryMisses": 0, "unresolvedIds": []},
+            coverage_rows=[],
+            r5c={"surfacesTotal": 0, "mappedSchema": 0, "documentedGaps": 0,
+                 "tooltipTargetClasses": 0, "localizeBindings": 0},
+            ledger_rows=[],
+            r6c={"sourcesRead": 0, "confirmsHard": 0, "addsDerived": 0,
+                 "flagsMissing": 0, "wallsRecorded": 0},
+            floor_met=True, pair_files=0, edges_emitted=0,
+            registry_rows=[{}], loc_rows=[{}])
+    except TypeError as e:
+        pytest.fail(f"_relations_lines signature drifted; the F1 template "
+                    f"pin needs the availability bullet reachable: {e}")
+    blob = "\n".join(lines)
+    assert "REGENERATED at its" in blob and "locale-proof" in blob \
+        and "stage 9" in blob, (
+        "piece-07 §5/item-4: the availability-routing bullet must name "
+        f"stage 9 `locale-proof` as canonical writer; generator emitted:"
+        f"\n{blob[:900]}")
+    assert "STAGE-5 SOLE PROPERTY" not in blob, (
+        "the superseded piece-02 §R4 ownership pin is back in the "
+        f"RELATIONS.md generator (stale-buffer revert):\n{blob[:900]}")
 
 
 def test_K_no_surviving_test_demands_dead_emission():
@@ -1748,8 +1843,23 @@ def test_N_full_corpus_exact_figures(real_scratch, tmp_path_factory):
         "Config_UniversityLevel_ZeroMoney_Remix",
         "LevelScenarioV2_FreePlay_City"}
     coincident = [x for x in unj if x.get("coincidesWithEnTermText")]
-    assert {x["id"] for x in coincident} == {"Idle", "Food", "Drink"} or \
-        len(coincident) == 3, coincident
+    # AC7/F14 membership AND count are each pinned facts — no disjunction
+    # (build fix-round T-3). F14's (`Idle`,`Food`,`Drink`) names the EN TERM
+    # VALUES the literals collide with, NOT row ids: the measured carriers
+    # are Activity_Room_Cafeteria / Interaction_VendingMachine_
+    # CheesyGubbinsZero / Interaction_VendingMachine_MilkMade (the blind
+    # suite's id-guess rode the removed `or len==3` escape hatch).
+    assert len(coincident) == 3, coincident
+    assert all(x["kind"] == "unlockable"
+               and x["class"] == "english-only-literal" for x in coincident), \
+        coincident
+    assert {x["nameLiteral"] for x in coincident} == \
+        {"Idle", "Food", "Drink"}, coincident
+    assert {x["id"] for x in coincident} == {
+        "Activity_Room_Cafeteria",
+        "Interaction_VendingMachine_CheesyGubbinsZero",
+        "Interaction_VendingMachine_MilkMade",
+    }, coincident
     kernels = [x for x in unj if x["class"] == "internal-kernel"
                and x["kind"] == "item"]
     assert len(kernels) == REAL["kernelRowsItem"]
@@ -1795,6 +1905,14 @@ def test_N_full_corpus_exact_figures(real_scratch, tmp_path_factory):
     assert gd["topLevelNamespaces"] == REAL["topLevelNamespaces"]
     assert gd["localizeBindings"] == REAL["localizeBindings"]
     assert gd["freeNarrativeKeys"] == REAL["freeNarrativeKeys"]
+    # T-1 (build fix round): the F20 reusable-namespace pins are ASSERTED,
+    # not merely seeded — deleting gameDataSide.reusableNamespaces must go
+    # red here (KeyError) and in test_G_reusable_namespaces_bound_to_registry
+    assert gd["reusableNamespaces"] == {
+        "Input": REAL["inputNamespace"],
+        "General": REAL["generalNamespace"],
+        "UI_Settings_source": REAL["uiSettingsSource"],
+    }
 
     fb = _fallback(ext)
     bo = fb["baseOverlay"]

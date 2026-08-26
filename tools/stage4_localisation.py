@@ -31,8 +31,10 @@ the same `{id, text}` contract with the pivot cell verbatim (mostly empty on
 this client — the registry holds keys+statuses, translations live in the
 locale bundles). TermStatus distributions are reported as evidence counts.
 
-Stage 5 is the SOLE OWNER of `relinks/locale_availability.jsonl`; this stage
-never writes under relinks/ (R3).
+`relinks/locale_availability.jsonl` is owned SOLELY by stage 9
+`locale-proof` (piece-07 §5 amendment, arbiter-piece07 R4 — supersedes the
+piece-01 Rev 2/R3 stage-5 ownership pin); this stage still never writes
+under relinks/.
 
 piece-05 amendments: per-locale run-section rows carry the
 `(emission-events)` unit annotation and print `duplicateKeysOverwritten`

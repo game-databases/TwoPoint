@@ -105,6 +105,18 @@ SEEDS = {
                       "course": 41, "staff": 3, "student-type": 54,
                       "unlockable": 43, "metagame-node": 390,
                       "campus-level": 0},
+    # F11 name-bearing seeds — INCLUDING the one figure the corpus outgrew:
+    # spec F11/F13/AC4 pin config at 2,627, but the same pinned rule measures
+    # 2,613 on buildId 20226581 (every other kind matches F11 exactly). The
+    # seed stays at the written-contract value so the divergence is
+    # SELF-ANNOUNCING: each real run prints
+    #   DRIFT: nameBearingPerKind[config] seed 2627 vs measured 2613 — fresh wins
+    # and the governance note rides its pinned location
+    # kinds.config.nameRoleNote (build fix-round F2).
+    "nameBearingPerKind": {"config": 2_627, "item": 1_077, "room": 105,
+                           "course": 0, "staff": 3, "student-type": 27,
+                           "unlockable": 23, "metagame-node": 195,
+                           "campus-level": 0},
     "stubRowsPerKind": {"config": 8_430, "item": 3_885, "room": 116,
                         "course": 69, "staff": 3, "student-type": 54,
                         "unlockable": 415, "metagame-node": 454,
@@ -166,7 +178,13 @@ CONFIG_NAME_ROLE_NOTE = (
     "an implied 2613 denominator; the pinned rule (first fieldPath "
     "containing 'name', sorted (srcKind,srcId,fieldPath,dstId) order) does "
     "NOT reproduce them under any tried tie-break (F13) — the columns "
-    "here are the pinned-rule values and fresh wins")
+    "here are the pinned-rule values and fresh wins. Denominator doctrine "
+    "(build fix-round F2): spec F11/AC4 pin 2,627 name-bearing configs but "
+    "the same pinned rule measures 2,613 on this corpus (every other kind "
+    "matches F11 exactly), so the 2,627 seed is kept and every run "
+    "announces `DRIFT: nameBearingPerKind[config] seed 2627 vs measured "
+    "2613 — fresh wins` — the divergence from the written contract is "
+    "never silent")
 
 COURSE_NAME_ROLE_NOTE_BASE = (
     "course name hole (F15): all {edges} course edges carry "
@@ -345,6 +363,13 @@ REQUIRED_INPUTS = (
 )
 # per-locale tables are required too, but the REQUIRED SET is resolved from
 # the roster inside load_inputs (a mini fixture names fewer locales)
+
+# OPTIONAL input (absence is a zero, never a failure — build fix-round F4
+# declares it so the input contract is complete): stage-6's committed
+# `relinks/ui_link_coverage.jsonl` is L5's localizeBindings substrate (the
+# measured-OPTIONAL F20 figure; a declared stage-6 output, consumed
+# UPSTREAMS-free exactly like the alias input below — never in run_all.UPSTREAMS).
+OPTIONAL_INPUTS = ("relinks/ui_link_coverage.jsonl",)
 
 
 def precheck_inputs(extracted_root: Path) -> None:
@@ -756,6 +781,20 @@ def pass_l2(inputs: dict, drift: Drift, name_edges: dict,
         named_ids = [row_id(r) for r in stub_rows
                      if (kind, row_id(r)) in name_edges]
         nb = len(named_ids)
+        drift.check(f"nameBearingPerKind[{kind}]",
+                    SEEDS["nameBearingPerKind"][kind], nb)
+
+        # §L2 (build fix-round F6): `inferred:true` rides the RESOLUTION
+        # PATH — the optional alias input — never the kind. A course whose
+        # effective name edge came from the client fieldPath rule, or a kind
+        # with no alias-resolved name edge at all, must not claim inferred.
+        alias_named = sum(1 for (k, _i), ne in name_edges.items()
+                          if k == kind and ne.get("source") == "alias-input")
+        fieldpath_named = sum(
+            1 for (k, _i), ne in name_edges.items()
+            if k == kind and ne.get("source") == "fieldPath")
+        inferred_flag = bool(alias_map) and alias_named > 0 \
+            and fieldpath_named == 0
         per_locale = {}
         for loc in locs:
             any_present = all_present = 0
@@ -777,7 +816,6 @@ def pass_l2(inputs: dict, drift: Drift, name_edges: dict,
                 if nk and tables[loc].get(nk) and tables[PIVOT].get(nk) \
                         and tables[loc][nk] == tables[PIVOT][nk]:
                     ident += 1
-            inferred_flag = bool(alias_map) and kind == "course"
             per_locale[loc] = {
                 "anyTermPresent": any_present,
                 "allTermsPresent": all_present,
@@ -993,8 +1031,13 @@ def pass_l3(inputs: dict, drift: Drift, name_edges: dict,
     drift.check("availPerKind(seed)", SEEDS["joinedPerKind"],
                 {k: per_kind.get(k, 0) for k in KINDS})
     # §2.2 formula asserted programmatically: emitted rows == the DISTINCT
-    # (srcKind,srcId) universe holding >=1 registry-resolved edge (the
-    # deduplicated locale_join_report.registryHits population).
+    # (srcKind,srcId) universe holding >=1 registry-resolved edge. AC6's
+    # wording ("== registryHits deduplicated") cannot be an equality against
+    # the raw counter: locale_join_report.registryHits is the RAW EDGE count
+    # (10,964), not a deduplicated entity count (5,850), so the load-bearing
+    # guard here is the dedup equality above plus this <= bound; the pinned
+    # 5,850 figure is guarded by the availabilityRows DRIFT seed (build
+    # fix-round F5 — deviation from AC6-as-written recorded, not silent).
     if len(rows) != len(grouped):
         raise tc.StageError(
             "availability formula broken: emitted rows != distinct "
@@ -1028,11 +1071,16 @@ def pass_l3(inputs: dict, drift: Drift, name_edges: dict,
 # ---------------------------------------------------------------------------
 # L4 — fallback law artifact
 
-def measure_symbol_lines(dump_cs: Path) -> tuple[list[dict], str]:
+def measure_symbol_lines(dump_cs: Path,
+                         drift: Drift | None = None) -> tuple[list[dict], str]:
     """Deterministic substring pass over dump.cs. Signature strings stay
-    pinned; dumpCsLine values are MEASURED this run (~L<lineno>, 1-based)."""
+    pinned; dumpCsLine values are MEASURED this run (~L<lineno>, 1-based).
+
+    The symbolCheck enum stays the pinned two-value set
+    (`verified|skipped-no-dump.cs`); a dump.cs that is PRESENT yet missing a
+    declared token surfaces as a DRIFT line instead of a third verdict value
+    (build fix-round F3 — the loss is announced, never silent)."""
     symbols = []
-    verdict = "verified"
     if not dump_cs.is_file():
         for sym in FALLBACK_SYMBOLS:
             symbols.append({"name": sym["name"], "dumpCsLine": None})
@@ -1055,8 +1103,10 @@ def measure_symbol_lines(dump_cs: Path) -> tuple[list[dict], str]:
             "name": sym["name"],
             "dumpCsLine": (f"~L{hit + 1}" if hit is not None else None),
         })
-        if hit is None:
-            verdict = "verified-with-drift-symbol-line-missing"
+        if hit is None and drift is not None:
+            short = sym["name"].split("(")[0]
+            drift.check(f"fallbackSymbol[{short}] dumpCsLine",
+                        "matched-in-dump.cs", "token-not-found")
     return symbols, "verified"
 
 
@@ -1084,7 +1134,7 @@ def pass_l4(inputs: dict, drift: Drift, base_only_vs_en: list[str],
                 SEEDS["emptyCellsSkippedTotal"], skipped_total)
 
     symbols, symbol_check = measure_symbol_lines(
-        inputs.get("dump_cs") or Path("nonexistent"))
+        inputs.get("dump_cs") or Path("nonexistent"), drift)
 
     artifact = {
         "meta": {"buildId": inputs["build_id"]},
@@ -1694,8 +1744,9 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
 
     dump_cs = extracted_root / "decompiled" / "il2cppdumper" / "dump.cs"
     inputs["dump_cs"] = dump_cs
-    # R5 census rides the committed ui_link_coverage rows
-    coverage_path = extracted_root / "relinks/ui_link_coverage.jsonl"
+    # R5 census rides the committed ui_link_coverage rows (OPTIONAL_INPUTS[0]:
+    # absence ⇒ bindings 0 — never a gate failure)
+    coverage_path = extracted_root / OPTIONAL_INPUTS[0]
     inputs["ui_coverage_rows"] = (load_jsonl(coverage_path)
                                   if coverage_path.is_file() else [])
 

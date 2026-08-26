@@ -8,8 +8,9 @@ AssetGUID payload walkers, the cross-file resolver ladder (externals →
 cab_index → stub index), the GUID bridge, the I2 term-registry builder,
 the UI-link coverage builders, the competitor-model mapper, and the
 matrix/RELATIONS.md assemblers. Stage 6 owns every emitted path in
-`extracted/relinks/` EXCEPT `locale_availability.jsonl` (stage-5 SOLE
-owner — R4 ownership pin; this module never writes it).
+`extracted/relinks/` EXCEPT `locale_availability.jsonl` (sole writer since
+the piece-07 §5 amendment: stage 9 `locale-proof`, arbiter-piece07 R4 —
+superseding the piece-02 §R4 stage-5 pin; this module never writes it).
 
 Determinism: sorted enumeration everywhere, no wall-clock inputs, atomic
 temp+rename writes, UTF-8 + LF. Ids stay VERBATIM end to end (Principle
@@ -126,8 +127,10 @@ def stream_jsonl(path: Path, rows) -> None:
 
 def clear_owned_outputs(relinks_dir: Path) -> None:
     """Remove every stage-6-owned child of relinks/ before regeneration.
-    `locale_availability.jsonl` is stage-5 SOLE property (R4 pin) and is
-    never touched — not deleted, not rewritten."""
+    `locale_availability.jsonl` is stage 9's (`locale-proof`) sole property
+    (piece-07 §5 amendment, arbiter-piece07 R4 — supersedes the piece-02
+    §R4 stage-5 pin) and is never touched here — not deleted, not
+    rewritten."""
     if not relinks_dir.is_dir():
         relinks_dir.mkdir(parents=True, exist_ok=True)
         return

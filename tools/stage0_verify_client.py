@@ -35,8 +35,8 @@ SKELETON_PLACEHOLDERS: dict[str, str] = {
         "# Relations — PLACEHOLDER POINTER ONLY\n\n"
         "A later piece catalogs every relation, mechanism and coverage gap "
         "here ([DR-2026-08-17-relink]). Piece 1 ships only "
-        "`relinks/locale_availability.jsonl`, owned solely by the "
-        "emit-stub-datasets stage.\n"),
+        "`relinks/locale_availability.jsonl`, owned since the piece-07 §5 "
+        "amendment solely by stage 9 `locale-proof` (arbiter-piece07 R4).\n"),
     "protocol/README.md": (
         "# Protocol layer — observed surface (single-player inventory)\n\n"
         "No gameplay client↔server plane exists. The owed protocol section "

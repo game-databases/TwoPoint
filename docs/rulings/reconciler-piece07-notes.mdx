@@ -1,0 +1,46 @@
+# Reconciler notes — piece-07 stage 9 locale-proof (interface reconciliation)
+
+**Seat:** Reconciler (recorded post-hoc by the build fix round). **Date:**
+2026-08-26. **Subject:** the five deviations from
+[`../specs/piece-07-locale-proof.mdx`](../specs/piece-07-locale-proof.mdx)
+Revision 3-as-written that commit `0295df6` ("stage9 locale-proof interface
+reconciliation") landed, each with its code site. The build reviews
+([codereviewer-piece07-build](../reviews/codereviewer-piece07-build.mdx) F2/O1,
+[testreviewer-piece07-build](../reviews/testreviewer-piece07-build.mdx) §4)
+found these rulings living only in a commit message and test comments; this
+note is their durable home. None of the five reopens the arbiter ruling
+([arbiter-piece07-spec](arbiter-piece07-spec.mdx)) — all are honest
+measurement-or-interface corrections of Rev 3's letter, implemented and
+suite-pinned.
+
+| # | Ruling | Where it lives |
+|---|---|---|
+| 1 | **Equal-rerun baseline untouched.** Same-buildId rerun with an equal vector → verdict `ok`, action `untouched`; `.baseline.json` bytes stay frozen (no `previousVerdict` churn), so byte-stable tripwire state survives steady-state reruns. | `tools/stage9_locale_proof.py::evaluate_baseline` (the `if not improved:` branch); suite legs `test_J_unchanged_rerun_no_false_positive`, `test_N_real_double_run_idempotent` |
+| 2 | **`residualIdenticalInDe` generalized to ALL 13 rows** under the SAME frozen predicates (`bie − identicalAndDeDiffers`, de comparator everywhere — no ru special case). Compact in practice: only non-empty lists emit; largest list 14 keys; the de row is structurally bie=14/didd=0 per arbiter R2; the ru list equals the pinned residual-4 verbatim. | `tools/stage9_locale_proof.py` pass_l1 (`residual_by_locale`); fixture pin `test_C_identity_to_pivot_two_tier_framing`, real pin in `test_N_full_corpus_exact_figures` |
+| 3 | **Closability probe is `Code/<fieldPath>` THEN `Code/<_dev>`.** F18's wording ("the `_dev` string IS the key under Code/") does not match the measured corpus alone — LocalisedStringCodeRef cells carry the key as their fieldPath. Probing both spellings IN THAT ORDER reproduces the pinned 3-closable / 2-dangling split under either reading. | `tools/stage9_locale_proof.py::derive_misses` docstring + probe; pins `test_H_miss_ledger_shape`, `test_N` dangling rows |
+| 4 | **Config name-bearing doctrine: spec pin 2,627 vs measured 2,613 — fresh wins, loudly.** Spec F11/F13/AC4 pin config name-bearing at 2,627; the pinned first-name-edge rule measures 2,613 on buildId 20226581 (scout percentages do not reproduce either; every other kind matches F11 exactly). The SEEDS member keeps the WRITTEN value so every run prints `DRIFT: nameBearingPerKind[config] seed 2627 vs measured 2613 — fresh wins`, and the doctrine text rides its pinned artifact location `kinds.config.nameRoleNote` (+ run-section `configIdentityDriftNoted=true`). Suite pins the measured 2,613. *(Build fix round F2 made this self-announcing — before it, no seed existed and the divergence was silent at every layer a verifier reads.)* | `SEEDS["nameBearingPerKind"]` + pass_l2 drift checks + `CONFIG_NAME_ROLE_NOTE`; `docs/rulings/reconciler-piece07-notes.mdx` (this file); `tests/_prooflib.py::REAL` comment; `test_D_kind_level_counts_and_name_role_notes`, `test_N` |
+| 5 | **Alias input resolved BESIDE THE EXTRACTION ROOT** (`<root>/../data/sources/derived/course-name-aliases.jsonl`). Equals the pack-relative repo convention on real runs (default extracted root sits inside the pack) while keeping hostless fixture/scratch roots hermetic against concurrent sibling activity at the shared pack path. | `tools/stage9_locale_proof.py::load_alias_input`; `tests/_prooflib.py::alias_input` context manager |
+
+## Addendum (build fix round, 2026-08-26) — F14's coincidence trio is VALUES, not ids
+
+Tightening the AC7 coincidence pin (testreviewer T-3) exposed a wrong-as-
+written reading, not corpus drift (buildId still 20226581): spec F14's
+"exactly 3 coincidental EN-term-value collisions (`Idle`,`Food`,`Drink`)"
+names the EN TERM VALUES the unlockable `Name` literals collide with. The
+measured carrier rows in `unjoined_entities.jsonl` are
+`Activity_Room_Cafeteria` (= "Idle") ·
+`Interaction_VendingMachine_CheesyGubbinsZero` (= "Food") ·
+`Interaction_VendingMachine_MilkMade` (= "Drink") — all three
+`unlockable` / `english-only-literal`, count 3 exactly as pinned. The blind
+suite's id-form assertion (`{x["id"]} == {"Idle","Food","Drink"}`) never
+bit because the reviewer-flagged `or len(coincident)==3` disjunction
+(MINOR-2) absorbed its failure; the tightened pin now asserts count AND
+value-trio AND measured carrier ids. Emitted data was always right.
+
+## Scope note
+
+Rev 3's letter stands everywhere else; where these five differ from it, THIS
+note + the code sites govern until the next spec touch folds them in (the
+way Rev 2 folded reviewer round 1). The known seed correction owed to a
+future spec revision: F11/F13's config name-bearing figure (ruling 4 above)
+— see testreviewer MINOR-6.
