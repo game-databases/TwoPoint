@@ -1,0 +1,485 @@
+# Scout piece-07 — locale coverage proof inventory (Two Point Campus)
+
+**Seat:** Scout, PrepareTask pipeline for piece #36 (locale-coverage proof).
+**Date:** 2026-08-26 · **Host:** NE8K · **Client:** Two Point Campus, appid
+1649080, buildId **20226581**, version `10.3.169253+2024-12-06.1241`.
+**Scope:** prove (not claim) translation coverage for every locale the
+client ships, per entity kind; separate game-data coverage from site-UI
+coverage; set the competitor language-UX bar.
+
+Every number below is measured from disk on this host (python/jq-style
+walks over the named artifacts) unless explicitly marked otherwise.
+Reading basis: repo-root `AGENTS.md`, `_foundation/decision-register.md`,
+`_foundation/extraction-doctrine.md`, `_foundation/extraction-host.md`,
+`_foundation/localization-architecture.md`, pack `spec.md` / `README.md` /
+`data-acquisition.md` / `PROGRESS.mdx`, and
+[docs/specs/piece-01-extraction-pipeline.mdx](specs/piece-01-extraction-pipeline.mdx)
+(stage-4 conventions, Revisions 2–7) — read in full.
+
+---
+
+## §1 — Locale roster + provenance
+
+**Roster: 13 text locales + 1 unnamed base overlay = 14 locale bundles,
+exactly as shipped** (binding gate [FRAMEWORK §2.4]; verified against the
+client, not marketing). Source of truth:
+`extracted/bundle-roster.jsonl` (stage-0 acceptance pins “exactly 14
+`localeFlag != null` rows”), cross-checked against
+`extracted/identity.json` (`localeBundleCount: 14`) and
+[data-acquisition.md](../data-acquisition.md) S1.
+
+| Bundle (under `TPC_Data/StreamingAssets/aa/StandaloneWindows64/`) | bytes | localeFlag | BCP-47 |
+|---|---:|---|---|
+| `localisation_assets_localisation.bundle` (unnamed) | 252,920 | `base` | BASE-OVERLAY |
+| `…localisationenglish.bundle` | 448,196 | `en` | `en` (pivot) |
+| `…localisationbrazilianportuguese.bundle` | 465,748 | `pt-BR` | `pt-BR` |
+| `…localisationchinese(simplified).bundle` | 473,061 | `zh-Hans` | `zh-Hans` |
+| `…localisationchinese(traditional).bundle` | 475,381 | `zh-Hant` | `zh-Hant` |
+| `…localisationfrench.bundle` | 482,113 | `fr` | `fr` |
+| `…localisationgerman.bundle` | 505,279 | `de` | `de` |
+| `…localisationitalian.bundle` | 456,614 | `it` | `it` |
+| `…localisationjapanese.bundle` | 487,853 | `ja` | `ja` |
+| `…localisationkorean.bundle` | 501,360 | `ko` | `ko` |
+| `…localisationpolish.bundle` | 504,725 | `pl` | `pl` |
+| `…localisationrussian.bundle` | 533,769 | `ru` | `ru` |
+| `…localisationspanish.bundle` | 475,040 | `es` | `es` |
+| `…localisationturkish.bundle` | 479,427 | `tr` | `tr` |
+
+Total locale-bundle payload: **6,541,486 B**. All 14 carry
+`dirClass: base` — neither DLC axis (`dlc-space`, `dlc-ghost`) adds or
+removes a locale; locale capability is a base-game fact. One `spanish`
+bundle → `es`; the queued appdetails pull confirmed **no `es-419` row**
+and that the storefront’s `supported_languages` names only 11 of the 13
+(Japanese and Russian absent there) — the client’s 14 bundles remain the
+sole authority ([data-acquisition.md](../data-acquisition.md) §kickoff).
+
+**Emitted artifacts (piece-1 stage 4, run `2026-08-25T03:13:17Z`,
+exit 0 — `extracted/EXTRACTION-LOG.md`):**
+
+- `extracted/locales/<locale>.jsonl` ×13 — `{id, text}`, `id` = I2 term
+  key verbatim; UTF-8; empty cells skipped-and-counted, never invented.
+- `extracted/locales/base-overlay.jsonl` — the unnamed bundle persisted
+  verbatim: **15,672 rows, every row’s `text` empty** (measured). It is
+  the I2 **master registry** (keys + statuses), not a string table.
+- `extracted/locales/base-overlay-report.json` — emitted
+  `compositionPolicy` enum + evidence counts (see §4).
+- `extracted/locales/locale-matrix.json` — 15,672 keys × 13 locales +
+  `includesBaseKeys: true`; strictly supersedes key-granular availability.
+- Relink side (piece-2 stage 6, run `2026-08-25T23:49:25Z`, exit 2
+  completed-with-ledger): `relinks/entity_locale.jsonl` (authoritative
+  entity↔term relation), `i2_term_registry.jsonl`,
+  `locale_term_entity.jsonl`, `locale_join_report.json`;
+  `relinks/locale_availability.jsonl` exists but is **empty** (§8 G1).
+
+Storage shapes measured (Revision 5 mechanism, re-derived here): the base
+overlay holds 26 `I2.Loc.LanguageSourceAsset` MonoBehaviours (25
+term-bearing `I2LS_*` categories + `I2LS_TEMPLATE` with 0 terms); each of
+the 13 named bundles instead holds 25 `I2LS_<Category>` **TextAssets** in
+I2 category-text grammar (`[i2t]`-joined `Term=text`). Both decode paths
+are implemented in `tools/stage4_localisation.py`.
+
+---
+
+## §2 — Kind × locale coverage matrix (measured)
+
+Two planes must be reported separately; conflating them is how false
+“fully localized” claims happen.
+
+### §2.1 Key-granular plane — the whole string corpus
+
+Universe: **union of the 13 emitted tables = 15,666 distinct keys**
+(base registry holds 15,672; the 6-key delta is base-only keys with no
+text anywhere — §4). Presence across locales, measured per key:
+
+| # locales holding the key | keys |
+|---:|---:|
+| 13 (all) | 15,369 (98.11%) |
+| 12 | 46 |
+| 11 | 27 |
+| 10 | 1 |
+| 9 | 2 |
+| 3 | 1 |
+| 2 | 15 |
+| 1 | 205 |
+
+Per-locale table size and hole count (keys absent from that locale):
+
+| locale | rows | % of union | missing keys |
+|---|---:|---:|---:|
+| en | 15,665 | 99.99% | 1 |
+| ko | 15,457 | 98.67% | 209 |
+| zh-Hant | 15,446 | 98.60% | 220 |
+| zh-Hans | 15,445 | 98.59% | 221 |
+| fr / de / it / pl | 15,445 | 98.59% | 221 each |
+| pt-BR | 15,443 | 98.58% | 223 |
+| tr | 15,443 | 98.58% | 223 |
+| es | 15,440 | 98.56% | 226 |
+| ru | 15,422 | 98.44% | 244 |
+| ja | 15,371 | 98.12% | **295** |
+
+Hole anatomy (namespace histogram of missing keys): dominated by
+`Challenge/*` (event/challenge-mode strings, ~115–119 of each locale’s
+holes) and `Levels/*` (32), then `Meta/`, `Advisor/`, `Objectives/`,
+`UI/` — i.e. seasonal/challenge narrative text, not entity display
+names. ja is the worst locale in absolute terms (295).
+
+Quirks worth recording:
+
+- **en itself misses 1 key**: `UI/General/NameSeparator` exists only in
+  `zh-Hans`, `zh-Hant`, `ja` (a CJK-only formatting string).
+- 205 keys live in exactly one locale (all `en`): frontend/tutorial/
+  challenge strings never translated anywhere
+  (e.g. `UI/Frontend/SetScreenBoundry`, `Advisor/Advisor_Student_Dropout_Warning_Title`).
+- A 15-key cluster exists only as `en`+`ko`
+  (`Meta/CareerGoals/*` — club/career-goal strings).
+- **Partial translation inside a single locale**: Russian carries 297
+  `Items/*_Name` values byte-identical to English while other locales
+  translate them (e.g. `Items/Library/Reception_Giant_Name` =
+  “Giant Library Reception” in both en and ru; de/fr/it differ).
+  Conversely, of 905 `Items/*_Name` keys, **zero** are identical-to-en in
+  every locale — item display names are genuinely translated corpus.
+  Presence ≠ quality; coverage stats must count cells, and
+  identical-to-pivot rows should be surfaced separately (§8 G6).
+
+### §2.2 Entity-granular plane — the 9 stub kinds
+
+Join chain (all hard, `method: i2-termid-registry`): stub payload
+`LocalisedString {_dev, _termID}` → `i2_term_registry` termID → term key
+→ per-locale cell. Measured over the walk: **20,070 LocalisedString
+instances**, of which **9,101 are declared-empty** (`_termID == 0`),
+**10,964 resolve** (5 miss — §3), giving `coverageOnNonEmpty = 0.9995`
+(`relinks/locale_join_report.json`).
+
+Stub rows vs entities with ≥1 joined term (`extracted/stubs/*.jsonl`,
+13,443 rows total):
+
+| kind | file | stub rows | entities w/ ≥1 term | share | name-bearing ents |
+|---|---|---:|---:|---:|---:|
+| config | `configs.jsonl` | 8,430 | 3,178 | 37.7% | 2,627 |
+| item | `items.jsonl` | 3,885 | 2,035 | 52.4% | 1,077 |
+| room | `rooms.jsonl` | 116 | 106 | 91.4% | 105 |
+| metagame-node | `metagame-nodes.jsonl` | 454 | 390 | 85.9% | 195 |
+| unlockable | `unlockables.jsonl` | 415 | 43 | 10.4% | 23 |
+| course | `courses.jsonl` | 69 | 41 | 59.4% | **0** |
+| student-type | `student-types.jsonl` | 54 | 54 | 100% | 27 |
+| staff | `staff.jsonl` | 3 | 3 | 100% | 3 |
+| campus-level | `campus-levels.jsonl` | 17 | **0** | 0% | 0 |
+
+Per-locale coverage of *joined* entities (any-term present / all-terms
+present / first-name-term identical-to-en), computed across all 13
+locales × 9 kinds; representative rows:
+
+- **config** (3,178 ents): any 99.0% / full 98.0% in every non-en locale;
+  name==en ranges 7.35% (zh) – 30.95% (ru), 18.39% (ja).
+- **item** (2,035): any/full 100.0% everywhere except **ja 99.2%** and
+  ru 99.2%; name==en ≤1.4% except ja 10.96% and ru 23.03%.
+- **room** (106), **student-type** (54), **metagame-node** (390):
+  any/full 100% (rooms/student-types) or 99.0% (metagame-node) in every
+  locale; ru again highest identical-to-en (19.05% / 37.04% / 28.21%).
+- **unlockable** (43 joined): 100% everywhere; but ja 86.96% / ru 91.30%
+  of name strings identical to en — these two locales barely translated
+  this kernel.
+- **course**: 41 entities have description terms (100% coverage in all
+  13 locales) but **zero name-role terms** — course display names are not
+  reachable by the hard join at all (§8 G2).
+- **campus-level**: zero joins; see below.
+
+**Which kinds/kernels are english-only even inside the client** (honest
+holes, measured):
+
+1. `campus-level` — all 17 rows carry plain English `Name` literals
+   (“All buildings”, “Blank Level”, “Test Level”, “Mark’s Test
+   Scenario”, …) and no LocalisedString reference. Genuinely
+   english-only in the client.
+2. `unlockable` — 372 of 415 rows have no term join; 41 of those carry
+   non-empty plain English `Name` literals (“Cupid Relationship”, “Idle”);
+   only 3 of those literals coincidentally equal some EN term text.
+3. `item` — 1,850 rows without terms, dominated by internal kernels:
+   `Item_Editor*` 713, `Unused_Item*` 231, `Item_LS*` 141, `A_LS_Variation*`
+   134, `Variation_*` 219 — visual variants/editor/ununused assets with no
+   player-facing display strings.
+4. `config` — 5,252 rows without terms (`Action_*`, behavior nodes):
+   machine-facing definitions, mostly legitimately unlabeled.
+
+---
+
+## §3 — Term registry completeness
+
+`extracted/relinks/i2_term_registry.jsonl`, measured:
+
+- **15,675 rows / 15,672 distinct keys**, canonical-on-key (3 extra rows
+  = keys registered under multiple IDs; every ID stays lookup-valid, G10).
+- Raw walk reconciles: 26 LanguageSource dumps on disk
+  (`extracted/harvest/monobehaviours/localisation_assets_localisation/I2.Loc.LanguageSourceAsset/`)
+  hold 15,677 raw terms → 15,675 merged rows → 15,672 keys. The 26th
+  source is `I2LS_TEMPLATE` (0 terms).
+- `matrixKeyDiff = 0`: registry keys ↔ `locale-matrix.json` keys match
+  exactly in both directions. No orphan key between registry and matrix.
+- TermStatus (registry rows): **15,400 ForTranslation / 275
+  NotForTranslation** (raw-walk evidence in base-overlay-report says
+  15402/275 over undeduplicated terms).
+- `termType` is uniformly 0; the registry’s `locales[]` projection is
+  **empty on all 15,675 rows** — correct once the storage shapes are
+  understood: the master registry holds keys/statuses only, so per-locale
+  availability can only come from joining term keys to the 13 named
+  tables (this report does exactly that). Consequence for consumers:
+  `entity_locale.evidence.locales` is always `[]`; never read it as
+  “available in no locale”.
+- Referenced-by-entities: **6,526 distinct keys**
+  (= `locale_term_entity.jsonl` rows; 10,964 usage edges over **5,850
+  distinct entities**). Orphans direction B: **0** — every referenced
+  key resolves in the registry.
+- Orphans direction A: **9,148 registry rows (9,146 distinct keys) are
+  never referenced by any stub entity** — the free game-text corpus:
+  `UI` 1,688, `ArchetypeNames` 1,535, `Names` 908, `VO` 901, `Levels`
+  773, `SubGoals` 516, `Challenge` 477, `FlavourTraits` 400, … These are
+  advisor lines, tannoy/radio VO, objectives, challenge text — usable by
+  guides/news/tools, outside entity pages.
+- `registryMisses = 5` term IDs (ledgered with sampleRefs in
+  `locale_join_report.json`). Probing their `_dev` payloads: **3 of 5 are
+  closable today** because the dev string IS the key under the `Code/`
+  category (`Code/InspectorItem_TooltipRequiresJanitorMechanics`,
+  `Code/Staff_Unassigned`, `Code/InspectorItem_TooltipCancelUpgrade` all
+  exist in `locales/en.jsonl`); 2 remain dangling
+  (`WantsMessage` on `Unused_PersonalGoal_Item_{Gym_Vaulting_Horse,AnyExterior}`).
+- `I2LS_CodeRef` contributes 586 runtime-created code-ref terms and is
+  fully registered — they join through the same path
+  (`locale_join_report.codeRefTerms`, audit path pinned).
+
+**Completeness verdict:** registry ↔ matrix ↔ locale-table key space is
+reconciled to within 6 base-only text-less keys and 5 unresolved IDs (3
+trivially closable, 2 ledgered). There is no silent loss anywhere in the
+chain.
+
+---
+
+## §4 — Fallback semantics (base overlay + client behavior)
+
+Measured facts:
+
+1. The unnamed base bundle is a **master registry, not a fallback text
+   table**: `base-overlay.jsonl` = 15,672 rows, **all with empty text**;
+   its 26 sources define keys, `TermType`, `TermStatus`, descriptions,
+   flags, and the 13-language column layout. Translations exist only in
+   the 13 named bundles’ category TextAssets.
+2. `base-overlay-report.json.compositionPolicy = "mixed"` with
+   `differingTextSharedKeys = 15,665`. Honest reading (verified against
+   the emitted rows): the classifier counts an empty base cell as
+   “differing” from the English text — since ALL base cells are empty,
+   “mixed” here encodes “base adds 7 keys English lacks; English adds
+   nothing base lacks; no shared text comparison is meaningful”. The
+   enum is still the contract (consumers read the field); the semantic
+   caveat belongs in any downstream doc (§8 G7). Base-only keys vs en
+   (7): `Buildings/BuildingGeneric_Description`,
+   `Levels/DLC_Hospital/LakeHospital/Inbox_Fires_Title_Unused`,
+   `UI/EmptyStringNoTranslate`, `UI/General/DLC/MSStore`,
+   `UI/Messages/MissionStatus`, `UI/Messages/Suggestion`,
+   `UI/General/NameSeparator`.
+3. Each named bundle is **self-contained** for its language: 25 category
+   TextAssets decoding to ~15.4k rows with only 215–301 empty cells
+   skipped per locale (en just 7). Untranslated cells are *absent or
+   empty*, never filled with another language inside the bundle.
+4. **Client runtime fallback is not provable at the data layer.**
+   Method bodies don’t survive Il2CppDumper (declarations only);
+   `dump.cs` confirms the I2.Loc runtime surface exists
+   (`LanguageSource`, `LanguageSourceData`, `LanguageSourceAsset`,
+   `LocalizationReader`, `LocalizationManager` incl.
+   `LoadLanguageAsync`/`SetLanguageAndCodeAsync`, `Localize`
+   MonoBehaviour) but contains no `GetTermTranslation` /
+   `FallbackLanguage` symbol to quote. What the data does prove: keys
+   missing from a locale’s bundle demonstrably render in-game in that
+   language, so resolution happens through a runtime mechanism outside
+   these tables. We do **not** assert its exact order.
+5. **Our artifacts preserve whatever the client does**, because of the
+   skip-empty discipline: no locale table ever borrows another locale’s
+   text, and the matrix records absence truthfully. The site-side
+   obligation therefore stands unchanged: per
+   [localization-architecture.md §5.5](../../_foundation/localization-architecture.md)
+   a missing locale page is omitted **or** rendered with an explicit
+   localized “not yet translated” filler — never silently pivot-filled.
+   Piece-07’s proof must pair every coverage percentage with the filler
+   policy that covers the residue.
+
+---
+
+## §5 — Site-UI vs game-data split
+
+The binding gate (“all locales the client ships”) governs **game data**.
+The site’s own chrome is a separate i18n namespace
+([localization-architecture.md §4](../../_foundation/localization-architecture.md)).
+Measured inventory of both sides:
+
+**Game-data side (client-provided, joinable):**
+
+- 15,666-key string corpus, 52 top-level namespaces; entity-visible text
+  flows through 10,964 hard `entity_locale` edges onto 5,850 entities.
+- Game-UI namespaces reusable as game-faithful labels on our pages:
+  `UI` (2,214 keys — only 533 referenced by entities; 1,688 free),
+  `Input` (164), `UI_Settings` source (187), `General` (143). The
+  piece-2 UI-link census additionally found **11,312 `I2.Localize`
+  bindings** routing game-prefab text lookups to terms
+  (`ui_link_coverage.jsonl` R5 census) — the game’s own UI is fully
+  term-driven, so game-faithful component labels can be sourced, not
+  invented.
+- Free narrative text (9,146 unreferenced keys) feeds Guides/News/VO
+  quotes in every locale.
+
+**Site-chrome side (MUST be authored by the site; zero client
+coverage):** navigation + labels, buttons, filters/sort options,
+tooltips/help, empty states, error/404 pages, search placeholder +
+results states, pagination, map controls, builder/planner/calculator UI
+strings, UGC surfaces (sign-in, comments, corrections, screenshot
+upload), consent/cookie banners, News/Guides editorial prose, SEO title
++ meta-description templates per locale, locale switcher, and the
+“not yet translated” filler itself. Multiplied by 13 locales under the
+ship-when-chrome-complete rule. None of these strings exist anywhere in
+the client corpus — the client’s `UI/*` strings describe game screens,
+not our site, and mixing the two namespaces is an explicit defect.
+
+**Structural gap to close before the site consumes this (§8 G1):**
+`extracted/relinks/locale_availability.jsonl` is **empty (0 rows)** —
+the stage-5 sole-owner artifact honestly reports zero because the v1
+name-based join found nothing and piece-2 §R4 rerouted consumers to
+`entity_locale.jsonl`. But
+[localization-architecture.md §5.4](../../_foundation/localization-architecture.md)
+names that file the single source for cross-locale link rows, per-locale
+sitemaps, and coverage stats. Either it gets regenerated from
+`entity_locale` + the 13 tables (derivation is deterministic — this
+report’s §2.2 math), or the pack declares the substitution in its spec.
+Today the artifact the standard points at proves nothing; the relation
+that proves it is `entity_locale.jsonl` + `locales/*.jsonl`.
+
+---
+
+## §6 — Competitor language UX bar
+
+Method: WebFetch blocked network-side; wikily.gg fetched via curl with
+`Claude-User` UA (polite, two requests); metaforge.app returned 403 to
+curl and was rendered once through the sanctioned stealth headless-Chrome
+tool (`web-browse browse.mjs`), two requests total.
+
+- **wikily.gg** — full page-per-locale architecture, measured from
+  served HTML/RSC payloads:
+  - **24 hreflang locales** on the home page: `cs de en es es-la es-mx
+    fr hu id it ja ko nl pl pt pt-br ru th tr uk vi zh-cn zh-hk zh-tw`
+    (+ `x-default` → bare-path English). Locale in the URL (`/de/…`),
+    pivot unprefixed — same contract as [DR-2026-08-20-locale-urls].
+  - **Complete site-chrome i18n dictionary shipped per locale** in the
+    page payload (EN `"no_results": "No results"` /
+    DE `"Keine Ergebnisse"`; `"home"/"Startseite"`;
+    `"select_game"/"Spiel auswählen"`;
+    `"adding_comment"/"Kommentar wird hinzugefügt"`), with a payload
+    `"locale"` marker — structurally the same chrome/game-content
+    namespace split our standard mandates.
+  - **Explicit partial-translation empty state**: a dedicated chrome
+    string `"no_other_languages": "No other languages available yet."`
+    — they surface missing languages rather than hiding or faking them.
+  - Games sections exist under each prefix (`/de/ark-survival-ascended/`,
+    `/de/once-human/`, `/de/subnautica/`, …) plus legal pages localized.
+- **metaforge.app** — **single-locale English**. Measured on `/` and
+  `/guild-wars-2`: zero `link[rel=alternate]` hreflang tags,
+  `document.documentElement.lang = "en"`, no language switcher or locale
+  prefixes anywhere in the DOM. No localization bar to clear.
+
+**Bar statement for piece-07/site:** match wikily’s mechanics (locale
+prefixes, full hreflang clusters, chrome dictionary per locale, honest
+missing-language states) and exceed it where our standard is already
+stricter — per-entity availability-driven link rows driven by a measured
+artifact (not marketing), unique localized title/meta per locale, never
+mixing locales on one page, and a declared filler policy. The client’s
+13-locale roster (incl. `pt-BR`, `zh-Hant`, regional splits wikily also
+carries) maps cleanly onto that shape.
+
+---
+
+## §7 — Feasibility verdicts
+
+| # | Proof target | Verdict | Grounds |
+|---|---|---|---|
+| V1 | “Properly translates game data into EACH locale the client provides” is provable | **FEASIBLE — provable today** | 13/13 locales measured; key-plane 98.12–99.99% per locale with holes enumerable per key; entity-plane 98–100% on joined entities; every residual cell traceable to an artifact |
+| V2 | Page-per-locale × 13 for entity kinds | **FEASIBLE** | 13,443 stub rows × 13 locales is a bounded static build; internal kernels (`Item_Editor`, `Unused_Item`, variations ≈ 1,300 item rows) should be excluded from page universe by an IA ruling (§8 Q3) |
+| V3 | Cross-locale link rows + per-locale sitemaps per §5.4 | **FEASIBLE after one derivation pass** | inputs complete (`entity_locale` + tables); `locale_availability.jsonl` must be regenerated from them or the spec amended (G1) |
+| V4 | Course display names localized | **FEASIBLE via inferred convention layer, NOT via current hard join** | 0 name-role terms on courses; candidate keys measured to exist (`Courses/Courses/Archaeology_Name`, `Courses/DLC_Space/Astronaut_Name`, `Marketing/Courses/*`, `Meta/CareerChallenges/Course_*_Name`) — multi-pattern, must emit `inferred: true` + method (G2) |
+| V5 | English-only kernels handled honestly | **FEASIBLE — data already supports it** | campus-levels (17) and most unlockables carry English literals in-client; ship as locale-neutral data with `untranslated-in-client` marking; never fabricate translations |
+| V6 | Site chrome × 13 | **FEASIBLE — authorable scope, enumerated** | §5 list; no client dependency; ship-per-completeness rule allows staged locale rollout |
+| V7 | Client fallback replication | **PARTIAL — not needed** | runtime fallback order unprovable at data layer (§4.4); site doesn’t need it: omit-or-filler policy replaces it; artifacts preserve absence truthfully |
+
+---
+
+## §8 — Gap ledger + open questions
+
+**Gaps (each with concrete unblock):**
+
+- **G1** `relinks/locale_availability.jsonl` empty (0 rows) while
+  localization-architecture §5.4 makes it the single source for link
+  rows/sitemaps/coverage. Unblock: regenerate from `entity_locale` +
+  `locales/*.jsonl` (deterministic; §2.2 math) in the piece that builds
+  the proof artifact — or record a pack-spec amendment naming
+  `entity_locale.jsonl` as authoritative (piece-2 §R4 precedent).
+- **G2** Course display-name join missing (0 name-role terms on all 69
+  course rows; 28 courses lack any term). Unblock: derived/inferred
+  convention join over the measured key families
+  (`Courses/Courses/*_Name`, `Courses/DLC_Space/*_Name`,
+  `Courses/DLC_ChallengeMode/*_Name`, `Marketing/Courses/*_Name`,
+  `Meta/CareerChallenges/Course_*_Name`), emitted `inferred: true` with
+  method; unresolved courses stay ledgered.
+- **G3** `registryMisses = 5`. Unblock: 3 closed by mapping `_dev`
+  strings to `Code/<dev>` keys (verified present); 2 remain
+  (`WantsMessage` on unused personal-goal items) — ledger or extend the
+  walk to code-ref creation sites.
+- **G4** Per-locale key holes (ja 295, ru 244, others 209–226;
+  `Challenge/`+`Levels/` heavy). Unblock: none needed on data — apply
+  the §5.5 filler policy per locale page and print honest per-locale
+  coverage in the proof manifest.
+- **G5** `UI/General/NameSeparator` missing from `en` (exists only in
+  zh-Hans/zh-Hant/ja) — cosmetic client quirk; note in the proof, no
+  action.
+- **G6** Identical-to-pivot strings inside a locale (ru 297 item names;
+  ja/ru unlockable names >86%) make “cell present” ≠ “translated”.
+  Unblock: proof artifact reports presence AND an
+  `identicalToPivotCount` column per kind × locale; policy question in
+  Q2.
+- **G7** `compositionPolicy="mixed"` reads as “base carries different
+  text”, but measured reality is “base carries NO text” (all 15,672 rows
+  empty). Unblock: one sentence in the piece-07 proof + RELATIONS/locale
+  docs stating the measured semantics; classifier itself unchanged (enum
+  is the contract).
+- **G8** Locale bundles ship text for content this install lacks —
+  `Items/DLC_Hospital/*`, `dlc-preorder-*` keys exist in the 13 tables
+  while Medical School / preorder bundles are out-of-roster. Unblock:
+  coverage claims state install scope (base + Space Academy + School
+  Spirits); DLC-scoped keys tagged by namespace in the proof.
+
+**Open questions (none blocking the piece):**
+
+- **Q1 (owner, site IA)** do internal kernels get pages at all —
+  `Item_Editor*` (713), `Unused_Item*` (231), `A_LS_/Item_LS_`
+  variants (~275)? Default proposal: exclude from the entity page
+  universe; keep in data API.
+- **Q2 (owner/policy)** for cross-locale link-row membership, does a
+  locale where the string is present-but-identical-to-English count as
+  “available”? Recommendation: yes for membership (it renders), with the
+  identical-count surfaced on the coverage page.
+- **Q3 (orchestrator)** confirm the availability-artifact route (G1):
+  regenerate the §5.4 file vs amend the pack spec — recommend regenerate
+  inside piece-07 so the standard’s file path stays true.
+- **Q4 (site)** chrome locale rollout order: all 13 at launch vs
+  ship-when-chrome-complete staging starting en/de/fr/es/ja — affects
+  W-D-polish lane #22 sequencing, not this piece.
+
+**Measurement appendix (artifacts touched read-only):**
+`extracted/bundle-roster.jsonl`, `extracted/identity.json`,
+`extracted/EXTRACTION-LOG.md` (runs 2026-08-25T03:13:17Z localisation,
+2026-08-25T23:49:25Z relink), `extracted/locales/*` (14 files + report +
+matrix), `extracted/stubs/*.jsonl` (11 files), `extracted/relinks/{entity_locale,i2_term_registry,locale_term_entity,ui_link_coverage}.jsonl`,
+`extracted/relinks/locale_join_report.json`,
+`extracted/relinks/locale_availability.jsonl`,
+`extracted/RELATIONS.md`, `tools/stage4_localisation.py`,
+`tools/stage6_relink.py`, `tools/relink_util.py`,
+`extracted/decompiled/il2cppdumper/dump.cs`. Writes: this report only.
+
+Owner questions routed to QUESTION-QUEUE: none new beyond Q2/Q3 above
+(both answerable without the owner if the orchestrator accepts the
+recommendations).
+
+§END
