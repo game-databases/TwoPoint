@@ -58,6 +58,28 @@ UPSTREAMS = {
                "locales/locale-matrix.json",
                "decompiled/structural",
                "bundle-roster.jsonl"],
+    # piece-07 §4: locale-proof upstream set — committed flat artifacts
+    # only (purely derived; no game dir). The per-locale tables are NOT
+    # enumerated here: the REQUIRED table set resolves from the roster's
+    # named locales inside the stage (a hostless mini fixture names fewer
+    # than 13), which exits 3 naming any missing table. The OPTIONAL alias
+    # input (data/sources/derived/course-name-aliases.jsonl) is likewise
+    # not a gate: absence is a ledger row, never a refusal.
+    "locale-proof": [
+        "identity.json",
+        "bundle-roster.jsonl",
+        "locales/base-overlay.jsonl",
+        "locales/base-overlay-report.json",
+        "locales/locale-matrix.json",
+        "stubs/items.jsonl", "stubs/unlockables.jsonl", "stubs/rooms.jsonl",
+        "stubs/campus-levels.jsonl", "stubs/courses.jsonl",
+        "stubs/configs.jsonl", "stubs/staff.jsonl",
+        "stubs/metagame-nodes.jsonl", "stubs/student-types.jsonl",
+        "relinks/entity_locale.jsonl",
+        "relinks/i2_term_registry.jsonl",
+        "relinks/locale_term_entity.jsonl",
+        "relinks/locale_join_report.json",
+    ],
 }
 
 STAGE_TOOLS = {
@@ -68,6 +90,8 @@ STAGE_TOOLS = {
     "localisation": "UnityPy",
     "emit-stub-datasets": "stdlib",
     "relink": "UnityPy",
+    # piece-07: purely derived — committed artifacts in, proof artifacts out
+    "locale-proof": "stdlib",
 }
 
 

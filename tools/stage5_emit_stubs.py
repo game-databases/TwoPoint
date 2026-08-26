@@ -3,9 +3,12 @@
 
 Canonical JSONL skeletons per entity family from the MonoBehaviour dumps —
 rows land contract-pinned even where fields are only partially understood
-(stub data in place rather than absent). SOLE OWNER of
-`extracted/relinks/locale_availability.jsonl` (entity-granular,
-regenerated on EVERY run — arbiter-001 R3).
+(stub data in place rather than absent). Does NOT write
+`extracted/relinks/locale_availability.jsonl`: since piece-01 Revision 8
+(arbiter-piece07 R4) the path's SOLE writer is stage 9 `locale-proof`
+(tools/stage9_locale_proof.py, v2 schema per piece-07 §L3); this stage's
+former emission block is REMOVED and a CALLER-SCOPED refusal guard exits 1
+if the legacy write path ever fires against populated non-v1 content.
 
 Hard-read vs derived (arbiter-001 R8): ids/GUIDs/path_ids/loc keys and RAW
 FIELD VALUES copied from dumps are HARD-READ (never flagged `inferred`);
@@ -95,7 +98,6 @@ ID_FIELD_PRIORITY = ("m_ID", "m_id", "id", "Id", "ID", "m_key", "m_Key",
                      "m_name", "m_Name", "name")
 DISCRIMINATOR_FIELDS = ("kind", "m_kind", "entityKind", "m_entityKind",
                         "entityType")
-NAMED_FIELD_RE = re.compile(r"name|title|display", re.IGNORECASE)
 
 GENERIC_SCRIPT_CLASS = "MonoBehaviour"
 _ENGINE_NS_RE = re.compile(r"^(UnityEngine\.|TMPro\.|UnityEditor\.)")
@@ -265,18 +267,6 @@ def load_monobehaviour_dumps(monobehaviours_dir: Path):
         yield family, cls, bundle, path_id, payload, path
 
 
-def index_monobehaviour_dumps(monobehaviours_dir: Path) -> dict:
-    """(bundle, pathId) → payload for every parseable dump, keyed for exact
-    provenance lookups (a bare pathId collides across bundles — negative
-    int64s collide loudly). Used by callers holding only the directory."""
-    index: dict = {}
-    for _family, _cls, bundle, path_id, payload, _path in \
-            load_monobehaviour_dumps(monobehaviours_dir):
-        if path_id is not None:
-            index.setdefault((bundle, path_id), payload)
-    return index
-
-
 def payload_fields(payload: dict) -> dict:
     """The dump's field block: fixtures wrap fields under `fields`; real
     harvest dumps are flat payloads. Both shapes read identically here."""
@@ -334,117 +324,61 @@ def validate_row(row: dict) -> None:
             raise tc.StageError(f"stub row source missing '{req}'", exit_code=1)
 
 
-def build_locale_availability(rows_by_kind: dict[str, list[dict]],
-                              matrix_keys: dict[str, dict],
-                              dumps_source,
-                              build_id,
-                              stats_out: dict | None = None) -> list[dict]:
-    """Entity-granular availability via the PINNED join procedure:
-    1. collect the entity dump's string-valued fields;
-    2. exact-equal to a locale-matrix key → HARD join;
-    3. `<entityId>_<role>` convention corroborated by the matrix → INFERRED;
-    4. no other association path exists.
+# ---------------------------------------------------------------------------
+# Availability retirement (piece-01 Revision 8 / piece-07 §5, arbiter R4)
 
-    `dumps_source` is the (bundle, pathId) → payload index built during the
-    load pass; a monobehaviours directory is also accepted (indexed once).
-    Availability is evidence-based (fail-closed): only HARD-joined keys grant
-    locale coverage — availableLocales is the intersection of their matrix
-    locale sets, and fieldPresence lists the granting fields per locale.
-    Convention joins record joinMethod/joinInferred but claim no locales,
-    because their keys are not observed in any locale bundle yet.
-    Disambiguated rows join through their VERBATIM id (fields.id).
+LOCALE_AVAILABILITY_NAME = "locale_availability.jsonl"
+_V1_ROW_MARKERS = ("joinInferred", "joinMethod")
 
-    When `stats_out` is a dict it receives mechanical scan evidence
-    ({entitiesScanned, payloadsResolved, hardJoins, conventionJoins}) so a
-    zero-row result is provably 'no join surface', never silent starvation."""
-    if isinstance(dumps_source, Path):
-        dumps_source = index_monobehaviour_dumps(dumps_source)
-    availability: list[dict] = []
-    join_stats = {"entitiesScanned": 0, "payloadsResolved": 0,
-                  "hardJoins": 0, "conventionJoins": 0}
-    all_prefixes = set()
-    for key in matrix_keys:
-        if isinstance(key, str) and "_" in key:
-            all_prefixes.add(key.rsplit("_", 1)[0])
 
-    for kind, rows in sorted(rows_by_kind.items()):
-        seen_ids: set = set()
-        for row in rows:
-            eid = row["id"]
-            marker = (kind, verbatim_id_of(row))
-            if marker in seen_ids:
-                continue
-            seen_ids.add(marker)
-            join_stats["entitiesScanned"] += 1
-            payload: dict | None = None
-            # locate the source dump from the in-memory index (no re-walk,
-            # no re-read); the exact provenance key hits directly, and the
-            # identifier byte-match still guards it
-            src = row["source"]
-            cand_payload = dumps_source.get((src.get("bundle"),
-                                             src.get("pathId")))
-            verbatim = verbatim_id_of(row)
-            if cand_payload is not None:
-                cand_id = extract_id(payload_fields(cand_payload))
-                if cand_id is None or str(cand_id) == verbatim \
-                        or str(cand_id) == str(eid):
-                    payload = cand_payload
-            if payload is None:
-                continue
-            join_stats["payloadsResolved"] += 1
-            fields_block = payload_fields(payload)
-            hard_fields: dict[str, str] = {}
-            conv_fields: dict[str, str] = {}
-            for fname, fval in fields_block.items():
-                if not isinstance(fval, str) or fname.startswith("_"):
-                    continue
-                if fval in matrix_keys:
-                    hard_fields[fname] = fval
-                elif isinstance(verbatim, str) and verbatim \
-                        and fval.startswith(verbatim + "_"):
-                    prefix_ok = fval.rsplit("_", 1)[0] in all_prefixes \
-                        or fval in all_prefixes
-                    if matrix_keys and (prefix_ok or not all_prefixes):
-                        conv_fields[fname] = fval
-            joins = dict(hard_fields)
-            joins.update(conv_fields)
-            if not joins:
-                continue
-            join_stats["hardJoins"] += len(hard_fields)
-            join_stats["conventionJoins"] += len(conv_fields)
-            locales_per_field: dict[str, set[str]] = {
-                f: set(matrix_keys[key]["locales"])
-                for f, key in joins.items() if key in matrix_keys}
-            available = set.intersection(*locales_per_field.values()) \
-                if locales_per_field else set()
-            # named-field coverage claims only HARD-joined keys (fail-closed):
-            # a convention-only named field records joinMethod but no locales,
-            # so this domain is locales_per_field — never `joins` (a
-            # convention-only named field would KeyError here)
-            named_fields = [f for f in locales_per_field
-                            if NAMED_FIELD_RE.search(f)]
-            named_pool = {f: locales_per_field[f] for f in named_fields} \
-                if named_fields else locales_per_field
-            named = set.union(*named_pool.values()) if named_pool else set()
-            field_presence = {
-                loc: sorted(f for f, locs in locales_per_field.items() if loc in locs)
-                for loc in sorted(available)}
-            availability.append({
-                "kind": kind,
-                "id": eid,
-                "availableLocales": sorted(available),
-                "namedLocales": sorted(named & available),
-                "fieldPresence": field_presence,
-                "joinInferred": len(hard_fields) == 0,
-                "joinMethod": "; ".join(sorted(
-                    ([f"exact-match:{f}" for f in hard_fields]
-                     + [f"convention:{f}=<entityId>_<role>" for f in conv_fields]))),
-                "buildId": build_id,
-            })
-    availability.sort(key=lambda r: (r["kind"], str(r["id"])))
-    if stats_out is not None:
-        stats_out.update(join_stats)
-    return availability
+def locale_availability_content_class(data: bytes) -> str:
+    """'absent' | 'empty' | 'v1' | 'non-v1' for the canonical availability
+    file. The retired stage-5 schema (v1) carried joinInferred/joinMethod;
+    the stage-9 v2 schema does not. Anything else non-empty is non-v1."""
+    if not data.strip():
+        return "empty"
+    try:
+        first = json.loads(data.splitlines()[0].decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return "non-v1"
+    if isinstance(first, dict) and any(m in first for m in _V1_ROW_MARKERS):
+        return "v1"
+    return "non-v1"
+
+
+def guard_locale_availability_write(target: Path) -> None:
+    """CALLER-SCOPED refusal guard (piece-07 §5 item 3; arbiter-piece07 R4
+    implementation pin): fires ONLY on stage-5-originated invocation of the
+    legacy availability write path — this module-local choke point below.
+    It is deliberately NOT an unconditional check inside a shared write
+    helper: stage 9's emitter legitimately rewrites the file with v2 rows
+    on its own reruns and must never trip it.
+
+    A target holding NON-v1/non-empty content means a populated v2 file
+    written by stage `locale-proof` (or unknown content) — truncating it
+    would be the patch-day clobber window, so this exits 1 NAMING the
+    conflict. Empty or genuine-v1 targets have nothing to clobber and pass.
+    """
+    if not target.is_file():
+        return
+    cls = locale_availability_content_class(target.read_bytes())
+    if cls != "non-v1":
+        return
+    raise tc.StageError(
+        f"refusing legacy stage-5 write of {target}: the canonical "
+        "availability file already holds NON-v1 content (sole writer since "
+        "piece-01 Revision 8 / piece-07 §5 is stage 'locale-proof', "
+        "tools/stage9_locale_proof.py) — resolve the stale checkout "
+        "instead of truncating populated rows", exit_code=1)
+
+
+def write_locale_availability_legacy(rows, relinks_dir: Path) -> None:
+    """RETAINED LEGACY CHOKE POINT — no live stage-5 code path calls it
+    (the emission block was REMOVED by piece-07 §5). Any restored/future
+    legacy write routes through here and hits the caller-scoped guard
+    before a single byte lands."""
+    guard_locale_availability_write(relinks_dir / LOCALE_AVAILABILITY_NAME)
+    log_util.write_jsonl(relinks_dir / LOCALE_AVAILABILITY_NAME, rows)
 
 
 # ---------------------------------------------------------------------------
@@ -524,18 +458,23 @@ def run(game_root: Path, extracted_root: Path) -> int:
     identity_path = extracted_root / "identity.json"
     build_id = json.loads(identity_path.read_text(encoding="utf-8")).get("buildId") \
         if identity_path.is_file() else None
-    matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
-    matrix_keys = matrix.get("keys", {})
+    # the matrix remains a REQUIRED upstream (spec §3 stage-5 inputs); its
+    # former consumer was the retired availability join (piece-07 §5), so it
+    # is parsed here for validity only
+    json.loads(matrix_path.read_text(encoding="utf-8"))
     structural_inputs = sorted(p.name for p in structural.iterdir()) \
         if structural.is_dir() else []
     gate = DefinitionGate(structural if structural.is_dir() else None)
 
     stubs_dir = extracted_root / "stubs"
-    relinks_dir = extracted_root / "relinks"
-    for d in (stubs_dir, relinks_dir):
-        if d.exists():
-            shutil.rmtree(d)
-        d.mkdir(parents=True, exist_ok=True)
+    if stubs_dir.exists():
+        shutil.rmtree(stubs_dir)
+    stubs_dir.mkdir(parents=True, exist_ok=True)
+    # relinks/ is NOT cleared here (piece-07 §5): stage 5 has owned nothing
+    # in it since Revision 8, and wiping the directory deleted stage-6
+    # outputs plus the stage-9-owned canonical availability file on
+    # isolated reruns. Stage 6 clears its own outputs (clear_owned_outputs,
+    # which protects locale_availability.jsonl).
 
     # policy state -----------------------------------------------------------------
     candidates_by_kind: dict[str, dict[str, list[dict]]] = {k: {} for k in KINDS}
@@ -690,11 +629,8 @@ def run(game_root: Path, extracted_root: Path) -> int:
     unmapped_rows = sorted(unmapped.values(), key=lambda r: r["class"])
     log_util.write_jsonl(stubs_dir / "_unmapped-families.jsonl", unmapped_rows)
 
-    join_stats: dict = {}
-    availability = build_locale_availability(rows_by_kind, matrix_keys,
-                                             payload_index, build_id,
-                                             stats_out=join_stats)
-    log_util.write_jsonl(relinks_dir / "locale_availability.jsonl", availability)
+    # locale_availability.jsonl is NOT written here (retired, piece-07 §5):
+    # the path's sole writer is stage 9 `locale-proof`.
 
     # -- mechanical acceptance checks ---------------------------------------------
     problems: list[str] = []
@@ -710,10 +646,6 @@ def run(game_root: Path, extracted_root: Path) -> int:
         bad_build = sum(1 for r in rows if r["buildId"] != build_id)
         if bad_build:
             problems.append(f"{bad_build} rows in '{kind}' carry wrong buildId")
-    for r in availability:
-        for req in ("availableLocales", "namedLocales", "fieldPresence"):
-            if req not in r:
-                problems.append(f"availability row missing '{req}'")
 
     # signed-stem contract: recover source.pathId + full bundle name for ALL
     # export-manifest rows (Revision 6 amendment 2 — assert 0 unparsed stems)
@@ -791,7 +723,8 @@ def run(game_root: Path, extracted_root: Path) -> int:
         problems.append(f"identifierByteMatch violated: mismatches="
                         f"{mismatched} of checked={checked}")
 
-    distinct_entities = len({(r["kind"], str(r["id"])) for r in availability})
+    distinct_entities = len({(r["kind"], str(r["id"]))
+                             for k in KINDS for r in rows_by_kind[k]})
     lines = [
         "- exitCode: 0" if not problems else f"- exitCode: 1 ({'; '.join(problems)})",
         "- stubRowsByKind: "
@@ -804,9 +737,10 @@ def run(game_root: Path, extracted_root: Path) -> int:
         f"- scriptClassResolution: resolved={resolved_classes} "
         f"generic/unresolved={generic_classes}",
         f"- absences: {len(absences)}; unmappedClasses: {len(unmapped_rows)}",
-        f"- localeAvailabilityRows: {len(availability)} "
-        f"(distinctJoinedEntities: {distinct_entities}); regenerated this run; "
-        f"joinEvidence: {json.dumps(join_stats, sort_keys=True)}",
+        "- localeAvailabilityRows: 0 (emission RETIRED, piece-07 §5 / "
+        "piece-01 Revision 8 — sole writer is stage 'locale-proof'; the "
+        "refuted seeded join procedure and its joinEvidence counters went "
+        "with it; distinctEntities above is the stub universe)",
         "- identifierByteMatch: "
         + (f"checked={checked} mismatches={mismatched}" if not mismatch_examples
            else f"checked={checked} mismatches={mismatched}; e.g. "
@@ -820,7 +754,7 @@ def run(game_root: Path, extracted_root: Path) -> int:
 
     print(f"[emit-stub-datasets] stubs="
           f"{json.dumps({k: len(rows_by_kind[k]) for k in KINDS}, sort_keys=True)} "
-          f"unmapped={len(unmapped_rows)} availability={len(availability)}")
+          f"unmapped={len(unmapped_rows)} availability=retired(piece-07-§5)")
     print(f"[emit-stub-datasets] policy: componentExcluded="
           f"{counters['componentExcluded']} identifierLess="
           f"{counters['identifierLess']} merged="

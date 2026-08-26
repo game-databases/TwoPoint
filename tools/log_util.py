@@ -230,7 +230,23 @@ STAGE_OUTPUTS = {
         "stubs/configs.jsonl", "stubs/staff.jsonl",
         "stubs/metagame-nodes.jsonl", "stubs/student-types.jsonl",
         "stubs/_absences.jsonl", "stubs/_unmapped-families.jsonl",
+    ],
+    # piece-07 locale-proof (canonical index 9). SOLE writer of the
+    # canonical availability path since piece-01 Revision 8 (arbiter R4) —
+    # deliberately removed from emit-stub-datasets above. `.baseline.json`
+    # is excluded like the other determinism-excluded files.
+    "locale-proof": [
+        "locales/proof/key_plane.json",
+        "locales/proof/kind_locale_matrix.json",
+        "locales/proof/unjoined_entities.jsonl",
+        "locales/proof/fallback_law.json",
+        "locales/proof/site_ui_gap_manifest.json",
+        "locales/proof/registry_completeness.json",
+        "locales/proof/summary.json",
+        "locales/proof/hashes.json",
+        "locales/proof/_ledger.jsonl",
         "relinks/locale_availability.jsonl",
+        "relinks/locale_availability.report.json",
     ],
     # stage 6 (piece-02): every stage-6-OWNED path of the §4 layout. The
     # pair/overlay datasets are data-dependent (one file per cell with ≥1
@@ -301,6 +317,10 @@ def stage_outputs(stage_id: str) -> list[str]:
     if stage_id == "localisation":
         import tpc_common as tc
         outs += [f"locales/{locale}.jsonl" for locale in tc.EMITTED_LOCALES]
+    if stage_id == "locale-proof":
+        import tpc_common as tc
+        outs += [f"locales/proof/key_holes/{locale}.jsonl"
+                 for locale in tc.EMITTED_LOCALES]
     if stage_id == "relink":
         import relink_util
         outs += [f"relinks/{s}_{d}.jsonl"

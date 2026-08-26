@@ -1412,8 +1412,11 @@ def _relations_lines(matrix, unresolved, dangling_rows, locale_report,
         "",
         "## Locale-join ownership routing",
         "",
-        "- `relinks/locale_availability.jsonl` stays STAGE-5 SOLE PROPERTY "
-        "(piece-02 §R4 pin; v1 procedure frozen at hardJoins: 0).",
+        "- `relinks/locale_availability.jsonl` is REGENERATED at its "
+        "canonical path by stage 9 `locale-proof` "
+        "(`tools/stage9_locale_proof.py`, v2 schema) — piece-07 §5 "
+        "amendment, arbiter-piece07 R4 (supersedes the piece-02 §R4 "
+        "stage-5 ownership pin); this stage never writes the path.",
         "- The authoritative entity-granular locale relation is "
         "`relinks/entity_locale.jsonl` "
         f"({len(loc_rows)} rows; mechanism "

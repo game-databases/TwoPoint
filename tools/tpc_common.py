@@ -135,6 +135,12 @@ STAGES = [
     # registered ADDITIVELY — stages 0–5 byte-behave identically)
     ("relink", "tools/stage6_relink.py",
      ["stage6_relink.py", "relink_util.py", "tpc_common.py", "log_util.py"]),
+    # piece-07 locale-proof stage (canonical registry index 9, arbiter
+    # R1; registered ADDITIVELY after the last currently-registered stage
+    # — ordering authority is the canonical registry, not append accident).
+    # Purely derived: opens no bundles, needs no game dir, imports no UnityPy.
+    ("locale-proof", "tools/stage9_locale_proof.py",
+     ["stage9_locale_proof.py", "tpc_common.py", "log_util.py"]),
 ]
 STAGE_IDS = [sid for sid, _script, _deps in STAGES]
 
