@@ -1,0 +1,84 @@
+# Verification A (fact re-measurement) — scout-report-piece-08-search
+
+**Verifier:** verifyA · **Date:** 2026-08-26 · **Host:** Windows workhost (local corpus paths).
+Independent re-measurement of `TwoPoint/docs/scout-report-piece-08-search.mdx`
+against primary artifacts only (`extracted/stubs/*.jsonl`,
+`extracted/relinks/{entity_locale,i2_term_registry,locale_term_entity}.jsonl`,
+`extracted/relinks/matrix.json`, `extracted/locales/*.jsonl`,
+`extracted/harvest/...`, `extracted/EXTRACTION-LOG.md`). All numbers below were
+recomputed fresh with python over the committed corpus (buildId **20226581**);
+method is stated next to every verdict. Read-only except this file. No commits.
+
+## Verdict table
+
+| # | Claim (report §) | Measured (method) | Verdict |
+|---|---|---|---|
+| 1a | Stub universe 13,443 rows / 9 kinds; config 8,430 · item 3,885 · metagame-node 454 · unlockable 415 · room 116 · course 69 · student-type 54 · campus-level 17 · staff 3 (§1) | walk over all 9 stub files: total 13,443; per-kind counts identical digit-for-digit | CONFIRMED |
+| 1b | `slug` null on 13,443/13,443 = 100% (§1) | `r['slug'] is None` on every row of every stub file: 13,443/13,443 | CONFIRMED |
+| 1c | Localized-edge entities 5,850 distinct `(srcKind,srcId)` in `entity_locale.jsonl`, 10,964 rows (§1) | parse both fields over 10,964 lines → 5,850 distinct pairs; all dstKind=`locale-term`; srcKind distribution config 7,149 · item 2,736 · room 438 · metagame-node 390 · unlockable 69 · course 41 · staff 33 · student-type 108 | CONFIRMED |
+| 1d | Name-carrier entities 4,298 (§1) | stub-side walk of the §2-pinned carrier fieldPaths counting rows whose carrier bears text (`_termID≠0`, or `_termID==0` with non-empty `_dev`, or plain non-empty string for campus-level): 4,298 exactly | CONFIRMED |
+| 1e | Union 7,178 = 53.4%; id-only remainder 6,265; overlap handled (§1) | set math: 5,850 ∪ 4,298 − overlap 2,970 = 7,178 (55.1% if overlap mishandled by naive sum — report's arithmetic is correct); 13,443−7,178 = 6,265 | CONFIRMED |
+| 1f | Union per kind: config 3,856 · item 2,649 · metagame-node 406 · room 107 · student-type 54 · course 41 · unlockable 49 · campus-level 13 · staff 3 (§1) | same sets grouped by kind: 3856 / 2649 / 406 / 107 / 54 / 41 / 49 / 13 / 3 — all nine match | CONFIRMED |
+| 2a | Display-name edges 2,993 resolving to en text; 1,895 distinct (kind,title); 264 collide; top config "Lab Work" ×53, "Specialist Book Report" ×51; 320 collide ignoring kind (§1) | join entity_locale rows whose fieldPath ∈ pinned name paths (config `Name`; item/metagame-node/unlockable `LocalisedName*`; room `NameWhenBuilt`; student-type F/M; staff `LocalisedName` only — Ranks titles excluded) to `locales/en.jsonl`: 2,993 edges, all resolve; Counter over (kind,text) → 1,895 distinct, 264 with multiplicity >1, top pair ("config","Lab Work")=53 then ("config","Specialist Book Report")=51; distinct title strings involved in >1 pair ignoring kind = 320 | CONFIRMED |
+| 2b | 23 titles clean to empty string (markup-only), must be dropped not indexed as "" (§1) | strip `<[^>]+>` tags AND `{…}` placeholders from the 2,993 resolved en texts → exactly 23 reduce to empty (same 23 keys in every locale; raw strings are placeholder/tag-only). Raw-text empties alone = 0, so the claim's "clean to empty" wording is the correct reading | CONFIRMED |
+| 2c | Registry = 15,675 rows / 15,672 distinct keys / canonical:true on 15,672 / 3 legacy duplicate-ID rows / `locales[]` empty on all rows (§1, §3-G1) | parse i2_term_registry.jsonl: rows 15,675; `len(set(termKey))`=15,672; canonical true count 15,672; dupes 15,675−15,672=3; `locales==[]` on 15,675/15,675 | CONFIRMED |
+| 2d | "**26 source assets**" attributed to `relinks/i2_term_registry.jsonl` (§1) | distinct `sourceAsset` values in that file = **25**. The 26 exists elsewhere: 26 `LanguageSourceAsset` dump files under `extracted/harvest/monobehaviours/localisation_assets_localisation/I2.Loc.LanguageSourceAsset/` and `registrySources=26` in `base-overlay-report.json` — one dumped source contributes no surviving term rows to the registry jsonl | REFUTED (misattributed count: registry jsonl carries 25, not 26; 26 belongs to the dump set / overlay report) |
+| 2e | Reverse index `locale_term_entity.jsonl` = 6,526 distinct terms referenced by entities (~9k chrome remainder of 15,672) (§1) | 6,526 rows = 6,526 distinct termKeys; 10,964 total usages (= entity_locale row count); 15,672−6,526 = 9,146 ≈ "~9k UI chrome" | CONFIRMED |
+| 3a | §2 carrier table, all rows: config `Name` 2,421/1,703/718/6,009-no-field · item `LocalisedName` 1,728/949/779/2,157 · room `NameWhenBuilt` 63/59/4/53 · metagame-node `LocalisedName` 241/195/46/213 · student-type F/M 27/27/0/27 · staff 3/3/0/0 (+Ranks[].TitleM/F ×30) · course none/69 · unlockable `LocalisedName*` 28/20/8/387 · campus-level plain `Name` ×13 (§2) | stub walk classifying `{_dev,_termID}` values by `_termID!=0`: every cell matches, including all four "no field" columns (row sums check: e.g. 2,421+6,009=8,430); staff Ranks title edges = 30 in entity_locale (15 Male + 15 Female) | CONFIRMED |
+| 3b | Internal-id tokens 3,224 distinct (§2, §4) | split all 13,443 ids on non-alphanumeric runs, lowercase tokens → exactly 3,224 distinct | CONFIRMED |
+| 3c | `_dev` English fallback strings 3,874 name-field instances: config 2,184 · item 1,458 · metagame-node 159 · room 31 · student-type 22 · unlockable 17 · staff 3 (§2) | count ROWS (not field instances) with ≥1 non-empty `_dev` across the kind's carrier paths: 2184/1458/159/31/22/17/3, sum 3,874 — exact (instance-level counting gives 3,919; row-level is what reproduces the claim) | CONFIRMED |
+| 3d | `DisplayName.mTerm` on 55 unlockable rows, 53 resolve in en; outside the `{_dev,_termID}` walker (§2, G7) | unlockables with `fields.DisplayName.mTerm`: 55; membership of mTerm value in en.jsonl ids: 53. Cross-checked absent from entity_locale fieldPaths | CONFIRMED |
+| 3e | Sprite-name carriers `IconReference.m_SubObjectName`: item 1,290 · room-descriptor 104 · metagame 202 (§2) | items: rows with non-empty `IconReference.m_SubObjectName` = 1,290; metagame-nodes = 202; rooms: sprite-bearing `FunctionalDescriptors[]` ELEMENTS = 104 (57 rows carry them — the claim's unit is descriptors, which matches) | CONFIRMED |
+| 3f | config long tail: 344 classes; `Meshes[].GeometryList[].Bones[]` = 139,847 bone-name strings (§2) | distinct source.class over configs.jsonl = 344; nested walk counting Bones[] elements = 139,847 | CONFIRMED |
+| 3g | Item classes: LiteDefinition 1,728 carries LocalisedName; GameItemDefinition 1,654 no name field; VariationDefinition 353 neither; 2,007 rows lacking name fields entirely (G3) (§2, §7) | items by source.class: 1728 / 1654 / 353 (+150 others: PersonalGoal_ItemDefinition 134, EmblemLayer 8, LightingEnvironment 7, GrabPointConfig 1 — unmentioned but not claimed otherwise); LocalisedName-carrier presence: 1728/1728 Lite, 0/1654 full, 0/353 variation → 2,007 nameless | CONFIRMED |
+| 3h | Description tier: config Description 1,737 + FlavourDescriptions[] 745; item Description 1,654; room Description/LongDescription 74/63; course Description._dev ×41 dev placeholder (§2) | stub-level field walks: 1737 / 745 (= FlavourDescriptions LIST-ELEMENT count; rows carrying the list = 521, elements = 745 — element reading is the one that matches) / 1654 / 74 / 63 / 41 | CONFIRMED |
+| 3i | Course names hole: TPC.CourseDefinition carries no name field; best convention resolves 12/28 (9/28 Teacher/ prefix alone); `Courses/Courses/<X>_Name` exists for 18 keys; mapping non-mechanical (`Course_Clowns`→`Clown_Name`, `Course_Computing`→`Computer_Name`) (§2, G2, §7-7) | courses split: 28 `TPC.CourseDefinition` + 41 `TPC.MarketingCourseDefinition` ✓; `fields.Name` is None on all 28 CourseDefinitions ✓ (no dict/plain carrier); `Courses/Courses/*_Name` keys = 18 ✓ with Clown_Name and Computer_Name present ✓. BUT the resolution counts do NOT reproduce: strict `<lastSeg>_Qualification_Name` suffix match resolves **10/28** (**7** restricted to the non-DLC `Characters/Qualifications/Teacher/` chain); adding plural-stem normalization (Clowns→Clown, Goths→Goth, Lectures→Lecture, Toffs→Toff) raises it to **14/28** (**11** non-DLC). Claimed 12/28 and 9/28 sit inside this band but no convention tried (exact / endswith / contains / prefix-only / plural-normalized / registry-key space incl. its 7 extra keys) yields exactly 12 or 9 | PARTIAL-CONFIRMED with CORRECTION (hole direction fully stands — minority resolution, non-mechanical, curated aliases needed — but the quoted counts are unreproducible from the stated method; corrected band 10–14 of 28) |
+| 3j | campus-level names are plain English dev strings; 4 of 17 null (G8) | campus-levels.jsonl: 17 rows, `Name` null on 4; samples "All buildings", "Blank Level", "Free Play Level", "IL3 Video 1" | CONFIRMED |
+| 4a | Locale planes: 13 files, 23.1 MB total; en 15,665 rows, others 15,371–15,457, zero empty texts (§3) | byte sum of the 13 files = 23,107,394 B = 23.1 MB decimal (22.0 MiB); row counts min ja 15,371 max ko 15,457; zero whitespace-empty texts | CONFIRMED |
+| 4b | base-overlay-report.json: 15,665 shared keys, 2,824 empty locale cells skipped, termStatusForTranslation 15,402 (§3) | JSON reads sharedKeys 15665, localeCellsSkippedEmptyTotal 2824, termStatusForTranslation 15402 verbatim | CONFIRMED |
+| 4c | Full §3 tokenization table (13 locales × rows/med-len/avg-len/CJK-rows/no-whitespace-rows/vocab), e.g. en 15,665·17·47·4·3,716·11,897; ko 15,457·8·26·15,213(98.4%)·3,986(25.8%)·28,594; zh-Hans 14,721(95.3%) no-ws; ja 12,840(83.5%) (§3) | recompute per locale (CJK = Han+Kana+Hangul ranges; no-ws = no `isspace()` char; vocab = distinct `\w+` runs): every cell matches — en/de/fr/it/es/pt-BR/pl/ru/ko/ja/zh-Hans/zh-Hant all exact incl. percentages (ko 98.42/25.79, ja 83.11/83.53, zh-Hans 98.30/95.31, zh-Hant 98.38/95.36). tr vocab = 23,445 when tokens are matched on raw text then lowercased per token (claimed value); lowercasing before splitting gives 23,420 — tokenizer-order artifact, claimed figure reproducible | CONFIRMED |
+| 4d | CJK verdicts: zh-Hans/Hant ~95% whitespace-free rows unusable without bigrams; ja mixed; ko standard (25.8% no-ws) (§3, §7-4) | derived rates from 4c measurements: zh-Hans 95.3%, zh-Hant 95.4%, ja 83.5%, ko 25.8% — the three-way verdict follows directly | CONFIRMED |
+| 4e | Cross-locale identity vs en: ru 30.5%, ja 16.5%, de 14.3%, pt-BR 13.4%, fr 10.2%, zh/ko ≈1.3% (§3, G5) | text equality joins on key: ru 4709/15422=30.5%, ja 16.5%, de 14.3%, pt-BR 13.4%, fr 10.2%, zh-Hans 1.3%, zh-Hant 1.2%, ko 1.3% | CONFIRMED |
+| 4f | Markup hygiene: tags on 6.0% of en rows, `{PLACEHOLDER}` braces 4.8% (§3) | any `<…>` tag = 939 rows = 5.99% ≈ 6.0% (`<style=`/`<br` alone = 5.62%, so 6.0% corresponds to the all-tags reading); braces `\{[^{}]+\}` = 748 = 4.77% ≈ 4.8% | CONFIRMED |
+| 4g | Within-locale collisions: en 1,570 · zh-Hans 1,668 · ko 1,702 · tr 1,625 (~9–11% of texts) (§3) | texts mapping to >1 key: 1570 / 1668 / 1702 / 1625 — all four exact. Percent band: 10.0–11.0% of emitted rows, 11.5–12.9% of distinct texts — "~9–11%" slightly understates either denominator (NOTE, not a correction; absolute counts are the load-bearing figures) | CONFIRMED (note on % band) |
+| 5a | Vocab sizes 11,897 (en) … 28,594 (ko), ≥4 locales re-checked (§3, §4) | en 11,897 · de 18,356 · fr 13,970 · pl 23,037 · ru 22,470 · ko 28,594 · zh-Hant 22,586 — range endpoints and mid-table all reproduced | CONFIRMED |
+| 5b | Stopword candidates: en the/a/to/of/and/in/'s/you/for/it · fr de/la/le/à/un/les · de die/und/der/zu/das · es de/la/a/que/el · pt-BR de/o/a/para/e/que · tr bir/ve/için · ru в/и/не/на · pl w/na/się/z/i · ja 構内放送 after latin fragments (§4) | per-locale top-token counts (per-row-unique, lowercased) reproduce every listed sequence in order: en ['the','a','to','of','and','in','s','you'…], fr ['de','la','le','à','un','les'], de ['die','und','der','zu','das'], es ['de','la','a','que','el'], pt-BR ['de','o','a','para','e','que'], tr ['bir','ve',…,'için'], ru ['в','и','не',…,'на'], pl ['w','na','się','z','i'], ja latin fragments ('style','tannoy','the','a') then '構内放送' — the ja description is literally accurate | CONFIRMED |
+| 6a | Entity-relevant sizing: 6,526 keys × 13 locales = 9.45 MB raw, ~0.67–0.84 MB/locale (§6) | sum raw JSONL line bytes of the 6,526 locale_term_entity keys per locale: total 9,454,777 B = **9.45 MB exact**; per-locale 0.67 (zh-Hant) – 0.84 (ru) MB — both endpoints exact | CONFIRMED |
+| 6b | Titles-only subset ESTIMATE <150 KB/locale raw (§6) | bytes of the 2,059 distinct title keys per locale: en 164 KB, range 157 (zh) – 189 (ru) KB | CORRECTION (author-flagged ESTIMATE runs ~10–25% low; real figure ≈160–190 KB/locale raw — changes nothing downstream: still trivially shippable, option-C sizing unaffected) |
+| 6c | Exit-2 steady state: 73 missing matrix cells, 1,137 dangling GUIDs, 5 registryMisses, bar-3 floor unmet sourcesApplied=0; `.stage-stamps/<stage>.json` exists (§6) | matrix.json pairs: 100 cells, status=='missing' on 73; `_dangling_guids.jsonl` = 1,137 rows; locale_join_report.json registryMisses=5 (ids match RELATIONS.md L126); EXTRACTION-LOG.md R6 terminal row reads `sourcesApplied=0 floorMet=False` (RELATIONS.md L213 "floor UNMET"); `extracted/.stage-stamps/` directory exists | CONFIRMED |
+
+## Not re-measured (out of artifact scope)
+
+| # | Claim | Reason |
+|---|---|---|
+| U1 | §5 competitor probes: new-world.guide ships Algolia instantsearch.js 4.48.0; wikily.gg `/search` 404; metaforge.app 403 ×2 walled | External web observations dated 2026-08-26 with no primary artifact in the repo; re-probing metaforge would violate the single-attempt rule for a challenged surface, so left as recorded. The section is explicitly labeled observation-based and gates nothing data-side. UNVERIFIABLE-ARTIFACT-MISSING |
+
+## Corrections list
+
+1. **§1 "26 source assets" → 25.** `i2_term_registry.jsonl` carries 25 distinct
+   `sourceAsset` values; the 26 counts the LanguageSource dumps on disk /
+   `base-overlay-report.json:registrySources`. One dumped source contributes no
+   surviving registry rows. Cosmetic misattribution; no downstream number moves.
+2. **§2/G2 course-convention counts 12/28 (9/28) → measured band 10–14/28
+   (7–11 under the non-DLC Teacher chain)** depending on stem normalization;
+   the stated suffix convention strictly gives 10/28. The gap's substance —
+   no mechanical full resolution, curated aliases required (§7-7 PARTIAL,
+   G2 unblock) — is unaffected.
+3. **§6 titles-only "<150 KB/locale" → ≈160–190 KB/locale raw** (en 164 KB,
+   ru 189 KB). Author-flagged ESTIMATE; option C remains viable, no verdict flips.
+
+Non-blocking notes: collision percentages sit at 10.0–11.0% of rows
+(11.5–12.9% of distinct texts) vs the quoted "~9–11%"; the 6.0% markup figure
+is the all-tags reading (style/br alone = 5.6%); tr vocab 23,445 requires
+tokenize-then-lowercase ordering (lowercase-first gives 23,420).
+
+## Overall verdict
+
+**PASS-WITH-CORRECTIONS** — every load-bearing measurement in §1, §2, §3, §4
+and the §6 sizing reproduces exactly from primary artifacts (union math 7,178 =
+5,850 ∪ 4,298 − 2,970 included; the entire §3 tokenization table; 9.45 MB
+entity-relevant payload to the byte). Three corrections, all peripheral:
+source-asset count misattributed (25 not 26), course-convention resolution
+counts replaced by a measured 10–14/28 band, titles-only estimate raised to
+~160–190 KB/locale. No verdict in the scout report's feasibility table (§7)
+changes.

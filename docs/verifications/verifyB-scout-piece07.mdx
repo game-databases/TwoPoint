@@ -1,0 +1,244 @@
+# verifyB — adversarial verification of `docs/scout-report-piece-07-locales.mdx`
+
+**Agent:** verifyB-piece07 · **Date:** 2026-08-26 · **Seat:** adversarial
+(two-verifier rule). Mandate: break the scout's claims before they drive
+the piece-#36 locale-proof spec. Every number below was re-measured from
+disk this session against `extracted/` at buildId **20226581** (stage-4
+run `2026-08-25T03:13:17Z` exit 0; stage-6 run `2026-08-25T23:49:25Z`
+exitCode 2 completed-with-ledger — both re-read from
+`extracted/EXTRACTION-LOG.md`). Method: python full scans over the 13
+locale tables + registry + relink JSONLs, an **independent raw walk of
+all 9 stub datasets** for the LocalisedString census, live curl probes of
+wikily.gg / metaforge.app (`Claude-User` UA, one request each), and
+targeted greps of `dump.cs`. No binary reads into context. No commits;
+this file is the only write.
+
+Inputs read first: repo-root `AGENTS.md`,
+`_foundation/decision-register.md`, `promptForDB.md`, the scout report
+under review (in full), pack `data-acquisition.md` (DLC/install-scope
+rows), `docs/specs/piece-01-extraction-pipeline.mdx` §Stage 4,
+`tools/stage4_localisation.py` (skip-empty + compositionPolicy code
+paths), plus the artifacts named per claim below.
+
+---
+
+## Attack 1 — "courses have zero name-role terms" → **SURVIVED** (and strengthened)
+
+The hard join is confirmed name-free: all 41 course edges in
+`relinks/entity_locale.jsonl` carry `fieldPath: "Description"` (41 edges
+over 41 distinct entities; zero `_Name`-suffixed or name-fieldPath terms).
+Course stubs carry exactly one LocalisedString-typed field (`Description`
+on 41 rows).
+
+I then tried to refute via other conventions. Every family the scout
+named exists and is measurable:
+
+- `Courses/Courses/*_Name` — 36-key family incl. the cited
+  `Courses/Courses/Archaeology_Name` = "Archaeology";
+- `Courses/DLC_Space/*_Name` (7, incl. `Astronaut_Name` = "Astrology"),
+  `Courses/DLC_Ghost/*_Name` (2), `Courses/DLC_Hospital/*_Name` (2),
+  `Courses/DLC_ChallengeMode/*_Name` (3);
+- `Marketing/Courses/*_Name` (campaign names — note these are *marketing
+  campaign* titles like "Archaeology Campaign", not neutral display
+  names);
+- `Meta/CareerChallenges/Course_*_Name` (17 career-challenge titles like
+  "Digging Deep").
+
+Precision finding for the G2 unblock: a mechanical stub-id → term-stem
+match yields **0/69** — the game does not derive keys from ids
+(`Course_Clowns`→`Clown_Name`, `Course_Spy`→`SpySchool_Name`,
+`Course_PerformingArts`→`Music_Name`, `Course_Magic`→`Wizardry_Name`).
+The inferred join therefore needs a measured **alias table**, not pure
+suffix convention. One is derivable inside the corpus today: the
+marketing-campaign stubs' own hard joins pin the aliases for the ~16
+base courses (`Marketing_Course_Magic → Wizardry`, `…_PerformingArts →
+Music`, `…_Spy → SpySchool`, …). V4's verdict ("FEASIBLE via inferred
+convention layer, NOT via current hard join", emit `inferred: true`) is
+correct and now has its mechanism named.
+
+## Attack 2 — "campus-levels/unlockables genuinely english-only in-client" → **SURVIVED core; one factual correction**
+
+Localized-twin hunt: every campus-level Name literal was searched as a
+VALUE across all 13 tables (verbatim + case-insensitive containment):
+**0 hits anywhere** — no per-locale columns, no alternate keyed tables,
+no twins. No campus-level stub field is LocalisedString-typed. The
+english-only conclusion holds.
+
+Correction: the report says "**all 17 rows** carry plain English `Name`
+literals". Measured: **13/17**. Four rows have **no `Name` field at
+all** — `Config_UniversityLevel`, `Config_UniversityLevel_Puzzle_Remix`,
+`Config_UniversityLevel_ZeroMoney_Remix`, `LevelScenarioV2_FreePlay_City`.
+The quoted examples ("All buildings", "Blank Level", "Test Level",
+"Mark's Test Scenario") are all real.
+
+Unlockables reproduce exactly: 372/415 without a join, **41**
+non-empty English literals, and **exactly 3** coincidental EN-term-value
+collisions (`Idle`, `Food`, `Drink`); samples match verbatim.
+
+## Attack 3 — the 98.11% key-plane number → **SURVIVED** (denominator sound)
+
+Presence histogram reproduced **exactly**: {13: 15,369 · 12: 46 · 11: 27
+· 10: 1 · 9: 2 · 3: 1 · 2: 15 · 1: 205} over union = 15,666. All 13
+per-locale row/hole counts reproduce exactly (ja 15,371/295 … en
+15,656+1). Denominator checks:
+
+- Report's universe (union of 13 tables): 15,369/15,666 = **98.10%**
+  at 2 dp (report's 98.11% is a rounding hair high — immaterial).
+- Registry universe (adds the 6 base-only text-less keys):
+  15,369/15,672 = 98.07%. Materially identical.
+- Event strings are **not** excluded by construction — `Challenge/*`
+  holes are IN the universe (115–119 of each locale's holes, verified:
+  119 ja, 115 everywhere else non-en, 0 en). If anything the rate is
+  conservative for non-seasonal content.
+
+No alternative legitimate universe moves the number materially.
+Consumers should quote 98.1% (union) or 98.07% (registry) interchangeably
+with the universe named.
+
+## Attack 4 — fallback law ("runtime fallback unprovable at data layer") → **DOWNGRADED** (as worded; conclusion survives)
+
+§4.4 claims dump.cs "contains no `GetTermTranslation` /
+`FallbackLanguage` symbol to quote". Those exact names indeed don't
+exist — but equivalent, better-named symbols DO (dump.cs line refs from
+this session):
+
+- `LanguageSourceData.TryGetFallbackTranslation(TermData termData, out
+  string Translation, int langIndex, string overrideSpecialization,
+  bool skipDisabled)` (~L546889);
+- `LanguageSourceData.LoadLanguageData(int languageIndex, string
+  langData, bool UnloadOtherLanguages, bool useFallback,
+  bool onlyCurrentSpecialization, bool forceLoad)` (~L546872);
+- `LocalizationManager.GetTranslation(...)` /
+  `TryGetTranslation(...)` statics (~L547700+) and
+  `TermData.GetTranslation(int idx, string specialization, bool
+  editMode)` (~L548930).
+
+So the data layer DOES prove an explicit per-term fallback path exists
+inside LanguageSourceData. What remains unprovable is exactly what the
+report's operative conclusion says: the **order** (which language index
+is tried when) — method bodies don't survive Il2CppDumper. Required
+correction: narrow §4.4 to "fallback ORDER unprovable; fallback-path
+EXISTENCE provable (symbols above)". V7 ("PARTIAL — not needed") and the
+omit-or-filler site policy are unaffected — the site never needed the
+order.
+
+## Attack 5 — ru identical-to-English ×297 → **SURVIVED exactly**; identity is genuine untranslatedness
+
+Raw count: **301** `Items/*_Name` keys where ru == en byte-for-byte.
+Of those, **297 differ from en in de** — i.e. exactly 297 are
+identical-to-en *while another locale translates them*, which is what
+the report's sentence asserts; the residual 4 are identical in de too.
+The worked example verifies (`Items/Library/Reception_Giant_Name` =
+"Giant Library Reception" in en AND ru; de/fr/ja differ). Also verified:
+of all 905 `Items/*_Name` keys, **0** are identical-to-en in every
+locale holding them.
+
+Classification of all 301 values: 100% Latin-script English
+(215 two-word, 53 three-word, 26 one-word, 7 four-word phrases — e.g.
+"Fragrant Space Rock", "Ectoplasm"); **zero cyrillic**, i.e. these are
+untranslated English common nouns, not transliterations or proper nouns
+where identity would be correct localization. The G6/Q2 implication
+(presence ≠ translated; surface an identical-count column) is the right
+one.
+
+## Attack 6 — competitor bar → **SURVIVED live**
+
+wikily.gg fetched HTTP 200 via curl (`Claude-User` UA, one request):
+
+- Measured `rel="alternate" hrefLang` set = `cs de en es es-la es-mx fr
+  hu id it ja ko nl pl pt pt-br ru th tr uk vi zh-cn zh-hk zh-tw` +
+  `x-default` → **24 locales, list matching the report token-for-token**;
+  pivot unprefixed, locales in the URL — same contract as
+  [DR-2026-08-20-locale-urls]. (Note for consumers: wikily emits these
+  as React camelCase `hrefLang` inside the RSC flight payload, not as
+  rendered `<link>` tags in raw HTML — consistent with the report's
+  "HTML/RSC payloads" wording.)
+- Chrome dictionary ships in-payload: `"no_results":"No results"`,
+  `"adding_comment"`, `"select_game"`, `"home"` present; and the
+  distinctive partial-translation empty state
+  `"no_other_languages":"No other languages available yet."` — verbatim.
+- Game sections present in payload (`ark-survival-ascended`,
+  `once-human`, `subnautica` tokens).
+
+metaforge.app: HTTP 403 to curl (same wall the scout hit; its error page
+declares `lang="en-US"`, zero hreflang). Single-locale posture is
+consistent-with-evidence; the full headless render was not re-performed
+(one-attempt rule). The bar statement survives as written.
+
+## Attack 7 — provenance audit (numbers traced to artifacts)
+
+| # | Claim (report) | Re-measured | Verdict |
+|---|---|---|---|
+| 1 | 14 locale bundles, bytes table, Σ=6,541,486 B, dirClass base ×14 | `bundle-roster.jsonl`: 14 `localeFlag!=null` rows, every byte matches, Σ=6,541,486 exact | CONFIRMED |
+| 2 | identity.json buildId/version/localeBundleCount | 20226581 / `10.3.169253+2024-12-06.1241` / 14 | CONFIRMED |
+| 3 | base-overlay 15,672 rows all empty; 26 sources; 15,677 raw terms; TEMPLATE sole 0-term source | all exact (raw-walk of the 26 dumps; per-source counts sum 15,677) | CONFIRMED |
+| 4 | TermStatus 15,400/275 dedup; 15402/275 raw | exact (registry census; base-overlay-report evidence) | CONFIRMED |
+| 5 | Key-plane table (presence hist, 13 hole counts, en-missing `UI/General/NameSeparator` CJK-only, 205 single-locale all en, 15-key en+ko `Meta/CareerGoals`, 7 base-only-vs-en keys) | every cell exact | CONFIRMED |
+| 6 | Entity plane 20,070 instances / 9,101 sentinel-zero / 10,964 hits / 5 misses / coverageOnNonEmpty 0.9995 | independent raw walk over all 9 stubs: 20070 / 9101 / 10964 / 5 exact; 0.99954 exact | CONFIRMED |
+| 7 | Registry 15,675 rows / 15,672 keys / 3 non-canonical / termType≡0 / locales[]≡[] / matrixKeyDiff 0 / orphan-B 0 | all exact | CONFIRMED |
+| 8 | Orphan-A 9,148 rows / 9,146 keys; histogram ArchetypeNames 1535, Names 908, VO 901, Levels 773, SubGoals 516, Challenge 477, FlavourTraits 400 | exact; "UI 1,688" reproduces under ROW counting (distinct-key count 1,686; the 3 non-canonical dup rows are all `UI/*`) — convention note, not error | CONFIRMED |
+| 9 | registryMisses 5: 3 closable via `Code/<dev>`, 2 dangling WantsMessage on Unused_PersonalGoal items | sampleRefs match; all three `Code/…` keys present in en.jsonl | CONFIRMED |
+| 10 | Stub counts 9 kinds, Σ13,443; joined ents per kind Σ5,850 (config 3,178 … staff 3) | all exact | CONFIRMED |
+| 11 | Item kernels 713/231/141/134/219, noTerms 1,850 | exact (kernel sum 1,438) | CONFIRMED |
+| 12 | Per-kind any/full coverage (item 100% except ja/ru 99.2; rooms/student-types 100%; metagame-node 99; config 99.0/98.0) | reproduced; config ja is 98.8/97.8 — see correction C4 | CONFIRMED (C4 nit) |
+| 13 | name==en percentages (config zh-min 7.35 / ru ~31 / ja ~18.4; item ja 10.96 / ru 23.03; unlockable ja 86.96 / ru 91.30; room ru 19.05; student-type ru 37.04; metagame-node ru 28.21) | reproduced within ≤0.5 pp under first-name-term metric with name-bearing denominators (unlockable/room/student-type/metagame-node EXACT) | CONFIRMED |
+| 14 | Course descriptions 100% × 13 locales on 41 entities | exact | CONFIRMED |
+| 15 | 11,312 I2.Localize bindings | `find harvest/monobehaviours -path "*I2.Loc.Localize/*.json"` = **11,312** exactly | CONFIRMED |
+| 16 | EXTRACTION-LOG runs (exit 0 localisation; exitCode 2 relink) | both sections re-read | CONFIRMED |
+| 17 | G8 install scope (Space Academy + School Spirits installed; Medical School catalog-KNOWN, "not owned, nothing on disk"; DLC_Hospital 753 keys + preorder keys in tables) | data-acquisition.md rows + key censuses agree | CONFIRMED |
+| 18 | §5 "UI (2,214 keys — 533 referenced; 1,688 free)" | union-universe UI = 2,214 exact; referenced-by-entities = **532**; free = 1,686 (registry) / row-convention 1,688 | MINOR (±1) |
+
+Silent scope cuts: none. Every surface in the piece-#36 scope (roster,
+kind×locale coverage, registry completeness, fallback semantics, site-UI
+split, competitor bar, feasibility verdicts, gap ledger G1–G8, open
+questions Q1–Q4) is present; the reading basis named in the header
+(piece-01 spec Revisions 2–7, stage-4 conventions) exists and matches
+the described storage shapes (26 LanguageSource MonoBehaviours vs 25
+category TextAssets per named bundle — TextAsset dir count = 25,
+verified on the english bundle).
+
+---
+
+## Corrections required before the proof spec consumes this
+
+- **C1 (fact fix):** campus-levels — "all 17 rows carry plain English
+  `Name` literals" → **13/17**; 4 rows lack the field entirely
+  (`Config_UniversityLevel`, `Config_UniversityLevel_Puzzle_Remix`,
+  `Config_UniversityLevel_ZeroMoney_Remix`, `LevelScenarioV2_FreePlay_City`).
+  English-only conclusion unchanged.
+- **C2 (claim narrowing):** §4.4 — quotable fallback symbols exist
+  (`TryGetFallbackTranslation`, `LoadLanguageData(…useFallback…)`,
+  `GetTranslation`/`TryGetTranslation`). Narrow the unprovability claim
+  to the fallback ORDER; cite the symbols.
+- **C3 (precision):** §5/G2 course-name join needs a measured alias
+  table (ids ≠ stems: Clowns→Clown, Spy→SpySchool, PerformingArts→Music,
+  Magic→Wizardry); the marketing-campaign hard joins supply most base
+  aliases. Pure suffix-convention framing would fail 0/69.
+- **C4 (rounding):** key-plane headline is 98.10% at 2 dp (98.07% on the
+  registry universe); config ja coverage is 98.8/97.8, so "every non-en
+  locale 99.0/98.0" should drop "every".
+- **C5 (nit):** V2's internal-kernel estimate "≈1,300 item rows" → the
+  five named kernels sum **1,438**; §5's "533 referenced UI keys" → 532
+  measured.
+
+None of C1–C5 flips any feasibility verdict (V1–V7), any gap entry
+(G1–G8), or any open question (Q1–Q4). G6/Q2 survive attack 5
+strengthened; G2/V4 survive attack 1 sharpened by C3.
+
+---
+
+## Verdict table
+
+| Attack surface | Outcome |
+|---|---|
+| 1 · courses zero name-role terms | SURVIVED (sharpened: alias-table requirement, C3) |
+| 2 · campus-levels/unlockables english-only | SURVIVED core; DOWNGRADED detail (C1: 13/17 literals) |
+| 3 · 98.11% key-plane number | SURVIVED (denominator sound; 98.10% at 2 dp, C4) |
+| 4 · fallback law | DOWNGRADED as worded (C2); operative conclusion + V7 stand |
+| 5 · ru identical ×297 | SURVIVED exactly; genuine untranslated English, not proper-noun identity |
+| 6 · competitor bar (wikily.gg / metaforge.app) | SURVIVED live (24 hrefLang locales verbatim; `no_other_languages` verbatim; metaforge 403 consistent) |
+| 7 · provenance audit (~18 traced figures) | SURVIVED — 17 exact confirmations, 1 ±1 nit, 0 fabrications |
+
+**VERDICT: PASS-WITH-CORRECTIONS** — apply C1–C5 (one fact fix, one claim
+narrowing, three precision edits) before the piece-#36 proof spec freezes
+its numbers; no structural rework needed.
