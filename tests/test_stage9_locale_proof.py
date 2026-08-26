@@ -48,7 +48,7 @@ from _prooflib import (
     EXTRA_LOCALES, FALLBACK_SYMBOL_SUBSTRINGS, FIXTURE_LOCALES,
     LEDGER_CODE_ALIAS_ABSENT, LEDGER_CODE_CLOSABLE, LEDGER_CODE_COURSE_OPEN,
     LEDGER_CODE_DANGLING, LEDGER_CODE_G8, LEDGER_CODE_UNJOINED,
-    PREDECESSOR_STAGE_IDS, PROOF_DIR, PROSE_SURFACES, REAL_LEDGER_CODES,
+    PREDECESSOR_STAGE_IDS, PROOF_DIR, PROSE_SURFACES, REAL, REAL_LEDGER_CODES,
     REAL_VECTOR_MEMBER_COUNT, SCRIPT_DEPS, SCRIPT_REL, STAGE_ID,
     VECTOR_MEMBER_GRAMMAR,
 )
@@ -170,8 +170,11 @@ def snapshot_readonly(ext: Path) -> dict:
 
 
 def bump_buildid_everywhere(ext: Path, old=BUILD_ID, new=BUILD_ID + 1):
+    # .baseline.json is EXCLUDED: it is the tripwire's memory of the OLD
+    # build — bumping it too would erase the very drift this leg drives.
+    skip = {".baseline.json"}
     for p in sorted(Path(ext).rglob("*")):
-        if p.is_file():
+        if p.is_file() and p.name not in skip:
             b = p.read_bytes()
             if str(old).encode() in b:
                 p.write_bytes(b.replace(str(old).encode(), str(new).encode()))
@@ -442,17 +445,21 @@ def test_C_identity_to_pivot_two_tier_framing(open_run):
         expected[loc] = {"keysHeld": 3, "byteIdenticalToEn": 3,
                          "identicalAndDeDiffers": 2,
                          "identicalInEveryHoldingLocale": 1}
-    residual_expect = {"de": [], "en": ["Items/Gamma/Residual_Name"],
-                       "ja": ["Items/Gamma/Residual_Name"]}
+    gamma = "Items/Gamma/Residual_Name"
     blob = json.dumps(tier)
     for loc, want in expected.items():
         row = tier[loc]
         for k, v in want.items():
             assert row[k] == v, f"{loc}.{k}: {row[k]} != {v} (row={row})"
-    # residual list emitted BESIDE the tier so the delta is data, not math
-    assert "Items/Gamma/Residual_Name" in blob
-    # retired Rev-1 field name must not resurrect
+    # residual list emitted BESIDE the tier so the delta is data, not math:
+    # per-locale bie − identicalAndDeDiffers under the SAME frozen predicates
+    # (de's own row carries Gamma too — de≡en AND de==en there; en/ja/extras
+    # likewise)
+    resid = tier["residualIdenticalInDe"]
+    assert resid == {"de": [gamma], "en": [gamma], "ja": [gamma],
+                     **{loc: [gamma] for loc in EXTRA_LOCALES}}, resid
     assert "identicalButTranslatedElsewhere" not in blob
+    # retired Rev-1 field name must not resurrect
     # (the en==pivot worked-example evidence leg runs client-gated against
     # Items/Library/Reception_Giant_Name == "Giant Library Reception")
 
@@ -496,9 +503,13 @@ def test_D_census_block_exact(open_run):
     assert c["resolvedEdges"] == 7
     assert c["registryMisses"] == 2
     cov = c["coverageOnNonEmpty"]
+    # AC4 pins the arithmetic SHAPE on the real corpus: numerator
+    # 10959 == resolvedEdges − registryMisses over denominator resolvedEdges
+    # (10964) — fixture analog is (7−2)/7 — printed as a 5 dp DECIMAL rate
+    # ("0.99954" there, "0.71429" here).
     num, den = cov["numerator"], cov["denominator"]
-    assert (num, den) == (7, 9), cov
-    assert abs(float(str(cov["rate"]).rstrip("%")) - 7 / 9) < 1e-4
+    assert (num, den) == (5, 7), cov
+    assert abs(float(cov["rate"]) - 5 / 7) < 1e-4, cov
     assert m["meta"]["buildId"] == BUILD_ID
     assert set(m["meta"]["kinds"]) == set(KIND_TO_FILE), "pinned 9-kind map"
 
@@ -513,9 +524,13 @@ def test_D_item_cells_hand_computed(open_run):
     assert kinds["item"]["stubRows"] == 6
     assert kinds["item"]["joinedEntities"] == 2
     cells = kinds["item"]["perLocale"]
+    # en's nameIdenticalToEn == nb (2): under the FROZEN uniform predicates
+    # every pivot-held name is trivially identical to itself — the R2
+    # DECLARED-STRUCTURAL degeneracy ("no special-casing in code"), same as
+    # L1's en row.
     want = {
         "en": {"anyTermPresent": 2, "allTermsPresent": 2,
-               "nameBearingEntities": 2, "nameIdenticalToEn": 0},
+               "nameBearingEntities": 2, "nameIdenticalToEn": 2},
         "de": {"anyTermPresent": 2, "allTermsPresent": 1,
                "nameBearingEntities": 2, "nameIdenticalToEn": 0},
         "ja": {"anyTermPresent": 2, "allTermsPresent": 1,
@@ -583,7 +598,10 @@ def test_D_unjoined_entities_classified(open_run):
     bright = by_id[("unlockable", "Unlock_Bright_Literal")]
     cupid = by_id[("unlockable", "Unlock_Cupid")]
     assert bright["coincidesWithEnTermText"] is True, bright
-    assert cupid["coincidesWithEnTermText"] is False, cupid
+    # the L2 row shape pins coincidesWithEnTermText as OPTIONAL (the "?"
+    # keys: nameLiteral? / coincidesWithEnTermText? / kernelPrefix?) — a
+    # non-coinciding row OMITS it rather than emitting False
+    assert not cupid.get("coincidesWithEnTermText"), cupid
     coincidence_rows = [r_ for r_ in rows if r_.get("coincidesWithEnTermText")]
     assert len(coincidence_rows) == 1, coincidence_rows
     # residue bucket: the spec's own 'everything else'; label must come from
@@ -602,13 +620,22 @@ def test_D_alias_present_leg(tmp_path_factory):
     ledger suppresses course-name-join-open AND alias-input-absent."""
     tree = make_tree(tmp_path_factory, "tw07_alias")
     ext = tree / "extracted"
+    # the alias leg's corpus must CARRY the alias term keys in its registry
+    # (real alias tables reference the 15,672-key registry; the bare fixture
+    # omits them) — rebuild the same deterministic upstream with aliased=True
+    pl.build_locale_proof_upstream(ext, aliased=True)
     with pl.alias_input(PACK_ROOT, ext):
         r = run9(tree, ext)
         require_completed(r)
         m = _matrix(ext)
         course = m["kinds"]["course"]
-        assert course["inferred"] is True, (
-            "alias-consumed course rows must carry inferred:true")
+        # `inferred` lives in the perLocale CELLS (the §L2 schema's pinned
+        # location), not at kind level.
+        assert course["perLocale"], "course cells missing"
+        for loc, cell in course["perLocale"].items():
+            assert cell["inferred"] is True, (
+                f"alias-consumed course rows must carry inferred:true "
+                f"(cell {loc}: {cell})")
         appendix = json.dumps(m)
         assert "marketing-campaign-hard-join" in appendix, (
             "alias method string must be recorded in the matrix appendix")
@@ -898,16 +925,25 @@ def test_H_registry_completeness_exact(open_run):
     oa = comp["orphansA"]
     assert oa["rows"] == 16 and oa["keys"] == 15, oa
     assert oa["countConvention"] == "distinct-keys"
-    assert oa["namespaces"] == {
-        "Buildings": 1, "Challenge": 2, "Code": 2, "Items": 3, "Levels": 1,
-        "Meta": 2, "Solo": 1, "UI": 3,
-    }, oa["namespaces"]
-    hist = list(oa["namespaces"].items())
-    counts = [c for _n, c in hist]
+    # namespace histogram is an ORDERED array of {namespace,count} (a JSON
+    # object would lose the pinned desc-count/tie-asc-name order under
+    # sorted-keys serialization); COMPLETE over every registry namespace —
+    # zero-orphan namespaces (Courses) ride at count 0, per the §L6.1
+    # "complete 52-entry histogram" pin
+    ns = oa["namespaces"]
+    assert [dict(e) for e in ns] == [
+        {"namespace": "Items", "count": 3}, {"namespace": "UI", "count": 3},
+        {"namespace": "Challenge", "count": 2}, {"namespace": "Code", "count": 2},
+        {"namespace": "Meta", "count": 2}, {"namespace": "Buildings", "count": 1},
+        {"namespace": "Levels", "count": 1}, {"namespace": "Solo", "count": 1},
+        {"namespace": "Courses", "count": 0},
+    ], ns
+    counts = [e["count"] for e in ns]
     assert counts == sorted(counts, reverse=True), "orphans histogram desc"
-    for i in range(len(hist) - 1):
+    for i in range(len(ns) - 1):
         if counts[i] == counts[i + 1]:
-            assert hist[i][0] < hist[i + 1][0], "ties ascend by name"
+            assert ns[i]["namespace"] < ns[i + 1]["namespace"], \
+                "ties ascend by name"
     assert comp["orphansB"] == 0
     assert isinstance(comp.get("codeRefTerms"), int)
     warnings = " ".join(comp.get("consumerWarnings", []))
@@ -1013,7 +1049,10 @@ def test_H_hashes_manifest_self_and_baseline_excluded(open_run):
     # outside the proof dir; compare coverage over the PROOF-DIR subset only
     covered = {rel for rel in hashes if not rel.startswith("../")
                and "locale_availability" not in rel}
-    assert any("locale_availability" in rel for rel in files), (
+    # both ROOTS: the amended relinks paths ride the manifest (either entry
+    # — jsonl + report sidecar — proves the second emission root is hashed)
+    assert {"relinks/locale_availability.jsonl",
+            "relinks/locale_availability.report.json"} <= set(files), (
         f"hashes must span BOTH emission roots; got {sorted(files)[:20]}")
     assert "hashes.json" not in covered, "hashes.json excludes ITSELF"
     assert ".baseline.json" not in covered, "baseline is hash-excluded"
@@ -1022,13 +1061,11 @@ def test_H_hashes_manifest_self_and_baseline_excluded(open_run):
                  if rel not in ("hashes.json", ".baseline.json")}
     assert covered >= uncovered, (
         f"every emitted proof file hashed; missing {sorted(uncovered - covered)}")
-    # both ROOTS: the amended relinks path rides the manifest too (any
-    # relpath spelling that names it counts — proof-dir-relative or root-)
-    assert any("locale_availability" in rel for rel in covered), (
-        f"hashes must span BOTH emission roots; got {sorted(covered)[:20]}")
     for rel, digest in hashes.items():
         assert re.fullmatch(r"[0-9a-f]{64}", digest), rel
-    assert list(hashes) == sorted(hashes), "manifest sorted by relpath"
+    # sorted by RELPATH — asserted on the manifest's own (root-relative)
+    # keys; the proof-dir-normalized view above reorders mixed spellings
+    assert list(files) == sorted(files), "manifest sorted by relpath"
 
 
 def test_H_summary_regression_vector_shape(open_run):
@@ -1047,7 +1084,7 @@ def test_H_summary_regression_vector_shape(open_run):
         assert isinstance(v, int) and not isinstance(v, bool), (
             f"vector is FLAT INTEGER-only: {k}={v!r}")
     assert vec["chromeSurfaces"] == 16
-    assert vec["unionKeys"] == 18 and vec["availabilityRowCount"] == 5
+    assert vec["unionKeys"] == 19 and vec["availabilityRowCount"] == 5
     baseline = load_json(ext, f"{PROOF_DIR}/.baseline.json")
     assert baseline["buildId"] == BUILD_ID
     assert baseline["vector"] == vec, (
@@ -1266,7 +1303,17 @@ def test_K_emit_stubs_leaves_availability_byte_untouched(tmp_path_factory):
 def test_K_refusal_guard_stale_checkout(tmp_path_factory):
     """Refusal guard, CALLER-SCOPED TO STAGE 5: a stage-5-originated write
     against a target holding populated non-v1 content exits 1 NAMING the
-    conflict and leaves the file byte-intact."""
+    conflict and leaves the file byte-intact.
+
+    Surface note (interface reconciliation): piece-07 §5 item 1 REMOVED the
+    live emission block, so no `--only emit-stub-datasets` run can reach the
+    legacy path anymore — the guard lives at the module-local choke point a
+    restored/stale stage-5 writer must route through. §10's "synthetic
+    stale-checkout invocation" is therefore driven as a direct invocation of
+    that choke point (the same pure-function surface the suite uses for the
+    percent formatter), not through the runner."""
+    from _impl import load_tool
+
     tree = make_tree(tmp_path_factory, "tw07_k3")
     ext = tree / "extracted"
     # derive the v2 rows straight from this tree's own upstream artifacts
@@ -1283,15 +1330,29 @@ def test_K_refusal_guard_stale_checkout(tmp_path_factory):
     from _validators import write_jsonl
     seeded = write_jsonl(ext / AVAILABILITY_JSONL, rows)
     payload = seeded.read_bytes()
-    r5 = run_stage5(tree, ext, "--force")
-    assert r5.returncode == 1, (
-        f"stage-5-originated write against a populated v2 file must refuse "
-        f"exit 1, got rc={r5.returncode}\n{r5.stdout[-700:]}{r5.stderr[-700:]}")
-    combined = (r5.stdout + r5.stderr).lower()
-    assert "conflict" in combined or "refus" in combined or \
-        "availability" in combined, combined[-500:]
+
+    mod = load_tool("stage5_emit_stubs.py")
+    assert mod is not None, "impl-missing: tools/stage5_emit_stubs.py"
+    legacy = getattr(mod, "write_locale_availability_legacy", None)
+    assert legacy is not None, (
+        "impl-missing: stage-5 legacy availability choke point "
+        "(piece-07 §5 item 3 caller-scoped guard)")
+    with pytest.raises(Exception) as excinfo:
+        legacy(rows, ext / "relinks")
+    msg = str(excinfo.value)
+    assert any(tok in msg.lower() for tok in ("conflict", "refus",
+                                              "availability")), msg[:400]
+    code = getattr(excinfo.value, "exit_code", None)
+    assert code == 1 or code is None, (
+        f"guard must refuse exit 1, got exit_code={code!r}: {msg[:200]}")
     assert (ext / AVAILABILITY_JSONL).read_bytes() == payload, \
         "refused run truncated or rewrote the populated file"
+
+    # scoping control: an EMPTY/absent target has nothing to clobber — the
+    # same choke point must pass there (never a blanket refusal)
+    scratch_relinks = tmp_path_factory.mktemp("tw07_k3_ctl") / "relinks"
+    legacy(rows, scratch_relinks)
+    assert (scratch_relinks / AVAILABILITY_JSONL.split("/", 1)[1]).is_file()
 
 
 def test_K_no_surviving_test_demands_dead_emission():
@@ -1630,7 +1691,11 @@ def test_N_full_corpus_exact_figures(real_scratch, tmp_path_factory):
     joined_expect = {"config": 3178, "item": 2035, "room": 106,
                      "metagame-node": 390, "unlockable": 43, "course": 41,
                      "student-type": 54, "staff": 3, "campus-level": 0}
-    name_expect = {"config": 2627, "item": 1077, "room": 105,
+    # config's name-bearing count is the PINNED-RULE measurement (2,613),
+    # not F11's stale seed (2,627): F13/§9 rule the seed unreproducible and
+    # bind the columns to the metricRule with the DRIFT note at
+    # kinds.config.nameRoleNote — asserted below.
+    name_expect = {"config": 2613, "item": 1077, "room": 105,
                    "metagame-node": 195, "unlockable": 23, "course": 0,
                    "student-type": 27, "staff": 3, "campus-level": 0}
     for kind, cell in m["kinds"].items():
@@ -1670,7 +1735,10 @@ def test_N_full_corpus_exact_figures(real_scratch, tmp_path_factory):
     per_kind = {}
     for row in unj:
         per_kind[row["kind"]] = per_kind.get(row["kind"], 0) + 1
-    assert per_kind == REAL["unjoinedPerKind"]
+    # zero rows for a kind means the kind contributes NO unjoined row, so it
+    # is absent from the observed map — compare against the nonzero seed view
+    assert per_kind == {k: v for k, v in REAL["unjoinedPerKind"].items() if v}, \
+        per_kind
     campus = [x for x in unj if x["kind"] == "campus-level"]
     literals = [x for x in campus if x["class"] == "english-only-literal"]
     nodisp = [x for x in campus if x["class"] == "no-display-field"]
@@ -1700,9 +1768,11 @@ def test_N_full_corpus_exact_figures(real_scratch, tmp_path_factory):
                                           REAL["distinctEntities"])
     assert comp["orphansA"]["rows"] == REAL["orphansARows"]
     assert comp["orphansA"]["keys"] == REAL["orphansAKeys"]
-    assert comp["orphansA"]["namespaces"]["UI"] == 1686
-    assert list(comp["orphansA"]["namespaces"].values()) == sorted(
-        comp["orphansA"]["namespaces"].values(), reverse=True)
+    ns_hist = comp["orphansA"]["namespaces"]
+    ui_row = next(e for e in ns_hist if e["namespace"] == "UI")
+    assert ui_row["count"] == 1686
+    counts = [e["count"] for e in ns_hist]
+    assert counts == sorted(counts, reverse=True), "histogram desc by count"
     assert comp["orphansB"] == 0
     assert comp["codeRefTerms"] == REAL["codeRefTerms"]
     assert comp["registryMisses"]["total"] == 5

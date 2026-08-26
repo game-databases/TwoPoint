@@ -436,11 +436,17 @@ def load_inputs(extracted_root: Path, drift: Drift) -> dict:
     return inputs
 
 
-def load_alias_input(pack_dir: Path) -> list[dict] | None:
+def load_alias_input(pack_side_base: Path) -> list[dict] | None:
     """OPTIONAL input (absence is a ledger row, never a failure): the shared
     course-id -> term-key alias table closing G2 for this piece and
-    piece-08's search."""
-    path = pack_dir / ALIAS_REL_PACK
+    piece-08's search.
+
+    Resolved BESIDE THE EXTRACTION ROOT (`<root>/../data/sources/derived/`),
+    which is byte-identical to the pack-relative repo convention on real
+    runs (the default extracted root sits inside the pack) while keeping
+    hostless fixture/scratch roots hermetic against concurrent sibling
+    activity at the shared pack path (rec-07 interface reconciliation)."""
+    path = pack_side_base / ALIAS_REL_PACK
     if not path.is_file():
         return None
     return load_jsonl(path)
@@ -518,7 +524,12 @@ def pass_l1(inputs: dict, drift: Drift, locs: list[str]) -> dict:
     de_texts = tables.get(DE_COMPARATOR) or {}
     en_texts = tables[PIVOT]
     identity_rows = {}
-    ru_identical: list[str] = []
+    # residualIdenticalInDe generalizes the seed's ru-residual-4 framing to
+    # EVERY row under the SAME frozen predicates (no locale special case):
+    # per locale, the byteIdenticalToEn keys the de comparator does NOT
+    # differ on — i.e. bie − identicalAndDeDiffers — so the 301−297 delta is
+    # data. Only non-empty lists are emitted.
+    residual_by_locale: dict[str, list[str]] = {}
     for loc in locs:
         held = [k for k in family if k in tables[loc]]
         bie = [k for k in held
@@ -528,8 +539,9 @@ def pass_l1(inputs: dict, drift: Drift, locs: list[str]) -> dict:
         iehl = [k for k in held
                 if all(k not in tables[h] or tables[h].get(k) == en_texts[k]
                        for h in locs)]
-        if loc == "ru":
-            ru_identical = bie
+        resid = sorted(set(bie) - set(didd))
+        if resid:
+            residual_by_locale[loc] = resid
         identity_rows[loc] = {
             "keysHeld": len(held),
             "byteIdenticalToEn": len(bie),
@@ -542,8 +554,6 @@ def pass_l1(inputs: dict, drift: Drift, locs: list[str]) -> dict:
     drift.check("ru.identicalAndDeDiffers",
                 SEEDS["ruIdenticalAndDeDiffers"],
                 ru_row and ru_row["identicalAndDeDiffers"])
-    residual = sorted(k for k in ru_identical
-                      if de_texts.get(k) == en_texts.get(k))
 
     artifact = {
         "meta": {
@@ -577,7 +587,8 @@ def pass_l1(inputs: dict, drift: Drift, locs: list[str]) -> dict:
             "namespace": "Items/*_Name",
             "familyKeysTotal": len(family),
             "metricRule": IDENTITY_METRIC_RULE,
-            "ruResidualIdenticalInDe": residual,
+            "residualIdenticalInDe": {loc: residual_by_locale[loc]
+                                      for loc in sorted(residual_by_locale)},
             **identity_rows,
         },
     }
@@ -1210,13 +1221,16 @@ def derive_misses(inputs: dict, registry_keys: set) -> tuple[list[str], list[dic
     """Split join-report unresolvedIds into closableViaCodeDev and dangling
     rows — ONE ROW PER termId, enriched from the stub payloads.
 
-    Closability rule (reproducible from committed artifacts): the miss's
-    fieldPath spells a registered key under the Code/ namespace —
-    `Code/<fieldPath>` present in i2_term_registry (F18: the three
-    InspectorItem_Tooltip*/Staff_Unassigned refs close exactly this way,
-    all three keys verified present in locales/en.jsonl at emit time;
-    `Code/WantsMessage` is not a key, so the two WantsMessage IDs stay
-    dangling)."""
+    Closability rule (reproducible from committed artifacts): the miss
+    spells a registered key under the Code/ namespace — `Code/<fieldPath>`
+    OR `Code/<_dev>` present in i2_term_registry, probed IN THAT ORDER
+    (F18 wording is "_dev string IS the key under Code/", while the
+    measured LocalisedStringCodeRef cells carry the key as their
+    fieldPath; probing both reproduces the pinned 3-closable/2-dangling
+    split under either spelling). The two WantsMessage misses match
+    neither (`Code/WantsMessage` / `Code/Wants a {ITEM}` are not keys), so
+    they stay dangling. All closable keys are verified present in
+    locales/en.jsonl at emit time."""
     join_report = inputs["join_report"]
     stub_lookup: dict[tuple, dict] = {}
     for kind in KINDS:
@@ -1251,8 +1265,11 @@ def derive_misses(inputs: dict, registry_keys: set) -> tuple[list[str], list[dic
     for tid in sorted(grouped):
         g = grouped[tid]
         dev = g["dev"]
-        code_key = f"Code/{g['fieldPath']}" if g["fieldPath"] else None
-        if code_key and code_key in registry_keys:
+        code_candidates = [
+            f"Code/{name}" for name in (g["fieldPath"], dev) if name]
+        code_key = next(
+            (c for c in code_candidates if c in registry_keys), None)
+        if code_key is not None:
             closable.append(code_key)
             continue
         dangling.append({
@@ -1557,11 +1574,16 @@ def evaluate_baseline(proof_dir: Path, build_id, vector: dict) -> dict:
                 "lines": lines, "regression": True, "new_baseline": None}
     improved = [m for m in sorted(vector)
                 if m in old_vector and old_vector[m] != vector[m]]
-    verdict = "improved" if improved else "ok"
-    return {"verdict": verdict, "action": "rewrite", "lines": [],
+    if not improved:
+        # Equal rerun: §L6.3 bullet 1 — baseline UNTOUCHED (neither worse
+        # nor DRIFT; rewriting would churn previousVerdict bytes while
+        # nothing changed, breaking byte-stable tripwire state).
+        return {"verdict": "ok", "action": "untouched", "lines": [],
+                "regression": False, "new_baseline": None}
+    return {"verdict": "improved", "action": "rewrite", "lines": [],
             "regression": False,
             "new_baseline": {"buildId": build_id, "vector": vector,
-                             "previousVerdict": verdict}}
+                             "previousVerdict": "improved"}}
 
 
 def build_summary(inputs: dict, l1: dict, l2: dict, l3: dict, l5: dict,
@@ -1665,8 +1687,7 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
     drift = Drift()
     precheck_inputs(extracted_root)
     inputs = load_inputs(extracted_root, drift)
-    pack_dir = tc.resolve_pack_dir()
-    alias_rows = load_alias_input(pack_dir)
+    alias_rows = load_alias_input(extracted_root.parent)
     alias_map = None
     if alias_rows is not None:
         alias_map = {str(r["courseId"]): r for r in alias_rows}
@@ -1712,9 +1733,20 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
     if trip["regression"]:
         problems.extend(trip["lines"])
     if problems:
+        # AC13 precedence 1 > 2 > 0 (F7): a run with open ledgers AND a
+        # regression exits 1 and NAMES BOTH in the run section.
         log_util.append_run_section(extracted_root, STAGE_ID,
                                     ["- exitCode: 1 (failed)"]
                                     + [f"- PROBLEM: {p}" for p in problems]
+                                    + ["ledgerCodes: "
+                                       + json.dumps(dict(sorted(Counter(
+                                           r["code"] for r in
+                                           ledger_rows).items())),
+                                           sort_keys=True)]
+                                    + [f"- ledgerRows={len(ledger_rows)}"]
+                                    + [f"- {code}="
+                                       f"{sum(1 for r in ledger_rows if r['code'] == code)}"
+                                       for code in sorted({r["code"] for r in ledger_rows})]
                                     + ["- regressionVerdict: "
                                        + trip["verdict"],
                                        "- baselineAction: "
@@ -1745,22 +1777,24 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
 
     run_lines = (
         [f"- exitCode: {2 if ledger_rows else 0}"]
-        + [f"- {k}: {json.dumps(v, sort_keys=True, ensure_ascii=False)}"
+        # §4 Run-section keys are PINNED tokens spelled `key=value`; values
+        # that are dicts ride as compact JSON beside their key.
+        + [f"- {k}={json.dumps(v, sort_keys=True, ensure_ascii=False)}"
            for k, v in l1["run"].items() if k != "pass"]
-        + [f"- {k}: {json.dumps(v, sort_keys=True, ensure_ascii=False)}"
+        + [f"- {k}={json.dumps(v, sort_keys=True, ensure_ascii=False)}"
            for k, v in l2["run"].items() if k != "pass"]
-        + [f"- {k}: {json.dumps(v, sort_keys=True, ensure_ascii=False)}"
+        + [f"- {k}={json.dumps(v, sort_keys=True, ensure_ascii=False)}"
            for k, v in l3["run"].items() if k != "pass"]
-        + [f"- {k}: {json.dumps(v, sort_keys=True, ensure_ascii=False)}"
+        + [f"- {k}={json.dumps(v, sort_keys=True, ensure_ascii=False)}"
            for k, v in l4["run"].items() if k != "pass"]
-        + [f"- {k}: {json.dumps(v, sort_keys=True, ensure_ascii=False)}"
+        + [f"- {k}={json.dumps(v, sort_keys=True, ensure_ascii=False)}"
            for k, v in l5["run"].items() if k != "pass"]
-        + [f"- {k}: {json.dumps(v, sort_keys=True, ensure_ascii=False)}"
+        + [f"- {k}={json.dumps(v, sort_keys=True, ensure_ascii=False)}"
            for k, v in l6["run"].items() if k != "pass"]
         + ["ledgerCodes: "
            + json.dumps(dict(sorted(Counter(
                r["code"] for r in ledger_rows).items())), sort_keys=True)]
-        + [f"- ledgerRows: {len(ledger_rows)}"]
+        + [f"- ledgerRows={len(ledger_rows)}"]
         + [f"- {code}={sum(1 for r in ledger_rows if r['code'] == code)}"
            for code in sorted({r["code"] for r in ledger_rows})]
         + ["- regressionVerdict: " + trip["verdict"],

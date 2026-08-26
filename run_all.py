@@ -77,15 +77,21 @@ UPSTREAMS = {
         "harvest/monobehaviours",
     ],
     # piece-07 §4: locale-proof upstream set — committed flat artifacts
-    # only (purely derived; no game dir). The per-locale tables are NOT
-    # enumerated here: the REQUIRED table set resolves from the roster's
-    # named locales inside the stage (a hostless mini fixture names fewer
-    # than 13), which exits 3 naming any missing table. The OPTIONAL alias
-    # input (data/sources/derived/course-name-aliases.jsonl) is likewise
-    # not a gate: absence is a ledger row, never a refusal.
+    # only (purely derived; no game dir). The per-locale tables ARE part of
+    # the pinned §4 gate set ("locales/<locale>.jsonl x13"), so they are
+    # declared here BOTH for the runner pre-check (ANY missing => exit 3
+    # naming it) and so a table edit invalidates the stage stamp (AC10's
+    # rerun-the-tripwire leg re-executes without --force). The OPTIONAL
+    # alias input (data/sources/derived/course-name-aliases.jsonl) is not a
+    # gate: absence is a ledger row, never a refusal.
     "locale-proof": [
         "identity.json",
         "bundle-roster.jsonl",
+        "locales/de.jsonl", "locales/en.jsonl", "locales/es.jsonl",
+        "locales/fr.jsonl", "locales/it.jsonl", "locales/ja.jsonl",
+        "locales/ko.jsonl", "locales/pl.jsonl", "locales/pt-BR.jsonl",
+        "locales/ru.jsonl", "locales/tr.jsonl", "locales/zh-Hans.jsonl",
+        "locales/zh-Hant.jsonl",
         "locales/base-overlay.jsonl",
         "locales/base-overlay-report.json",
         "locales/locale-matrix.json",

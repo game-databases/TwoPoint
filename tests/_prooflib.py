@@ -176,18 +176,23 @@ REAL = {
     "orphansARows": 9148,
     "orphansAKeys": 9146,
     "codeRefTerms": 586,
+    # AC8 pins MEMBERSHIP + en.jsonl presence, not order; the emitted array
+    # is sorted (piece-1 console/write discipline: sorted enumeration), so
+    # the oracle list is sorted to match.
     "closableKeys": [
+        "Code/InspectorItem_TooltipCancelUpgrade",
         "Code/InspectorItem_TooltipRequiresJanitorMechanics",
         "Code/Staff_Unassigned",
-        "Code/InspectorItem_TooltipCancelUpgrade",
     ],
+    # ONE ROW PER termId, ASCENDING numeric sort (F3 / arbiter ruling:
+    # "-1451566921 < -1172386361 holds")
     "danglingRows": [
-        {"termId": -1172386361, "fieldPath": "WantsMessage",
-         "dev": "Wants a {ITEM}", "srcKind": "item",
-         "onIds": ["Unused_PersonalGoal_Item_AnyExterior"]},
         {"termId": -1451566921, "fieldPath": "WantsMessage",
          "dev": "Wants a {ITEM}", "srcKind": "item",
          "onIds": ["Unused_PersonalGoal_Item_Gym_Vaulting_Horse"]},
+        {"termId": -1172386361, "fieldPath": "WantsMessage",
+         "dev": "Wants a {ITEM}", "srcKind": "item",
+         "onIds": ["Unused_PersonalGoal_Item_AnyExterior"]},
     ],
     "baseOverlayRows": 15672,
     "baseOverlayEmptyTextRows": 0,
@@ -662,13 +667,27 @@ def build_locale_proof_upstream(extracted: Path, *, closed=False,
     write_jsonl(extracted / "relinks" / "i2_term_registry.jsonl", reg_rows)
 
     edges = []
+    miss_refs = {}
     by_tid = {r["termId"]: r["termKey"] for r in reg_rows}
     for kind, eid, fpath, payload in info.ls_instances():
+        tid = payload["_termID"]
+        if tid == 0:
+            # stage-6 dialect: sentinel-zero instances are EXCLUDED from
+            # rows and COUNTED (declared-empty class G4) — never misses
+            continue
+        key = by_tid.get(tid)
+        if key is None:
+            # stage-6 dialect (`build_entity_locale`): registry MISSES land
+            # ONLY in locale_join_report.unresolvedIds — entity_locale.jsonl
+            # carries RESOLVED rows exclusively.
+            miss_refs.setdefault(tid, []).append(
+                {"srcKind": kind, "srcId": eid, "fieldPath": fpath})
+            continue
         edges.append({
-            "buildId": BUILD_ID, "dstId": by_tid.get(payload["_termID"], ""),
+            "buildId": BUILD_ID, "dstId": key,
             "dstKind": "locale-term",
             "evidence": {"dev": payload["_dev"], "fieldPath": fpath,
-                         "locales": [], "termId": payload["_termID"]},
+                         "locales": [], "termId": tid},
             "inferred": False, "mechanism": "hard",
             "method": "i2-termid-registry", "srcId": eid, "srcKind": kind,
         })
@@ -699,7 +718,8 @@ def build_locale_proof_upstream(extracted: Path, *, closed=False,
         "instancesTotal": len(inst), "matrixKeyDiff": 0,
         "perKindHits": {}, "registryHits": resolved,
         "registryMisses": misses, "sentinelZero": sentinel,
-        "unresolvedIds": [],
+        "unresolvedIds": [{"termId": tid, "sampleRefs": miss_refs[tid]}
+                          for tid in sorted(miss_refs)],
     })
     return info
 
@@ -724,18 +744,20 @@ def seed_v2_availability(extracted: Path, info: FixtureInfo):
 
 @contextmanager
 def alias_input(pack_dir: Path, extracted: Path):
-    """Expose the OPTIONAL alias input at its contracted pack-relative path
-    (data/sources/derived/) for the alias-PRESENT legs; restored after.
+    """Expose the OPTIONAL alias input at its contracted data/sources/
+    derived/ location for the alias-PRESENT legs; restored after.
 
-    The pack-relative location is the repo convention (data-acquisition.md);
-    a copy also rides inside the extraction root so either resolution base
-    finds it. Assumption is flagged for interface reconciliation.
+    Resolution base (rec-07 interface reconciliation): the stage resolves
+    the input BESIDE THE EXTRACTION ROOT (`<root>/../data/`), which equals
+    the pack-relative repo convention on real runs — so the leg-private
+    copy is written to ``extracted.parent`` (inside the fixture tree),
+    keeping hostless legs hermetic against concurrent sibling activity at
+    the shared pack path. The ``pack_dir`` argument is retained for
+    signature compatibility and deliberately NOT touched.
     """
     written = []
-    for base in (pack_dir, extracted):
-        p = Path(base) / ALIAS_INPUT_REL
-        if p.exists():                   # never clobber foreign state
-            continue
+    p = Path(extracted).parent / ALIAS_INPUT_REL
+    if not p.exists():                   # never clobber foreign state
         p.parent.mkdir(parents=True, exist_ok=True)
         write_jsonl(p, ALIAS_ROWS)
         written.append(p)
@@ -769,7 +791,12 @@ def selective_real_scratch(src_extracted: Path, dst: Path) -> Path:
             shutil.copytree(s, dst / dirname)
     (dst / "relinks").mkdir(parents=True, exist_ok=True)
     for name in ("entity_locale.jsonl", "i2_term_registry.jsonl",
-                 "locale_term_entity.jsonl", "locale_join_report.json"):
+                 "locale_term_entity.jsonl", "locale_join_report.json",
+                 # NOT in §4's gate set (measured-OPTIONAL L5 substrate):
+                 # present on the real corpus, absent on hostless fixtures;
+                 # copied so the client-gated L5 census measures the real
+                 # 11,312 I2.Loc.Localize bindings (F20/AC11).
+                 "ui_link_coverage.jsonl"):
         s = src_extracted / "relinks" / name
         if s.is_file():
             shutil.copy2(s, dst / "relinks" / name)
@@ -778,4 +805,12 @@ def selective_real_scratch(src_extracted: Path, dst: Path) -> Path:
         ddst = dst / "decompiled" / "il2cppdumper"
         ddst.mkdir(parents=True, exist_ok=True)
         shutil.copy2(dump, ddst / "dump.cs")
+    # OPTIONAL alias input, resolved beside the extraction root (rec-07):
+    # mirrored when present so the scratch measures the true current state
+    # (absent on today's corpus) without touching the shared pack path.
+    alias_src = src_extracted.parent / ALIAS_INPUT_REL
+    if alias_src.is_file():
+        adst = dst / ALIAS_INPUT_REL
+        adst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(alias_src, adst)
     return dst
