@@ -19,18 +19,19 @@ course 69 · student-type 54 · campus-level 17 · staff 3.
 `slug` is **null on 13,443/13,443 rows (100%)** — re-confirms the bar-3
 lesson; nothing slug-shaped exists to index.
 
-What is actually *findable by human text*:
+What is actually *findable by human text* — TWO floors, definitions
+explicit (the narrow one understates; plan against the expanded one):
 
-| Universe | Count | Source |
+| Universe | Count | Carrier definition |
 |---|---|---|
-| Entities with ≥1 localized-text edge | **5,850** (43.5%) | distinct `(srcKind,srcId)` in `relinks/entity_locale.jsonl` (10,964 rows) |
-| Entities bearing a display-*name* carrier (localized or `_dev` fallback) | **4,298** | name-field walk over `stubs/*.jsonl` |
-| Union (the realistic searchable set) | **7,178 = 53.4%** | measured union |
-| Id-only searchable (no human text anywhere) | **6,265** | remainder — mostly config internals, item variations, unlockable internals |
+| Entities with ≥1 localized-text edge | **5,850** (43.5%) | any edge in `relinks/entity_locale.jsonl` (10,964 rows) |
+| Narrow union | **7,178 = 53.4%** | A ∪ {pinned display-name fields only (`Name`/`LocalisedName`/`NameWhenBuilt`/`TitleM·F` family), counting `_termID≠0` OR non-empty `_dev`} — silently excludes plain-string Names, secondary localized name fields, `DisplayName.mTerm`, and the §2 item joins |
+| **Expanded planning floor** | **10,200 = 75.9%** | A ∪ plain-string `Name`/`Title`/`DisplayName`/`DescriptiveName` carriers ∪ dev-bearing sentinel structs on localized name-class fields (config LocalisedName ×552, Title ×547, DisplayName ×170 instances; room Name ×49) ∪ unlockable `DisplayName.mTerm`/DescriptiveName ∪ §2 item joins ∪ course conventions (§G2). Verifier re-measure 2026-08-26; independent component-wise recomputation landed 10,107 = 75.2% — boundary choices differ (nested `States[].Name`, course-alias rows), conclusion identical. **Plan against 10,200.** |
+| Id-only searchable (outside expanded floor) | **~3,243** | remainder — config internals (GOOSE graphs, objectives), unlockable internals |
 
-Union per kind: config 3,856/8,430 · item 2,649/3,885 · metagame-node
-406/454 · room 107/116 · student-type 54/54 · course 41/69 · unlockable
-49/415 · campus-level 13/17 · staff 3/3.
+Narrow union per kind (for reference): config 3,856/8,430 · item
+2,649/3,885 · metagame-node 406/454 · room 107/116 · student-type 54/54 ·
+course 41/69 · unlockable 49/415 · campus-level 13/17 · staff 3/3.
 
 Display-name edges specifically (fieldPaths pinned per kind — see §2):
 **2,993 edges resolving to en text**, collapsing to **1,895 distinct
@@ -41,8 +42,10 @@ needs kind weighting + id disambiguation. 23 titles clean to empty string
 (markup-only) — must be dropped, not indexed as "".
 
 Locale-term plane behind it: `relinks/i2_term_registry.jsonl` =
-**15,675 rows / 15,672 distinct keys / 26 source assets** (canonical:true on
-15,672; 3 legacy duplicate-ID rows). Reverse index
+**15,675 rows / 15,672 distinct keys / 25 distinct sourceAssets**
+(canonical:true on 15,672; 3 legacy duplicate-ID rows; **26** LanguageSource
+dump files exist on disk but `I2LS_TEMPLATE` ships 0 terms so it never
+registers a row — 25 is the reproducible count). Reverse index
 `locale_term_entity.jsonl`: **6,526 distinct terms actually referenced by
 entities** — the search-relevant subset of the 15,672-key universe (the
 other ~9k keys are pure UI chrome).
@@ -59,8 +62,8 @@ Display-name carriers (measured at stub level):
 | metagame-node | `LocalisedName` | 241 | 195 | 46 | 213 |
 | student-type | `LocalisedNameF/M` | 27 | 27 | 0 | 27 |
 | staff | `LocalisedName` (+`Ranks[].TitleM/F` ×30) | 3 | 3 | 0 | 0 |
-| course | **none** | 0 | 0 | 0 | 69 |
-| unlockable | `LocalisedName*` (+`DisplayName.mTerm` ×55, §G7) | 28 | 20 | 8 | 387 |
+| course | **none** (display names via conventions, §G2) | 0 | 0 | 0 | 69 |
+| unlockable | `LocalisedName*` — field PRESENCE on 28 rows; CONTENT basis: 20 localized + 8 dev-only. `DisplayName.mTerm` ×55 is a separate direct-key surface (53 resolve in en; §G7) | 28 | 20 | 8 | 387 |
 | campus-level | none localized; plain `Name` str ×13 (en dev text) | — | — | — | 17 |
 
 Structural facts that size the index:
@@ -69,10 +72,17 @@ Structural facts that size the index:
   names — `Meshes[].GeometryList[].Bones[]` (139,847 bone-name strings!),
   texture/material paths. A naive "index every string leaf" would balloon
   ~10× for garbage. Index only whitelisted fieldPaths.
-- **item**: `GameItemLiteDefinition` (1,728) carries `LocalisedName`;
-  `GameItemDefinition` (1,654) has **no name field at all**
-  (Description + flavour only); `GameItemVariationDefinition` (353) neither.
-  Title-complete item search needs definition-grouping first (§G3).
+- **item**: `GameItemLiteDefinition` (1,728) carries `LocalisedName` — and
+  it is the name hub for the other two classes, all resolvable FROM
+  COMMITTED STUBS TODAY: `GameItemVariationDefinition.GameItem` int refs
+  resolve to `GameItemLiteDefinition.DefinitionID` **353/353** (measured,
+  0 miss); every `GameItemDefinition` has a `<id>_Lite` twin by
+  name-convention — substring containment **1,652/1,654**
+  (raw id-equality is 0/1654; the `_Lite` suffix convention IS the join).
+  piece-02 has not EMITTED these edges yet (`relinks/item_item.jsonl`'s
+  155 rows are unrelated PPtr edges) — a concrete relink work item per
+  AGENTS rule 8, NOT a data hole. Search can consume the joins from stubs
+  directly meanwhile.
 - Descriptions (second text tier): config `Description` 1,737 +
   `FlavourDescriptions[]` 745; item `Description` 1,654;
   room `Description/LongDescription` 74/63; course `Description._dev` ×41
@@ -85,15 +95,21 @@ Alias surface (what EXISTS to match against, beyond the canonical title):
 | Internal ids (verbatim) | 13,443 | CamelCase+underscore; split → **3,224 distinct id tokens** — free alias vocabulary |
 | `_dev` English fallback strings | 3,874 name-field instances | config 2,184 · item 1,458 · metagame-node 159 · room 31 · student-type 22 · unlockable 17 · staff 3 |
 | `DisplayName.mTerm` (direct term-KEY ref, not `_termID`) | 55 unlockable rows; 53 resolve in en | outside the `{_dev,_termID}` walker — §G7 |
-| `IconReference.m_SubObjectName` sprite names | item 1,290 · room-descriptor 104 · metagame 202 … | human-readable ("UI_InGame_T_Icon_Item_4Seater_Indoors") but noisy; optional |
+| `IconReference.m_SubObjectName` sprite names | item 1,290 · room descriptors 104 instances / 49 distinct · metagame 202 … | human-readable ("UI_InGame_T_Icon_Item_4Seater_Indoors") but noisy; optional |
 | slugs | **0 — 100% null** | confirmed dead end |
 
-Course names are the one hard hole: `TPC.CourseDefinition` carries no name
-field. Probed conventions against `locales/en.jsonl`: qualification-chain
-suffix (`Characters/…/<tail>_Qualification_Name`) resolves **12/28**
-(9/28 with the `Teacher/` prefix alone); `Courses/Courses/<X>_Name` exists
-for 18 keys but the def→X mapping is non-mechanical (`Course_Clowns`→
-`Clown_Name`, `Course_Computing`→`Computer_Name`). Ledgered §G2.
+Course names were scouted as a hole and are now MOSTLY CLOSED by on-disk
+families: `TPC.CourseDefinition` carries no name field, but `en.jsonl`
+holds FOUR `_Name` families that cover them — qualification chain
+(`Characters/…/<tail>_Qualification_Name`, 28 keys incl. DLC_Space/Ghost/
+Hospital branches), `Courses/Courses/<X>_Name` (18), 
+`Courses/DLC_Space|DLC_Ghost/<X>_Name` (9), and
+`Marketing/Courses[|/Minor]/*_Name` (24). With casefold + plural +
+suffix-token rules across these families **19/28** course defs resolve
+purely mechanically (17/28 without plural folding — verifier measure); a
+small (~7-entry) token map for the renames (`Clowns→Clown`,
+`Computing→Computer`) reaches ~24/28; curated-alias residue shrinks to
+~4–7 rows. Ledgered §G2 with the shrunk scope.
 
 ## §3 Localization / tokenization measurements
 
@@ -122,10 +138,12 @@ Tokenization reality check (word-char runs, lowercased, per row-unique):
 | zh-Hant | 15,446 | 5 | 17 | 15,196 (98.4%) | 14,730 (95.3%) | 22,586 |
 
 Verdicts: **whitespace tokenization works for 10 locales incl. ko**
-(Korean spaces normally). **zh-Hans/zh-Hant are unusable without
-character-bigram (or CJK segmenter) indexing** — median 5-char strings with
-no spaces, only ~2.1 runs/row (under-segmentation proven). **ja is mixed** —
-needs bigram fallback alongside whitespace runs.
+(Korean spaces normally; the ko "CJK" column value is **Hangul-bearing**
+rows — Han ideographs are negligible in ko, 11 chars total measured).
+**zh-Hans/zh-Hant are unusable without character-bigram (or CJK segmenter)
+indexing** — median 5-char strings with no spaces, only ~2.1 runs/row
+(under-segmentation proven). **ja is mixed** — needs bigram fallback
+alongside whitespace runs.
 
 Cross-locale identity (text == en text): **ru 30.5%**, ja 16.5%, de 14.3%,
 pt-BR 13.4%, fr 10.2%, zh/ko ≈1.3% — sizable untranslated-fallback layers
@@ -188,10 +206,15 @@ this (one attempt each, rule 10); routed to the UX piece, not blocking here.
 
 Sizing inputs (measured): entity-relevant term texts (6,526 keys × 13
 locales) = **9.45 MB raw** (~0.67–0.84 MB/locale, id+text+overhead);
-full locale planes 23.1 MB; titles-only subset ≈ 2,993 name edges
-(ESTIMATE <150 KB/locale raw). Any Lunr/MiniSearch-style structure lands
-within ~2–3× of its source text — i.e. **single-digit MB total, well under
-1 MB gzipped per locale shard**.
+full locale planes 23.1 MB. Titles-only plane MEASURED, not estimated:
+display-name edges resolve to **2,059 distinct term keys** under the
+pinned per-kind name fields (**2,532** with config `LocalisedName`/
+`Title`/`DisplayName` + room `Name` added to the name class) →
+**51–100 KB/locale raw text**, **≈0.16–0.21 MB/locale serialized** with
+ids + JSON framing (brackets the verifier's 163–212 KB figure; difference
+is framing/key-set definition only). Any Lunr/MiniSearch-style structure
+lands within ~2–3× of its source text — i.e. **single-digit MB total, well
+under 1 MB gzipped per locale shard**.
 
 Options:
 
@@ -235,11 +258,16 @@ other pieces.
 5. Filter-by-kind — **GO**, free on the proposed row grammar.
 6. Alias/id search — **GO**: 3,224 id tokens + 3,874 `_dev` strings are
    already on disk; zero new extraction needed.
-7. Course-title search — **PARTIAL** (§G2): 41 marketing courses carry only
-   dev-placeholder descriptions; 28 course defs need curated aliases or a
-   code-analysis unblock.
-8. Item-title completeness — **PARTIAL** (§G3): full/variation definitions
-   lack name fields; grouping needed before titles are meaningful.
+7. Course-title search — **GO at ~86%, small residue** (§G2): mechanical
+   conventions across four on-disk `_Name` families resolve 19/28 course
+   defs (17/28 verifier basis); a ~7-entry token map reaches ~24/28;
+   curated-alias residue ~4–7 rows. The 41 marketing courses still carry
+   only dev-placeholder descriptions.
+8. Item-title completeness — **GO via committed stubs** (§2): variations
+   353/353 (`GameItem` int → Lite `DefinitionID`) and full definitions
+   1,652/1,654 (`<id>_Lite` twin convention) reach `LocalisedName`. The
+   joins are a pending relink EMISSION work item (AGENTS rule 8), not a
+   data hole — search consumes them from stubs meanwhile.
 9. Overall: the corpus supports a search experience at or above the
    observable competitor floor WITHOUT hosted search infrastructure.
 
@@ -248,8 +276,8 @@ other pieces.
 | # | Gap (measured) | Unblock |
 |---|---|---|
 | G1 | `i2_term_registry.jsonl` `locales[]` empty on all 15,675 rows — spec-R4 per-term availability contract unmet because source dumps store empty `Languages[]`; text lives per-locale bundle | None for search (derive from `locales/*.jsonl`). Route a spec/R4 honesty note to the relink owners. |
-| G2 | Course display names: no hard carrier; best convention resolves 12/28; `Courses/Courses/*_Name` (18 keys) non-mechanically mapped | Curated alias file OR logic-piece code analysis of course-name lookup |
-| G3 | 6,265 entities (46.6%) carry no human text — id-only; item full/variation defs (2,007 rows) lack name fields entirely | Site-scope decision (which kinds get pages) owned by Documentator/orchestrator; definition-grouping is a data-layer question |
+| G2 | Course display names: no HARD carrier on the definition, but four on-disk `_Name` families cover them — mechanical rules resolve **19/28** (17/28 verifier basis), ~24/28 with a ~7-entry token map | Curated alias file for the ~4–7 residue rows; emit the convention joins as `name-convention:*` edges (relink amendment or search-side builder) |
+| G3 | ~3,243 entities outside the expanded floor remain id-only (config internals, unlockable internals). RESOLVED sub-item: item full/variation names are mechanically reachable from committed stubs (`GameItem`→Lite.DefinitionID 353/353; `<id>_Lite` twins 1,652/1,654) but NOT yet emitted by piece-02 (`item_item.jsonl`'s 155 rows are unrelated) → concrete relink work item per AGENTS rule 8, routed to the relink owners | Site-scope decision (which kinds get pages) owned by Documentator/orchestrator; relink emission of the two item joins |
 | G4 | 779 item + 718 config + 46 metagame name-fields are `_termID==0` dev-only (English-only titles) | Acceptable fallback; flag per-record |
 | G5 | Untranslated fallback rates: ru 30.5%, ja 16.5%, de 14.3%, pt-BR 13.4% identical-to-en | Data reality, not fixable by us; per-locale quality noted for launch QA (#53) |
 | G6 | metaforge.app walled (403 ×2) — planner/search UX unobserved | One ABP attempt in the UX piece, if wanted |
