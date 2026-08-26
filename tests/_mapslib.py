@@ -354,7 +354,8 @@ def _layer(flags, room_id, terrain, objmap, attr):
 
 def scenario_alpha_payload() -> dict:
     rooms = [
-        {"UniqueID": ROOM_UID_A, "Anchor": {"x": 2, "y": 2},
+        # Anchor is a GridCoord: the REAL dumps spell its legs X/Y (F7)
+        {"UniqueID": ROOM_UID_A, "Anchor": {"X": 2, "Y": 2},
          "WorldPosition": {"x": -152.0, "y": FLOAT_TRAP, "z": -116.0},
          "DefinitionID": -690496154,
          "Definition": {"m_FileID": 0, "m_PathID": None},
@@ -377,7 +378,7 @@ def scenario_alpha_payload() -> dict:
              # 6: resolves ONLY through the widened class sweep
              _item(DEF_ID_WIDE, 0, PID_WIDE, 13.0, 0.0, 14.0),
          ]},
-        {"UniqueID": ROOM_UID_B, "Anchor": {"x": 12, "y": 9},
+        {"UniqueID": ROOM_UID_B, "Anchor": {"X": 12, "Y": 9},
          "WorldPosition": {"x": 10.0, "y": 0.0, "z": 20.0},
          "DefinitionID": -690496155,
          "Definition": {"m_FileID": 0, "m_PathID": None},
@@ -497,7 +498,10 @@ def scenario_alpha_payload() -> dict:
     return {
         "_decoded": {"method": "typetree+synthesis", "typetreeDecoded": True},
         "_scriptClass": "TPC.LevelScenarioV2",
-        "_sourceFile": f"{STEM_SCEN_A}_{PID_SCEN_ALPHA}.json".lower(),
+        # landed shape: _sourceFile names the OWNING SERIALIZED FILE (the
+        # CAB), not the dump filename — externals.jsonl is keyed by it and
+        # the M3 cross-file ladder resolves through that key
+        "_sourceFile": CAB_SCEN_A.lower(),
         "_id": -880000001,
         "m_Name": SCEN_ALPHA,
         "m_GameObject": {"m_FileID": 0, "m_PathID": 0},
@@ -512,7 +516,7 @@ def scenario_beta_payload() -> dict:
     return {
         "_decoded": {"method": "typetree+synthesis", "typetreeDecoded": True},
         "_scriptClass": "TPC.LevelScenarioV2",
-        "_sourceFile": f"{STEM_SCEN_B}_{PID_SCEN_BETA}.json".lower(),
+        "_sourceFile": "cab-mapsscenb",   # landed shape: serialized-file CAB
         "_id": -880000002,
         "m_Name": SCEN_BETA,
         "m_GameObject": {"m_FileID": 0, "m_PathID": 0},
@@ -729,19 +733,45 @@ ITERATOR_LINE = dump_cs_line_of("<LoadAssets>d__532 : IEnumerator")
 
 # --- bridges / externals / registry / catalog --------------------------------------
 
-def externals_rows():
-    """LANDED shape: one row PER SERIALIZED FILE, sourceFile lowercase."""
+def _roster_relmap(extracted) -> dict:
+    """Bundle FILENAME → roster relpath. Landed join shape: export-manifest
+    `sourceBundle` and externals.jsonl `bundle` spell FULL ROSTER RELPATHS
+    while the bridges carry bare filenames (the stage maps them back through
+    the roster). Fixtures built over a cumulative tree mirror that; a bare
+    fallback keeps standalone upstream builds deterministic."""
+    out: dict[str, str] = {}
+    p = Path(extracted) / "bundle-roster.jsonl"
+    if p.is_file():
+        for line in p.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                row = json.loads(line)
+                rel = row.get("relpath")
+                if isinstance(rel, str) and rel:
+                    out.setdefault(rel.replace("\\", "/").rsplit("/", 1)[-1],
+                                   rel)
+    return out
+
+
+def externals_rows(rel=None):
+    """LANDED shape: one row PER SERIALIZED FILE, sourceFile lowercase,
+    bundle spelled as its roster relpath."""
+    def b(name):
+        return (rel or {}).get(name, name)
+
     def ext(fid, cab):
         return {"fileId": fid, "guid": "0" * 32,
                 "path": f"archive:/{cab}", "type": 0}
 
     return [
-        {"bundle": B_SCEN_A, "sourceFile": CAB_SCEN_A.lower(),
+        {"bundle": b(B_SCEN_A), "sourceFile": CAB_SCEN_A.lower(),
          "externals": [ext(1, CAB_ITEMS_A), ext(2, CAB_ITEMS_B),
                        ext(3, CAB_ITEMS_A), ext(4, CAB_DANGLING)]},
-        {"bundle": B_ITEMS, "sourceFile": CAB_ITEMS_A.lower(), "externals": []},
-        {"bundle": B_ITEMS, "sourceFile": CAB_ITEMS_B.lower(), "externals": []},
-        {"bundle": B_SCEN_B, "sourceFile": "cab-mapsscenb", "externals": []},
+        {"bundle": b(B_ITEMS), "sourceFile": CAB_ITEMS_A.lower(),
+         "externals": []},
+        {"bundle": b(B_ITEMS), "sourceFile": CAB_ITEMS_B.lower(),
+         "externals": []},
+        {"bundle": b(B_SCEN_B), "sourceFile": "cab-mapsscenb",
+         "externals": []},
     ]
 
 
@@ -919,13 +949,16 @@ def catalog_addresses():
 
 # --- export-manifest append ----------------------------------------------------------
 
-def maps_export_manifest_append():
+def maps_export_manifest_append(rel=None):
     rows = []
 
+    def b(name):
+        return (rel or {}).get(name, name)
+
     def add(bundle, stem, family, cls, pid):
-        rel = f"harvest/monobehaviours/{family}/{cls}/{stem}_{pid}.json"
-        rows.append({"sourceBundle": bundle, "pathId": pid, "class": cls,
-                     "bytes": 256, "outRelPath": rel})
+        out = f"harvest/monobehaviours/{family}/{cls}/{stem}_{pid}.json"
+        rows.append({"sourceBundle": b(bundle), "pathId": pid, "class": cls,
+                     "bytes": 256, "outRelPath": out})
 
     for bundle, family, stem, cls, pid, _f in item_definition_dumps():
         add(bundle, stem, family, cls, pid)
@@ -938,8 +971,11 @@ def maps_export_manifest_append():
     add(B_SCEN_B, STEM_SCEN_B, DIR_SCEN_B, "TPC.LevelScenarioV2",
         PID_SCEN_BETA)
     for family, _scene, _pc, _part, _g, pid, _sp, _bo in LEVEL_CONFIGS:
-        add(STEM_BY_FAMILY[family], STEM_BY_FAMILY[family], family,
-            "TPC.LevelConfig", pid)
+        # landed shape: the manifest spells FULL roster relpaths whose tail
+        # is `<stem>.bundle`; the stage's bundle_basename() + bridge lookups
+        # key on exactly that shape
+        add(f"{STEM_BY_FAMILY[family]}.bundle", STEM_BY_FAMILY[family],
+            family, "TPC.LevelConfig", pid)
     add(B_SCEN_A, STEM_SCEN_A, DIR_SCEN_A, "TPC.UniversityLevelConfig",
         PID_UNIVERSITY)
     add(B_SCEN_A, STEM_SCEN_A, DIR_SCEN_A, "TPC.ItemValidator_Door",
@@ -947,7 +983,6 @@ def maps_export_manifest_append():
     add(B_SCEN_A, STEM_SCEN_A, DIR_SCEN_A, "TPC.ItemValidator_Door",
         PID_VALIDATOR_2)
     return rows
-
 
 # --- tree assembly --------------------------------------------------------------------
 
@@ -1048,19 +1083,21 @@ def build_maps_upstream(extracted: Path) -> Path:
                                 ensure_ascii=False) + "\n",
                      encoding="utf-8", newline="\n")
 
-    # export-manifest (cumulative merge, sorted)
+    # export-manifest (cumulative merge, sorted) — bundle spellings follow
+    # the LANDED join shape via the roster relmap when a roster exists
+    roster_rel = _roster_relmap(extracted)
     man = harv / "export-manifest.jsonl"
     existing = []
     if man.exists():
         existing = [json.loads(x) for x in
                     man.read_text(encoding="utf-8").splitlines() if x.strip()]
     merged = {r["outRelPath"]: r for r in existing}
-    for r in maps_export_manifest_append():
+    for r in maps_export_manifest_append(roster_rel):
         merged.setdefault(r["outRelPath"], r)
     write_jsonl(man, sorted(merged.values(), key=lambda r: r["outRelPath"]))
 
     # externals (landed shape)
-    write_jsonl(harv / "externals.jsonl", externals_rows())
+    write_jsonl(harv / "externals.jsonl", externals_rows(roster_rel))
 
     # relink bridges READ-ONLY inputs (landed shapes; fixtures cannot run
     # stage 6, so the bridge OUTPUTS are synthesized directly here)
@@ -1339,11 +1376,14 @@ def validate_room_row(row, where="rooms"):
     return e
 
 
-def _validate_bitmap_row(row, bitmap_key, where):
+def _validate_bitmap_row(row, bitmap_key, id_key, where):
     e = []
     if not isinstance(row, dict):
         return [f"{where}row is not an object"]
-    _keys(e, row, {"scenarioName", bitmap_key, "source", "buildId"}, where)
+    # the identity key rides every row (spec M2 sketches pin
+    # {scenarioName, uniqueId | plotUniqueId, <bitmap>, source, buildId})
+    _keys(e, row, {"scenarioName", id_key, bitmap_key, "source", "buildId"},
+          where)
     bm = row.get(bitmap_key) or {}
     if set(bm) != {"_width", "_height", "_saveData"}:
         _err(e, f"{where}bitmap must be verbatim {{_width,_height,"
@@ -1357,11 +1397,11 @@ def _validate_bitmap_row(row, bitmap_key, where):
 
 
 def validate_room_tiles_row(row, where="rooms_tiles"):
-    return _validate_bitmap_row(row, "tiles", where)
+    return _validate_bitmap_row(row, "tiles", "uniqueId", where)
 
 
 def validate_plot_tiletypes_row(row, where="plots_tiletypes"):
-    return _validate_bitmap_row(row, "tileTypes", where)
+    return _validate_bitmap_row(row, "tileTypes", "plotUniqueId", where)
 
 
 def validate_placement_row(row, where="item_placements"):

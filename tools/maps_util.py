@@ -24,6 +24,8 @@ from __future__ import annotations
 import json
 import re
 from bisect import bisect_left
+from fnmatch import fnmatch
+from collections import defaultdict
 from pathlib import Path
 
 import tpc_common as tc
@@ -36,6 +38,16 @@ _GRID_DECL_RE = re.compile(r"^public (?:struct|class) GridCoord\b")
 _ENUM_DECL_RE = re.compile(r"^public enum EPlotTileType\b")
 _CONST_FLOAT_RE = re.compile(r"public const float (\w+) = (-?[\d.eE+]+);")
 _ENUM_VALUE_RE = re.compile(r"public const EPlotTileType (\w+) = (-?\d+);")
+
+
+def _as_lines(src):
+    """Accept a dump.cs PATH, its full text, or a line list — the parse
+    re-executes over the same bytes either way (never a cached answer)."""
+    if isinstance(src, Path):
+        return src.read_text(encoding="utf-8").splitlines()
+    if isinstance(src, str):
+        return src.splitlines()
+    return list(src)
 
 # Embedded expectations (F7). Movement prints a DRIFT line; the PARSED
 # value always wins in output.
@@ -79,9 +91,11 @@ class CoordinateLawError(tc.StageError):
             "silent lie (piece-03 M1)", exit_code=1)
 
 
-def parse_grid_constants(lines):
-    """GridCoord block → {constants, sourceLine}. Raises CoordinateLawError
-    when the declaration or any of the four CellSize* constants is absent."""
+def parse_grid_constants(src):
+    """GridCoord block → {type, constants, sourceLine}. Raises
+    CoordinateLawError when the declaration or any of the four CellSize*
+    constants is absent. Accepts a path, full text, or line list."""
+    lines = _as_lines(src)
     idx = _find_decl(lines, _GRID_DECL_RE)
     if idx < 0:
         raise CoordinateLawError("no 'public struct GridCoord' declaration")
@@ -96,12 +110,14 @@ def parse_grid_constants(lines):
         raise CoordinateLawError(
             f"GridCoord block at dump.cs:{idx + 1} lacks constant(s) "
             f"{missing}")
-    return {"constants": consts, "sourceLine": idx + 1,
+    return {"type": "GridCoord", "constants": consts, "sourceLine": idx + 1,
             "blockLines": len(block)}
 
 
-def parse_tile_palette(lines):
-    """EPlotTileType block → {values, sourceLine}. Raises on absence."""
+def parse_tile_palette(src):
+    """EPlotTileType block → {type, values, sourceLine}. Raises on absence.
+    Accepts a path, full text, or line list."""
+    lines = _as_lines(src)
     idx = _find_decl(lines, _ENUM_DECL_RE)
     if idx < 0:
         raise CoordinateLawError("no 'public enum EPlotTileType' declaration")
@@ -114,7 +130,8 @@ def parse_tile_palette(lines):
     if not values:
         raise CoordinateLawError(
             f"EPlotTileType block at dump.cs:{idx + 1} carries no values")
-    return {"values": values, "sourceLine": idx + 1}
+    return {"type": "EPlotTileType", "values": values,
+            "sourceLine": idx + 1}
 
 
 # ---------------------------------------------------------------------------
@@ -133,15 +150,16 @@ _RVA_RE = re.compile(
     r"VA: (?P<va>0x[0-9A-Fa-f]+)")
 
 
-def find_loadassets(lines):
-    """Generic `<LoadAssets>d__NN` read over dump.cs lines → dict shaped like
-    the loadassets_read.json `declaration` block, or None when the method
-    declaration cannot be found (caller decides how loud to be).
+def find_loadassets(src):
+    """Generic `<LoadAssets>d__NN` read over dump.cs (path, text, or lines)
+    → dict shaped like the loadassets_read.json `declaration` block, or None
+    when the method declaration cannot be found (caller decides how loud).
 
     il2cppdumper emits declarations, not bodies — so the read establishes
     what dump.cs CAN say; `methodBodyAvailable` stays False and the caller
     records readStatus honestly ('inconclusive-from-dumpcs' unless outside
     evidence ever supplies an instantiated generation)."""
+    lines = _as_lines(src)
     decl_idx = -1
     for i, ln in enumerate(lines):
         if _METHOD_DECL_RE.match(ln):
@@ -515,6 +533,92 @@ class DoorGate:
                 f"HARD GATE violated ({v}) — validator-ref → room-instance "
                 "edges stay DERIVED-ONLY until one id-space reconciliation "
                 "pass closes the gate (piece-03 M5)", exit_code=1)
+
+
+def door_gate_violation(row, room_unique_ids, state=None):
+    """Functional form of the M5 HARD GATE detection rule — the SAME pinned
+    rule as DoorGate.violation and the AC11 post-hoc audit, exposed for
+    audit reuse over a plain (room-id set, gate-state dict) pair.
+
+    state carries {"reconciliation": "agreed"|"divergent",
+                   "instanceLinks": {"measured": int}}; absent/None state
+    reads as the closed gate. Returns the reason string when the row is
+    gated, None when clean."""
+    if isinstance(room_unique_ids, dict):
+        state, room_unique_ids = room_unique_ids, ()
+    reconciliation = "divergent"
+    links = 0
+    if isinstance(state, dict):
+        reconciliation = str(state.get("reconciliation", reconciliation))
+        il = state.get("instanceLinks")
+        if isinstance(il, dict):
+            links = int(il.get("measured") or 0)
+        elif il is not None:
+            links = int(il)
+    ids = set(room_unique_ids or ())
+    room_map = defaultdict(lambda: ids) if ids else {}
+    gate = DoorGate(reconciliation, links, room_map)
+    return gate.violation(row, "door_relations")
+
+
+# ---------------------------------------------------------------------------
+# M4 terrain decode-status machine (pure form of build_terrain_decode's
+# decision, G7): blocked with no ground to stand on, partial on any
+# value↔brush id-space intersection, decoded only proven upstream.
+
+DECODE_STATES = ("decoded", "partial", "blocked")
+
+
+def terrain_decode_status(terrain_values, brush_ids=None, correlated=None):
+    """Pure M4 decode-status machine. Accepts the collection of observed
+    TerrainMap values plus the readable brush `_id` set (or a pre-computed
+    intersection size); a 1-tuple carrying a status word passes through so
+    callers can echo an already-decided state idempotently."""
+    if isinstance(terrain_values, (tuple, list)) and len(terrain_values) == 1 \
+            and terrain_values[0] in DECODE_STATES:
+        return terrain_values[0]
+    if isinstance(terrain_values, dict):
+        # evidence-summary spelling: count only explicit numeric entries
+        values = [v for v in terrain_values.values()
+                  if isinstance(v, (int, float))]
+    else:
+        values = list(terrain_values or [])
+    brushes = brush_ids
+    if isinstance(brushes, (str, int)) and not isinstance(brushes, bool):
+        brushes = None      # not an iterable id space — no ground
+    brush_set = set(brushes or ())
+    if not values or not brush_set:
+        return "blocked"
+    if isinstance(correlated, bool):
+        intersects = correlated
+    elif isinstance(correlated, int):
+        intersects = correlated > 0
+    else:
+        try:
+            intersects = len(set(values) & brush_set) > 0
+        except TypeError:
+            intersects = False
+    return "partial" if intersects else "blocked"
+
+
+# ---------------------------------------------------------------------------
+# Stale-temp naming (interrupted-run convergence, AC6): files matching these
+# shapes under extracted/maps/ are crash leftovers of THIS stage's atomic
+# writes — swept before every write phase, never mistaken for outputs.
+
+_TEMP_NAME_PATTERNS = ("*.tmp", "*.tmp.*", "*.partial", "*.part", "*.temp")
+_TEMP_TAIL_RE = re.compile(r"\.(?:tmp|part|partial|temp)(?:\.|$)|\.tmp\d")
+
+
+def is_stale_temp_name(name: str) -> bool:
+    """Crash-leftover spellings of atomic-write temps: `<final>.tmp`,
+    mkstemp debris (`.<prefix>.<rand>.tmp`), numbered tails like
+    `<final>.tmp137`, plus .part/.partial/.temp siblings. Never matches a
+    declared output name."""
+    for pat in _TEMP_NAME_PATTERNS:
+        if fnmatch(name, pat):
+            return True
+    return bool(_TEMP_TAIL_RE.search(name))
 
 
 # ---------------------------------------------------------------------------

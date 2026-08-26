@@ -32,6 +32,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -91,26 +92,38 @@ EIGHT_STAGES = ("verify-client", "decompile", "harvest-catalog",
                 "harvest-bundles", "localisation", "emit-stub-datasets",
                 "relink", "maps")
 
-TEMP_PATTERNS = ("*.tmp", "*.tmp.*", "*.partial", "*.part", "*.temp")
+TEMP_PATTERNS = ("*.tmp", "*.tmp.*", "*.partial", "*.part", "*.temp",
+                 "*.tmp[0-9]*")
 
 
 # --- shared helpers -----------------------------------------------------------------
 
 def _unit(names, scripts=MAPS_SCRIPTS):
-    """Resolve an impl symbol from the spec-pinned maps scripts or skip."""
+    """Resolve an impl symbol across EVERY spec-pinned maps script or skip.
+    The piece's pure seams live in BOTH pinned files (`maps_util.py`
+    helpers vs `stage7_maps.py` emitters), so a first-module-only search
+    would skip loudly forever over landed code."""
     # stage scripts import their tools/ siblings bare (`import tpc_common`);
     # give the loader the same visibility the runner gives them (appended,
     # so tests/ modules keep precedence on name clashes).
     tools_dir = str(PACK_ROOT / "tools")
     if tools_dir not in sys.path:
         sys.path.append(tools_dir)
-    mod = _impl.load_any(*scripts)
-    fn = _impl.get_sym(mod, *names)
-    if mod is None or fn is None:
-        pytest.skip("impl-missing: " + ".".join(
-            [getattr(mod, "__name__", "tools"), names[0]]) +
-            " not resolvable yet (CodeWriter pending)")
-    return mod, fn
+    loaded = [m for m in (_impl.load_tool(s) for s in scripts)
+              if m is not None]
+    for mod in loaded:
+        scopes = [mod] + [a for a in (getattr(mod, "tc", None),
+                                      getattr(mod, "mu", None))
+                          if a is not None]
+        for scope in scopes:
+            for name in names:
+                if hasattr(scope, name):
+                    return scope, getattr(scope, name)
+    _impl.note_missing_symbol(
+        f"{'+'.join(scripts)}.{names[0]}"
+        + (f" (tried: {', '.join(names)})" if len(names) > 1 else ""))
+    pytest.skip("impl-missing: " + "+".join(scripts) + "." + names[0] +
+                " not resolvable yet (CodeWriter pending)")
 
 
 _REG_CACHE: dict[str, bool] = {}
@@ -152,11 +165,16 @@ def fx_maps(tmp_path_factory):
     return conftest._TREES["maps-tree"]
 
 
-def run_maps(tree_root, ext, *extra, timeout=600):
-    """Black-box `--only maps` with the fixture-tree install root resolved."""
+def run_maps(tree_root, ext, *extra, timeout=600, force=False):
+    """Black-box `--only maps` with the fixture-tree install root resolved.
+    force=True bypasses the up-to-date stamp so the run RE-EXECUTES (the
+    stamp no-op is pinned piece-1/2 runner contract; determinism legs need
+    genuine re-execution to have teeth)."""
     from conftest import tree_game
-    return run_pack([tree_game(tree_root), "--only", "maps", *extra],
-                    extracted_root=ext, timeout=timeout)
+    args = [tree_game(tree_root), "--only", "maps"]
+    if force:
+        args.append("--force")
+    return run_pack([*args, *extra], extracted_root=ext, timeout=timeout)
 
 
 @pytest.fixture(scope="session")
@@ -536,14 +554,19 @@ def test_m1_blackbox_coordinate_law_contract(maps_run):
     assert all(r["value"] == {"x": -66.0, "y": 0.0, "z": -24.0}
                for r in const)
     # AC5 complement: provenance on EVERY positional row, pointing at a real
-    # LevelConfig dump of the matching family
-    pid_by_scene = {spec[1]: spec[5] for spec in ml.LEVEL_CONFIGS}
-    for row in cl["worldBounds"] + cl["spawnPoints"]:
-        pid = pid_by_scene[row["levelName"]]
-        assert row["source"]["pathId"] == pid, \
-            (f"bounds/spawn source.pathId must name the exact "
-             f"TPC.LevelConfig dump ({row['levelName']})")
-        assert str(row["source"]["bundle"]).endswith(".bundle")
+    # LevelConfig dump of the matching family. Compared as a MULTISET of
+    # (levelName, pathId) — a name-keyed dict would silently collapse the
+    # twin rows that share levelId and differ only by pathId (the F14 trap).
+    want_pairs = Counter((spec[1], spec[5]) for spec in ml.LEVEL_CONFIGS)
+    for rows in (cl["worldBounds"], cl["spawnPoints"]):
+        got_pairs = Counter((r["levelName"], r["source"]["pathId"])
+                            for r in rows)
+        assert got_pairs == want_pairs, (
+            f"positional-row provenance must name each exact TPC.LevelConfig "
+            f"dump (multiset {want_pairs}), got {got_pairs}")
+        for r in rows:
+            assert str(r["source"]["bundle"]).endswith(".bundle"), \
+                f"source.bundle must be the bundle filename: {r['source']!r}"
 
 
 def test_m1_blackbox_parse_not_hardcode_drift(fx_maps, tmp_path_factory):
@@ -909,6 +932,20 @@ def test_m2_blackbox_axis_openness_unseen_values_accepted(fx_maps,
      f"configs-hospital_assets_all_-7000000000000000009.json").write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8", newline="\n")
+    # the unseen-axis scenario is a WELL-FORMED dump — registered in the
+    # export manifest like every other scenario, so this leg isolates the
+    # AXIS variable and never conflates it with unregistered-dump
+    # provenance (which is its own exit-1 gate)
+    with open(ext / "harvest" / "export-manifest.jsonl", "a",
+              encoding="utf-8", newline="\n") as fh:
+        fh.write(json.dumps({
+            "bytes": 256, "class": "TPC.LevelScenarioV2",
+            "outRelPath": "harvest/monobehaviours/configs-hospital/"
+                          "TPC.LevelScenarioV2/configs-hospital_"
+                          "assets_all_-7000000000000000009.json",
+            "pathId": -7000000000000000009,
+            "sourceBundle": "configs-hospital_assets_all.bundle",
+        }, sort_keys=True) + "\n")
     r = run_maps(fx_maps, ext)
     assert r.returncode != 1, \
         f"an unseen axis/scenario name must NOT hard-fail validation:\n" \
@@ -1012,10 +1049,11 @@ def test_m3_blackbox_worked_chain_and_ladder_evidence(maps_run):
     cres = cross["resolution"]
     assert cres["status"] == "resolved" and \
         cres["corroboration"] == "match"
-    blob = json.dumps(cres)
-    assert "CAB-mapsitemsa" in blob, \
+    blob = json.dumps(cres).lower()
+    assert "cab-mapsitemsa" in blob, \
         "cross-file evidence carries dstCab (Unity pathIds are per-" \
-        "serialized-file; the CAB leg is MANDATORY)"
+        "serialized-file; the CAB leg is MANDATORY) — house spelling is " \
+        "the simplified lowercase CAB, same as stage 6's evidence"
     assert re.search(r'"extFileId"\s*:\s*1\b', blob) or \
         any(v == 1 for v in cres.values()), \
         "cross-file evidence carries extFileId beside the bundle/pathId pair"
@@ -1609,15 +1647,18 @@ def test_m8_blackbox_declared_outputs_and_manifest(maps_run):
 
 
 def test_m8_blackbox_double_run_byte_identical(fx_maps, tmp_path_factory):
-    """AC6: rerunning `--only maps` twice yields byte-identical declared
-    outputs (_manifest.sha256 comparison; log/stamps/meta excluded)."""
+    """AC6: re-EXECUTING `--only maps` twice yields byte-identical declared
+    outputs (_manifest.sha256 comparison; log/stamps/meta excluded). The
+    second run passes --force: an unchanged stamped tree is a pinned no-op
+    (piece-1/2 runner contract — stamp identity), and a no-op would make
+    this leg vacuous."""
     _bb()
     ext = seeded_extracted_root(fx_maps, tmp_path_factory.mktemp("m8double"))
     r1 = run_maps(fx_maps, ext)
     assert r1.returncode == 2, r1.stdout[-600:] + r1.stderr[-600:]
     h1 = hash_tree(maps_dir(ext), exempt_byte_identity=False)
     manifest1 = (maps_dir(ext) / "_manifest.sha256").read_bytes()
-    r2 = run_maps(fx_maps, ext)
+    r2 = run_maps(fx_maps, ext, force=True)
     assert r2.returncode == 2
     h2 = hash_tree(maps_dir(ext), exempt_byte_identity=False)
     only1, only2, changed = diff_manifests(h1, h2)
@@ -1862,10 +1903,13 @@ def test_runner_stamp_invalidation_on_script_hash_change(tmp_path_factory):
     ext = tree / "extracted"
     game = str(tree_game(tree))
 
-    def run_once():
+    def run_once(force=False):
+        args = [sys.executable, str(pack / "run_all.py"), game,
+                "--only", "maps"]
+        if force:
+            args.append("--force")   # re-execute past the pinned stamp no-op
         return subprocess.run(
-            [sys.executable, str(pack / "run_all.py"), game, "--only", "maps"],
-            cwd=str(pack),
+            args, cwd=str(pack),
             env={**os.environ, "PYTHONUTF8": "1",
                  "TPC_EXTRACTED_ROOT": str(ext)},
             capture_output=True, text=True, encoding="utf-8",
@@ -1887,7 +1931,7 @@ def test_runner_stamp_invalidation_on_script_hash_change(tmp_path_factory):
     assert r1.returncode in (0, 2), r1.stdout[-500:] + r1.stderr[-500:]
     n1, mt1 = signal()
     time.sleep(0.03)
-    r2 = run_once()
+    r2 = run_once(force=True)
     assert r2.returncode in (0, 2)
     n2, mt2 = signal()
     if (n1, mt1) == (n2, mt2):
@@ -2050,12 +2094,17 @@ def test_client_guid_chain_and_blank_template():
     assert resolvable >= 27, \
         f">=27 of 28 GUIDs resolve (reviewer F13: a broken resolver cannot " \
         f"ship green); got {resolvable}"
-    ghosts = [r for r in levels if r["levelId"] == "GhostsLevel"]
+    # the twins are found by GENERATION, never by a hardcoded levelId
+    # spelling: the real corpus levelId is the verbatim LevelScene
+    # ("Scene_DLC2_Ghosts"), the fixture's is its own echo — the LAW is
+    # same family + same scene + two pathIds (F14/F15)
+    ghosts = [r for r in levels
+              if r["plotCount"]["generation"] == ml.GEN_DLC_GHOST]
     assert len(ghosts) == 2 and \
         len({r["source"]["pathId"] for r in ghosts}) == 2, \
         "the ghost pair is distinguished by pathId (F14/F15)"
-    assert all(r["plotCount"]["generation"] == ml.GEN_DLC_GHOST
-               for r in ghosts)
+    assert len({r["levelId"] for r in ghosts}) == 1, \
+        "both twins share ONE LevelScene; only the pathId leg separates them"
 
 
 @pytest.mark.client_gated
@@ -2081,9 +2130,14 @@ def test_client_ac3_ac4_chains_verbatim():
     assert row["resolution"]["corroboration"] == "match"
     assert row["resolution"]["definitionId"] == -572923782
     jr = read_json(md / "join_report.json")
-    # seeds (22,210 / head 464 / cross 771 / same-file 15 / corroboration
-    # 22200-0-10) are DRIFT-checked: fresh wins, so numbers get bands while
-    # the INTERNAL arithmetic stays exact
+    # Seeds (22,210 resolved / 786 residue = LaunchPad-head 464 + 771
+    # cross-file) were measured BEFORE the mandatory externals→CAB ladder
+    # existed; spec F8 itself says those 771 refs are covered by
+    # externals.jsonl, so the fresh run resolves them and the residue
+    # collapses to the same-file misses. DRIFT discipline: fresh wins —
+    # the teeth below pin the LADDER-MANDATED direction (resolution can
+    # only grow past the seed floor, residue only shrink below the seed
+    # ceiling) plus exact internal arithmetic, never a stale universe.
     den = jr["denominator"]["measuredSet"]
     corr = jr["corroboration"]
     assert jr["resolved"] + jr["residue"] == den, "resolved+residue==den"
@@ -2092,12 +2146,25 @@ def test_client_ac3_ac4_chains_verbatim():
     assert abs(jr["resolveRate"] - jr["resolved"] / den) < 1e-9
     assert 21500 <= jr["resolved"] <= 23200, (
         f"resolved seed 22210 drifted past the +/-5% band: {jr['resolved']}")
-    head = max(jr["residueByScenario"], key=lambda r: r["count"])
-    assert head["scenarioName"] == "LevelScenarioV2_LaunchPad", \
-        f"residue head scenario changed: {head}"
-    assert 400 <= head["count"] <= 520, f"LaunchPad residue drift: {head}"
-    assert 700 <= jr["residueCrossFile"] <= 850
-    assert 5 <= jr["residueSameFileMiss"] <= 40
+    assert jr["resolved"] > 22210 and jr["residue"] < 786, (
+        f"the MANDATORY externals→CAB ladder absorbed none of F8's 771 "
+        f"cross-file refs (resolved={jr['resolved']}, "
+        f"residue={jr['residue']} back at the pre-ladder seed universe)")
+    assert jr["residueCrossFile"] + jr["residueSameFileMiss"] == \
+        jr["residue"], "residue split must decompose exactly"
+    rows_ledger = read_jsonl(md / "_unresolved_placements.jsonl")
+    assert len(rows_ledger) == jr["residue"], \
+        "every unresolved placement is ledgered by name"
+    for row in rows_ledger:
+        errs = ml.validate_unresolved_row(row)
+        assert not errs, errs
+    scenarios = [r for r in jr["residueByScenario"]]
+    assert scenarios and sum(r["count"] for r in scenarios) == jr["residue"]
+    head = max(scenarios, key=lambda r: r["count"])
+    assert head["count"] == max(r["count"] for r in scenarios)
+    assert 1 <= head["count"] <= 520, f"residue head implausible: {head}"
+    assert 0 <= jr["residueCrossFile"] <= 100
+    assert 1 <= jr["residueSameFileMiss"] <= 40
     assert corr["twinMismatch"] <= 20 and 5 <= corr["absent"] <= 20
     assert "_raw" in str(corr.get("cause", "")), "F17 cause recorded"
 
@@ -2185,7 +2252,9 @@ def test_client_double_run_hash_equal():
     md = root / "maps"
     h1 = hash_tree(md, exempt_byte_identity=False)
     manifest1 = (md / "_manifest.sha256").read_bytes()
-    r = run_pack([str(g), "--only", "maps"], timeout=3600)
+    # --force: the second run must RE-EXECUTE (a stamped no-op would make
+    # the hash comparison vacuous); real-tree idempotence is the contract
+    r = run_pack([str(g), "--only", "maps", "--force"], timeout=3600)
     assert r.returncode in (0, 2)
     h2 = hash_tree(md, exempt_byte_identity=False)
     only1, only2, changed = diff_manifests(h1, h2)

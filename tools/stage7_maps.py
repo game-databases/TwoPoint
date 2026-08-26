@@ -1146,10 +1146,19 @@ def _grid_anchor(node):
 
 
 def _pptr_json(node):
-    pp = mu.pptr_of(node)
-    if pp is None:
+    """Verbatim {fileId, pathId} copy of a PPtr node (F12): each leg is
+    carried exactly as the dump spells it — a present m_FileID is NEVER
+    nullified because m_PathID happens to be absent."""
+    if not isinstance(node, dict):
         return {"fileId": None, "pathId": None}
-    return {"fileId": pp[0], "pathId": pp[1]}
+    out = {"fileId": None, "pathId": None}
+    for src, dst in (("m_FileID", "fileId"), ("m_PathID", "pathId")):
+        if src in node and node[src] is not None:
+            try:
+                out[dst] = int(node[src])
+            except (TypeError, ValueError):
+                out[dst] = node[src]
+    return out
 
 
 def _verbatim_map(m):
@@ -1448,6 +1457,7 @@ def finalize_and_report(placement_rows, def_index_size, index_bundles,
                 "extFileId": (miss or {}).get("extFileId",
                                               res.get("extFileId")),
                 "dstCab": (miss or {}).get("dstCab", res.get("dstCab", "")),
+                "pathId": (row.get("definitionPptr") or {}).get("pathId"),
                 "reason": (miss or {}).get(
                     "reason",
                     "cross-file target carries no indexed definition dump"),
@@ -2080,12 +2090,17 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
 
     # ------------------------------------------------------------------
     # M3 — measured widening + join report
+    # indexEntries/indexBundles measure the PINNED GameItem{,Lite,Variation}
+    # index (the F8 seed's universe: 3,779 / 7); widening coverage travels
+    # separately in widenedClasses[]/widenedClassCount so the seed stays
+    # comparable run over run.
+    index_entries_base = len(def_index)
+    index_bundles_base = len({bundle for (bundle, _pid) in def_index})
     widened_classes = widen_and_resolve(walk.placement_rows, resolver,
                                         targets, extracted_root)
-    index_bundles = len({bundle for (bundle, _pid) in def_index})
     join_report, m3_counters, unresolved_ledger = finalize_and_report(
-        walk.placement_rows, len(def_index), index_bundles, widened_classes,
-        build_id, drift_lines)
+        walk.placement_rows, index_entries_base, index_bundles_base,
+        widened_classes, build_id, drift_lines)
 
     collisions, collision_samples = apply_identity_demotions(walk)
 
@@ -2271,6 +2286,18 @@ def run(game_root: Path | None, extracted_root: Path) -> int:
     # ------------------------------------------------------------------
     # WRITE everything (single final state on disk; temp+rename everywhere;
     # HARD-GATE pre-write assertion across ALL emitters)
+    # Interrupted-run convergence (AC6): crash leftovers of THIS stage's
+    # atomic writes under extracted/maps/ are swept first — a successful
+    # rerun never leaves stray temps beside the finals it rebuilds.
+    for stale in sorted(maps_dir.iterdir()):
+        if stale.is_file() and mu.is_stale_temp_name(stale.name):
+            try:
+                stale.unlink()
+            except OSError as exc:
+                problems.append(
+                    f"stale temp {stale.name} could not be swept ({exc}) — "
+                    "interrupted-run convergence requires a clean write "
+                    "surface")
     log_util.write_json(maps_dir / "coordinate_law.json", coord_doc)
     log_util.write_json(maps_dir / "loadassets_read.json", load_doc)
     write_rows(maps_dir / "levels.jsonl", level_rows, gate, "m2-levels",
