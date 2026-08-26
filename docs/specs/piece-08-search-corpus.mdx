@@ -95,7 +95,7 @@ measurement wins (piece-2 §2 rule).
 | F4 | **Conservative universe = 7,178** (53.4 %) | A(5,850) ∪ carriers(4,298), overlap 2,970 — reproduced digit-for-digit by this spec's probe (doc) | vA #1e; doc |
 | F5 | Conservative per-kind | config 3,856 · item 2,649 · metagame-node 406 · room 107 · student-type 54 · course 41 · unlockable 49 · campus-level 13 · staff 3 | vA #1f |
 | F6 | Expanded planning floor | **10,200 = 75.9 %** (vB attack A3); independent verifier recomputation **10,107 = 75.2 %** with differing boundary choices (nested `States[].Name`, course-alias rows) — the floor is recipe-dependent inside a ~±0.9 % band; id-only remainder outside it ≈ 3,243 | vB #4; vA corrections |
-| F7 | Expanded extra components (this spec's pinned recipe) | plain-string `Name` literals on any kind ×**1,456** (doc; incl. campus-level 13) · config `LocalisedName` instances ×**552**, `Title` ×**547**, `DisplayName` ×**170** · room `Name` locstr rows ×**49** · unlockable `DisplayName.mTerm` resolving in en ×**53** (of 55 rows) · unlockable `DescriptiveName` ×**27** | doc; vB A3; vA #3d |
+| F7 | Expanded extra components (this spec's pinned recipe) | plain-string `Name` literals on any kind ×**1,456** (doc; incl. campus-level 13) · config `LocalisedName` instances ×**552**, `Title` ×**547**, `DisplayName` ×**170** · room `Name` locstr rows ×**49** on the PRESENCE basis (**48** bear text — `_termID≠0` or non-empty `_dev`; the one empty struct emits nothing; basis PINNED as presence, reviewer F5) · unlockable `DisplayName.mTerm` resolving in en ×**53** (of 55 rows) · unlockable `DescriptiveName` ×**27** | doc; vB A3; vA #3d |
 | F8 | Item-title joins (ceiling) | variation `GameItem` int refs resolve to Lite `DefinitionID` **353/353**; full defs with `<id>_Lite` twin **1,652/1,654** — ceiling add **2,005** titles. NOT yet emitted by piece-02 (`item_item.jsonl`'s 155 rows are unrelated PPtr edges) — a relink-family work item, consumed here IF present, never re-derived | vB #3; vA #3g; doc |
 | F9 | Display-name edge truth | 2,993 name edges resolve to en text → **2,059 distinct term keys** (probe-reproduced); **1,895** distinct (kind,title); **264 collide** — top ("config","Lab Work") ×53, ("config","Specialist Book Report") ×51; 320 collide ignoring kind; **23 titles clean to empty** after tag+placeholder stripping (drop, never index "") | vA #2a/#2b; doc |
 | F10 | Registry + reverse index | registry 15,675 rows / 15,672 distinct keys / canonical-on-key / `locales[]` empty on all rows / **25** distinct sourceAssets (26 counts dump files — vA correction C1); reverse index **6,526** terms actually referenced by entities; remainder ≈9,146 = UI chrome, OUT of search scope | vA #2c/#2e; vB C1 |
@@ -104,12 +104,12 @@ measurement wins (piece-2 §2 rule).
 | F13 | Locale planes | 13 tables + base overlay = **23,107,394 B (23.1 MB)**; rows en 15,665 … ko 15,457 … ja 15,371; zero whitespace-empty emitted texts; cross-locale identity vs en: ru 30.5 % · ja 16.5 % · de 14.3 % · pt-BR 13.4 % · fr 10.2 % · zh/ko ≈1.3 % | vA #4a/#4b/#4e |
 | F14 | Sizing metric (a) — TITLE TEXT BYTES | sum of UTF-8 title-text bytes per locale over the 2,059-key narrow set: **29,645 B (zh-Hant) … 62,286 B (ru)**, en 34,044 (doc probe). The scout's "51–100 KB raw" band used a looser denominator — superseded by this per-metric definition | doc |
 | F15 | Sizing metric (b) — KEY-LINE BYTES | the same 2,059-key set serialized as `{id,text}` JSONL lines: **157–189 KB/locale** (vA #6b, en 164 KB); vB measured **163–212 KB** (avg 178) over its 2,655-key superset. Quoted honestly as ≈**0.16–0.21 MB/locale** — THIS is the metric behind the scout's serialized figure | vA #6b; vB A5 |
-| F16 | Sizing metric (c) — SHIPPED DOC PLANES | per-entity documents cost more than key-lines: measured en anchors — titles projection ≈**249 B/doc** rich schema, **0.94 MB @ 3,793 docs**; full docs (with id-token aliases, pre-descriptions) **1.74 MB**. Expected shipped planes: titles projection ≈0.6–1.6 MB/locale, full shards ≈1.4–3.0 MB/locale (bands pinned as AC4, not estimates) | doc |
-| F17 | Entity-relevant reference plane | 6,526 referenced keys × 13 locales = **9.45 MB raw** (exact 9,454,777 B), **0.67 (zh-Hant) – 0.84 (ru) MB/locale**; full locale planes 23.1 MB for contrast | vA #6a |
+| F16 | Sizing metric (c) — SHIPPED DOC PLANES (prototype-measured with the PINNED schemas; denominators explicit) | pending-join corpus: **5,279 docs en** · 5,234 ru · 5,243 zh-Hant · 5,222 ja (NAME-BEARING members only — description-only universe members emit no document, §S2); FULL shard **2.68–2.80 MB/locale at 511–536 B/doc**; TITLES projection `{kind,id,t}` **0.43–0.49 MB/locale at 82–93 B/doc**; doc-source text plane ≈0.51 MB/en. At the join ceiling (+2,005 named docs) en projects ≈3.6 MB full / ≈0.61 MB titles. AC4 gates the RATIOS, not absolutes (F1 fix) | doc (rev-2 probe) |
+| F17 | Entity-relevant reference plane | 6,526 referenced keys × 13 locales = **9.45 MB raw** (exact 9,454,777 B), **0.67 (zh-Hant) – 0.84 (ru) MB/locale**; full locale planes 23.1 MB for contrast. NOTE: this plane covers registry-referenced keys ONLY — it excludes exactly the literals/dev strings/joined titles the shards additionally serialize, so it is a CONTRAST figure, never a size-law denominator (F1 fix) | vA #6a |
 | F18 | Tokenization reality | vocab 11,897 (en) … 28,594 (ko) — full 13-locale table in scout §3, cell-for-cell verifier-confirmed; ko is WHITESPACE-safe (its "CJK" column counts Hangul syllables; Han ideographs ≈0 — vB C4); zh-Hans/zh-Hant **95.3 %** no-whitespace rows → char-bigram REQUIRED; ja mixed (83.5 % no-ws); markup tags on 6.0 % of en rows (any-tag reading), `{PLACEHOLDER}` braces 4.8 %; within-locale colliding texts en 1,570 · zh-Hans 1,668 · ko 1,702 · tr 1,625 (10.0–11.0 % of rows) | vA #4c/#4d/#4f/#4g; vB C4/C5 |
 | F19 | Relink steady state (exit 2) | `matrix.json` 100 cells = 73 missing / 24 modeled / 3 partial · `_dangling_guids.jsonl` 1,137 rows · `locale_join_report.registryMisses` 5 · bar-3 floor unmet (`sourcesApplied=0`) · `.stage-stamps/relink.json` carries `{exitCode:2, identity, outputs{relpath:sha256}}` | vA #6c; vB A6; doc (stamp shape) |
 | F20 | Course-name surface | 69 courses = 28 `TPC.CourseDefinition` + 41 `TPC.MarketingCourseDefinition`; NO name field on either; on-disk `_Name` families: qualification chain `Characters/**/<X>_Qualification_Name` ×**28** · `Courses/Courses/<X>_Name` ×**18** · `Courses/DLC_{Space,Ghost}/<X>_Name` ×**9** · `Marketing/Courses[/Minor]/[Long_]<X>_Name` ×**24** · `Research/Courses/<X>_Name` ×**4**; resolution band: strict suffix 10/28 (vA #3i) → plural-normalized 14/28 (vB A1) → union 17/28 mechanical (vB #2) → ~24/28 with the 7-entry token map; genuinely nameless: `Course_SpaceExplorer`, `Course_SummerSchool`, `Course_Archaeology_Easter_23` (seasonal), `Course_KnightSchool_LordBlaggard` (shares Knight School) | vA #3i; vB A1 |
-| F21 | Course resolution UNDER THE PINNED RECIPE (§S3.2) | families {qual 28, cc 18, dlc 9} + casefold + plural ±s + last-underscore-segment rule: **16/28** without the token map, **23/28** with it; + curated seed rows (§S3.4) → **25/28**, open **3** (Easter seasonal, SummerSchool, SpaceExplorer) — satisfies the ≥24/28 gate with residue inside the 4–7 band (doc probe) | doc |
+| F21 | Course resolution UNDER THE PINNED RECIPE (§S3.2, UNION-set staging pinned by reviewer F12) | candidate forms generated as ONE union set ({tail, tail±plural-s, LAST underscore segment ±s, token-map rewrites}), matched against family tails in priority order, first hit wins. Yields: **19/28** without the token map (reviewer re-measure; vB's staged reading 17 and this spec's earlier staged-probe 16 are superseded readings of the same rules — staging-dependent intermediates, gates unaffected), **23/28** with it, **25/28** with the curated seed rows — open exactly {`Course_Archaeology_Easter_23`, `Course_SpaceExplorer`, `Course_SummerSchool`}. The uniform resolver over ALL 69 courses resolves **62/69** (marketing 37/41, residue ledgered). Gates: seeded ≥24/28 ✓ with margin; degraded mechanical floor ≥16/28 holds under every tried reading | doc; reviewer r1 audit |
 
 ## 3. Competitor search bar + product constraints the index serves
 
@@ -176,10 +176,16 @@ must therefore protect:
 > absent, with a loud DRIFT line (§S1.4). Note: sibling specs
 > (pieces 03/04/06/07) each claim a `stage7_*` filename — a doc-level
 > numbering collision owned by those seats; this spec pins ONLY
-> `stage12_search_corpus.py` and registers LAST in `--list`.
+> `stage12_search_corpus.py`, claims canonical index 12, and asserts NO
+> absolute `--list` count (§6 AC1 wording is conditional — reviewer F2).
 
-- **Stage id:** `search-corpus` (entrypoint `--list` enumerates it
-  LAST; twelfth stage per the canonical registry).
+- **Stage id:** `search-corpus`. Registration is REGISTRY-AWARE, not
+  append-positional (reviewer F2): `--list` shows it appended after the
+  last currently registered stage until its canonical predecessors
+  land; ORDERING AUTHORITY is the canonical registry index (12), never
+  append position — this spec makes no absolute-count claim about
+  `--list` (`tools/tpc_common.py::STAGES` holds SEVEN stages today;
+  pieces 03/04/06/07 have registered nothing).
 - **Script:** `tools/stage12_search_corpus.py` + shared
   `tools/search_util.py` (universe walker, course resolver, analyzer
   census, shard writers). Registered in `tools/tpc_common.py::STAGES`
@@ -228,13 +234,21 @@ acceptance surface).
    files; a row is a NARROW CARRIER iff its pinned name-class
    fieldPath holds a LocalisedString struct bearing text
    (`_termID != 0`, or `_termID == 0` with non-empty `_dev`), or —
-   campus-level only — a plain non-empty `Name` string. Pinned paths:
-   config `Name` · room `NameWhenBuilt` · staff `LocalisedName` ·
-   item/metagame-node/unlockable/student-type `LocalisedName*` ·
-   campus-level plain `Name`. Universe = A(F2) ∪ narrow-carriers(F3).
+   campus-level only — a plain non-empty `Name` string. Pinned paths —
+   the star notation denotes EXACTLY the member set listed, never a
+   broader prefix sweep: config `Name` · room `NameWhenBuilt` · staff
+   `LocalisedName` · item / metagame-node / unlockable {
+   `LocalisedName`, `LocalisedNameFemale`, `LocalisedNameMale` } ·
+   student-type { `LocalisedNameF`, `LocalisedNameM` } · campus-level
+   plain `Name`. The expansion is LOAD-BEARING (reviewer F3): reading
+   `LocalisedName*` as the single field `LocalisedName` measures
+   carriers 4,282 / union **7,172** and trips the assert below — a
+   guaranteed day-one failure loop. Universe = A(F2) ∪
+   narrow-carriers(F3).
    Assert equality with 7,178 and per-kind F5 — deviation is an exit-1
    validation failure (this recipe is fully mechanical and
-   verifier-reproduced digit-for-digit).
+   verifier-reproduced digit-for-digit under the pinned expansion;
+   reviewer r1 re-measured every cell digit-for-digit with it).
 2. **Pinned expanded recipe (computed every run):** union of the
    conservative universe with the F7 components — plain-string `Name`
    literals (any kind), dev-bearing sentinel structs on the expanded
@@ -248,11 +262,14 @@ acceptance surface).
 3. **Dual-floor reporting (pre-ruling-enforced):** the run section and
    `manifest.universe` carry BOTH counts every run — `narrow` (7,178
    asserted) and `expanded` — plus `planningFloor: {value: 10200,
-   share: "75.9%"}` and a mandatory
-   `DRIFT: expanded <n> vs planning floor 10200 (<share>%); delta
-   attributable to <named boundary components>` line. `idOnly` =
-   13,443 − expanded, decomposed per kind. Planning NEVER silently
-   narrows to the conservative variant.
+   share: "75.9%"}`. The planning-floor comparison line is a
+   MOVEMENT signal like every other DRIFT line, not constant noise:
+   it prints IFF `expanded != 10200`
+   (`DRIFT: expanded <n> vs planning floor 10200 (<share>%); delta `
+   `attributable to <named boundary components>`); at exact equality
+   nothing prints (reviewer F9). `idOnly` = 13,443 − expanded,
+   decomposed per kind. Planning NEVER silently narrows to the
+   conservative variant.
 4. **Pending-relink-edge consumption (pre-ruling 4).** Scan EVERY
    `relinks/<src>_<dst>.jsonl` pair file for `srcKind=="item"` and
    `dstKind=="item"` rows; classify: `evidence.fieldPath == "GameItem"`
@@ -292,10 +309,27 @@ Frozen row shape (exact key set; NO additional or missing keys):
  "buildId":20226581}
 ```
 
-- **Membership rule (locale purity, localization-architecture §1):** a
-  document exists in locale L iff the entity has ≥1 NON-EMPTY text
-  RESOLVED IN L — a localized term edge with text in L's table, or an
-  `mTerm` key resolving in L, or (any locale) a plain literal.
+- **Membership rule (locale purity, localization-architecture §1).**
+  A document exists in locale L iff the entity has ≥1 non-empty
+  **NAME-CLASS** text resolved in L, by exactly one of four clauses:
+  1. a localized term edge on a pinned §S1.1 name-class fieldPath with
+     non-empty cleaned text in L's table;
+  2. an `mTerm` key resolving in L;
+  3. a plain `Name` literal (locale-independent English);
+  4. a `convention`/`curated` resolution whose termKey resolves in L —
+     family/tail matching runs against EACH locale's table (keys are
+     locale-independent; only the text differs), so a course resolved
+     via `Courses/Courses/KnightSchool_Name` ships in all 13 shards.
+     Unresolved-in-L behaves like any other membership miss (no doc in
+     that locale) — never a fallback to en text (reviewer F4; without
+     this clause the 28 `TPC.CourseDefinition` rows — which carry ZERO
+     `entity_locale` edges; all 41 course edges are Marketing rows —
+     would ship en-only).
+  A document REQUIRES a name: an entity whose only resolved text is
+  description-class emits NO document in any locale; those members are
+  counted in `manifest.universe.descriptionOnlyNoDoc` per kind — data,
+  not silence (rev-2 pin; this is why measured docs/locale ≈5.2–5.3k
+  sit below the expanded universe ≈8.9k pending / 10.2k ceiling).
   Literal-bearing and dev-only entities therefore ship in the **en
   shard only** (the pivot); no locale shard ever contains another
   locale's fill (pivot-fill banned, piece-07 L4 posture). The manifest
@@ -310,6 +344,11 @@ Frozen row shape (exact key set; NO additional or missing keys):
   student-type: `LocalisedNameF` is the name, `LocalisedNameM` rides
   as a `name-variant` alias; staff `Ranks[].TitleM/F` (30 instances)
   ride as `name-variant` aliases.
+- **`weight` is DERIVED, never free-hand (reviewer F6):**
+  `weight == kindWeights[kind]`, snapshotted at emit from the §S5.1
+  table — the manifest table is the single authority, the doc field its
+  materialization. An all-1.0 emitter is a schema violation (AC3
+  spot-check: every doc's weight equals its kind's table entry).
 - **Cleaning (before any text lands):** strip `<[^>]+>` tags and
   `\{[^{}]+\}` placeholders; texts cleaning to empty are DROPPED and
   counted (expect 23 name titles, F9) — never indexed as `""`.
@@ -347,11 +386,15 @@ Frozen row shape (exact key set; NO additional or missing keys):
 1. **Classes (enum, frozen):** `id-token` (verbatim internal id split
    on non-alphanumeric runs, lowercased, length ≥2, pure digits
    dropped, deduped — vocabulary 3,224, F11) · `name-variant`
-   (M/F forms, Ranks titles) · `dev-string` (the `_dev` English
+   (M/F forms — the §S1.1 member spellings `LocalisedNameFemale`/
+   `LocalisedNameMale`/`LocalisedNameM`, plus staff `Ranks[].TitleM/F`)
+   · `dev-string` (the `_dev` English
    fallback, attached when a localized name EXISTS — 3,874-row basis)
    · `convention` (course family/token-map resolutions) · `curated`
    (seed-table rows). `mTerm` resolutions are NAMES (basis `mterm`),
-   not aliases.
+   not aliases. Name-class and dev-string extraction use the SAME
+   expanded §S1.1 path lists — one definition of "name field" everywhere
+   (reviewer F3).
 2. **Course-name resolution encoding (pinned recipe, F21):**
    - Families, priority order: qualification chain
      `Characters/**/<X>_Qualification_Name` (28) >
@@ -359,19 +402,31 @@ Frozen row shape (exact key set; NO additional or missing keys):
      `Courses/DLC_{Space,Ghost}/<X>_Name` (9) >
      `Marketing/Courses[/Minor]/[Long_]<X>_Name` (24) >
      `Research/Courses/<X>_Name` (4).
-   - Candidate generation per course id: strip the
+   - Candidate construction is UNION-SET staging, PINNED (reviewer
+     F12 — staged/priority evaluation of the same rules measures
+     different intermediates): per course id, strip the
      `Course_` / `Marketing_Course_` / `Marketing_Minor_Course_`
-     prefix; strip a trailing `_Long`; generate {tail, tail±plural-s,
-     LAST underscore segment, last±s}; apply the token map; match
-     casefold against family tails in priority order.
+     prefix; strip a trailing `_Long`; then generate ALL candidate
+     forms as ONE set {tail, tail±plural-s, LAST underscore segment,
+     last±s, token-map rewrites of any of these}; match casefold
+     against family tails trying families in the priority order above;
+     first hit wins and records its method. Intermediates are
+     staging-dependent by nature (`courseMechanical` under this pinned
+     staging: 19/28 no-map — F21); only the GATED counts are contract.
+   - Matching runs against each locale's family index (the keys are
+     locale-independent across all 13 tables; resolution is computed
+     ONCE on keys, then TEXT is drawn per locale — §S2 clause 4).
    - Token map (7 entries, frozen DATA): `Computing→Computer`,
      `Magic→Wizardry`, `Spy→SpySchool`, `VeryHard→Hard`,
      `Grease→Greaser`, `CheeseAlien→AlienCheese`,
      `HumanityAlien→Alien`.
-   - Expected yields (F21): 16/28 mechanical without the map, 23/28
-     with it; **gate: ≥24/28 WITH the seed table** (probe: 25/28);
-     the 41 marketing courses resolve through the same index — every
-     unresolved row is ledgered, none silently dropped.
+   - Expected yields (F21, pinned staging): 19/28 mechanical without
+     the map (cross-reading band 16–19), 23/28 with it;
+     **gate: ≥24/28 WITH the seed table** (measured 25/28, open 3);
+     degraded floor when the alias input is ABSENT: **≥16/28**
+     (holds under every tried reading). The uniform resolver covers
+     all 69 courses — measured 62/69 (marketing 37/41), every
+     unresolved row ledgered, none silently dropped.
    - Resolutions are emitted as alias/name material with
      `inferred:true` semantics carried in the manifest's
      `courseResolution` block (method per row:
@@ -390,6 +445,16 @@ Frozen row shape (exact key set; NO additional or missing keys):
      validates every row's `termKey` against the registry/en table and
      FAILS exit 1 on a dangling curated key (bad data is louder than
      missing data).
+   - **Authorship + provenance duty (reviewer F7):** the file is
+     authored and committed by THIS piece's Documentator seat BEFORE
+     the CodeWriter/TestWriter pair is seated — it is prepared input,
+     not build-pair output. Its creation appends one append-only row to
+     `data/sources/MANIFEST.md` (AGENTS rule 4): source class
+     `curated-derived`, generator `documentator-piece-08`, date, and
+     the two `sourceRefs` term keys. Until it lands, the stage runs in
+     degraded mode with `alias-input-absent` ledgered — that ledger
+     row is CONDITIONAL on input absence and disappears once the file
+     exists, so §9's expected-ledger sets are stated per state.
 4. **Collision handling:** text→entity stays many-to-many by
    construction (documents keyed by entity). The manifest's
    `collisions` block publishes the measured truth —
@@ -416,12 +481,18 @@ Frozen row shape (exact key set; NO additional or missing keys):
    stays trivial; the reversal path is one manifest field),
    `asciiFolding: none` (Turkish İ/dotless-i folding is a client
    normalization choice; recorded, not decided here).
-2. **Vocab census (recomputed every run):** per locale — rows, distinct
-   word-char-run tokens, median/avg token-count-per-row, CJK-bearing
-   rows, no-whitespace rows — the scout §3 table's columns, embedded in
+2. **Vocab census (recomputed every run; column definitions PINNED so
+   two implementers emit identical `manifest.analyzers` — reviewer
+   F8):** per locale — rows; distinct word-char-run tokens;
+   median/avg token-count-per-row; CJK-bearing rows where CJK = any
+   char in Han U+4E00–U+9FFF ∪ Kana U+3040–U+30FF ∪ Hangul
+   U+AC00–U+D7A3 (the Hangul-INCLUSIVE detector behind scout §3 — ko
+   measures 15,213 under it; a pure-Han detector would measure ≈0 and
+   is NOT what this census emits); no-whitespace rows (no `isspace()`
+   char); tokenization order GLOBAL: tokenize-then-lowercase (the tr
+   23,445 basis; lowercase-first gives 23,420, vA #4c). Embedded in
    `manifest.analyzers.<locale>` and reconciled against the measured
-   range endpoints (en 11,897 … ko 28,594; tr 23,445 under the
-   tokenize-then-lowercase order, vA #4c note). Drift prints `DRIFT:` ;
+   range endpoints (en 11,897 … ko 28,594). Drift prints `DRIFT:` ;
    fresh wins.
 3. **Typo budget block:** `manifest.typoBudget = {maxVocabObserved,
    ceilingAssumed: 30000, strategy: "client-side levenshtein-d2",
@@ -438,12 +509,17 @@ Frozen row shape (exact key set; NO additional or missing keys):
 1. **`manifest.json`** (sorted keys, deterministic): `meta` (buildId,
    stage, script deps, `sourceStamps: {relinkIdentity,
    localisationIdentity}` copied from the consumed stamps);
-   `universe` (§S1 dual floors + components + perKind + idOnly);
+   `universe` (§S1 dual floors + components + perKind + idOnly +
+   `descriptionOnlyNoDoc` per kind — §S2 name-required pin);
    `shards` (per locale: docs, bytes, sha256; titles docs/bytes/sha256);
    `analyzers` (§S4); `aliasVolumes` (`{idTokens: 3224, devStrings:
    3874, mTermRows: 55, mTermResolved: 53}`);
    `titleKeySets` (`{narrow: {edges: 2993, keys: 2059, enResolvePct:
-   100}, expandedWalker: {keys: 2748}}`);
+   100}, expandedWalker: {keys: 2748}}` — the narrow triple is
+   verifier-reproduced; the `expandedWalker` figure is an UNVERIFIED
+   doc-probe seed (vB saw 2,655 over its superset definition), carried
+   with that provenance label and reconciled FRESH every run — never
+   load-bearing, never asserted);
    `sizes` (planes 23,107,394 B; entityRelevant 9,454,777 B;
    perMetric bands F14/F15/F16 — all three metrics, labeled);
    `kindWeights` (frozen ranking hint: item 1.0, room 1.0, course 1.0,
@@ -469,8 +545,13 @@ Frozen row shape (exact key set; NO additional or missing keys):
    - **Structural validity:** `matrix.json` must parse with
      `cellsTotal == 100`; core relations must be non-empty and
      schema-valid → violations are **exit 1**.
-   - **Steady-state bounds (pinned seeds at buildId 20226581; any
-     bound breach at the SAME buildId = REAL regression → print
+   - **Steady-state bounds (pinned seeds at buildId 20226581; ALL
+     comparisons are INCLUSIVE — a member SITTING ON its bound is in
+     the steady state, and eight members do exactly that today:
+     missing=73, modeled=24, dangling=1,137, misses=5,
+     entity_locale=10,964, registry=15,675, terms=6,526, ja=15,371 /
+     en=15,665 — exclusive comparisons fail day one, reviewer F9).
+     Any bound breach at the SAME buildId = REAL regression → print
      `RELINK-REGRESSION: <member> bound<b> measured<m>` for every
      breached member, WRITE NOTHING, exit 1):**
      `statusCounts.missing ≤ 73` · `modeled ≥ 24` ·
@@ -545,20 +626,31 @@ two-class rule).
 
 ## 6. Acceptance criteria (mechanical, whole piece)
 
-1. **Entrypoint:** `python run_all.py --list` enumerates twelve stages
-   ending `..., search-corpus` (canonical registry order); `make list`
-   equivalent; `--only search-corpus` runs in isolation on a prepared
-   tree (client mode: `--skip search-corpus` then `--only
-   search-corpus`; hostless smoke: `tests/build_fixture_tree.py --stage
-   search-corpus` materializes §4's upstream set synthetically — mini
-   stubs + relink JSONLs + 2 locale tables + stamps; NO Unity bytes).
+1. **Entrypoint (registry-aware, no absolute count — reviewer F2):**
+   `python run_all.py --list` enumerates `search-corpus` AFTER every
+   currently registered stage, in canonical-registry order;
+   `search-corpus` is the LAST entry whenever it is registered alongside
+   today's stage set. The twelve-stage enumeration
+   (`verify-client … media, search-corpus`) holds once pieces
+   03/04/06/07 register their stages and is gated as such in tests:
+   assert THIS stage's presence + relative order + LAST-position-among-
+   current-stages, never a global count. `make list` equivalent;
+   `--only search-corpus` runs in isolation on a prepared tree (client
+   mode: `--skip search-corpus` then `--only search-corpus`; hostless
+   smoke: `tests/build_fixture_tree.py --stage search-corpus`
+   materializes §4's upstream set synthetically — mini stubs + relink
+   JSONLs + 2 locale tables + stamps; NO Unity bytes).
 2. **Universe (AC by carrier definition):** `universeNarrow == 7,178`
    EXACT with per-kind F5 decomposition; every expanded component
-   equals its F7/F8 seed (1,456 / 552 / 547 / 170 / 49 / 53 / 27;
-   joins ≤ 353 + 1,652); `expanded == |union(components)|` internally
-   consistent and `expanded == ceiling − pendingJoinCandidates`;
-   planning-floor DRIFT line printed with share of 13,443; `idOnly ==
-   13443 − expanded`.
+   equals its F7/F8 seed ON ITS PINNED BASIS — room `Name` = 49 on the
+   locstr-PRESENCE basis (48 text-bearing; the empty struct emits no
+   doc), the rest text-bearing as measured (1,456 / 552 / 547 / 170 /
+   53 / 27; joins ≤ 353 + 1,652); `expanded == |union(components)|`
+   internally consistent and `expanded == ceiling −
+   pendingJoinCandidates`; planning-floor DRIFT line printed IFF
+   `expanded != 10200`, carrying the share of 13,443; `idOnly ==
+   13443 − expanded`; `descriptionOnlyNoDoc` per kind reconciles
+   (`expanded − namedDocs == descriptionOnlyNoDoc`, both emitted).
 3. **Shards:** exactly 13 shard files + 13 title projections, locale
    names character-exact; every document schema-valid (exact key sets,
    enums for `basis`/`visibility`/alias `class`); sorted `(kind,id)`;
@@ -566,20 +658,34 @@ two-class rule).
    L≠en without a locale-resolved text in L
    (`localePureViolations == 0`); the 23 cleaned-to-empty titles
    dropped and counted; `slug == null` on 100 % of docs;
-   `bonesIndexed == 0`.
-4. **Size bands (honest, measured):** full shard per locale within
-   **[1.0, 3.5] MB**; titles projection per locale within **[0.3,
-   1.6] MB**; Σ full shards ≤ **28.4 MB** (the ≤3× entity-relevant
-   source law over 9.45 MB); manifest `sizes` block carries all three
-   metrics (F14 text bytes, F15 key-line bytes 0.16–0.21 MB/locale,
-   F16 shipped planes) — no band may quote a metric it does not name.
+   every doc's `weight == kindWeights[kind]` (F6 derivation);
+   `bonesIndexed == 0`; membership clause coverage — no doc exists
+   whose name basis is absent from the four §S2 clauses.
+4. **Size gates as RATIO bands over the emitter's own denominators
+   (blind-checkable — reviewer F1):** for EVERY locale, with `D` =
+   that shard's own doc count and `B` = its own byte length:
+   titles projection `60·D ≤ B ≤ 120·D` (measured anchor 82–93 B/doc,
+   F16 — ±~30 % headroom around the pinned `{kind,id,t}` shape);
+   full shard `380·D ≤ B ≤ 650·D` (measured anchor 511–536 B/doc).
+   Aggregate law restated over the plane the shards ACTUALLY
+   serialize: `Σ full ≤ 650 × Σ docs` (the former "3× the 9.45 MB
+   entity-relevant source" figure is RETIRED as a gate — 9.45 MB
+   covers only registry-referenced keys and excludes by construction
+   the literals/dev strings/joined titles also serialized; it survives
+   as a contrast metric in §2/F17 only). Absolute sizes are
+   INFORMATIONAL, DRIFT-tracked in `manifest.sizes` beside all three
+   named metrics (F14 text bytes / F15 key-line bytes / F16 doc
+   planes) — no gate may quote a metric it does not name.
 5. **Alias layer:** id-token vocabulary == 3,224 distinct; `dev-string`
    aliases reconcile with the 3,874-row basis; mTerm 55 rows → 53
    resolved + 2 ledgered; course resolution **≥24/28** over the 28
-   `TPC.CourseDefinition` rows WITH the seed table present (open ≤ 4,
+   `TPC.CourseDefinition` rows WITH the seed table present (measured
+   under the pinned union staging: 25/28; open ≤ 4,
    each in `course-name-open` with a reason); mechanical-only floor
-   ≥16/28 asserted when the alias input is ABSENT (degraded mode);
-   marketing courses resolved-or-ledgered with zero silent drops;
+   **≥16/28** asserted when the alias input is ABSENT (degraded mode;
+   pinned staging measures 19/28 — the gate is the cross-reading
+   bound, reviewer F12); marketing courses resolved-or-ledgered with
+   zero silent drops (measured 37/41 + ledger);
    collisions block equals F9/F18 seeds.
 6. **Tokenization:** analyzer table equals the §S4 assignment exactly
    (ko under `whitespace` — the Hangul/Han distinction is contractual);
@@ -634,8 +740,8 @@ two-class rule).
 
 | Question | Resolution route |
 |---|---|
-| Default hydration plane for the shell: titles-only box + lazy full shard (option C as shipped), or full-shard-only? Both planes exist, so the call is pure UX | UX piece at site phase; payload math settled here |
-| Should guide/news/editorial content ever join the same index? v1 excludes it; a `sourceClass` field would be the seam | Site IA lanes; needs a new upstream contract first |
+| Default hydration plane for the shell: titles-only box + lazy full shard (option C as shipped), or full-shard-only? Both planes exist, so the call is pure UX | Search UI task **#23** (PROGRESS.mdx W-D band) at site phase; payload math settled here |
+| Should guide/news/editorial content ever join the same index? v1 excludes it; a `sourceClass` field would be the seam | Guides/news task **#24**; needs a new upstream contract first |
 | Shard naming == route-coded locale paths with `en` as bare-path canonical | CONFIRMED by this spec per [DR-2026-08-20-locale-urls]; site lane consumes filenames verbatim |
 | campus-level public/internal roster (11 internal pinned here) | Documentator decision applied (scout §8 G8 routing); owner flips by editing the roster list, no code change |
 | metaforge.app planner/search internals (walled 403 ×2) | One ABP attempt in the UX piece if wanted (rule 10 posture unchanged) |
@@ -653,14 +759,20 @@ two-class rule).
   unrelated PPtr rows; pending-mode DEGRADED line + ledger row;
   whitelist guard trips on a planted bone-string field.
 - S2: document emitter — name priority chain (localized > mterm >
-  literal > convention), F/M variant aliasing, cleaning (tags,
-  placeholders, empty-drop counter), locale purity violation detector,
-  visibility roster application, titles projection derived row-for-row,
-  sort/dedup determinism, exact-key-set schema validator.
-- S3: course resolver unit tests — every family regex, plural fold
+  literal > convention/curated), all FOUR membership clauses incl.
+  per-locale convention resolution and unresolved-in-L miss semantics,
+  NAME-REQUIRED rule (description-only entity → `descriptionOnlyNoDoc`,
+  no doc), F/M variant aliasing, weight==kindWeights spot-check,
+  cleaning (tags, placeholders, empty-drop counter), locale purity
+  violation detector, visibility roster application, titles projection
+  derived row-for-row, sort/dedup determinism, exact-key-set schema
+  validator, AC4 ratio-band checker on fixture shards.
+- S3: course resolver unit tests — every family regex, UNION-set
+  candidate construction as pinned (§S3.2), plural fold
   both directions, last-segment rule (`Course_Ghost_Ghostbusting` →
   `GhostBusting` tail), token map (all 7), curated-row validation incl.
-  the exit-1 dangling-termKey case; collision counters on a fixture
+  the exit-1 dangling-termKey case; per-locale text draw after key
+  resolution; collision counters on a fixture
   with known multiplicities.
 - S4: analyzer assignment table (13 entries, ko→whitespace); vocab
   census on fixture tables with hand-computed vocab; cleaning
@@ -670,7 +782,9 @@ two-class rule).
   matrix** — the five §6.8 branches as fixtures (stamp exitCode 3 /
   steady 73-1137-5 / GUIDs 1,138 / entity_locale 10,963 / buildId
   bump); rebuild-trigger firing when a consumed stamp identity changes;
-  runner: `--list` twelve stages ending `search-corpus`; `--only`
+  runner: `--list` contains `search-corpus` AFTER every currently
+  registered stage and LAST among today's set (AC1's conditional
+  wording — never an absolute count); `--only`
   isolation; prepared-tree builder covers the upstream set; stamp
   invalidation on script-hash change; interrupted-run convergence;
   carve-out guard still green.
@@ -678,13 +792,18 @@ two-class rule).
 **Client-gated integration (auto-SKIP without the extracted corpus):**
 
 - Full-corpus run against the real tree: AC2–AC6 exact figures as
-  written; expected verdict **exit 2** with the pinned ledger set
-  (pending item joins ≈2,005, course-open ≤4, dev-only G4 counts,
-  mt-unresolved 2, campus-level-scope note).
+  written; expected verdict **exit 2** with the ledger set STATED PER
+  INPUT STATE (reviewer F7): with the seed table landed — pending item
+  joins ≈2,005 · course-open ≤4 · dev-only G4 counts · mt-unresolved 2
+  · campus-level-scope note; before it lands — the same set PLUS
+  `alias-input-absent`.
 - Idempotence: `--only search-corpus` double-run hash-equal on the real
-  tree; en shard doc count ≥ 7,000 and every non-en shard ≥ 4,500
-  (sanity floors derived from A = 5,850 and expanded ≈ 8.8k; breaches
-  indicate upstream collapse already caught by §S5.3 bounds).
+  tree; doc-count sanity floors are JOIN-STATE-AWARE (measured F16):
+  joinState=pending → en docs within [5,000, 6,500], every non-en
+  shard ≥ 4,500; joinState=emitted → en docs ≥ 6,900 (≈5,279 +
+  2,005 named joined docs). Breaches indicate upstream collapse
+  already caught by §S5.3 bounds — these floors are a second net,
+  not the primary tripwire.
 - Regression drill on real data: copy the tree, decrement one tracked
   member (e.g. drop one `entity_locale` row), rerun at the same
   buildId → exit 1 with the `RELINK-REGRESSION:` line naming the
@@ -717,5 +836,76 @@ rows, shared with piece-07); the frozen 13-entry analyzer table
 distinct sizing metrics (F14/F15/F16) replacing the scout's loose
 single figure. Expected first-run verdict: exit 2 with the pinned
 ledger set — honest steady state, not failure.
+
+## Revision 2 (reviewer round 1 — F1–F12 applied)
+
+Grounded in [`../reviews/reviewer-piece08-spec-r1.mdx`](../reviews/reviewer-piece08-spec-r1.mdx)
+(FIX-REQUIRED: 0 CRITICAL / 4 MAJOR / 8 MINOR; its fact-fidelity audit
+re-measured every gated §2 figure green, including the full collision
+block, both item-join ceilings, and the complete exit-2 envelope at
+bound). Every finding addressed:
+
+- **F1 (MAJOR):** AC4 converted from absolute MB bands to RATIO bands
+  over each emitter's own denominators (`60·D ≤ B ≤ 120·D` titles,
+  `380·D ≤ B ≤ 650·D` full); the unexplainable "3,793 docs" rich-schema
+  anchor DELETED and F16 re-measured with explicit denominators
+  (5,222–5,279 docs/locale pending-join, 511–536 B/doc full, 82–93
+  B/doc titles) under the pinned schemas; the Σ≤28.4 MB "3× law"
+  RETIRED as a gate — its denominator (6,526 registry-referenced keys)
+  excluded by construction exactly the literals/dev/joined text the
+  shards serialize — replaced by `Σ full ≤ 650 × Σ docs`, with 9.45 MB
+  demoted to a contrast metric. Root cause also fixed: §S2 now REQUIRES
+  a name for doc membership (`descriptionOnlyNoDoc` counter), which is
+  why measured docs/locale sit below the expanded universe, and §9's
+  sanity floors are JOIN-STATE-AWARE (pending en [5,000, 6,500];
+  emitted en ≥ 6,900) instead of contradicting the measured reality.
+- **F2 (MAJOR):** registration and AC1 rewritten registry-aware —
+  ordering authority is the canonical index, `--list` assertions are
+  conditional ("after every currently registered stage; LAST among
+  today's set"), no absolute count; the twelve-stage enumeration is
+  gated on pieces 03/04/06/07 registering.
+- **F3 (MAJOR):** `LocalisedName*` expanded everywhere to EXACT member
+  sets {`LocalisedName`, `LocalisedNameFemale`, `LocalisedNameMale`} /
+  student-type {`LocalisedNameF`, `LocalisedNameM`}; the single-field
+  misreading (union 7,172 → exit-1 loop) named explicitly in §S1.1;
+  §S3.1 bound to the same lists.
+- **F4 (MAJOR):** membership gains clause 4 (convention/curated
+  resolution resolving in L, per-locale family matching, miss
+  semantics), closing the hole that would have dropped all 28
+  `TPC.CourseDefinition` rows from the 12 non-en shards.
+- **F5:** room `Name` component pinned on the locstr-PRESENCE basis
+  (49 presence / 48 text-bearing; empty struct emits nothing) — F7 +
+  AC2.
+- **F6:** `weight == kindWeights[kind]` derivation pinned; schema
+  violation if divergent (AC3 spot-check).
+- **F7:** seed-table authorship assigned to this piece's Documentator
+  seat BEFORE build-pair seating, with the append-only
+  `data/sources/MANIFEST.md` row duty; `alias-input-absent` ledger row
+  marked conditional and §9's expected-ledger sets stated per input
+  state.
+- **F8:** census columns pinned — CJK detector = Han U+4E00–9FFF ∪
+  Kana U+3040–30FF ∪ Hangul U+AC00–D7A3 (ko measures 15,213 under it);
+  global tokenize-then-lowercase order (tr 23,445 basis).
+- **F9:** planning-floor DRIFT line prints IFF delta ≠ 0; ALL §S5.3
+  brackets declared INCLUSIVE with the eight members sitting on their
+  bounds today enumerated.
+- **F10:** `expandedWalker.keys: 2748` labeled an UNVERIFIED doc-probe
+  seed (vB saw 2,655 over its superset), carried with provenance,
+  reconciled fresh, never load-bearing.
+- **F11:** routing anchors restored — hydration plane → search UI task
+  **#23**, editorial-content scope → guides/news task **#24**.
+- **F12:** candidate construction PINNED as union-set staging;
+  intermediates declared staging-dependent (19/28 mechanical-no-map
+  under the pin vs vB's 17 and the earlier staged-probe 16), gates
+  unchanged (≥24/28 seeded, ≥16/28 degraded floor hold under every
+  reading).
+
+Dispositions recorded: none of the twelve findings disputed; the F1
+prototype measurement (this revision's probe over the real corpus)
+replaced estimate-with-estimate where the reviewer asked for
+measurement and confirmed its B/doc predictions (83 B/doc slim titles;
+514 B/doc full en). No contract change beyond the listed pins: stage
+id, emission root, doc schema, analyzer table, exit-code contract, and
+both universe definitions stand as registered in Revision 1.
 
 §END
