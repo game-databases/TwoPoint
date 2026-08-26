@@ -1,0 +1,252 @@
+A little something about Kudos, Loans and R&amp;D &quot; TwoPointHospital-Style &quot;
+
+## A little something about Kudos, Loans and R&D " TwoPointHospital-Style "
+
+ } );
+
+ 
+ 
+ 
+ 2 Comments 
+ 
+ 
+
+ 
+
+ 
+ 
+ <
+ 
+ 
+ >
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ FeteFatale
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Feb 21, 2023 @ 4:16pm 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ I train a few 'spare' teachers in a couple of specialities (in my dedicated R&D Uni) that have been unlocked at a newer university ... then return to the newer university and put the research into practice. 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ Techhead7890
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Feb 20, 2023 @ 6:54pm 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ I had no idea R&D was shared across all campuses, thanks! 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ 
+ <
+ 
+ 
+ >
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ [img]
+
+ [img]
+
+ 
+
+ 
+
+ 
+ 
+ Share to your Steam activity feed
+ 
+ 
+ [img]
+
+ [img]
+
+ [img]
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ 
+ Link: 
+ 
+ 
+
+ 
+ 
+ 
+ You need to sign in or create an account to do that.
+
+ 
+ Sign In
+ Create an Account
+ Cancel
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ [img]
+
+ 
+
+ 
+ 
+ 
+ function UpdateKVTagsSingle()
+ {
+ $('PromptModalForm').submit();
+ }
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+
+ Update
+
+ 
+
+ 
+ 
+
+ 
+
+ 
+ 
+
+ 
+ RecordAppImpression( 1649080, '2_100100_100101_100106' );

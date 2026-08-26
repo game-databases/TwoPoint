@@ -1,0 +1,27 @@
+2026-08-25T16:49:26+0300 200 fandom/allcategories-p1.json https://two-point-campus.fandom.com/api.php?action=query&list=allcategories&aclimit=max&acprop=size&format=json
+2026-08-25T16:50:30+0300 200 fandom/catmembers-Courses.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Courses&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:33+0300 200 fandom/catmembers-Rooms.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Rooms&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:36+0300 200 fandom/catmembers-Items.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Items&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:39+0300 200 fandom/catmembers-Academic_Rooms.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Academic_Rooms&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:43+0300 200 fandom/catmembers-Facility_Rooms.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Facility_Rooms&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:47+0300 200 fandom/catmembers-Interior_Rooms.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Interior_Rooms&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:50+0300 200 fandom/catmembers-Exterior_Rooms.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Exterior_Rooms&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:52+0300 200 fandom/catmembers-Campuses.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Campuses&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:55+0300 200 fandom/catmembers-Staff.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Staff&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:50:57+0300 200 fandom/catmembers-Students.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Students&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:51:00+0300 200 fandom/catmembers-Teacher.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Teacher&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:51:04+0300 200 fandom/catmembers-Assistant.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Assistant&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:51:07+0300 200 fandom/catmembers-Space_Academy_DLC.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Space_Academy_DLC&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:51:09+0300 200 fandom/catmembers-School_Spirits_DLC.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:School_Spirits_DLC&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:51:12+0300 200 fandom/catmembers-Increases_Happiness.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Increases_Happiness&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:51:15+0300 200 fandom/catmembers-Kudosh_Bundle.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Kudosh_Bundle&cmlimit=max&cmtype=page|subcat&format=json
+2026-08-25T16:51:48+0300 200 fandom/catmembers-Items-p2.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Items&cmlimit=max&cmtype=page&format=json&cmcontinue=page%7C4f5343494c4c41544f525%7C1684
+2026-08-25T16:52:02+0300 200 fandom/catmembers-Items-p2.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Items&cmlimit=max&cmtype=page&format=json&cmcontinue=page%7C4f5343494c4c41544f52%7C1684
+2026-08-25T16:52:15+0300 200 fandom/catmembers-InfoboxTemplates.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Infobox%20Templates&cmlimit=max&format=json
+2026-08-25T16:52:18+0300 200 fandom/catmembers-Infoboxtemplates2.json https://two-point-campus.fandom.com/api.php?action=query&list=categorymembers&cmtitle=Category:Infobox%20templates&cmlimit=max&format=json
+2026-08-25T16:53:09+0300 200 fandom/wikitext-A-templates-staff.json
+2026-08-25T16:53:46+0300 200 fandom/wikitext-B-rooms.json
+2026-08-25T16:53:49+0300 200 fandom/wikitext-C-courses.json
+2026-08-25T16:53:52+0300 200 fandom/wikitext-D-items.json
+2026-08-25T16:53:55+0300 200 fandom/wikitext-E-campus-clubs.json
+2026-08-25T16:54:40+0300 200 fandom/wikitext-F-hubs.json

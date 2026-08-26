@@ -1,0 +1,40 @@
+{
+ "fetched": "2026-08-25",
+ "appid": 1649080,
+ "name": "Two Point Campus",
+ "dlc_ids": [
+  1884560,
+  2312070,
+  1907450,
+  2195430
+ ],
+ "supported_languages_raw": "English<strong>*</strong>, French, Italian, German<strong>*</strong>, Spanish - Spain, Korean, Polish, Portuguese - Brazil, Simplified Chinese<strong>*</strong>, Traditional Chinese, Turkish<br><strong>*</strong>languages with full audio support",
+ "dlc_1884560": {
+  "name": "Two Point Campus: Space Academy",
+  "release_date": {
+   "coming_soon": false,
+   "date": "Dec 6, 2022"
+  }
+ },
+ "dlc_2312070": {
+  "name": "Two Point Campus Soundtrack",
+  "release_date": {
+   "coming_soon": false,
+   "date": "Mar 16, 2023"
+  }
+ },
+ "dlc_1907450": {
+  "name": "Two Point Campus: School Spirits",
+  "release_date": {
+   "coming_soon": false,
+   "date": "Mar 15, 2023"
+  }
+ },
+ "dlc_2195430": {
+  "name": "Two Point Campus: Medical School",
+  "release_date": {
+   "coming_soon": false,
+   "date": "Aug 17, 2023"
+  }
+ }
+}

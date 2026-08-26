@@ -1,0 +1,340 @@
+# Scout piece 02 — relinking surface of the landed corpus
+
+**Agent:** scout-piece-02 · **Date:** 2026-08-25 · **Scope:**
+intelligence only — no implementation, no edits outside this file, no
+commits. Every number below was measured on the landed
+`extracted/` tree (buildId 20226581) during this session; probe method
+stated per claim. A concurrent `harvest-bundles` run was in flight while
+probing; all counts were re-verified stable after it finished.
+
+Inputs read in full first: repo-root `AGENTS.md`,
+`_foundation/extraction-doctrine.md`, pack `spec.md` (relations seeds),
+`docs/scout-report-001.mdx`, `extracted/RELATIONS.md` +
+`extracted/PROOF.md` placeholders, `competitor-research.md`.
+
+Corpus state at probe time: `stubs/` 12,764 rows across 9 kinds
+(+`_absences` 1 row, `_unmapped-families` 767 rows);
+`harvest/export-manifest.jsonl` 167,069 exported Monobehaviour dumps
+(1,129 distinct script classes); `locales/locale-matrix.json`
+15,672 keys × 13 locales; `decompiled/structural/` class-hierarchy
+20,037 rows + id-registries for 1,900 classes.
+
+---
+
+## §1 Pair inventory — ordered-pair matrix skeleton
+
+**Method:** built a `(bundle, pathId) → (kind, id)` index from every
+stub row's `source` block (12,764 entries), then walked every stub
+payload collecting leaf PPtr values (`{m_FileID, m_PathID}` dicts).
+Same-file refs (`m_FileID == 0`: 37,314 of 60,564 total PPtr leaves)
+resolve directly against the index. Result: **10,641 hard same-file
+references resolve into 19 distinct ordered pairs** covering 8 of 72
+off-diagonal cells with ≥1 resolved edge. The remaining 23,250 refs are
+cross-file (`m_FileID ≥ 1`; distribution peaks at file 1 = 12,764,
+file 2 = 6,123) and need serialized-file external tables that stage 3
+does not yet emit → *unknown-needs-probe* for every pair they could
+carry.
+
+### Measured hard-join pairs (same-file PPtr)
+
+Counts are **distinct source entities** with ≥1 resolved edge; field
+names verbatim from payloads; one sample value per pair. Full machine
+detail: `_scout2_pair_inventory.json` at pack root (probe artifact).
+
+| From \ To | campus-level | config | course | item | metagame-node | room | staff | student-type | unlockable |
+|---|---|---|---|---|---|---|---|---|---|
+| **campus-level** | — | GUID¹ (13) | none-yet | none-yet | GUID¹ (13) | none-yet | none-yet | none-yet | none-yet |
+| **config** | none-yet | **2,528** | **34** | **513** | **3** | **353** | **14** | none-yet | none-yet |
+| **course** | none-yet | **45** | **28** | none-yet | none-yet | none-yet | none-yet | none-yet | none-yet |
+| **item** | none-yet | **160** | none-yet | **31** | none-yet | none-yet | none-yet | none-yet | none-yet |
+| **metagame-node** | none-yet | **4** | none-yet² | **1**² | none-yet | none-yet | none-yet | none-yet | none-yet |
+| **room** | none-yet | **111** | none-yet | **59** | none-yet | none-yet | none-yet | none-yet | **1** |
+| **staff** | none-yet | **3** | none-yet | none-yet | none-yet | none-yet | none-yet | none-yet | none-yet |
+| **student-type** | none-yet | **27** | none-yet | none-yet | none-yet | none-yet | none-yet | none-yet | none-yet |
+| **unlockable** | none-yet | none-yet | none-yet | **38** | none-yet | none-yet | none-yet | none-yet | **70** |
+
+¹ `campus-level → config/metagame-node` runs through AssetGUID fields,
+not PPtrs — see below.
+² `metagame-nodes` carry `.references.NNNN.data.Course` PPtrs (3 seen)
+whose targets did not land on stub entities — needs-probe (likely
+points at scene-resident course objects).
+
+Pair detail (field names + samples):
+
+- **config→config (2,528 src):** `ChildModuleSelections[]` (732),
+  `Graph` (511), `Schedules[]` (462), `List[]` (248), `BrushLayers[]`
+  (162). Sample: `configs/Activity_Dynamic_Social_Item_Caterer`.
+  `.Group.ParticipantsGraph → config/BG_Character_Interaction_Caterer`.
+  This is the behavior-graph lattice: `TPS.Core.GOOSE.GraphDefinition`
+  states reference actions/status effects by PPtr.
+- **config→item (513):** `Items[]` (2,087 refs), `Item` (354),
+  `Goals[]` (184), `RequiredItems[]`. Sample:
+  `configs/Config_Campus.ResearchHiveItem → item/Item_Research_The_Hive_V1_Lite`.
+- **config→room (353):** `Room` (300), `SuggestedRoom` (37),
+  `DefaultNewPlotRoomDefinition`. Sample:
+  `Config_LevelEditor.DefaultNewPlotRoomDefinition → room/Room_Plot`.
+- **config→course (34):** `InitialCoursesToStart[]`, `Courses[].Definition`
+  (54 refs). Sample: `Config_Courses.Courses[].Definition → course/Course_Robotics`.
+- **config→staff (14):** `StaffTypes[]` (9),
+  `.references…StaffArchetype` (6). Sample:
+  `Config_JobApplicantManager_Christmas_Challenge → staff/Staff_Teacher`.
+- **config→metagame-node (3):** `RandomProjects[].Definition` (32 refs).
+  Sample: `Config_DLC1_ResearchManager.RandomProjects[].Definition →
+  metagame-node/Research_Repeatable_Astronaut_Kudosh`.
+- **course→config (45):** `SelfStudyAssignments[].Definition` (484 refs!),
+  `Terms[]` (75), `Visitors[]`. Sample:
+  `Course_Archaeology.SelfStudyAssignments[].Definition →
+  config/SelfStudy_Archaeology_Library_Generic`. **This is where the
+  course↔room requirement chain actually lives** — via SelfStudy +
+  CourseModule definitions sitting in the `config` kind.
+- **course→course (28):** `MarketingCampaigns[]` (46 refs).
+  Sample: `Course_Archaeology.MarketingCampaigns[] →
+  course/Marketing_Course_Archaeology`.
+- **item→config (160):** `Graph`, `StatusEffectComplete`,
+  `StatusEffectFailed` (95 each), `Upgrades[]` (62). Sample:
+  `items/Item_Arrival_Cupid.…_arrivalMethods[] → config/Arrival_Cupid`.
+- **item→item (31):** `.Item`. Sample:
+  `PersonalGoal_Item_AI_Station.Item → item/Item_DLC1_Space_AI_Station_Lite`.
+- **room→item (59):** `RequiredItems[].DefaultItem` (110 refs),
+  `RequiredWorkingItems[]` (22) — **the room-item-needs join the UI's
+  room requirements tab shows**. Sample:
+  `Room_Archaeology_Display.RequiredItems[].DefaultItem →
+  item/Item_Door_Building_Archaeology_Display`.
+- **room→config (111):** `RecommendedItemsList[]` (91),
+  `FloorAreaDefinition` (62), `Permissions[]`/`DisabledPermissions[]`,
+  `Job`. Sample: `HauntedRoom_Definition.CharacterStatusEffects[] →
+  config/StatusEffect_Haunted_Room_White`.
+- **room→unlockable (1):** `Room_Cafeteria.Activities[] →
+  unlockable/Activity_Room_Cafeteria`.
+- **staff→config (3):** `Actions[]` (15 refs), `JobTypes[]` (12 refs),
+  `ModuleData`, `RandomTraits`, `RoomPreferences[].Type`. Sample:
+  `Staff_Assistant.Actions[] → config/Action_Work`.
+- **student-type→config (27):** `Traits[]` (46), `PersonalGoals[]`,
+  `ModuleFemaleNewSystem`/`ModuleMaleNewSystem` (27 each). Sample:
+  `StudentArchetype_Alien_Humanity.ModuleFemaleNewSystem →
+  config/Root_CharModule_Aliens_Standard`.
+- **unlockable→item (38):** `Items[]` (110 refs). Sample:
+  `DB_Items_August_23.Items[] → item/Item_FunFair_Duck_Game`
+  (monthly item-drop databases).
+- **unlockable→unlockable (70):** `Anim`, `OverrideAnims[]`,
+  `ChildModuleSelections[]`, `StaffVisualOverrides[]`,
+  `CharacterBehaviour`.
+- **metagame-node→config (4):**
+  `.references…_qualifications[].Definition`. Sample:
+  `Research_ProposalProject._qualifications[].Definition →
+  config/Qualification_T_Research`.
+- **campus-level→(config, metagame-node)** via
+  `.LevelConfig.m_AssetGUID` / `.MetagameConfig.m_AssetGUID` (13 of 17
+  rows carry them). Sample: `Config_Metagame.asset` address resolves for
+  GUID `1676b22c239b1554fad03b6027331112`. Resolution needs the
+  catalog-GUID→address index (§2 mechanism, 79.7% resolve rate) plus an
+  address→stub-entity bridge that does not exist yet → **partial**.
+- **campus-level→campus-level / →scene:** `GameModePlayLevelConfig`
+  rows name levels (`Name: "Blank Level"`, `m_Name:
+  Config_GameMode_All_Buildings`) but no measured edge to scenes or to
+  each other yet — unknown-needs-probe (level DB lives in
+  `scenes_scenes_config_level_databases` + `configs-levels-prefabs`,
+  both harvested).
+
+### Cells with no measured surface today
+
+All unlisted off-diagonal cells read **none-yet or needs-probe**, not
+absent-by-proof. The two structural reasons:
+
+1. **Cross-file PPtrs (23,250 refs)** hide any pair whose references
+   cross serialized files inside a bundle — the most likely carrier for
+   e.g. `item→student-type` (validators), `course→room` direct edges,
+   and unlock-tree chains. Unblock: stage 3 emits per-dump external
+   file tables (file-id → bundle/pathId), then the same resolution
+   pass re-runs unchanged.
+2. **Kind taxonomy is coarse.** The `config` kind is 339 classes;
+   `unlockable` is 48. Definition classes land under kinds that don't
+   match their domain name (`TPC.CourseModuleDefinition` → `config`,
+   not `course`). The matrix skeleton should therefore be published
+   **per class-family inside each pair cell** (the class-level join
+   table above), not just per kind.
+
+---
+
+## §2 The GUID→locale mechanism — hypothesis REFUTED, real mechanism MEASURED
+
+Stage 5 measured zero string joins because it scanned for payload
+strings equal to matrix keys. The game does not do that. Measured
+mechanism, end to end:
+
+1. **Entity side.** Localizable fields are embedded structs
+   `TPS.Core.Localisation.LocalisedString = {_dev: string, _termID:
+   int32}` (dump.cs TypeDefIndex 9108; verified in payloads, e.g.
+   `staff/Staff_Assistant.LocalisedName = {"_dev": "Assistant",
+   "_termID": -744531364}`). No GUID-shaped value participates anywhere
+   in locale joining — **the localization-GUID hypothesis is refuted**;
+   the join key is a signed 32-bit term ID.
+2. **Registry side.** 26 `I2.Loc.LanguageSourceAsset` dumps
+   (bundle `localisation_assets_localisation.bundle`) each carry
+   `mSource.mTerms[]` rows `{ID: int, Term: string, TermType,
+   TermStatus, Languages[13], Flags[13]}` — measured on dump
+   `I2LS_General`: term `General/Achievements/AllLevels_Description`,
+   ID `-1672347010`. Code confirms the runtime map:
+   `LanguageSourceData.mDictionaryID: Dictionary<int, TermData>` +
+   `GetTermData(int termID)` (dump.cs lines ~546727, ~546893).
+3. **Measured overlap (this session's decisive probe).** Building the
+   ID→Term registry from all 26 sources yields 15,677 term rows →
+   15,675 distinct IDs → **15,672 distinct Term keys, which equals the
+   locale-matrix key set exactly (bidirectional diff 0)**. Scanning all
+   12,764 stub payloads finds 19,272 `LocalisedString` instances:
+   - **10,480 instances (54.4%) carry a termID present in the registry;
+     every one of those resolves to a key inside the locale matrix
+     (10,480/10,480).**
+   - 8,788 instances carry sentinel `_termID: 0` (unlocalized /
+     dev-text-only, empty `_dev`) — not misses.
+   - Exactly 4 instances carry non-zero IDs absent from the registry
+     (`-1168948158` "Cancel Upgrade", `-2044546668` "Requires Janitor
+     with Mechanics", `-1942168175` "Unassigned", `-1451566921`
+     "Wants a {ITEM}" — the latter on `Unused_PersonalGoal_Item_Gym_Vaulting_Horse`),
+     plus 3 term keys registered under two numeric IDs each. Effective
+     coverage on non-empty localised strings: **10,480/10,484 = 99.96%.**
+
+Per-kind instance counts and hit rates (probe artifact
+`../_scout2_locale_join_perkind.json` regenerated inline; headline
+numbers): configs 6,665/11,888 hits; items 2,736/6,030; rooms 438/521;
+metagame-nodes 390/553; unlockables 69/98; courses, staff,
+student-types **100%** (41, 33, 108); campus-levels 0 localised fields.
+
+Consequences for the relink layer:
+
+- The entity↔locale relation family is **hard** (`inferred: false`),
+  mechanism = `int-termID → I2 registry ID → Term key → locale-matrix
+  key`, cardinality N:1 per field. It must be derived as
+  `relinks/entity_locale.jsonl` (+ reverse index) by a later piece; the
+  registry itself should be emitted as a first-class artifact
+  (`relinks/i2_term_registry.jsonl`: termID, termKey, source asset,
+  termStatus, flags) since stage 4 currently emits only key→text rows
+  and drops `TermData.ID`.
+- `IconReference`-style `{m_AssetGUID, m_SubObjectName}` fields are a
+  separate, art-side join: 20,042 GUID refs across stubs, 5,548
+  distinct GUIDs, **15,982 (79.7%) resolve to catalog addresses** via
+  the `guid`-kind keys in `addressables/catalog.json` (54,143 guid
+  rows; e.g. staff icon GUID →
+  `Assets/Data/UI/Textures/Atlases/UI_Icons.spriteatlasv2`). 1,137
+  distinct GUIDs dangle (ledgered §6). This is entity→asset, not
+  entity→locale.
+
+---
+
+## §3 Cross-bundle identity & axes provenance
+
+Measured facts (R10 duplicate policy output, stage-5 log + disk):
+
+- Emitted id space is collision-free per kind (e.g. configs: 7,756
+  rows = 7,756 distinct ids).
+- Raw duplication events: **21 identical-payload merges** and **22
+  disambiguations** (differing payloads → `<id>@<contentHash8>` twins,
+  bare twin retained for 13 of 15 config twins). All merges observed so
+  far are intra-axis `base` (e.g. `HBAOPostProcess` carrier in
+  `configs-metagame_assets_all.bundle` with `axes:["base"]` vs its
+  differing twin `@eee7f342` in `configs_assets_all.bundle`).
+- Axis enum is filename-derived (`tpc_common.axis_for_bundle_name`):
+  `base | dlc-space | dlc-ghost`. **No verbatim id exists in more than
+  one axis after policy application** — DLC content partitions cleanly
+  at the id level (DLC entities carry `DLC1`/`DLC2` name segments).
+
+Recommendation for how axes-provenance surfaces in relations:
+
+1. Every emitted relation row carries `sourceAxes: [...]` inherited
+   from its endpoint rows' `axes` when present, plus per-endpoint
+   `bundle` provenance already in stub `source`. Today only 2 rows on
+   disk carry `axes` — the merged-carrier population is tiny but the
+   schema slot exists and should be propagated, not reinvented.
+2. Relation resolution must treat `@hash` twins as **distinct
+   definition versions of one logical entity**: group by verbatim id
+   (preserved in `fields.id`), expose `variantOf` semantics, never
+   collapse silently. 13 bare-twin pairs in configs are the working
+   example.
+3. Cross-axis identity collisions being zero means axis-scoped pages
+   can key on verbatim ids without disambiguation — but the invariant
+   belongs in a test, not an assumption (a future DLC patch can break
+   it).
+
+---
+
+## §4 UI-link floor (bar 2) — what the game's UI shows, grounded in class names
+
+Structural evidence base: `class-hierarchy.jsonl` (20,037 rows;
+TPC namespace = 5,621 classes, 218 ScriptableObject-derived) +
+export-manifest class counts (1,129 classes). The UI surfaces below
+must resolve to schema joins; candidate definition classes per family:
+
+| Game UI surface (menu class, harvested count) | Reads from (definition classes, corpus counts) | Relation families implied |
+|---|---|---|
+| `CourseManagementMenu_Requirements` / `_RequirementsFull` (2 each) | `TPC.CourseModuleDefinition` (319 dumps; **193 undecoded**, see §6), `TPC.CourseDefinition` (28), `TPC.SelfStudyDefinition` (504) | course↔room↔item requirement chains |
+| Room build/edit inspector: `InspectorRoomCourseItem` (2), `RoomSize`(measurement) | `TPC.RoomDefinition` (63), `TPC.RoomLiteDefinition` (70), `TPC.FloorAreaDefinition` (80), `RequiredItems[]` measured in §1 | room↔item minimum/recommended needs |
+| `TrainingMenu_Qualification*` (5 variants), `OverviewMenu_QualificationInspector` | `TPC.QualificationDefinition`/`Lite` (50+50) | staff↔qualification↔course |
+| `ResearchProjectInspector` (5), `ResearchBaseUI` | `TPC.ResearchProjectDefinition`/`Lite` (209+241), points costs in payloads | metagame-node↔course/item/qualification unlock tree |
+| `StaffJobAssignmentUI_*` (2) | `TPC.StaffJobDefinition*` (17 subclasses, 63 lite) | staff↔job↔room type |
+| `CampusEventMenu_*` (8 classes incl. Timeline) | `TPC.CampusEventDefinition`/`Lite` (72+88), `TPC.CampusEventType` (22+22 in stubs/unlockables) | event↔room↔item↔date |
+| Personal-goal inbox: `InboxMenuMessageUI_PersonalGoalRequest` (3), `WidgetPersonalGoal` | `TPC.PersonalGoal_{Item,Room,Event,Job,Training,Environment}Definition` (134+38+20+3+2+4) | student↔item/room wants |
+| Tooltip system: `TPC.TooltipSpawner` (**4,866 exported**) + `I2.Loc.Localize` bindings (**11,312**) | every definition class; tooltips are the generic cross-link renderer | bar-2 coverage map anchor: every tooltip target = a required join |
+| Student happiness/needs UI (`ObjectiveView` 2, `ObjectiveTaskCheckBox`, status effects) | `TPC.ObjectiveDefinition` (438), `CharacterStatusEffect*` (146+), `InteractionDefinition` (668, half undecoded) | entity↔effect, need satisfaction chains |
+
+The `I2.Loc.Localize` component count (11,312) doubles as the
+UI-localization binding census: every localized UI element binds by
+Term key — the same key space as §2 — which is why the term registry is
+the load-bearing artifact for both text and UI-link reconstruction.
+
+---
+
+## §5 Competitor bar (bar 3) — sources, walls, reachable
+
+From `competitor-research.md` (targets fixed by scout-002, access state
+measured 2026-08-24; nothing applied yet):
+
+- **Floor sources (≥3 named):** C1 `twopointcampus.fandom.com`
+  (primary community taxonomy), C2 `twopointcampus.wiki.gg`
+  (independent second instance; deltas vs C1 expose load-bearing
+  edges), C3 Steam Community guides corpus (player-authored
+  requirement chains). Reserves: C5 IGN wikis, C6 game8, C7 Neoseeker.
+- **Blocked (curl-measured):** C1 403/402 bot wall, C2 401, C5 403,
+  C6 202 challenge, C7 403. C4 fextralife NXDOMAIN (absence finding).
+  Per AGENTS rule 10 each wall gets exactly ONE attempt per rung.
+- **Reachable path:** the pre-committed ladder F1–F5 in
+  competitor-research.md — ABP browser pass first, then Web Archive CDX
+  snapshots (content-complete title ⇒ snapshot lag ≈ zero content
+  cost), then alternate Steam-guide URL shapes, then r/TwoPointCampus +
+  official news posts, then reserves. Bar #3 stays unconditional; if
+  F1–F5 still leave <3 applied sources, the terminal state is a
+  residue-ledger entry in PROOF.md naming the unblock (owner-directed
+  corpus acquisition), never a waiver.
+- What applying the model means here concretely: the community's
+  course→room→item tables, Kudosh-price lists, research-tree layouts,
+  and staff-trait effects must each land as either a measured hard join
+  (§1 already supplies most carriers), a logic-derived edge
+  (`inferred: true`, method recorded), or a flagged missing-relation
+  row — traceable as `competitor-model:<source-id>` in RELATIONS.md.
+
+---
+
+## §6 Coverage gaps — ledger
+
+What the corpus cannot answer yet; each with reason + concrete unblock.
+Nothing here is silent: every row is measurable in the current tree.
+
+| # | Gap | Measured size | Reason | Unblock |
+|---|---|---|---|---|
+| G1 | Typetree-decode failures excluded from stubs — headline victims `TPC.CourseModuleDefinition` (193/321 raw), `TPC.InteractionDefinition` (321/668 raw), `SocialActivityDefinition` (45), `GameItemDefinition` (44), `QualificationDefinition` (39), … | 732 dumps (0.44% of 166,714) carry `_raw` only | UnityPy synthesis error `type 'LocalisedString' not present in dump.cs` — nested struct not synthesized even though the struct IS in dump.cs (TypeDefIndex 9108) | Fix stage-1/stage-3 typetree supply (hand-register `TPS.Core.Localisation.LocalisedString` + co-types for synthesis), re-run harvest-bundles + emit-stubs; raw bytes meanwhile keep names recoverable (verified: `Module_VeryHard_ComputerLab_4` readable in base64) |
+| G2 | Cross-file PPtr edges unresolved | 23,250 refs (`m_FileID` 1..19+) | dumps record no externals table | Stage 3 emits per-object external file list (file-id → bundle/pathId); §1 resolver re-runs unchanged |
+| G3 | Dangling `m_AssetGUID`s | 1,137 distinct GUIDs (20.3% of 5,548) | assets inside scenes / editor-only / removed, absent from catalog's 54,143 guid keys | Probe per-GUID against scene dumps + `AssetRipper`-style full-project pass if needed; ledger per-GUID verdict |
+| G4 | Locale sentinel + code-ref terms | 8,788 `_termID: 0` instances; 4 non-registry IDs | sentinel "no translation"; runtime-created code terms (`LocalisedStringCodeRef`) | Emit as declared-empty rows, never gaps; code-ref IDs resolve via `I2LS_CodeRef` source audit (586 terms) |
+| G5 | Out-of-roster bundle references | 19 catalog-referenced bundles absent from install (`dlc-hospital-*` ×16, `dlc-preorder-*` ×3) | content axes not acquired on this Steam install | Owner decision: acquire hospital/preorder DLC axes or ledger permanently out-of-scope |
+| G6 | Catalogue-only objects (media carve-out + components) | censusOnlyResidual 1,811,650 of 2,026,658 objects | [DR-2026-08-18-media-scope]; component MonoBehaviours excluded by design (152,463) | None needed for relink; MEDIA-CATALOGUE reconciliation owed to PROOF.md |
+| G7 | Protocol section placeholder | `extracted/protocol/README.md` inventory-only | single-player proof not yet written | Later piece writes the no-surface proof (steam_api64 achievements/DLC/cloud-saves; Backtrace telemetry; Ansel) |
+| G8 | RELATIONS.md / PROOF.md placeholders | pointer-only files | piece-1 contract | This report supplies the pair-matrix skeleton + gap ledger inputs; reconciliation piece consumes them |
+| G9 | Staff-kind thinness | 3 rows (`Staff_Assistant`, `Staff_Janitor`, `Staff_Teacher`) | `TPC.StaffDefinition` genuinely ships 3 archetypes; role depth lives in `StaffJobDefinition*` (configs kind) | Model staff-role relations at class level (§4), not kind level |
+| G10 | Numeric-ID duplication in I2 registry | 3 term keys registered under two IDs each; 15,675 IDs → 15,672 keys | editor re-import generated fresh IDs for re-registered terms | Canonicalize on Term KEY; keep IDs as secondary indexes |
+
+Probe artifacts written to pack root (scratch, not committed by me):
+`_scout2_term_registry.json` (15,675 ID→key rows — ready seed for
+`relinks/i2_term_registry.jsonl`), `_scout2_pair_inventory.json`,
+`_scout2_decode_failures.json`, `_scout2_class_counts.json`,
+`_scout2_def_classes.json`.
+
+END OF scout-report-piece-02.mdx

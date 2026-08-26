@@ -1,0 +1,1031 @@
+Tips and tricks...
+
+## Introduction
+
+This is a compilation of tips that I gathered with Leamia (on Reddit).
+
+Since the game has been released recently, the guide will probably evolve over the next weeks. If you find something really interesting or hidden about gameplay mechanics, don't hesitate to add a comment.
+
+You can freely use data from this guide for your websites, wiki, etc... This guide probably won't be as advanced as the one made for Two Point Hospital though especially since TPC is far less challenging overall.
+
+If you spot any issue, please let me know in the comments. :)
+
+## General tips - Part 1
+
+1)
+ Since each class room has a max student capacity of 8, it's recommended to set the student intake for courses to multiples of 8 (so 8, 16, 24, 32, etc.) for better efficiency.
+ 2)
+ While keeping in mind the first tip, a single teacher can manage up to 16 students during the first year of courses. That's why it's better to start any mission with 16 students (or 15 if the course is level 2) and not waste a teacher's salary doing nothing half the year. During subsequent years and depending on the course, additional rooms may be needed. It's not easy to keep the student intake as multiples of 16 especially if you have multiple courses but as long as each student intake is a multiple of 8, it should be fine.
+ 3)
+ As usual with this kind of game, don't overextend. The only part of the game that can be difficult is the first year when your budget is limited. Subsequent years, expand slowly and make sure to not increase the student intake too much. 
+
+Keep in mind the duration of some courses is several years. It means for example that for a 3 years course, if you keep the student intake at 16 during 3 years :
+- you will have 16 students the first year
+- 16 more new students will join the campus the second year so you should have around 32 students
+- 16 more new students will join the campus the third year so you should have around 48 students
+
+Don't hesitate to reduce the student intake to 8 during a year if you feel your campus isn't ready to manage more students.
+ 4)
+ When possible avoid recruiting teachers with bad traits, they are listed in the "Reference" category on the recruitment screen. Sometimes, it's unavoidable since the applicants are random but try to keep an eye on the Hire Staff menu to replace any bad employee you have.
+
+Here is the list of bad traits, their in-game description are self explanatory :
+Bin-Blindness
+Bottomless Pit
+Dry-Mouth
+Gross
+Lollygagger
+Weak Bladder
+ 5)
+ Don't abuse loans if possible, however don't hesitate to take one if it allows you to build vital rooms. Ultimately, having classrooms ready for more students will help you make more money.
+ 6)
+ Try to have large corridors of 2 tiles to avoid congestion. 1 tile hallways can make students/staff have trouble moving from one point to another, that's why they should be avoided when possible. If you have some narrow corridors, at least don't put objects on the way.
+ 7)
+ In hallways, make sure to place enough food machines, drink machines, bins, hand sanitisers and entertainment items to take care of most basic needs and keep the university clean. In most rooms place a bin and a hand sanitiser. When the campus is doing well financially, you can also spread any other item (relationship, club and attractiveness) throughout the university.
+ 8)
+ If possible try to keep Dormitories, Student Lounges, Student Unions toward the center of the university along with enough items/rooms allowing students to take care of their needs without moving too far away during their free time.
+ 9)
+ Students happiness depends almost entirely on each gauge listed in the "Mood" tab (second tab from the left) when selecting any student. So to keep them as happy as possible just make sure to place items and build the necessary rooms to increase these gauges. Most of them are self-explanatory and there a lot of ways to get temporary happiness like organizing events or having the Comic Timing skill on some employees.
+
+Students aren't always good at taking care of themselves especially since they sometimes don't have much free time between classes. A good way to offset that is to increase attractiveness and room prestige which will passively help a lot with happiness. Once you have extra cash don't hesitate to add items that boost attractiveness and increase room prestige everywhere.
+
+Later having a medical office and/or a pastoral support room can help remove some of the nasty debuff students occasionally get. These rooms remain optional though but are still useful if you want to make/keep students happy.
+ 10)
+ At the end of each year in August, the Summer break is triggered. It's a period of time where students have free time, when teachers no longer work and when staff training is disabled. Note that this Summer break is endless and only ends when clicking on "Start New Year" at the top of the screen.
+
+If necessary, this is a good opportunity to let it run to give time for students to take care of their needs. During this time new applicants still show up so you can take your time if you need to recruit or replace employees.
+ 11)
+ The Lecture Theatre is a very important room in any campus because it's necessary for all courses. Once you have unlocked research, you should prioritize researching Lectern Upgrades. Then it's probably the best room worth upgrading first especially if there are several courses in your university.
+ 12)
+ Private Tuition room seems useful at first but it has a few issues making it not that great. First of all, students are often too busy to go there and even when manually sending students to the private tuition, the room is often idle or waiting for a queuing student. 
+
+It only takes care of 1 person at a time, it's a better investment to just upgrade machines in classrooms or train teachers working in these classrooms instead. Even if the room is always used, the xp gain of the student will barely cover the cost of the teacher's salary working there.
+ 13)
+ Regarding dormitories, no need to have 1 bed per student. In game, 1 bed supports up to 5 students. There is no need either to place multiple Dormitory rooms with only 1 or 2 beds inside each. It's usually better to have a big room with multiple beds inside since it's easier to increase the room prestige level in a big room than in a small room (I often use 7x3 or 10x3 tiles dormitories). Both the number of beds and room prestige level affect the accommodation rating and therefore the rent amount you get from them.
+ 14)
+ Unlike classrooms, the Student Lounge and Staff Room for example have a higher room capacity when they are bigger. If space isn't an issue, it's especially interesting to have bigger Student Union and Library rooms to allow them to support more students. It will reduce wage costs instead of having multiple of these rooms with 1 employee working in each of them.
+ 15)
+ It's recommended to assign employees to specific tasks. It can be done via the Job Assignment tab (fourth tab from the left) when selecting any employee. It's important for example to prevent your teaching employees from working in the research lab or your librarian from working in the Student Union room, etc.
+ 16)
+ The campus level usually slowly increases over time when you build your university, when students level up, when employees learn a new skill, etc. A fast way to quickly increase the campus level is to recruit a lot of employees, it can help for the last push to complete an "increase campus level" objective. Just make sure to fire the extra employees right after.
+
+Otherwise the best way is probably to place a 2x1 tiles bathroom and try to push it to level prestige 2 with windows and posters. Then just keep copying/pasting this room until the campus level increases. Obviously it can take a lot of place and it costs a good amount of money. You can just sell the rooms whenever you want anyway in case you need money back. Make sure to close these rooms if you don't want them to be used.
+
+## General tips - Part 2
+
+17)
+ Kudosh is a special currency used to unlock new items. You will earn a lot over time when completing objectives, getting awards, etc. What some players are missing is that a lot of Kudosh can be earned via the "Career Hub" menu that can be opened by clicking on the wallet icon at the top-right corner of the screen.
+
+When completing any of the career goals, it's necessary to open this career hub menu and manually claim the kudosh reward.
+ 18)
+ Placing items outdoor (especially clubs or relationship objects) to "force" students to go outside can be useful if you are always struggling with their healthiness. While outside characters slowly recover health over time. Note that you can get creative and not only place "outdoor" areas around the building but enclosed inside the building too like some kind of inner garden. It's especially useful in massive buildings when students have to walk a long time to get outside.
+ 19)
+ When selecting any of the club recruitment items, it's written in the tooltip that an assistant is required. Actually, it's entirely optional and I don't recommend having any assistant manage the club recruitment task at all.
+
+An assistant working at a club recruitment stand increases the chance for students to apply there instead of another club. This is very situational and could potentially be useful when a mission objective asks to get level 5 clubs. Other than that, make sure to always uncheck this task for all your assistants in the job assignment tab.
+ 20)
+ In the long term recruiting employees at level 1 and then training them is usually better to keep the wages cost low. The salary of employees having more than 1 skill or skills with multiple ranks during recruitment is much higher than if recruiting someone at level 1 and training them. 
+
+Here is an example :
+- A janitor in the recruitment pool with 1 Maintenance + 1 Mechanics has a salary for 34 700$
+- A janitor recruited with only 1 Maintenance and then trained to also have 1 Mechanics only has a salary of 27 000$ after the pay raise
+ 21)
+ Bonuses provided by items like "+1% Learning Power" stack. So it can be useful to place a few of them when possible. Placing for example 4 Brain Jars in a Training Room reduces the training duration by several days. Because of diminishing returns, more and more Brain Jars will be required to reduce the duration further. It's technically possible to reduce the training duration to less than 1 day. However, it would require a massive room with thousands of Brain Jars (somewhere around 2300 for level 1 skills) which would cost several millions.
+ 22)
+ If you want to reduce your janitors workload, use objects like posters and paintings instead of plants to increase attractiveness. Since those items don't need watering, your janitors can focus on other tasks.
+ 23)
+ It's possible to precisely rotate and move objects (without having it snap to the "grid") by holding left Ctrl key. You can also instantly create a copy of an item already placed in the campus by holding the left Ctrl key before clicking on it.
+ 24)
+ Moving the mouse cursor over an item and then pressing the Del key will sell it instantly. It's great to quickly reorganize a part of the campus.
+ 25)
+ You can instantly pick-up an employee from the staff list directly with a right-click. This way, you avoid making the camera automatically move to the employee when you first left-click to select the employee before clicking on the Pickup button.
+ 26)
+ The bonus from Items increasing learning and research only affects the rooms they are placed in and not all teaching/training/research rooms of the campus.
+
+## No pay raise strategy
+
+Surprisingly, it's possible to train employees at max level (3 level 10 skills) without increasing their salary and have no issue at all.
+[img]
+Happiness of these employees can temporarily go around 30% but not low enough to threaten to leave the campus. There is no major drawback which makes this "strategy" almost an exploit.
+
+Here is how to save a lot of money each month :
+- Make sure to recruit level 1 employees who have the cheapest skill. Employees with only Aerodynamics 1, Happy Thoughts 1 or Comic Timing 1 have a salary of only 17 750$.
+- Open the Policy tab in the Campus Overview menu and set the "Salary Review Timing" to "Never", this will deactivate the automatic pay raise system entirely.
+- Now you can just play and train your employees as much as you want without having their salary increase at all.
+
+The salary difference between the minimum and the expected salary when an employee only has a few low level skills is not that high (but still welcome early). However, with more skills it can be more than double. For example, here is the difference in the case of a janitor recruited at level 1 with Aerodynamics 1 and trained to have Aerodynamics, Maintenance and Security all at rank 10 :
+- Minimum salary = 17 750$
+- Expected salary = 38 675$
+
+In comparison recruiting employees that already have high level skills or more than one skill is very expensive. For example, a janitor with only Maintenance 1 and Security 1 costs 31 200$ which is insanely high compared to the 17 750$...
+
+Note that if for some reason reason you have issues with staff happiness while using the no pay raise strategy, there are a lot of solutions :
+- Obviously, first make sure they have everything they need in the campus to take care of their needs
+- Increase attractiveness everywhere in the campus (or at least everywhere they are working)
+- Add items in all rooms and hallways to increase room prestige level
+- In the policy tab, set the threshold for staff breaks higher (for example at +25 or +30%)
+- The ultimate solution would be to teach them the Happy Thoughts skill (to be honest I was expecting the skill to be mandatory for a no pay raise scenario to work)
+
+## Staff specialization
+
+In TPC, each employee can learn up to 3 qualifications/skills. The level of each of these skills can be increased up to 10. Obviously each of these qualifications can help make employees much more efficient. However, the main downside is that each time a training is completed, the trained employee will expect a higher salary. Training also takes time and costs money.
+
+As we saw in the "No pay raise strategy" chapter, it's entirely possible to never increase the salary of employees. In that case it's possible to give each employee 3 level 10 skills without worrying about extra monthly cost.
+
+Keep in mind it's overkill though and the game can easily be completed without having any skill higher than level 5. So skills I will recommend below will mostly be divided in 2. The "Ultimate" builds are only recommended if you don't raise the pay of your employees. The "Optimal" builds are the ones I would recommend if you let employees have pay raise and just want to complete main objectives.
+
+Regarding common skills, "Aerodynamics" increases movement speed. It can help employees move around faster but is mostly useful for janitors since they spend most of their time moving through the campus. For other employees, its effect is really marginal. It can be useful during breaks but they are usually very short. In the case of teachers they usually enter classrooms before students anyway so moving faster doesn't help that much.
+
+"Happy Thoughts" is rarely useful because currently happiness is never or very rarely an issue for employees. There are also a lot of other ways to improve happiness like adding items which will also affect students so this skill right now seems almost useless. It could have some hidden effects though so more tests are needed.
+
+"Comic Timing" has a chance to give a buff to students that boosts their entertainment and happiness so it can be useful especially when a mission objective is to keep students happy. Note that this skill doesn't seem to trigger in the library at all when an assistant has it.
+
+For all employees, specialization is important and in most cases they will be more efficient if they take care of only one specific task. There is no reason for example to have an assistant with Library Management work at the Student Union when another assistant can manage it instead.
+
+For teachers, leveling up the course qualification is very important as expected to improve their teaching skill stat. It's also necessary to have a course skill in order to research projects related to this specific course.
+
+Regarding the Private Tuition skill, it "only" increases the teaching skill by 5% per level while course skills increase it by 10% per rank. However, both skills stack so getting the Private Tuition skill after getting 10 level in the course skill can boost the teaching skill of your employee even further. It's also cheaper than course skills and if used with 2 course skills it's faster to level up this skill rather than the course skills.
+
+Teachers:
+
+ Jobs
+ Qualifications
+
+ All Class Rooms
+
+ Ultimate build :
+10 course skill + 10 Inspirational Speaking + 10 Comic Timing
+
+Optimal build :
+5 course skill
+
+ Private Tuition Room
+
+ Ultimate build :
+10 course skill + 10 Private Tuition + 10 Comic Timing
+
+Optimal build :
+5 course skill
+
+If the teacher isn't too busy and takes care of tuition for 2 courses
+Ultimate build :
+10 course skill + 10 Private Tuition + 10 other course skill 
+
+Optimal build :
+1 course skill + 5 Private Tuition + 1 other course skill
+
+ Research Room
+
+ Ultimate build :
+1 course skill + 10 Research (+ 1 other course skill)
+
+Optimal build :
+1 course skill + 5 Research (+ 1 other course skill)
+
+"Pastoral Care" and "First Aid" skills both speed up how long it takes to "cure" students. Without leveling these skills, it's a very long process and one of the reasons these rooms can have long queues sometimes.
+
+Assistants:
+
+ Jobs
+ Qualifications
+
+ Student Union
+Kiosks
+
+ Ultimate build :
+10 Comic Timing + 10 Aerodynamics + 10 Happy Thoughts
+
+Optimal build :
+5 Comic Timing
+
+ Library
+
+ Ultimate build :
+10 Aerodynamics + 10 Library Management + 10 Happy Thoughts
+
+Optimal build :
+5 Library Management
+
+ Medical Office
+
+ Ultimate build :
+10 Comic Timing + 10 First Aid + 10 Aerodynamics
+
+Optimal build :
+5 First Aid
+
+ Pastoral Support
+
+ Ultimate build :
+10 Comic Timing + 10 Pastoral Care + 10 Aerodynamics
+
+Optimal build :
+5 Pastoral Care
+
+ Marketing
+
+ Ultimate build :
+10 Aerodynamics + 10 Marketing + 10 Happy Thoughts
+
+Optimal build :
+5 Marketing
+
+"Security" can be leveled up because invaders have a level that seems to increase depending on the campus level. When "Security" level is lower than the level of an invader, there is a chance for the process to get rid of them to fail. In that case the janitor needs to start firing (watering ?) at the invader once again. I didn't test it extensively but that's what I observed so far. In some campus, there is no invader event at all so no need to teach security to janitors in this case.
+
+Because janitors don't depend on students or a fixed schedule at all, it's much easier to train them to higher levels.
+
+Janitors:
+
+ Jobs
+ Qualifications
+
+ Mechanic
+(1 or 2 per university) 
+
+ Ultimate build :
+10 Aerodynamics + 10 Mechanics + 10 Maintenance
+
+Optimal build :
+5 Mechanics
+
+ Maintenance and Security
+
+ Ultimate build :
+10 Aerodynamics + 10 Maintenance + 10 Security
+
+Optimal builds :
+5 Aerodynamics + 5 Maintenance
+5 Aerodynamics + 5 Security
+
+## What's the "Campus Capacity" ?
+
+The theoretical max Campus Capacity is 300 students.
+
+But why does the student intake get reduced when the campus is still far from having 300 students ? 
+[img][img]
+
+It's because the game anticipates the number of students when courses reach their max duration. For example, Scientography course has a duration of 3 years so if you set it during the first year to get 60 students it will eat from the max capacity : 60 students x 3 years = 180 students
+
+If you add for example another 3 years course like Robotics with 60 students, the max number of students will increase by 180 again and reach 360. It goes over the 300 students capacity so the game will display the red exclamation mark on the student intake number and tell you it will be reduced to avoid exceeding campus capacity.
+
+One of the issues however is that the UI doesn't properly refresh so the red exclamation mark may remain when changing the intake or suddenly appear even though you aren't yet at max capacity. To properly update the UI you usually need to press the "Confirm" button on the course management screen to close it then reopen it.
+
+That being said, it's still possible to get a bit more than 300 students for example after several years when you have all courses enabled in a campus. I am not sure if it's intended or if it's because of a rounding/calculation issue because courses don't have the same duration.
+
+## Campus buildable area
+
+In case you are looking for the biggest campus in the game, here is how many tiles there are in each mission. Note that it isn't 100% precise since doors take some space and some plots require more than one door. Some plots also don't allow to place a door "outside the plot area" so you need to remove at least 2 tiles to add a door. It's still accurate enough.
+
+Freshleigh Meadows
+ = 2 533 tiles
+Piazza Lanatra
+ = 6 392 tiles
+Mitton University
+ = 9 464 tiles
+Noblestead
+ = 6 673 tiles
+Spiffinmoore
+ = 5 205 tiles
+Fluffborough
+ = 4 998 tiles
+Pebberley Ruins
+ = 6 067 tiles
+Upper Etching
+ = 7 344 tiles
+Blundergrad
+ = 6 529 tiles
+Urban Bungle
+ = 6 349 tiles
+Breaking Point
+ = 4 994 tiles (+ some extra tiles outside on the beach)
+Two Point University
+ = 7 663 tiles
+
+Mitton University is the biggest campus by far and great as a sandbox. It has 9 plots but they are all connected so it's possible to have 1 giant single building if you want. Note however that if you play the mission in sandbox in Creative mode or in Custom mode with all plots unlocked as soon as the mission starts, you can't have a single building expanding in other plots for some reason. In this situation each plot acts as an independent plot that can't be "connected" which is annoying.
+
+Two Point University only has 1 plot so it doesn't suffer from this issue and has a big amount of tiles making it also a good sandbox campus.
+
+## Dear Campus Administrators
+
+This guide took a lot of time to research, experiment and to write so I hope it will help some of you. 
+
+If you spot any issue, do not hesitate to let me know in the comments below.
+Thanks for reading.
+
+Yours fragrantly,
+Freiya 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ 
+ } );
+
+ 
+ 
+ 
+ 34 Comments 
+ 
+ 
+
+ 
+
+ 
+ 
+ <
+ 
+ 
+ >
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ [img]
+ 
+ 
+
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ sir_chewie
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ May 13 @ 12:26pm 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ @Hurlevent
+To answer your question, the maximum teacher rating is dependent on that class's course level. It starts from max 3 at level one. Most of the times you raise your course level, it will also raise your max teaching level. To get your teachers to level to 5, you first need to level your course to 3. That'll take some course points. Which you'll achieve over time as your campus grows, as well as while your students learn.
+As an aside, when you raise your course level, you'll get more student applications. 5 per extra level, per year. You can easily go past your ability to accommodate them. If you correct for this by limiting your student intake, you'll only take in the best of them. The ones with higher academic ratings. This will greatly increase your average test scores. Though I'm not certain whether this will have an additive effect with your better teachers, or a multiplicative one. Either way, you won't need your tutors anymore. 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ Hurlevent
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Oct 23, 2025 @ 4:34am 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ I got an issue, in the campaign with the musical faculty.
+I can't rise teachers above lvl 3 or 4 In music (and I need it to gain a star)
+I don't understand the reason why?
+Thx everybody 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ [img]
+ 
+ 
+
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ baby无耻
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Jul 16, 2025 @ 8:27am 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ okok 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ LeniGirl08
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ May 7, 2025 @ 9:42pm 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ Thank you for this guide. 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ [img]
+ 
+ 
+
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ Nikan
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Apr 16, 2025 @ 11:52pm 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ Excellent guide! Thanks. [img] 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ [img]
+ 
+ 
+
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ Roger
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Mar 21, 2025 @ 2:59am 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ Very good guide thank you so much 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ [img]
+ 
+ 
+
+ 
+ 
+ 
+ [img]
+ 
+ 
+ 
+
+ 
+ 
+ 
+ Gabriel
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Feb 9, 2025 @ 6:45pm 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ Thanks for the time and effort on this. Especially the dorm tip. I didn't have a bunch of 4x4's or anything but I was using up more space than needed on them. [img] 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ [img]
+ 
+ 
+
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ Lights0ut04
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Feb 9, 2025 @ 7:16am 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ tyvm for all your time and efforts to put this together. Great tips - it helped me make sense of a few things and explained a few others to an understanding level. 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ Inshallah boys throw well
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Nov 3, 2024 @ 1:01am 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ Is this still up to date. I'm trying to understand TPC after coming from TPH wondering whether I should consult this or not. Things like assistant not triggering comedy timing in library is still unfixed to this day? 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+ 
+ 
+ 
+ [img] 
+ 
+
+ 
+ 
+ 
+ hooligansunited19
+
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+ Oct 17, 2024 @ 5:38pm 
+ 
+
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+ Nice work! Thank you. 
+
+ 
+ 
+
+ 
+ 
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ 
+ <
+ 
+ 
+ >
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ [img]
+
+ [img]
+
+ 
+
+ 
+
+ 
+ 
+ Share to your Steam activity feed
+ 
+ 
+ [img]
+
+ [img]
+
+ [img]
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ 
+ Link: 
+ 
+ 
+
+ 
+ 
+ 
+ You need to sign in or create an account to do that.
+
+ 
+ Sign In
+ Create an Account
+ Cancel
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+ [img]
+
+ 
+
+ 
+ 
+ 
+ function UpdateKVTagsSingle()
+ {
+ $('PromptModalForm').submit();
+ }
+ 
+ 
+ 
+ 
+
+ 
+ 
+
+ 
+
+ 
+
+ 
+ 
+
+ Update
+
+ 
+
+ 
+ 
+
+ 
+
+ 
+ 
+
+ 
+ RecordAppImpression( 1649080, '2_100100_100101_100106' );

@@ -1,0 +1,383 @@
+{"subjectKind": "course", "subjectName": "Archaeology", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Pebberley Ruins", "sourcePage": "Archaeology"}
+{"subjectKind": "course", "subjectName": "Archaeology", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Computer Lab", "sourcePage": "Archaeology"}
+{"subjectKind": "course", "subjectName": "Archaeology", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Dig Site", "sourcePage": "Archaeology"}
+{"subjectKind": "course", "subjectName": "Archaeology", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Archaeology"}
+{"subjectKind": "course", "subjectName": "Archaeology", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Science Lab", "sourcePage": "Archaeology"}
+{"subjectKind": "course", "subjectName": "Archaeology", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Archaeologist", "sourcePage": "Archaeology"}
+{"subjectKind": "course", "subjectName": "Archaeology", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Hard]", "sourcePage": "Archaeology"}
+{"subjectKind": "course", "subjectName": "Archaeology", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "3 Years]", "sourcePage": "Archaeology"}
+{"subjectKind": "course", "subjectName": "Dark Art", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Spiffinmoore", "sourcePage": "Dark Art"}
+{"subjectKind": "course", "subjectName": "Dark Art", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Dark Art"}
+{"subjectKind": "course", "subjectName": "Dark Art", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Potions Room", "sourcePage": "Dark Art"}
+{"subjectKind": "course", "subjectName": "Dark Art", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Goth", "sourcePage": "Dark Art"}
+{"subjectKind": "course", "subjectName": "Dark Art", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Hard]", "sourcePage": "Dark Art"}
+{"subjectKind": "course", "subjectName": "Dark Art", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "2 Years]", "sourcePage": "Dark Art"}
+{"subjectKind": "course", "subjectName": "Funny Business", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Piazza Lanatra", "sourcePage": "Funny Business"}
+{"subjectKind": "course", "subjectName": "Funny Business", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Funny Business"}
+{"subjectKind": "course", "subjectName": "Funny Business", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Science Lab", "sourcePage": "Funny Business"}
+{"subjectKind": "course", "subjectName": "Funny Business", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Class Clown", "sourcePage": "Funny Business"}
+{"subjectKind": "course", "subjectName": "Funny Business", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Medium]", "sourcePage": "Funny Business"}
+{"subjectKind": "course", "subjectName": "Funny Business", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "2 Years]", "sourcePage": "Funny Business"}
+{"subjectKind": "course", "subjectName": "Gastronomy", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Piazza Lanatra", "sourcePage": "Gastronomy"}
+{"subjectKind": "course", "subjectName": "Gastronomy", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Gastronomy"}
+{"subjectKind": "course", "subjectName": "Gastronomy", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Savoury Kitchen", "sourcePage": "Gastronomy"}
+{"subjectKind": "course", "subjectName": "Gastronomy", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Science Lab", "sourcePage": "Gastronomy"}
+{"subjectKind": "course", "subjectName": "Gastronomy", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Sweet Kitchen", "sourcePage": "Gastronomy"}
+{"subjectKind": "course", "subjectName": "Gastronomy", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Chef", "sourcePage": "Gastronomy"}
+{"subjectKind": "course", "subjectName": "Gastronomy", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Medium]", "sourcePage": "Gastronomy"}
+{"subjectKind": "course", "subjectName": "Gastronomy", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "3 Years]", "sourcePage": "Gastronomy"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Mitton University", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Class Clown", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Goth", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Neutral", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Rebel", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Swot", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Posho", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Easy]", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "General Knowledge", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "1 Year]", "sourcePage": "General Knowledge"}
+{"subjectKind": "course", "subjectName": "Knight School", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Noblestead", "sourcePage": "Knight School"}
+{"subjectKind": "course", "subjectName": "Knight School", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Battle Ground", "sourcePage": "Knight School"}
+{"subjectKind": "course", "subjectName": "Knight School", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Jousting Field", "sourcePage": "Knight School"}
+{"subjectKind": "course", "subjectName": "Knight School", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Knight School"}
+{"subjectKind": "course", "subjectName": "Knight School", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Knight", "sourcePage": "Knight School"}
+{"subjectKind": "course", "subjectName": "Knight School", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Medium]", "sourcePage": "Knight School"}
+{"subjectKind": "course", "subjectName": "Knight School", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "3 Years]", "sourcePage": "Knight School"}
+{"subjectKind": "course", "subjectName": "Money Wangling", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Noblestead", "sourcePage": "Money Wangling"}
+{"subjectKind": "course", "subjectName": "Money Wangling", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Computer Lab", "sourcePage": "Money Wangling"}
+{"subjectKind": "course", "subjectName": "Money Wangling", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Money Wangling"}
+{"subjectKind": "course", "subjectName": "Money Wangling", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Posho", "sourcePage": "Money Wangling"}
+{"subjectKind": "course", "subjectName": "Money Wangling", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Hard]", "sourcePage": "Money Wangling"}
+{"subjectKind": "course", "subjectName": "Money Wangling", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "2 Years]", "sourcePage": "Money Wangling"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Upper Etching", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Computer Lab", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Recording Studio", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Musician", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Dancer", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Goth", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Rebel", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Class Clown", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Hard]", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Musicality", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "3 Years]", "sourcePage": "Musicality"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Mitton University", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Robo Construction", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Robo Design", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Cyborg", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Swot", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Neutral", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Goth", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Posho", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Rebel", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Medium]", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Robotics", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "3 Years]", "sourcePage": "Robotics"}
+{"subjectKind": "course", "subjectName": "Spy School", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Blundergrad", "sourcePage": "Spy School"}
+{"subjectKind": "course", "subjectName": "Spy School", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Computer Lab", "sourcePage": "Spy School"}
+{"subjectKind": "course", "subjectName": "Spy School", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Gadget Lab", "sourcePage": "Spy School"}
+{"subjectKind": "course", "subjectName": "Spy School", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Spy School"}
+{"subjectKind": "course", "subjectName": "Spy School", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Panic Room", "sourcePage": "Spy School"}
+{"subjectKind": "course", "subjectName": "Spy School", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Spy", "sourcePage": "Spy School"}
+{"subjectKind": "course", "subjectName": "Spy School", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Hard]", "sourcePage": "Spy School"}
+{"subjectKind": "course", "subjectName": "Spy School", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "3 Years]", "sourcePage": "Spy School"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Freshleigh Meadows", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "requires-room", "objectKind": "room", "objectName": "VR Lab", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Class Clown", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Goth", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Neutral", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Rebel", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Swot", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Posho", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Medium]", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Virtual Normality", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "3 Years]", "sourcePage": "Virtual Normality"}
+{"subjectKind": "course", "subjectName": "Wizardry", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Spiffinmoore", "sourcePage": "Wizardry"}
+{"subjectKind": "course", "subjectName": "Wizardry", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Wizardry"}
+{"subjectKind": "course", "subjectName": "Wizardry", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Potions Room", "sourcePage": "Wizardry"}
+{"subjectKind": "course", "subjectName": "Wizardry", "relationVerb": "requires-room", "objectKind": "room", "objectName": "Spells Room", "sourcePage": "Wizardry"}
+{"subjectKind": "course", "subjectName": "Wizardry", "relationVerb": "enrolls-archetype", "objectKind": "archetype", "objectName": "Wizard", "sourcePage": "Wizardry"}
+{"subjectKind": "course", "subjectName": "Wizardry", "relationVerb": "classified-difficulty", "objectKind": "difficulty-class", "objectName": "Hard]", "sourcePage": "Wizardry"}
+{"subjectKind": "course", "subjectName": "Wizardry", "relationVerb": "classified-duration", "objectKind": "duration-class", "objectName": "3 Years]", "sourcePage": "Wizardry"}
+{"subjectKind": "room", "subjectName": "Bathroom", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Accommodation", "sourcePage": "Bathroom"}
+{"subjectKind": "room", "subjectName": "Bathroom", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Bathroom"}
+{"subjectKind": "room", "subjectName": "Bathroom", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "6100", "sourcePage": "Bathroom"}
+{"subjectKind": "room", "subjectName": "Bathroom", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "2x1", "sourcePage": "Bathroom"}
+{"subjectKind": "room", "subjectName": "Computer Lab", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Teacher", "sourcePage": "Computer Lab"}
+{"subjectKind": "room", "subjectName": "Computer Lab", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Computer Lab"}
+{"subjectKind": "room", "subjectName": "Computer Lab", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Mitton University", "sourcePage": "Computer Lab"}
+{"subjectKind": "room", "subjectName": "Computer Lab", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Computer Lab"}
+{"subjectKind": "room", "subjectName": "Computer Lab", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Computer Lab"}
+{"subjectKind": "room", "subjectName": "Computer Lab", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "26700", "sourcePage": "Computer Lab"}
+{"subjectKind": "room", "subjectName": "Computer Lab", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "4x4", "sourcePage": "Computer Lab"}
+{"subjectKind": "room", "subjectName": "Dormitory", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Accommodation", "sourcePage": "Dormitory"}
+{"subjectKind": "room", "subjectName": "Dormitory", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Dormitory"}
+{"subjectKind": "room", "subjectName": "Dormitory", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "7800", "sourcePage": "Dormitory"}
+{"subjectKind": "room", "subjectName": "Dormitory", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "2x2", "sourcePage": "Dormitory"}
+{"subjectKind": "room", "subjectName": "Gadget Lab", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Gadget Lab"}
+{"subjectKind": "room", "subjectName": "Gadget Lab", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Gadget Lab"}
+{"subjectKind": "room", "subjectName": "Gadget Lab", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Gadget Lab"}
+{"subjectKind": "room", "subjectName": "Gadget Lab", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "30100", "sourcePage": "Gadget Lab"}
+{"subjectKind": "room", "subjectName": "Gadget Lab", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "6x5", "sourcePage": "Gadget Lab"}
+{"subjectKind": "room", "subjectName": "Gym", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Teacher", "sourcePage": "Gym"}
+{"subjectKind": "room", "subjectName": "Gym", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Gym"}
+{"subjectKind": "room", "subjectName": "Gym", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Gym"}
+{"subjectKind": "room", "subjectName": "Gym", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Gym"}
+{"subjectKind": "room", "subjectName": "Gym", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "9100", "sourcePage": "Gym"}
+{"subjectKind": "room", "subjectName": "Gym", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "4x3", "sourcePage": "Gym"}
+{"subjectKind": "room", "subjectName": "Lecture Theatre", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Teacher", "sourcePage": "Lecture Theatre"}
+{"subjectKind": "room", "subjectName": "Lecture Theatre", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Lecture Theatre"}
+{"subjectKind": "room", "subjectName": "Lecture Theatre", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Lecture Theatre"}
+{"subjectKind": "room", "subjectName": "Lecture Theatre", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Lecture Theatre"}
+{"subjectKind": "room", "subjectName": "Lecture Theatre", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "21300", "sourcePage": "Lecture Theatre"}
+{"subjectKind": "room", "subjectName": "Lecture Theatre", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "4x4", "sourcePage": "Lecture Theatre"}
+{"subjectKind": "room", "subjectName": "Library", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Assistant", "sourcePage": "Library"}
+{"subjectKind": "room", "subjectName": "Library", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Library"}
+{"subjectKind": "room", "subjectName": "Library", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Library"}
+{"subjectKind": "room", "subjectName": "Library", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "5000", "sourcePage": "Library"}
+{"subjectKind": "room", "subjectName": "Library", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "3x3", "sourcePage": "Library"}
+{"subjectKind": "room", "subjectName": "Potions Room", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Teacher", "sourcePage": "Potions Room"}
+{"subjectKind": "room", "subjectName": "Potions Room", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Potions Room"}
+{"subjectKind": "room", "subjectName": "Potions Room", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Potions Room"}
+{"subjectKind": "room", "subjectName": "Potions Room", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Potions Room"}
+{"subjectKind": "room", "subjectName": "Potions Room", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "16100", "sourcePage": "Potions Room"}
+{"subjectKind": "room", "subjectName": "Potions Room", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "6x6", "sourcePage": "Potions Room"}
+{"subjectKind": "room", "subjectName": "Recording Studio", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Recording Studio"}
+{"subjectKind": "room", "subjectName": "Recording Studio", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Recording Studio"}
+{"subjectKind": "room", "subjectName": "Recording Studio", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Recording Studio"}
+{"subjectKind": "room", "subjectName": "Recording Studio", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "11600", "sourcePage": "Recording Studio"}
+{"subjectKind": "room", "subjectName": "Recording Studio", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "4x4", "sourcePage": "Recording Studio"}
+{"subjectKind": "room", "subjectName": "Research Lab", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Teacher", "sourcePage": "Research Lab"}
+{"subjectKind": "room", "subjectName": "Research Lab", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Facility", "sourcePage": "Research Lab"}
+{"subjectKind": "room", "subjectName": "Research Lab", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Research Lab"}
+{"subjectKind": "room", "subjectName": "Research Lab", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "40100", "sourcePage": "Research Lab"}
+{"subjectKind": "room", "subjectName": "Research Lab", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "4x4", "sourcePage": "Research Lab"}
+{"subjectKind": "room", "subjectName": "Savoury Kitchen", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Savoury Kitchen"}
+{"subjectKind": "room", "subjectName": "Savoury Kitchen", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Savoury Kitchen"}
+{"subjectKind": "room", "subjectName": "Savoury Kitchen", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Savoury Kitchen"}
+{"subjectKind": "room", "subjectName": "Savoury Kitchen", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "30100", "sourcePage": "Savoury Kitchen"}
+{"subjectKind": "room", "subjectName": "Savoury Kitchen", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "6x6", "sourcePage": "Savoury Kitchen"}
+{"subjectKind": "room", "subjectName": "Science Lab", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Teacher", "sourcePage": "Science Lab"}
+{"subjectKind": "room", "subjectName": "Science Lab", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Science Lab"}
+{"subjectKind": "room", "subjectName": "Science Lab", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Science Lab"}
+{"subjectKind": "room", "subjectName": "Science Lab", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Science Lab"}
+{"subjectKind": "room", "subjectName": "Science Lab", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "18200", "sourcePage": "Science Lab"}
+{"subjectKind": "room", "subjectName": "Science Lab", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "5x5", "sourcePage": "Science Lab"}
+{"subjectKind": "room", "subjectName": "Spells Room", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Teacher", "sourcePage": "Spells Room"}
+{"subjectKind": "room", "subjectName": "Spells Room", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Spells Room"}
+{"subjectKind": "room", "subjectName": "Spells Room", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Spells Room"}
+{"subjectKind": "room", "subjectName": "Spells Room", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Spells Room"}
+{"subjectKind": "room", "subjectName": "Spells Room", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "15600", "sourcePage": "Spells Room"}
+{"subjectKind": "room", "subjectName": "Spells Room", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "6x6", "sourcePage": "Spells Room"}
+{"subjectKind": "room", "subjectName": "Staff Room", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Teacher", "sourcePage": "Staff Room"}
+{"subjectKind": "room", "subjectName": "Staff Room", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Assistant", "sourcePage": "Staff Room"}
+{"subjectKind": "room", "subjectName": "Staff Room", "relationVerb": "staffed-by", "objectKind": "staff-kind", "objectName": "Janitor", "sourcePage": "Staff Room"}
+{"subjectKind": "room", "subjectName": "Staff Room", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Facility", "sourcePage": "Staff Room"}
+{"subjectKind": "room", "subjectName": "Staff Room", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Staff Room"}
+{"subjectKind": "room", "subjectName": "Staff Room", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "5100", "sourcePage": "Staff Room"}
+{"subjectKind": "room", "subjectName": "Staff Room", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "3x2", "sourcePage": "Staff Room"}
+{"subjectKind": "room", "subjectName": "Student Lounge", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Accommodation", "sourcePage": "Student Lounge"}
+{"subjectKind": "room", "subjectName": "Student Lounge", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Student Lounge"}
+{"subjectKind": "room", "subjectName": "Student Lounge", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "5100", "sourcePage": "Student Lounge"}
+{"subjectKind": "room", "subjectName": "Student Lounge", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "3x3", "sourcePage": "Student Lounge"}
+{"subjectKind": "room", "subjectName": "Sweet Kitchen", "relationVerb": "capacity-students", "objectKind": "count", "objectName": "8", "cardinalityClaim": "max 8 students per room", "sourcePage": "Sweet Kitchen"}
+{"subjectKind": "room", "subjectName": "Sweet Kitchen", "relationVerb": "classified-type", "objectKind": "room-class", "objectName": "Academic", "sourcePage": "Sweet Kitchen"}
+{"subjectKind": "room", "subjectName": "Sweet Kitchen", "relationVerb": "classified-placement", "objectKind": "placement-class", "objectName": "Interior Rooms", "sourcePage": "Sweet Kitchen"}
+{"subjectKind": "room", "subjectName": "Sweet Kitchen", "relationVerb": "base-price-money", "objectKind": "cost", "objectName": "35100", "sourcePage": "Sweet Kitchen"}
+{"subjectKind": "room", "subjectName": "Sweet Kitchen", "relationVerb": "minimum-size-tiles", "objectKind": "size", "objectName": "6x5", "sourcePage": "Sweet Kitchen"}
+{"subjectKind": "item", "subjectName": "2-Player Arcade Table", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Lounge", "sourcePage": "2-Player Arcade Table"}
+{"subjectKind": "item", "subjectName": "2-Player Arcade Table", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Union", "sourcePage": "2-Player Arcade Table"}
+{"subjectKind": "item", "subjectName": "2-Player Arcade Table", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Entertainment", "sourcePage": "2-Player Arcade Table"}
+{"subjectKind": "item", "subjectName": "2-Player Arcade Table", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "100", "sourcePage": "2-Player Arcade Table"}
+{"subjectKind": "item", "subjectName": "2-Player Arcade Table", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "1500", "sourcePage": "2-Player Arcade Table"}
+{"subjectKind": "item", "subjectName": "Alchemy Shelves", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Potions Room", "sourcePage": "Alchemy Shelves"}
+{"subjectKind": "item", "subjectName": "Alchemy Shelves", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "25", "sourcePage": "Alchemy Shelves"}
+{"subjectKind": "item", "subjectName": "Alchemy Shelves", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "2000", "sourcePage": "Alchemy Shelves"}
+{"subjectKind": "assignment", "subjectName": "Health Potions (Alchemy Shelves item)", "relationVerb": "used-in-course", "objectKind": "course", "objectName": "Wizardry", "notes": "assignment satisfied by Alchemy Shelves", "sourcePage": "Alchemy Shelves"}
+{"subjectKind": "item", "subjectName": "Chat Zone", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Pastoral Support", "sourcePage": "Chat Zone"}
+{"subjectKind": "item", "subjectName": "Chat Zone", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "3500", "sourcePage": "Chat Zone"}
+{"subjectKind": "item", "subjectName": "Experiment Station", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Science Lab", "sourcePage": "Experiment Station"}
+{"subjectKind": "item", "subjectName": "Experiment Station", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "15", "sourcePage": "Experiment Station"}
+{"subjectKind": "item", "subjectName": "Experiment Station", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "3500", "sourcePage": "Experiment Station"}
+{"subjectKind": "assignment", "subjectName": "Scientific Procedure (Experiment Station item)", "relationVerb": "used-in-course", "objectKind": "course", "objectName": "Scientography", "notes": "assignment satisfied by Experiment Station", "sourcePage": "Experiment Station"}
+{"subjectKind": "item", "subjectName": "Ferris Wheel", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Outside", "sourcePage": "Ferris Wheel"}
+{"subjectKind": "item", "subjectName": "Ferris Wheel", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "50", "sourcePage": "Ferris Wheel"}
+{"subjectKind": "item", "subjectName": "Ferris Wheel", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "4000", "sourcePage": "Ferris Wheel"}
+{"subjectKind": "item", "subjectName": "Festive Tent", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Jousting Field", "sourcePage": "Festive Tent"}
+{"subjectKind": "item", "subjectName": "Festive Tent", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "8000", "sourcePage": "Festive Tent"}
+{"subjectKind": "assignment", "subjectName": "Playing with Sticks (Festive Tent item)", "relationVerb": "used-in-course", "objectKind": "course", "objectName": "Knight School", "notes": "assignment satisfied by Festive Tent", "sourcePage": "Festive Tent"}
+{"subjectKind": "item", "subjectName": "Jobsworth Bust", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Library", "sourcePage": "Jobsworth Bust"}
+{"subjectKind": "item", "subjectName": "Jobsworth Bust", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Attractiveness", "sourcePage": "Jobsworth Bust"}
+{"subjectKind": "item", "subjectName": "Jobsworth Bust", "relationVerb": "unlocked-at", "objectKind": "campus-or-source", "objectName": "Two Point University", "sourcePage": "Jobsworth Bust"}
+{"subjectKind": "item", "subjectName": "Jobsworth Bust", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "4000", "sourcePage": "Jobsworth Bust"}
+{"subjectKind": "item", "subjectName": "Jousting Track", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Jousting Field", "sourcePage": "Jousting Track"}
+{"subjectKind": "item", "subjectName": "Jousting Track", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Needs Maintaining", "sourcePage": "Jousting Track"}
+{"subjectKind": "item", "subjectName": "Jousting Track", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "15000", "sourcePage": "Jousting Track"}
+{"subjectKind": "assignment", "subjectName": "Playing with Sticks (Jousting Track item)", "relationVerb": "used-in-course", "objectKind": "course", "objectName": "Knight School", "notes": "assignment satisfied by Jousting Track", "sourcePage": "Jousting Track"}
+{"subjectKind": "item", "subjectName": "Kitchen Counter", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Lounge", "sourcePage": "Kitchen Counter"}
+{"subjectKind": "item", "subjectName": "Kitchen Counter", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "275", "sourcePage": "Kitchen Counter"}
+{"subjectKind": "item", "subjectName": "Knight School Bookcase", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Library", "sourcePage": "Knight School Bookcase"}
+{"subjectKind": "item", "subjectName": "Knight School Bookcase", "relationVerb": "grants-power", "objectKind": "power-axis", "objectName": "Learning Power", "cardinalityClaim": "Learning Power +5%", "sourcePage": "Knight School Bookcase"}
+{"subjectKind": "item", "subjectName": "Knight School Bookcase", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Needs Maintaining", "sourcePage": "Knight School Bookcase"}
+{"subjectKind": "item", "subjectName": "Knight School Bookcase", "relationVerb": "unlocked-at", "objectKind": "campus-or-source", "objectName": "Noblestead", "sourcePage": "Knight School Bookcase"}
+{"subjectKind": "item", "subjectName": "Knight School Bookcase", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "100", "sourcePage": "Knight School Bookcase"}
+{"subjectKind": "item", "subjectName": "Knight School Bookcase", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "6000", "sourcePage": "Knight School Bookcase"}
+{"subjectKind": "item", "subjectName": "Omni-Cure", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Medical Office", "sourcePage": "Omni-Cure"}
+{"subjectKind": "item", "subjectName": "Omni-Cure", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Needs Maintaining", "sourcePage": "Omni-Cure"}
+{"subjectKind": "item", "subjectName": "Omni-Cure", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "20000", "sourcePage": "Omni-Cure"}
+{"subjectKind": "item", "subjectName": "Orb Club Stand", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Union", "sourcePage": "Orb Club Stand"}
+{"subjectKind": "item", "subjectName": "Orb Club Stand", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Campus Building", "sourcePage": "Orb Club Stand"}
+{"subjectKind": "item", "subjectName": "Orb Club Stand", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Outside", "sourcePage": "Orb Club Stand"}
+{"subjectKind": "item", "subjectName": "Orb Club Stand", "relationVerb": "reduces-need-axis", "objectKind": "need-axis", "objectName": "Happiness", "sourcePage": "Orb Club Stand"}
+{"subjectKind": "item", "subjectName": "Orb Club Stand", "relationVerb": "provides-income", "objectKind": "mechanic", "objectName": "Money over time", "sourcePage": "Orb Club Stand"}
+{"subjectKind": "item", "subjectName": "Orb Club Stand", "relationVerb": "recruits-for", "objectKind": "club", "objectName": ":Category:Orb Club", "sourcePage": "Orb Club Stand"}
+{"subjectKind": "item", "subjectName": "Orb Club Stand", "relationVerb": "unlocked-at", "objectKind": "campus-or-source", "objectName": "Upper Etching", "sourcePage": "Orb Club Stand"}
+{"subjectKind": "item", "subjectName": "Orb Club Stand", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "2000", "sourcePage": "Orb Club Stand"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Anti-Gravity Chamber", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Bathroom", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Battle Space", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Command Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Computer Lab", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Creamatorium", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Detection Office", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Dormitory", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Gadget Lab", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Ghost Storage", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Gym", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Head Clinic", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Injection Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Library", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Living Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Marketing Office", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Medical Office", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Panic Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Pastoral Support", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Potions Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Private Tuition Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Psychiatry", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Recording Studio", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Research Lab", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Robo Construction", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Robo Design", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Rocket Lab", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Savoury Kitchen", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Science Lab", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Shower Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Spells Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Staff Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Lounge", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Union", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Surgery", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Sweet Kitchen", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Thumping Therapy", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Training Room", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "VR Lab", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Ward", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Campus Building", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "30", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Partition Wall", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "500", "sourcePage": "Partition Wall"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Anti-Gravity Chamber", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Battle Space", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Command Room", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Computer Lab", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Creamatorium", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Detection Office", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Dormitory", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Gadget Lab", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Ghost Storage", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Gym", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Library", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Living Room", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Panic Room", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Potions Room", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Recording Studio", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Robo Construction", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Robo Design", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Savoury Kitchen", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Science Lab", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Spells Room", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Lounge", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Union", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Sweet Kitchen", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "VR Lab", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Campus Building", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Attractiveness", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "10", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Roderick Poster", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "100", "sourcePage": "Roderick Poster"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Computer Lab", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Dormitory", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Lecture Theatre", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Library", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Medical Office", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Pastoral Support", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Private Tuition Room", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Staff Room", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Lounge", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Union", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Training Room", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Campus Building", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Attractiveness", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "100", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Rose Bouquet", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "500", "sourcePage": "Rose Bouquet"}
+{"subjectKind": "item", "subjectName": "Study Cubicle", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Library", "sourcePage": "Study Cubicle"}
+{"subjectKind": "item", "subjectName": "Study Cubicle", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "300", "sourcePage": "Study Cubicle"}
+{"subjectKind": "item", "subjectName": "Super Computer", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Computer Lab", "sourcePage": "Super Computer"}
+{"subjectKind": "item", "subjectName": "Super Computer", "relationVerb": "grants-power", "objectKind": "power-axis", "objectName": "Learning Power", "cardinalityClaim": "Learning Power +10%", "sourcePage": "Super Computer"}
+{"subjectKind": "item", "subjectName": "Super Computer", "relationVerb": "unlocked-by-research", "objectKind": "research-project", "objectName": "Super Computer", "sourcePage": "Super Computer"}
+{"subjectKind": "item", "subjectName": "Super Computer", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "50000", "sourcePage": "Super Computer"}
+{"subjectKind": "assignment", "subjectName": "Technology of Tomorrow (Super Computer item)", "relationVerb": "used-in-course", "objectKind": "course", "objectName": "Internet History", "notes": "assignment satisfied by Super Computer", "sourcePage": "Super Computer"}
+{"subjectKind": "assignment", "subjectName": "Asset Management (Super Computer item)", "relationVerb": "used-in-course", "objectKind": "course", "objectName": "Money Wangling", "notes": "assignment satisfied by Super Computer", "sourcePage": "Super Computer"}
+{"subjectKind": "assignment", "subjectName": "Manual Auto-Tuning (Super Computer item)", "relationVerb": "used-in-course", "objectKind": "course", "objectName": "Musicality", "notes": "assignment satisfied by Super Computer", "sourcePage": "Super Computer"}
+{"subjectKind": "item", "subjectName": "Winter Kiosk", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Campus Building", "sourcePage": "Winter Kiosk"}
+{"subjectKind": "item", "subjectName": "Winter Kiosk", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Outside", "sourcePage": "Winter Kiosk"}
+{"subjectKind": "item", "subjectName": "Winter Kiosk", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Food", "sourcePage": "Winter Kiosk"}
+{"subjectKind": "item", "subjectName": "Winter Kiosk", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Healthiness", "sourcePage": "Winter Kiosk"}
+{"subjectKind": "item", "subjectName": "Winter Kiosk", "relationVerb": "reduces-need-axis", "objectKind": "need-axis", "objectName": "Toilet Comfort", "sourcePage": "Winter Kiosk"}
+{"subjectKind": "item", "subjectName": "Winter Kiosk", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "100", "sourcePage": "Winter Kiosk"}
+{"subjectKind": "item", "subjectName": "Winter Kiosk", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "1200", "sourcePage": "Winter Kiosk"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Dormitory", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Lounge", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Student Union", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Campus Building", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "placed-in", "objectKind": "room", "objectName": "Outside", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Entertainment", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "raises-need-axis", "objectKind": "need-axis", "objectName": "Attractiveness", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "purchasable-kudosh", "objectKind": "cost", "objectName": "15", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "item", "subjectName": "Wizard's Owl", "relationVerb": "purchase-price-money", "objectKind": "cost", "objectName": "300", "sourcePage": "Wizard's Owl"}
+{"subjectKind": "archetype", "subjectName": "Chef", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Nibbler", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Chef", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Comfort Baker", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Class Clown", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Laughing Matters", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Goth", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Dark Aura", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Jock", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Fun Runner", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Musician", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Busker", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Posho", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Big Tipper", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Rebel", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Sharpest Tool", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Spy", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Secret Sources", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Swot", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Wise Words", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Wizard", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Wicked", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Wizard", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Magic Touch", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Astronaut", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "En-Suit", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Space Cadet", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Beam Up", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Cheese-Moonger", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Cheesy Fragrance", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Ghost Detector", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Suck-Up", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Free Spirit", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Ghost Goo", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Free Spirit", "relationVerb": "carries-trait", "objectKind": "trait", "objectName": "Intangible", "notes": "trait description states its behavioural effect", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Alien", "relationVerb": "grouped-under", "objectKind": "content-axis", "objectName": "Space Academy DLC", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Astronaut", "relationVerb": "grouped-under", "objectKind": "content-axis", "objectName": "Space Academy DLC", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Space-Knight", "relationVerb": "grouped-under", "objectKind": "content-axis", "objectName": "Space Academy DLC", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Ghost Detector", "relationVerb": "grouped-under", "objectKind": "content-axis", "objectName": "School Spirits DLC", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Doctor", "relationVerb": "grouped-under", "objectKind": "content-axis", "objectName": "Medical School DLC", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Nurse", "relationVerb": "grouped-under", "objectKind": "content-axis", "objectName": "Medical School DLC", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Blaggard Knight", "relationVerb": "grouped-under", "objectKind": "content-axis", "objectName": "Challenge Mode", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "archetype", "subjectName": "Egg Hunter", "relationVerb": "grouped-under", "objectKind": "content-axis", "objectName": "Challenge Mode", "sourcePage": "Archetypes (fandom/wikitext-A-templates-staff.json)"}
+{"subjectKind": "event", "subjectName": "*", "relationVerb": "hosted-in", "objectKind": "room", "objectName": "(varies by room)", "notes": "\"Different Rooms can host different events, and some events may require specific Items\"", "sourcePage": "Events (fandom/wikitext-F-hubs.json)"}
+{"subjectKind": "event", "subjectName": "Campus Cook Off", "relationVerb": "unlocked-at", "objectKind": "campus", "objectName": "Piazza Lanatra", "sourcePage": "Events (fandom/wikitext-F-hubs.json)"}
+{"subjectKind": "event", "subjectName": "Campus Cook Off", "relationVerb": "requires-course-level", "objectKind": "course", "objectName": "Gastronomy Course Level 1 + 3 Gastronomy Students", "cardinalityClaim": "course Level 1 gate", "sourcePage": "Events (fandom/wikitext-F-hubs.json)"}
+{"subjectKind": "event", "subjectName": "Campus Cook Off", "relationVerb": "rewards-currency", "objectKind": "cost", "objectName": "2,000 money + 4 Kudosh", "sourcePage": "Events (fandom/wikitext-F-hubs.json)"}
+{"subjectKind": "research-project", "subjectName": "*", "relationVerb": "performed-in", "objectKind": "room", "objectName": "Research Lab", "notes": "research carried out by Teachers; speed scales with Research Power items", "sourcePage": "Research (fandom/wikitext-F-hubs.json)"}
+{"subjectKind": "research-project", "subjectName": "Lectern Upgrade", "relationVerb": "grants-upgrade", "objectKind": "item", "objectName": "Lectern (Lecture Theatre)", "notes": "community priority research", "sourcePage": "Research (fandom/wikitext-F-hubs.json)"}
+{"subjectKind": "research-project", "subjectName": "*", "relationVerb": "may-require-qualification", "objectKind": "staff-kind", "objectName": "Teacher with course-specific qualification", "sourcePage": "Research (fandom/wikitext-F-hubs.json)"}
+{"subjectKind": "campus", "subjectName": "Mitton University", "relationVerb": "features-course", "objectKind": "course", "objectName": "Robotics", "sourcePage": "Mitton University (fandom/wikitext-E-campus-clubs.json)"}
+{"subjectKind": "campus", "subjectName": "Mitton University", "relationVerb": "unlocked-after", "objectKind": "campus", "objectName": "Piazza Lanatra", "cardinalityClaim": "linear campus progression chain", "sourcePage": "Mitton University (fandom/wikitext-E-campus-clubs.json)"}
+{"subjectKind": "campus", "subjectName": "Mitton University", "relationVerb": "starting-intake", "objectKind": "count", "objectName": "10", "sourcePage": "Mitton University (fandom/wikitext-E-campus-clubs.json)"}

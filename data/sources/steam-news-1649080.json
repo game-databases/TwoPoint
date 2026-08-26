@@ -1,0 +1,76 @@
+{
+ "appnews": {
+  "appid": 1649080,
+  "newsitems": [
+   {
+    "gid": "1840944183776243",
+    "title": "Bundle Discounts! | SEGA Publisher Sale",
+    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1840944183776243",
+    "is_external_url": true,
+    "author": "Two Point Abby",
+    "contents": "SEGA Publisher SaleThe SEGA Publisher Sale is live from 13th-27th August.Two Point Hospital \u2013 75% off!Two Point Campus \u2013 85% off!!Two Point Museum \u2013 33% off!!!Two Point Museum: Arty-Facts \u2013 20%!!Plus discounts and bundles across our titles and DLCs!Whether you\u2019re late to the Two Point party or just ...",
+    "feedlabel": "Community Announcements",
+    "date": 1786613503,
+    "feedname": "steam_community_announcements",
+    "feed_type": 1,
+    "appid": 1649080
+   },
+   {
+    "gid": "1836506165577757",
+    "title": "Two Point Wrapped | Ten Years of Two Point County",
+    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1836506165577757",
+    "is_external_url": true,
+    "author": "Two Point Abby",
+    "contents": "Your journey as administrator across Two Point County's MANY community facilities is unique to you - and we have the numbers to prove it! Ever wondered exactly how many Museum staff went MIA under your management?How many Campus students you failed?Create a Two Point County account and receive your ...",
+    "feedlabel": "Community Announcements",
+    "date": 1783424258,
+    "feedname": "steam_community_announcements",
+    "feed_type": 1,
+    "appid": 1649080
+   },
+   {
+    "gid": "1824644522838716",
+    "title": "Lunar New Year Sale is Live! \ud83d\udc34\ud83e\udde7",
+    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1824644522838716",
+    "is_external_url": true,
+    "author": "Two Point Abby",
+    "contents": "SEGA Year of the Horse Sale \ud83d\udc34\ud83e\udde7There's no time for horsing around in the SEGA Year of the Horse Sale! We wish you all success and luck on the horses' arrival~Good things are already happening, as you can grab a bargain right now:Two Point Museum - 20% off!TPM: Fantasy Finds - 20% offTPM: Zooseum - 10...",
+    "feedlabel": "Community Announcements",
+    "date": 1770977637,
+    "feedname": "steam_community_announcements",
+    "feed_type": 1,
+    "appid": 1649080
+   },
+   {
+    "gid": "1819386365092355",
+    "title": "Two Point Winter Sale \ud83c\udf84",
+    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1819386365092355",
+    "is_external_url": true,
+    "author": "Two Point Abby",
+    "contents": "SEGA Winter SaleAs part of the Steam Winter Sale, SEGA is excited to offer its very own sale with discounts across Two Point County and our wonderful sister studios. The sale is live now, from December 18th to January 5th, 2026. So, why not grab a bargain and cozy up as the cooler months arrive?Two ...",
+    "feedlabel": "Community Announcements",
+    "date": 1766088233,
+    "feedname": "steam_community_announcements",
+    "feed_type": 1,
+    "appid": 1649080
+   },
+   {
+    "gid": "1813041031240943",
+    "title": "Hotfix - 10.3.169253",
+    "url": "https://steamstore-a.akamaihd.net/news/externalpost/steam_community_announcements/1813041031240943",
+    "is_external_url": true,
+    "author": "Two Point Abby",
+    "contents": "Hey Pointians, This is a tiny hot fix today to bring you the latest security patch for Two Point Campus. Changes:Implemented a security patch, more details can be found in\u00a0CVE-2025-59489.",
+    "feedlabel": "Community Announcements",
+    "date": 1760101996,
+    "feedname": "steam_community_announcements",
+    "feed_type": 1,
+    "appid": 1649080,
+    "tags": [
+     "patchnotes"
+    ]
+   }
+  ],
+  "count": 114
+ }
+}
