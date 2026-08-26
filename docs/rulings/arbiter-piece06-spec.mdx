@@ -1,0 +1,246 @@
+# Arbiter ruling — arbiter-piece06-spec (ruling round 1, media)
+
+**Arbiter:** arbiter-piece06 (PrepareTask step 5; rules, does not fix;
+spawned no subagents; wrote only this file — nothing committed).
+**Date:** 2026-08-26. **Subject:**
+[`docs/specs/piece-06-media.mdx`](../specs/piece-06-media.mdx)
+**Revision 2** (read to its `§END` sentinel, 828 lines), claiming full
+application of the 11-finding F-list in
+[`docs/reviews/reviewer-piece06-spec-r1.mdx`](../reviews/reviewer-piece06-spec-r1.mdx)
+(FIX-REQUIRED: 0 CRITICAL / 4 MAJOR / 7 MINOR) plus the orchestrator
+pre-ruling settling F3's disposition. This ruling gates the spec to build.
+
+**Read in full for this ruling:** repo-root `AGENTS.md` (sentinel seen);
+`promptForDB.md`; the Rev 2 spec; the review (to sentinel); the fact base
+([scout-report-piece-06-media](../scout-report-piece-06-media.mdx) rev 2 +
+[verifyA](../verifications/verifyA-scout-piece06.mdx) +
+[verifyB](../verifications/verifyB-scout-piece06.mdx)); ruling precedents
+[orchestrator-piece03-scope](orchestrator-piece03-scope.mdx),
+[orchestrator-piece04-scope](orchestrator-piece04-scope.mdx),
+[arbiter-001-piece-01](arbiter-001-piece-01.mdx),
+[arbiter-piece05-spec](arbiter-piece05-spec.mdx),
+[arbiter-piece07-spec](arbiter-piece07-spec.mdx).
+
+**Disk probes executed for this ruling** (read-only): pack `.gitignore`
+(the three `extracted/**` / `!extracted/**/` / `!extracted/**/*.md` lines
+verbatim as the reviewer quoted — traversal negation present, so the `.md`
+carve-out reaches nested paths and AC10's porcelain expectation is
+mechanically true today); `tools/tpc_common.py::STAGES` (exactly seven
+entries ending `("relink", "tools/stage6_relink.py", …)` — the
+additive-registration premise is real); `QUESTION-QUEUE.md` (Open holds
+exactly #1–#3; #55 nowhere — F8's purge was against a real defect);
+[piece-01](../specs/piece-01-extraction-pipeline.mdx) `TPC_EXTRACTED_ROOT`
+knob (:342), §4 SAME-ENVIRONMENT determinism note (:865), §5 guard list
+(`.png` IN, `.webp` NOT — :932, M21 accurate);
+[piece-02](../specs/piece-02-relinking.mdx) §R3 verdict vocabulary
+(:345–346) and its "non-entity address termination" clause (:717);
+canonical-registry citations in piece-04 (:107/:748/:964),
+piece-05, piece-08 (:167); `_foundation/decision-register.md`
+([DR-2026-08-18-media-scope], [DR-2026-08-18-pipeline] both present);
+grep sweeps for `extracted/media` writers and `.gitignore` commissions
+across all eight specs.
+
+---
+
+## Part 1 — Per-finding verification of the claimed Rev 2 application
+
+| Finding | Where verified in Rev 2 | Verdict |
+|---|---|---|
+| F1 MAJOR — 122-basis residue scan operationalized | New §3 **E6** (:346–383): population = nine kinds × ALL fields via the E1 recursive walk minus the sprite-type filter; pinned case-insensitive `icon` substring leaf-name vocabulary enumerating both measured scans' members (`BadgeIcon` ×67, `RivalIcon`, `InboxTrayIcon_*`, `ItemsMenuIcon`, `SwatchMenuIcon`, `IconReference`, `_iconReference`, `OverlayIcon*`); admission rule (non-null PPtr AND paired `*Reference` GUID empty/absent; null slots counted as `pptrSlotsNullSkipped`, never rowed); frozen `slotClass` (`external` iff `m_FileID != 0`) / `basis:"122-basis"` literal / `targetResolution` five-value enum; seven pinned E6 run-section keys (:399–401); COMPLETE `_missing_icons` reason enum with all four ledgered-skip values mapped to their measured families (:488–494); unknown values → `uncategorized-*` escapes + `DRIFT:` + exit 2, never exit 1, with the EC exit-2 row (:622), AC6 (:571–580), and §8 validators (FULL-enum assertion :697–702; synthetic nine-kind E6 scan :699–702) all aligned. Seed policy is the honest form: rule-canonical, number-follows-rule, fresh measurement becomes the recorded seed with `DRIFT:` against 122@20226581 | **APPLIED-CORRECTLY** |
+| F2 MAJOR — E4 tiebreak contract | E4(1) states the tiebreak as CONTRACT: size-filtered candidates → (a) home-bundle preference where the renderdata entry carries its page texture pointer (container_index-derived evidence) → (b) `(pagePathId ASC, entryIndex ASC)` FIRST-WINS; every multi-candidate resolution increments `ambiguousPairings` and stamps the chosen `pageName`/`pagePathId` on the manifest row; ≥3 ambiguous-tiebreak samples added to the E4(3) composition quotas (:313–315) and mirrored in AC4 (:556–558); §8's duplicate-size fixture asserts the PINNED order (:681–684); `ambiguousPairings` sits in the pinned E4 key block (:395) | **APPLIED-CORRECTLY** |
+| F3 MAJOR — committed layer per orchestrator pre-ruling | Superseding shape applied exactly: NO `.gitignore` rule added, needed, or permitted anywhere (header :25, §4 Ownership :507–514, §6 non-goal :645–646, Q1 :658); whole media tree gitignored-local under standing `extracted/**`; TRACKED layer = `extracted/media/MEDIA-EXPORT.md` only via the existing `.md` carve-out — which this arbiter verified on disk actually traverses into `extracted/media/`; self-sufficiency duty enumerated (buildId header, encoder pins, per-kind/per-plane counts+bytes, ledger sizes WITH full enums, ROW SCHEMA of every local artifact, per-artifact hash SUMMARY, crosscheck verdict — :515–523); new AC10 porcelain check (:599–605) + §8 commit-surface test (:716); Revision 1's `web/**` commission deleted | **APPLIED-CORRECTLY** |
+| F4 MAJOR — hostless end-state | §3 pins `media` CLIENT-GATED WHOLESALE: auto-SKIP when neither `TPC_GAME_DIR` nor the default install resolves (explicitly NOT exit 3, NOT a degraded join-only run), skip stamped in `.pipeline-meta.json`; exit 3 reserved for a missing upstream ARTIFACT while the game dir EXISTS; hostless proof = §8 unit validators + the black-box leg driving the 7-name seed fixture through `_missing_icons.jsonl`/`index.jsonl` (`resolved:false` rows present) WITHOUT opening any bundle; mirrored in AC1 (:539–543) and the runner test asserting no partial outputs (:717–719). Closes the piece-02 F13/CR6 gap up front instead of post-hoc | **APPLIED-CORRECTLY** |
+| F5 MINOR — transcription slips | M11 serialized total **209,500,708 B** (= landed catalogue figure both verifiers measured, :84); M20 reattaches 99.59% to the whole-universe reading 2,676/2,687 with the beyond-stub slice stated separately 525/529 = 99.24% and the 4 extra missing states carried (:93) — matches verifyB A1 digit-for-digit | **APPLIED-CORRECTLY** |
+| F6 MINOR — "six text artifacts" miscount | Killed everywhere: AC5 enumerates the byte-stability set item-by-item — `export-manifest.jsonl`, `index.jsonl`, `hashes.sha256`, `crosscheck-report.json`, `_missing_icons.jsonl`, `_pptr_residue.jsonl`, `_skipped_classes.jsonl`, `MEDIA-EXPORT.md` (+ the E5 carrier report when flagged) with the standard exclusions named (:561–567); recount confirms seven always-on text artifacts | **APPLIED-CORRECTLY** |
+| F7 MINOR — crosscheck failure exit + comparator | `pixelMatchRate < 1.0 OR maxDelta != 0` added to the EC exit-1 row (:623); comparator pinned: CLI export loaded via PIL, single `convert("RGBA")`, elementwise RGBA8 against our crop, no premultiplied/lossy intermediate, no second color conversion either side; genuine decoder divergence routes as exit-1 investigation with the diagnostic pair written to the temp root (:305–324) | **APPLIED-CORRECTLY** |
+| F8 MINOR — dead `question-queue #55` citations | All four replaced with the truthful form "a later owner-routed slug pass (routing TBD)" (header :20–23, §4 naming :430, §6 non-goals :642–644, Rev-1 note); QUESTION-QUEUE #3's DLC citation kept untouched and verified real (#3 = DLC 2195430 Medical School) | **APPLIED-CORRECTLY** |
+| F9 MINOR — small pins | Alpha-roundtrip tolerance PINNED: max per-pixel absolute alpha delta ≤ 1/255 post-roundtrip, beyond ⇒ PNG twin + counter (:443–447); E5 run-section keys added (`courseRowsWalked / qualificationChainHits / conventionYield / pptrPopulated / reportPath`, flag-gated runs only, :397–398); AC7 rewritten against the real frozen keys `source.bundle` ∪ `source.pageBundle` (:584–585) | **APPLIED-CORRECTLY** |
+| F10 MINOR — Q1 posture + S0 remediation legs | Q1 rewritten SETTLED-per-pre-ruling with the reversal path retained and no pending-confirmation framing (:658); S0 refusal prints BOTH legs' levers — temp → `TPC_MEDIA_TMP`/`TPC_TEMP_ROOT`, output → `TPC_EXTRACTED_ROOT` (verified a real piece-01 §1 knob) or free C: — tested per-branch in §8 over monkeypatched statfs (:162–172, :672–675); M18 records the output leg tripping first as equally likely on this host (:91) | **APPLIED-CORRECTLY** |
+| F11 MINOR — join resolution predicate | E1 pins it verbatim: `resolved:true` ⟺ `m_SubObjectName` presence among catalogue Sprite-row names (the predicate both verification passes reproduced at 2,151/2,158); catalog/container steps recorded as `chainBreak: none\|guid\|address\|container` evidence on index rows, never gates; future drift shifts nothing semantically — AC2 prints `DRIFT:` (:198–205, index schema :480–484, §8 chain-break-evidence-only fixtures :703–706) | **APPLIED-CORRECTLY** |
+
+**11 / 11 APPLIED-CORRECTLY.** No finding was applied wrong, weakened, or
+silently dropped. Fact fidelity otherwise stands as the reviewer found it
+(excellent): spot-recomputation of M4/M5/M6/M8/M14/M16/M20 against scout
+r2 + both verdicts reconciles cell-for-cell, including the arithmetic
+closure 492 pass-through + 3,157 direct-pointer + 3,140 NULL-pointer =
+6,789 and 683 null + 24 external = 707 residue framing.
+
+---
+
+## Part 2 — Rulings on the routed questions
+
+### R1 — Q2 (piece-01 carve-out-guard Revision): routing CONFIRMED — orchestrator/documentator seat owns it
+
+The amendment (image-extension hits legal ONLY under `extracted/media/**`;
+audio/video extensions absolute-zero) lives in piece-01's §5 guard and its
+suite — files outside the piece-06 build pair's write scope. Routing it to
+the documentator/orchestrator seat to land alongside this piece follows the
+piece-02 Rev-7 and arbiter-piece07 R5 precedents exactly. Confirmed as
+phrased; the piece-06 side owes only the §4/AC9 statement of what the
+amendment must say, which Rev 2 carries. Timing: rides piece-06's landing;
+the suite-side guard change is verified at build review.
+
+### R2 — Q4 (E3 timing): DEFERRED-TO-SCHEDULING confirmed, downgraded from owner-gate
+
+v1 ships `--include-ui-chrome` OFF — confirmed binding; it is the scope-
+ladder pre-ruling's second step and the default deliverable is E1+E2+E4+E6.
+But the flip is a RUN-PARAMETER change over machinery the piece already
+builds and tests (E3 counters, ceilings, skip-dedup are all in scope now):
+under [DR-2026-08-17-closed-loop] turning it on when the site plane wants
+chrome is an orchestrator scheduling call, not an owner Hard STOP. The
+owner retains it only if the added tens-of-MiB volume is disputed. No
+blocker either way.
+
+### R3 — Q5/Q6 (course-icon wiring): ruled — E5 stays EXACTLY AS SPECIFIED, and that choice is BINDING
+
+Between "in-scope optional probe" and "explicit non-goal," this seat binds
+the spec's own cut: **E5 exists as the default-OFF, report-only,
+never-emitting carrier probe** (`--probe-course-carrier`), scoped to answer
+scout §9 Q1 from landed artifacts, writing only
+`course-icon-carrier-report.json` inside `extracted/media/`. The spec's
+rejection of both alternatives is sound and adopted as the ruling's
+rationale: AGENTS rule 8 puts the course→art carrier question in the data
+layer (silent non-goal would strand it), while full emission would put
+`inferred:true` name-convention art into an `inferred:false` hard-join
+plane — plane-mixing this pack rejects (arbiter-001 R8 precedent).
+Consequently the WIRING itself (consuming the report into actual course
+icons) remains a non-goal routed to a relink-piece revision that the
+orchestrator seats (Q5 as written), and the Cheeseball stale-name row stays
+ledgered `stale-name` on the media side with the stub/relink owner holding
+the residue note (Q6 as written). A builder who turns E5's probe into
+emission, or deletes E5 as gold-plating, is violating this ruling — it is
+neither.
+
+### R4 — slug-pass TBD citations: phrasing CONFIRMED honest
+
+"a later pure rename index once an owner-routed slug pass exists (routing
+TBD); this piece leaves `namedBy` breadcrumbs" states exactly what is known
+and what is not — no dead anchor, no invented queue number. It is also
+cross-consistent with arbiter-piece05 Q2 (slug generation policy stays
+OWNER, site-layer; contracts keep `slug:null` allowed): piece-06 depends on
+nothing slug-shaped and blocks nothing on the routing decision. No change.
+
+---
+
+## Part 3 — Binding implementation pins (clarifications; no spec rewrite owed)
+
+Issued so CodeWriter/TestWriter cannot diverge on the three spots where Rev
+2's own text admits two readings. These ride the build brief and are
+checked at build review; they do not reopen PrepareTask.
+
+1. **EC exit-3 row reads scoped by the hostless pin.** The exit-3 row's
+   "missing game dir or missing upstream artifact (with the game dir
+   expected/resolving)" is governed by §3's explicit hostless end-state:
+   no game dir resolving ⇒ wholesale auto-SKIP (exit 0-path skip stamp);
+   exit 3 fires only when the game dir was EXPECTED (resolves) and an
+   upstream artifact is missing. The parenthetical is the qualifier, not a
+   second trigger.
+2. **Escape-value placement is per-ledger.** `uncategorized-reason` is the
+   escape for out-of-enum `reason` values on `_missing_icons.jsonl` rows;
+   `uncategorized-slot` is the escape for out-of-enum `slotClass` /
+   `targetResolution` values on `_pptr_residue.jsonl` rows. E6(6)'s
+   parenthetical naming `_missing_icons.jsonl` attaches to
+   `uncategorized-reason` only. Both escapes: row still emitted, `DRIFT:`
+   line, exit 2, never exit 1.
+3. **Cross-check CLI exports must be LOSSLESS.** Pin
+   AssetStudioModCLI `--image-format png` (bmp/tga acceptable) for the E4(3)
+   lane. A lossy CLI export (webp/jpg) would manufacture phantom pixel
+   mismatches against our decoded crops and burn an exit-1 investigation on
+   a codec artifact. Versions/flags are already stamped; add the format to
+   the stamp.
+4. **Non-binding observation:** the Rev 2 changelog says "six E6
+   run-section counters"; the pinned block carries SEVEN
+   (`pptrSlotsScanned` … `pptrTargetUnresolved`). The pinned block is the
+   contract surface and governs; the changelog numeral is narrative only.
+   No fix owed.
+
+---
+
+## Part 4 — Cross-spec consistency
+
+1. **Stage index 11 vs registry: CONSISTENT.** The canonical registry
+   (relink=6 · maps=7 · logic=8 · locale-proof=9 · contracts=10 · media=11 ·
+   search-corpus=12) is cited identically by piece-04 (three places),
+   piece-05 (countersigned by its arbiter), piece-06 (header + §3), and
+   piece-08 (:167); live `tpc_common.py::STAGES` holds seven entries ending
+   `relink`, so the additive-registration and "--list shows media appended
+   until 7–10 land; ordering authority is the registry, not append accident"
+   claims are true as written. Script/deps tuple
+   (`stage11_media.py` + `media_util.py` + shared utils) matches the live
+   entry shape.
+2. **Scratch discipline floors: CONSISTENT, and correctly the first of
+   their kind.** Piece-06 is the pack's first byte-decoding stage, so it is
+   the first spec to pin temp-root drive gates and free-space floors
+   (D:/A:-only, ≥4 GiB temp / ≥2 GiB output, exit 3, no override). The
+   other specs' many "floor" hits are unrelated semantics (piece-02's
+   competitor discovery floor, piece-05's floor-unmet terminal row) — no
+   numeric conflict exists. Both S0 remediation levers reference real
+   knobs (`TPC_MEDIA_TMP`/`TPC_TEMP_ROOT` stage-local;
+   `TPC_EXTRACTED_ROOT` = piece-01 §1 :342).
+3. **No `.gitignore` edits anywhere: CLEAN.** Grep across all eight specs:
+   only piece-06 mentions gitignore, exclusively to PROHIBIT edits; piece-05
+   merely describes the standing carve-out its repo-level `contracts/` tree
+   relies on (outside `extracted/`, untouched by the media decision). No
+   sibling commissions a rule; no negation conflicts with the three
+   standing lines.
+4. **Single-writer output tree: DISJOINT.** Zero references to writes under
+   `extracted/media/**` in any other spec; piece-05 explicitly scoped its
+   media-named surfaces to stage-3 harvest emissions
+   (media-catalogue rowshape), not the stage-11 icon tree. Piece-08 consumes
+   downstream and writes its own search-corpus family. `stage11_media.py`
+   alone writes the tree, satisfying the §4 ownership invariant.
+5. **Vocabulary reuse, no third forks:** E6 `targetResolution` = piece-02
+   §R3's four dangling verdicts + `resolved-address` (the non-entity
+   address termination piece-02 :717 already names) — exactly the reuse the
+   reviewer demanded; `contentAxis` = the arbiter-001 R5 emitted enum;
+   collision suffix = piece-1 Revision 6 signed-stem contract; exit-code
+   and ledger doctrine match piece-01/02 verbatim (exit-2 EXPECTED steady
+   state included).
+
+---
+
+## Part 5 — Independent hunt (this seat's residual sweep)
+
+Beyond the F-list, hunted for holes in the reviewer's judgments and new
+defects; results:
+
+- **Clean:** tiebreak totality ((pagePathId, entryIndex) is a total order
+  within one atlas's renderdata map — entryIndex unique by construction, so
+  no third-level discriminator is needed); E4(2) worst-case page cache
+  (125 pages ≈ well under the 4 GiB temp floor); scope ceilings (256/512 MiB
+  vs measured 8–25 MiB bands — detectors, not estimates); AC3 bijection
+  covers the flag-gated thumbs tier (it lives under `web/`); index/ledger
+  coverage of the four ledgered-skip families is coherent across E1 rules
+  6–7, the reason enum, AC6, and §8; M6 decomposition honesty survives the
+  verifyB 1,412–1,423 configs-cell tension by mandating fresh re-measure;
+  AC10's porcelain expectation verified mechanically true against the
+  on-disk ignore rules (traversal negation present).
+- **Watch items (no fix owed):** (a) the §4 tree comment renders the
+  thumbs tier as `thumbs/<subObjectName>.webp` while the size-ladder rule
+  pins `thumbs/{name}@{dim}.webp` — the ladder rule governs; (b) Part 3
+  item 4's changelog numeral; (c) E2 pass-through detection compares rect-
+  covers-texture per sprite — fixtures already assert it, float-exactness
+  left to the TestWriter's boundary rows.
+
+Nothing here reopens PrepareTask, demands re-scouting, or re-review of the
+fact base.
+
+---
+
+## VERDICT
+
+**SPEC-READY.** All eleven findings verified APPLIED-CORRECTLY, including
+the three MAJORs that mattered most: E6 now specifies the 122-basis scan
+end-to-end (population, vocabulary, admission, enums, counters, complete
+reason enum, escape routing), E4's tiebreak is contract-grade with its
+correctness enforced through the sample composition, and the commit-policy
+question is settled the implementable way — verified against the pack's
+actual `.gitignore`, whose existing carve-out makes the single tracked
+artifact real. The hostless end-state is pinned before the suite exists,
+closing the piece-02 class of gap preemptively. Routed questions are ruled
+(R1–R4 above) and the three interpretive pins (Part 3) close the only
+two-readable sentences found. The build pair may seat against Revision 2
+**as clarified by this ruling** — Part 3's pins are binding parts of the
+contract, checked at build review. No commits made from this seat.
+
+END OF arbiter-piece06-spec
