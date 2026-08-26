@@ -1,0 +1,550 @@
+# Review — reviewer-piece06-spec-r1 (piece-06-media.mdx, round 1)
+
+**Reviewer:** reviewer seat, PrepareTask step 4 (judges, does not fix;
+spawned no subagents; commits nothing). **Date:** 2026-08-26.
+**Subject:** [`docs/specs/piece-06-media.mdx`](../specs/piece-06-media.mdx)
+(Revision 1, read to its `§END` sentinel, 575 lines).
+**Inputs read in full:** repo-root `AGENTS.md`;
+[`../scout-report-piece-06-media.mdx`](../scout-report-piece-06-media.mdx)
+(revision 2, P1–P8 applied);
+[`../verifications/verifyA-scout-piece06.mdx`](../verifications/verifyA-scout-piece06.mdx)
++
+[`../verifications/verifyB-scout-piece06.mdx`](../verifications/verifyB-scout-piece06.mdx);
+[(piece-01)](../specs/piece-01-extraction-pipeline.mdx) +
+[(piece-02)](../specs/piece-02-relinking.mdx) specs;
+repo-root `promptForDB.md` (Note#5 boundary checked);
+integration surfaces probed: `tools/tpc_common.py` (`STAGES`),
+`tools/` directory listing, `run_all.py` flag surface, pack `.gitignore`,
+`QUESTION-QUEUE.md`, `FRAMEWORK.md` §2.5,
+`_foundation/decision-register.md` (both cited DR entries).
+
+---
+
+## Verdict
+
+**FIX-REQUIRED**
+
+Four MAJOR defects block a blind build pair: the canonical 122-basis
+PPtr-residue rule is pinned as POLICY but never operationalized as a scan
+— population, field-name vocabulary, classification enums, run-section
+counters, and half the exit-2 gate's declared vocabularies are all
+undefined (F1); the E4 size-only renderdata match is under-determined on
+this corpus's own atlas topology and ships with no tiebreak in the
+mechanism section and no ambiguity quota in the pixel-exact sample, so a
+wrong-page crop can ship silently (F2); the "committed layer" of seven
+text artifacts cannot be committed under the pack's actual `.gitignore`
+— the commissioned rule targets the already-ignored binary half and the
+load-bearing negations go unnamed (F3); and the first byte-emitting
+stage has no pinned hostless end-state, reopening exactly the
+fixture-premise ambiguity that required a post-hoc arbiter amendment on
+piece-02 (F4). Everything else is tightening. The fact base is
+excellent: every r2 correction landed, the headline join/geometry/band
+numbers reconcile against scout r2 + both verdicts, and only two
+transcription slips surfaced (F5). Fix F1–F4 (mechanical, hours, no
+re-scouting) and apply F5–F11 before seating the build pair.
+
+---
+
+## Orchestrator pre-rulings — enforcement
+
+**PR-1 — Canonical stage-index registry: ENFORCED; Q3 VERIFIED against
+disk.** The spec self-identifies position **11** consistently (header
+lines 12–14, §3 line 90, Revision-1 note line 563), names
+`tools/stage11_media.py` + `tools/media_util.py` with a deps tuple
+matching the live `STAGES` shape, and — learning from piece-05 F1 —
+asserts ordering authority rather than count-plus-tail ("ordering
+authority is the canonical registry above, not append accident", line
+94). Q3 check against live `tools/tpc_common.py::STAGES`: exactly seven
+entries (`verify-client` … `relink`, scripts `stage0_…`–`stage6_…`);
+**no** `stage7_locale_proof.py` exists anywhere under `tools/`, so there
+is no live-disk collision today. The only carrier of the legacy name is
+the UNBUILT sibling draft
+[`piece-07-locale-proof.mdx`](../specs/piece-07-locale-proof.mdx)
+(lines 26, 131, 133, 619 still claim `tools/stage7_locale_proof.py`) —
+if that piece builds before renaming it would collide cosmetically with
+piece-03's canonical `stage7_maps.py`. The spec's §3 note + §7 Q3
+routing ("orchestrator rules whether older specs renumber") is the right
+disposition; no change required in THIS file.
+
+**PR-2 — Scratch discipline binding: ENFORCED.** S0 runs first; hard
+gate is drive-letter based with **exit 3**, no override flag; floors are
+CONCRETE NUMBERS, not prose — temp root ≥ **4 GiB**, output root ≥
+**2 GiB** free, measured and printed (lines 141–145); scratch removal on
+completion is an AC (AC8) with a named hostless test (C:-pointed
+`TPC_MEDIA_TMP`). The 64 MiB worst-page buffer makes the 4 GiB floor
+generous, and M18's 0.07–0.36 GiB C: reality makes the refusal path the
+expected first-run experience — correctly framed as clean refusal, not
+crash. One operational gap in the remediation text → F10.
+
+**PR-3 — ONE pinned PPtr-residue basis: ENFORCED AS POLICY,
+UNDER-OPERATIONALIZED → F1 (MAJOR).** M14 labels both measured readings
+(verifier external-pointer scan **24**, fileId 14; scout broader
+icon-name scan **122**) and pins the CANONICAL ledger universe to the
+broader 122-basis with `slotClass: external|same-file` keeping the
+24-row subset visible inside it. The 683/707 dead-weight framing is
+present but correctly labeled as framing, not a third count — no silent
+third number. However, nothing in §3 tells the CodeWriter HOW the scan
+is executed (which kinds, which field names qualify as "icon-named",
+how `slotClass` is derived, what `targetResolution`/`basis` may contain),
+and the pinned run-section key block (lines 394–406) has NO residue
+counters at all. See F1.
+
+**PR-4 — Binary commit policy Q1 ACCEPTED: ENCODED, with residue →
+F10.** §4 Ownership settles it as contract ("The binary tree is
+gitignored-local …; the committed layer is the six text artifacts +
+rollup", lines 384–385) and the Revision-1 note records the pin. Two
+problems: the settlement sentence miscounts the artifacts (F6), and §7
+Q1 still reads "Owner confirms at review" — open-question framing on a
+pre-ruled settled point. Worse, the settlement is not implementable
+under the pack's actual `.gitignore` as commissioned → F3 (MAJOR).
+
+---
+
+## Fact-fidelity audit vs scout r2 + both verdicts (checklist 1)
+
+Every §2 figure re-derived from scout r2 and the verifyA/verifyB
+verdicts. All r2 corrections are absorbed; none of the hunted stale
+figures survived:
+
+| Check | Result |
+|---|---|
+| Join PRIMARY 2,151/2,158 = 99.676% + dual-basis footnote 2,146/2,153, both reported | ✓ M4, AC2, client-gated test lane |
+| Unresolved set = exactly 7 M16 names, verbatim, Cheeseball split out as BASE-game stale-name | ✓ M16 — compared name-for-name against verifyA's list; byte-identical |
+| Source crop area 108,445,749 px; median max-dim ≈233 px; ≤64 px 29 (1.3%); >512 px 4 (2048² Ghost) | ✓ M7 |
+| Shipped bands ≈8–25 MiB q80 / 10–60 lossless / 21–100 PNG with validated bpp ranges quoted | ✓ M13 (matches verifyB A5 empirically-measured bands) |
+| Sprite population 6,787/6,789 usable; 492 pass-through + 3,157 direct-pointer + 3,140 NULL-pointer = 6,789 (arithmetic closes); median area 34,939 px² | ✓ M8 |
+| Atlas route 3,717/3,870; verifyB's 1,412–1,423 configs cell and 3,728 total kept honest as labeled decompositions, stage re-measures fresh | ✓ M6 — no third number presented as authoritative |
+| Courses 9/69 strict convention; 24 config-side refs; 28/69 Qualification PPtr; 42 sprites; 652 edges; 28+41 class split | ✓ M15 (all five verifyA corr. 6 + verifyB A3 corrections landed) |
+| Per-kind table cells + 3,870 sum | ✓ M5 reproduces scout r2 / verifyA cell-for-cell |
+| Census values Cubemap 138 / Texture2DArray 9 (scout's 152/19 explicitly superseded); 29 zero-size font atlases | ✓ M19 |
+| DXT5 2,793 (not 2,799); zero ASTC/ETC2; single BC7 page ≤1 referenced name | ✓ M11 — except the serialized-total slip → F5 |
+| Cross-bundle placement 2,059 refs / 820 names + homes breakdown + AdvisorHuski instance | ✓ M10 (verifyB A1 verbatim) |
+| Pairing rule (NOT index-aligned, 0/352) + both probe anchors with dims | ✓ M9 (verifyB A2 verbatim) |
+| Toolchain: UnityPy 1.25.3 / Pillow 12.3.0 / webp feature true / avif absent / `UnityPy.config.FALLBACK_UNITY_VERSION` must be ASSIGNED / CLI v0.19.0 + `--unity-version` REQUIRED + `Found [0/1650]` / ffmpeg present, cwebp+avifenc+IM absent | ✓ M17 (verifyB A6 nuances carried) |
+| Host reality: C: 0.07–0.36 GiB span, was 84.77 GiB | ✓ M18 (both verifiers' readings spanned) |
+| GPU payload ≈4.49 GiB no-mip; corpus-wide RGBA-equivalent 25.05 GiB in non-goals | ✓ M2/§6 (corrected figures, not the scout's first-pass 4.32/25.12) |
+| Guard interaction: `.png` in piece-1 list, `.webp` not — verified against piece-01 §5 AC6 | ✓ M21 |
+| Resurrected-figure hunt: 26.6 Mpx / 26,595,109 / median-42 / 4,686 usable / duplicate-atlas gap / 1,509-at-70% ladder — ZERO hits in the spec | ✓ clean |
+
+Ground-truth probes that PASSED: `run_all.py` really exposes
+`--only/--skip/--force/--list`; `STAGES` registration pattern is real and
+additive; `[FRAMEWORK §2.5]` really pins `/cdn/v{ver}/…` game-art icons;
+both decision-register rulings ([DR-2026-08-18-media-scope],
+[DR-2026-08-18-pipeline]) exist. Ground-truth probes that FAILED: the
+`question-queue #55` citation (F8) and the `.gitignore`
+committed-layer premise (F3).
+
+---
+
+## Findings
+
+Severity scale: CRITICAL = contradicts verified facts or produces wrong
+acceptance · MAJOR = blocks blind implementation or breaks cross-spec
+contracts · MINOR = mechanical tightening.
+
+### F1 — MAJOR — The 122-basis PPtr-residue rule is pinned as policy but specified as neither scan nor schema
+
+**Location:** M14 (line 79) vs §4 `_pptr_residue.jsonl` row shape
+(lines 374–376), EC exit-2 row (line 293), run-section key block
+(lines 394–406), §3 sub-pass list (E1–E5, no residue pass), §8 ledger
+validator bullet (line ~530).
+
+**Problem:** M14 declares WHAT counts ("every icon-named PPtr slot that
+is non-null with an empty paired `*Reference` GUID field") but no
+section defines HOW a conforming implementation finds those slots:
+
+1. **Population:** which stub kinds are scanned (all nine? the same
+   recursive `fields.*` walk as E1?), and what makes a field name
+   "icon-named" — the two measured scans used different bases
+   (`BadgeIcon`×67 / `RivalIcon` / `InboxTrayIcon_*` on the scout side;
+   external fileId-14 pointers on the verifier side). Without the
+   vocabulary, 122 is not reproducible — two implementers produce two
+   different ledgers, defeating the entire point of the pre-ruling.
+2. **Enums:** the row shape carries `slotClass`
+   (`external|same-file` — derivation rule unstated: fileId≠0 ⇒
+   external?), `targetResolution` (NO value set anywhere in the spec),
+   and `basis` (presumably the literal `122-basis` label — never said).
+3. **Acceptance surface:** EC gates exit 2 on "every row within the
+   declared `reason`/`slotClass` vocabularies", but the `reason`
+   vocabulary for `_missing_icons.jsonl` is only partially declared
+   (`dlc-content-absent`, `stale-name`, `empty-sub-name`); the four
+   LEDGERED-SKIP families (E1 rule 7: `EditorFallbackIconReference`
+   351, `VisualsPrefab` 12, `Meshes[0]` 26, `LevelConfig` 7) have their
+   reason VALUES unnamed. An implementer cannot validate membership in
+   an undeclared enum — and under EC's fallback those rows become
+   exit-1 MECHANISM failures, contradicting M14's own doctrine
+   ("Under-ledgering is the defect mode, never over-ledgering"): the
+   next newly-discovered residue family would hard-fail the stage
+   instead of ledgering.
+4. **No counters:** the pinned run-section block has keys for E1–E4/env
+   but nothing like `pptrSlotsScanned / pptrResidueRows /
+   pptrResidueExternalSubset`, even though the ledger is an exit-code
+   contributor and an AC6 assertion target.
+
+**Fix shape:** Add a short **E6 (or E1b) residue-scan** subsection:
+scan universe (= the E1 walk's kinds, ALL fields, not just sprite-typed),
+the icon-name matching rule (pin the literal vocabulary or an explicit
+case-insensitive substring/regex list reconcilable to 122 on this
+corpus), `slotClass` derivation (`fileId != 0` ⇒ external), `basis`
+value literal, `targetResolution` enum (`unresolved-open` |
+`resolved-editor-only` | … — reuse piece-02 §R3's dangling-verdict
+vocabulary rather than inventing a third), run-section counters, and the
+FULL `reason` enum for `_missing_icons.jsonl` including the four
+ledgered-skip values. State unknown-value handling explicitly: a residue
+row outside the declared vocabulary is still LEDGERED (exit 2 + `DRIFT:`
+line), never exit 1.
+
+### F2 — MAJOR — Size-only renderdata matching is under-determined on this corpus; no pinned tiebreak and no ambiguity quota in the pixel-exact sample
+
+**Location:** E4(1) (lines 240–249); E4(3) sample composition
+(lines 258–264); §8 pairing-matcher bullet ("duplicate-size ambiguity →
+deterministic tiebreak + counter"); M12 topology facts
+(UI_Items_New 3×4096² pages, 1,099 slots; UI_Costumisation 400).
+
+**Problem:** The working rule matches a sprite to its home page via its
+OWN `m_RD.textureRect` SIZE against the owning atlas's
+`m_RenderDataMap` entries. On this corpus same-size collisions are the
+NORM, not an edge case: UI_Items_New packs 1,099 sprites across three
+4096² pages plus a tail — dozens of slots share dimensions (the worked
+example alone implies a family of 70×70 tab icons), and renderdata
+entries for different pages carry identical WxH. A wrong pick yields a
+same-dimension crop of the WRONG page region — garbage pixels that pass
+every dimension check and ship silently unless the sprite happens to be
+in the ≥20-sample cross-check lane. Yet:
+
+- E4(1) itself specifies NO ambiguity handling — the only mention of a
+  tiebreak lives in a TEST obligation bullet, which pins that one
+  exists, not what it IS;
+- the cross-check composition quotas (≥1 per route, ≥2 fractional, BC7
+  sprite, two anchors, deterministic-stride remainder) never require an
+  AMBIGUOUS-size sprite, so the tiebreak's correctness is untested by
+  construction;
+- no `ambiguousPairings` counter is defined in the run-section block.
+
+**Fix shape:** In E4(1): pin the tieback order deterministically (e.g.
+candidate entries ordered by `(pagePathId, entryIndex)` ascending, first
+match wins), state it as CONTRACT not implementation detail, and add the
+counter. Where the stronger discriminator is cheap, allow it explicitly
+(renderdata entries carry their page texture pointer; a candidate whose
+page bundle equals the sprite's home-bundle evidence may be preferred
+before falling back to pure order). In E4(3): add a composition quota —
+"≥3 sprites whose size-match was ambiguous" — so a wrong tiebreak
+surfaces as `pixelMatchRate < 1.0` (exit 1) instead of silent wrong art.
+In §8: the synthetic duplicate-size fixture then asserts the PINNED
+order, not just determinism.
+
+### F3 — MAJOR — The "committed layer" cannot be committed: the .gitignore commission targets a no-op while the load-bearing negations go unnamed
+
+**Location:** §4 Ownership (lines 379–387); §7 Q1 (line 494); AC5 hash
+scope (line 433).
+
+**Problem:** The pack's actual `.gitignore` reads:
+
+```
+extracted/**
+!extracted/**/
+!extracted/**/*.md
+```
+
+i.e. EVERYTHING under `extracted/` is ignored except directories
+(traversal) and `.md` files. Consequences the spec misses:
+
+1. All seven always-on text artifacts (`export-manifest.jsonl`,
+   `index.jsonl`, `hashes.sha256`, `crosscheck-report.json`,
+   `_missing_icons.jsonl`, `_pptr_residue.jsonl`,
+   `_skipped_classes.jsonl`) plus the flag-gated
+   `course-icon-carrier-report.json` are **gitignored today**. Only
+   `MEDIA-EXPORT.md` lands via the existing md carve-out.
+2. The commissioned builder task — ".gitignore rules for
+   `extracted/media/web/**` are added" — is a **literal no-op**: the
+   binary tree is ALREADY ignored by `extracted/**`.
+3. Therefore "the committed layer is the six text artifacts + rollup"
+   ships as an empty git layer: a fresh clone gets the rollup and none
+   of the manifests/ledgers/index that every consumer join and every AC
+   depends on. Nobody notices until a second machine or a CI clone.
+
+This is the same fragility that drove piece-05 to a repo-level
+`contracts/` tree (its PR-3 verified these exact three lines); here the
+spec leans on the ignored side without commissioning the negations.
+
+**Fix shape:** One sentence in §4 Ownership commissioning the REAL rule
+set, e.g. `!extracted/media/**/*.jsonl`, `!extracted/media/**/*.json`,
+`!extracted/media/**/*.sha256` (web/** stays ignored — say so
+explicitly as "already covered by `extracted/**`; no rule needed"), plus
+an AC9-adjacent acceptance: `git status --porcelain extracted/media/`
+on a built tree lists exactly the eight text artifacts and no binaries.
+Alternatively, reverse the ruling (whole `media/` local-only, matching
+house precedent that extracted JSONL stays local) — but then say THAT,
+because Q1's current text asserts a committed layer that the repo
+plumbing contradicts.
+
+### F4 — MAJOR — No pinned hostless end-state for `--only media` (piece-02 F13/CR6 about to repeat)
+
+**Location:** §3 inputs (lines 103–112, "PLUS the game dir … Missing
+upstream artifact ⇒ exit 3"; "Hostless testing goes through the
+fixture/unit lane (§8), never a degraded real run"); AC1 (lines
+410–416); §8 runner bullets (lines ~537–539).
+
+**Problem:** Stage 11 is the pack's FIRST byte-emitting stage, and its
+declared upstream set includes the game dir. Three statements pull in
+different directions: AC1 promises "`--only media` isolates on a
+prepared tree" with "hostless smoke materializes the §3 upstream set"
+(the game dir leg cannot be materialized meaningfully — piece-02 proved
+landed fixtures carry header+filler bytes with NO object tables);
+§3 pins that decode legs are client-gated; and §3's missing-upstream
+rule says a missing game dir is exit 3. Left ambiguous, a blind
+TestWriter must invent whether a hostless prepared-tree run (a) refuses
+exit 3, (b) completes the join/ledger legs and exits 2 with a
+decode-skipped marker, or (c) SKIPs wholesale like client-gated
+integration tests. Piece-02 lived this exact gap and needed a
+post-hoc arbiter amendment (its AC1 fixture-premise delta) after the
+suite was already built — the precedent correction is recorded IN
+piece-02 §5 AC1, and this spec cites that caveat without resolving the
+question it leaves open.
+
+**Fix shape:** One pinned sentence in §3 (mirrored in AC1): recommended
+— "in hostless mode the runner treats `media` as client-gated WHOLESALE
+(auto-SKIP when neither `TPC_GAME_DIR` nor the default install
+resolves), and the hostless lane proves the piece exclusively through
+the §8 unit validators over synthetic stub/catalog/container/canned-
+pixel fixtures"; alternatively pin (b) with a
+`clientGatedDecodeSkipped` counter and exit-2 semantics. Either is
+fine; silence is not. State also what the hostless black-box asserts
+instead of decode (piece-02's analogue: unresolvable refs land in the
+ledger, not silence — here: e.g. the 7-name seed fixture drives
+`_missing_icons.jsonl` end-to-end without any bundle open).
+
+### F5 — MINOR — Two transcription slips in §2 (the only fact-base blemishes found)
+
+**Location:** M11 (line 76); M20 (line 85).
+
+**Problem:**
+1. M11 states serialized Texture2D total "**209,500,704** B (= catalogue
+   figure)". Both verifiers land the catalogue value at **209,500,708**
+   (verifyA corrections #8, verifyB A4: "my sweep total serialized =
+   209,500,708 B = the landed catalogue value"). Four bytes off, and the
+   parenthetical equality claim is falsifiable and false as written.
+2. M20: "(529 beyond stubs, 525 resolvable = 99.59%)". The 99.59% is the
+   WHOLE-universe rate (2,676/2,687, verifyB A1); the beyond-stub slice
+   computes 525/529 = **99.24%**. The rate is attached to the wrong
+   numerator.
+
+**Fix shape:** 209,500,704 → 209,500,708; move "= 99.59%" to the
+2,676/2,687 whole-universe reading (state both, they are one clause
+apart).
+
+### F6 — MINOR — "Six text artifacts" is wrong; the tree declares seven (+1 flag-gated), and AC5 inherits the miscount
+
+**Location:** §4 Ownership (line 384); §5 AC5 (line 433).
+
+**Problem:** Counting §4's own layout: `export-manifest.jsonl`,
+`index.jsonl`, `hashes.sha256`, `crosscheck-report.json`,
+`_missing_icons.jsonl`, `_pptr_residue.jsonl`, `_skipped_classes.jsonl`
+= **seven** always-emitted text artifacts, plus
+`course-icon-carrier-report.json` when `--probe-course-carrier` is on,
+plus the `MEDIA-EXPORT.md` rollup. Both the Ownership sentence and
+AC5's determinism scope ("hash-manifest comparison over web/** + the
+six text artifacts") say six — a TestWriter sizing the byte-stability
+set from AC5 silently excludes one artifact (which one? undefined) from
+the strongest guarantee the piece has.
+
+**Fix shape:** Replace the count with the enumerated list (immune to
+future drift): "over `web/**` + export-manifest.jsonl + index.jsonl +
+hashes.sha256 + crosscheck-report.json + `_missing_icons.jsonl` +
+`_pptr_residue.jsonl` + `_skipped_classes.jsonl` (+ the carrier report
+when its flag is on)"; MEDIA-EXPORT.md included or excluded, stated.
+
+### F7 — MINOR — The crosscheck failure exit is pinned only in E4 prose; the EC table omits it; the comparison pipeline is unspecified
+
+**Location:** E4(3) line 262 ("`pixelMatchRate < 1.0` ⇒ exit 1") vs EC
+table exit-1 row (line 294); AC4 (lines 427–430).
+
+**Problem:** §3 says "Per-condition mapping pinned in §3 EC", and the
+exit-1 row enumerates eight conditions — the cross-check mismatch is
+not among them, though it is the piece's core acceptance surface. Also
+unspecified: HOW our crop and the CLI export are compared bit-exactly —
+bit-exactness depends on both sides traversing the SAME decode/conversion
+path (CLI export opened and converted to RGBA8 through PIL vs our numpy
+array), which is exactly where cross-library DXT-decoder divergence or a
+premature color convert would manufacture phantom mismatches.
+
+**Fix shape:** Add "; cross-check lane verdict < 1.0 or maxDelta ≠ 0"
+to the EC exit-1 row. In E4(3), pin the comparator: CLI export loaded
+via PIL, converted to RGBA8, compared elementwise against OUR crop's
+RGBA8 array (state the conversion, forbid any intermediate JPEG-ish or
+premultiplied step); note that a genuine off-by-one decoder-divergence
+finding routes as an exit-1 investigation with the diagnostic pair
+written to the temp root, not a silent retry.
+
+### F8 — MINOR — "question-queue #55" does not exist
+
+**Location:** lines 18–19 (header), 321 (§4 naming), 482 (§6 non-goals),
+565 (Revision-1 note).
+
+**Problem:** The pack's `QUESTION-QUEUE.md` holds exactly items 1–3
+(domain/trademark, compositionPolicy semantics, DLC 2195430+2312070).
+There is no #55, in this pack or any queue the citation names. The
+slug-deferral SUBSTANCE is sound (piece-02's 100%-null finding; scout
+r2 §5 "bar-3 alias-authored slugs land" carries no number), but the
+citation is a dead anchor in four places — the requirement-chain
+equivalent of citing a nonexistent artifact.
+
+**Fix shape:** Either route the slug/alias item INTO the question queue
+and cite its real number once it exists, or replace all four citations
+with the truthful form: "a later owner-routed slug/alias pass (routing
+TBD; this piece leaves `namedBy` breadcrumbs)". Item #3's DLC citation,
+by contrast, is real — no change there.
+
+### F9 — MINOR — Small determinism/naming pins left loose
+
+**Location:** §4 format rule (line 333); run-section block
+(lines 394–406); AC7 (line 444); E5 (lines 268–286).
+
+**Problem:** (a) The alpha-roundtrip fallback fires "beyond the pinned
+tolerance" — no tolerance VALUE is pinned, yet the spec pins far finer
+grain elsewhere (rounding mode, tiebacks); two implementers emit
+different `alphaSanityFallbacks` counts. (b) E5 has no run-section key
+block at all (every other sub-pass has pinned keys); when its flag is
+on, its counters are unpinned. (c) AC7 says "manifest `source.bundles`
+⊆ referenced-home ∪ atlas-page bundles" — plural `source.bundles`
+does not exist in the frozen row shape (rows carry `source.bundle` +
+`source.pageBundle`); name the actual keys or the validator reads as
+unimplementable.
+
+**Fix shape:** Pin the tolerance (e.g. decoded-alpha min/max drift
+≤1/255 per channel, stated as the literal bound); add an `E5:` key line
+(`courseRowsWalked / qualificationChainHits / conventionYield /
+pptrPopulated / reportPath`); rewrite AC7's clause against
+`source.bundle ∪ source.pageBundle`.
+
+### F10 — MINOR — Q1 residual open-question framing + S0 remediation covers only the temp leg
+
+**Location:** §7 Q1 (line 494); S0 hard-gate bullet (lines 138–140);
+M18 (line 83).
+
+**Problem:** Pre-ruling 4 records Q1 as ACCEPTED/settled; §4 encodes
+it, but the §7 row still solicits "Owner confirms at review" — keep the
+reversal path, drop the pending-confirmation posture, or the arbiter
+reads it as an open question and re-litigates a ruled point. Separately,
+S0's remediation message names only `TPC_MEDIA_TMP` — but on M18's
+host the run is equally likely to refuse on the OUTPUT-root floor
+(extracted/media/ resolves onto C:, 0.07–0.36 GiB free, below the
+2 GiB floor), whose lever is `TPC_EXTRACTED_ROOT` (piece-1 §1 knob) or
+C: cleanup — not the temp var. First-run operators get pointed at the
+wrong dial.
+
+**Fix shape:** Reword Q1 to "SETTLED (orchestrator pre-ruling
+2026-08-26): gitignored-local binaries + committed text layer;
+reversal = `.gitignore` edit + re-seat". Extend the S0 refusal text to
+print BOTH levers: temp leg → `TPC_MEDIA_TMP`/`TPC_TEMP_ROOT`; output
+leg → `TPC_EXTRACTED_ROOT=D:\…` or free C:.
+
+### F11 — MINOR — Pin the join's resolution predicate (chain-required vs name-presence) before drift arbitrates it
+
+**Location:** E1 join ladder (lines 163–169); M4 (line 69); AC2
+(line 418).
+
+**Problem:** The drawn ladder implies all four steps must succeed for
+`resolved:true`; verifyB's reproduced numerator is described as
+name-presence among catalogue Sprite rows. On THIS corpus the two
+predicates provably coincide (both verification passes converge on
+2,151/2,158 with the same 7 misses — the six DLC3 names fail at the
+container step AND the name step; Cheeseball fails at the name step
+with its chain intact), so nothing today diverges. But the spec's
+authoritative walk is described ambiguously enough that a literal-minded
+CodeWriter can implement chain-required, and the first future client
+patch with a dangling-GUID-but-known-name ref would then shift the
+unresolved set and trip AC2's byte-for-byte equality with no pinned rule
+to appeal to.
+
+**Fix shape:** One sentence in E1: "`resolved:true` ⟺ the ref's
+`m_SubObjectName` matches a catalogue Sprite-row name (the verified
+predicate); catalog/container steps are EVIDENCE recorded on the row
+(`chainBreak: none|guid|address|container`), never additional gates."
+AC2 then stays byte-exact and future drift prints `DRIFT:` instead of
+flipping semantics.
+
+---
+
+## What is genuinely good (do not lose these in the fix round)
+
+- **Sub-pass quality (checklist 2)** is otherwise exemplary: every
+  route has pinned mechanics, and the determinism-critical details most
+  specs leave to implementers are PINNED — round-half-away-from-zero
+  with the banker's-`round()` trap called out and 0.5/2.5 test cases
+  ordered, bottom-origin flip arithmetic stated as
+  `top = H − y − h` BEFORE cutting, and the manifest's illustrative row
+  is internally consistent (`4096 − 31 − 70 = 3995` — the example
+  survives recomputation, which almost none do).
+- **Honest exit-2 steady state**: EC declares today's guaranteed exit 2
+  (M16's absences) EXPECTED instead of pretending exit 0 is reachable —
+  matches piece-01/piece-02 ledger doctrine verbatim.
+- **Scope law enforced mechanically (checklist 4)**: 256/512 MiB
+  detectors ⇒ exit 1, bundle-set containment proving no corpus sweep,
+  flag-gated emission asserted to write NOTHING when off — the
+  never-bulk-decode rule is testable, not aspirational.
+- **E5's plane-mixing rationale** (report-only, default-off, why full
+  emission was rejected AND why silent non-goal was rejected, with the
+  AGENTS rule 8 grounding) is the best-argued paragraph in the spec —
+  the builder cannot improvise it wrong.
+- **M6's decomposition honesty**: keeping verifyB's unreconciled configs
+  cell visible as a labeled alternative while mandating a fresh
+  re-measure is exactly how irreproducible counts should be carried.
+- **Registration hygiene learned across pieces**: ordering-authority
+  language instead of count-plus-tail (piece-05 F1's lesson, applied).
+- **Carve-out amendment precision (M21)**: noticing `.png` is in the
+  piece-1 guard list while `.webp` is not — and routing the amendment
+  outward rather than editing a foreign file — is correct both ways.
+
+## Open-question routing check (Q1–Q6, checklist 7)
+
+Non-goals are real non-goals: generative art OUT (promptForDB #5
+boundary honored; client-owned art only), audio/video/mesh/fonts
+catalogue-forever, corpus-wide decode banned with the corrected
+25.05 GiB figure, site/CDN consumption-only, PROOF/VALIDATION/RELATIONS
+untouched, stage-behavior freeze on stages 0–6 — none dodge work this
+piece owns under AGENTS rule 8. Q1 → superseded by pre-ruling (fix
+framing per F10, plumbing per F3). Q2 (piece-1 revision note routed to
+documentator/orchestrator, piece-02 Rev-7 precedent) routes rightly.
+Q3 → VERIFIED this review (see PR-1); routing stands. Q4 (flag flip =
+run parameter, owner timing) sane. Q5 (carrier wiring → relink-piece
+revision consuming the E5 report) sane and consistent with E5's
+report-only design. Q6 (Cheeseball residue note routed with Q5) sane.
+Nothing blocks the build pipeline once F1–F4 land.
+
+## Required changes (F-list recap)
+
+1. **F1 (MAJOR):** operationalize the 122-basis residue scan (population
+   + icon-name vocabulary + `slotClass`/`targetResolution`/`basis`
+   enums + run-section counters) and declare the FULL `reason` enum
+   incl. the four ledgered-skip values; unknown values ledger at exit 2,
+   never exit 1.
+2. **F2 (MAJOR):** pin the duplicate-size tiebreak in E4(1) + counter;
+   add an ambiguous-match quota to the E4(3) sample composition.
+3. **F3 (MAJOR):** commission the real `.gitignore` negations for the
+   text layer (the web/** rule as written is a no-op) + a porcelain
+   acceptance listing exactly the tracked artifacts.
+4. **F4 (MAJOR):** pin the hostless end-state for `--only media`
+   (recommended: wholesale auto-SKIP; else join-legs-complete exit 2)
+   and what the hostless black-box asserts instead of decode.
+5. **F5 (MINOR):** 209,500,704 → 209,500,708; reattach 99.59% to
+   2,676/2,687.
+6. **F6 (MINOR):** enumerate the text-artifact determinism set in AC5
+   (seven + flag-gated), kill the "six" count.
+7. **F7 (MINOR):** crosscheck mismatch into the EC exit-1 row; pin the
+   comparator's RGBA8 conversion path.
+8. **F8 (MINOR):** fix or drop the four `question-queue #55` citations.
+9. **F9 (MINOR):** pin the alpha tolerance value; add E5 run-section
+   keys; AC7 against real row keys (`source.bundle`/`source.pageBundle`).
+10. **F10 (MINOR):** Q1 row → SETTLED phrasing; S0 remediation names the
+    output-leg lever (`TPC_EXTRACTED_ROOT`) too.
+11. **F11 (MINOR):** pin the resolution predicate (name-presence;
+    chain steps as evidence) so future-corpus drift prints `DRIFT:` and
+    never flips AC2's semantics.
+
+With F1–F4 applied and F5–F11 swept, this is an approve-for-build spec
+on the next pass: the fact base needs no re-verification, the
+route/crop architecture needs no redesign, and no finding requires
+re-scouting.
+
+END OF reviewer-piece06-spec-r1
