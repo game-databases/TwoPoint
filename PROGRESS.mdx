@@ -85,6 +85,25 @@ nothing work-blocking.
 
 ## Log
 
+- 2026-08-26: **BUILD-GATE ROUND — all six blind pairs landed and
+  reconciled; review pairs gating every build.** All six impls+suites
+  landed (`7fa73fc`/`f259a4e`, `9c7439c`/`6a54e9f`, `7859408`/`763b212`,
+  `a032d13`/`bf13cc6`, `d0f0e21`/`5f251f4`, `9ba57df`/`34aebf5`);
+  six reconcilers drove everything green-with-teeth (locale-proof 54/1,
+  contracts 89/5, maps 57/1, search 67/1, media 67/5, logic **56/0/0**)
+  — real-corpus seeds reproduced everywhere, byte-stable double runs,
+  invention guards audited (logic: 27,616 numerics / zero uncited).
+  Build-review pairs then gated each reconciled build: locale-proof
+  **closed first** (fix round `34328ac`, suite 57/1/0, orchestrator
+  verified); search code-side **APPROVE** (batch's first) w/ light fix
+  round running; maps caught a **CRITICAL only visible at real-corpus
+  scale** (RoomRecord.UniqueID≈0 → placement identity collapse:
+  1,775 duplicate groups, 20k silent join misses — fix round redesigning
+  identity chain + enforcing M2 uniqueness + absence ledgers); media/
+  logic/contracts reviews in flight. Cross-lane hazards caught and
+  repaired twice (stale-buffer revert of the RELATIONS.md delta;
+  syntactically-broken shared util). Provider storms killed ~15 lanes;
+  every one resumed from its exact stop point.
 - 2026-08-26: **PREPARETASK PASS 2 AT FULL THROUGHPUT — five blind build
   pairs live, every stage family 7–12 under construction.** The whole
   C-tail wave ran the pipeline in parallel: six scouts (map/logic/
