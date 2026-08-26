@@ -1,0 +1,268 @@
+# Scout piece 08 — search-corpus inventory (entities + terms)
+
+**Audience:** Documentator of the search piece (#38). Every number below was
+measured 2026-08-26 from disk (`python` over the committed corpus,
+buildId **20226581**) unless marked ESTIMATE. Artifact paths are given per
+claim. Raw probe scripts were throwaway (temp dir); rerunning any number is
+a ≤20-line walk over the cited JSONL. Join conventions build on
+[piece-02](specs/piece-02-relinking.mdx) — `entity_locale.jsonl` is the
+authoritative entity↔locale-term relation, `i2_term_registry.jsonl` the
+ID→key map, `extracted/locales/*.jsonl` the per-locale text planes.
+
+---
+
+## §1 Searchable-entity census
+
+Stub universe (piece-02 F1, re-counted): **13,443 rows / 9 kinds** —
+config 8,430 · item 3,885 · metagame-node 454 · unlockable 415 · room 116 ·
+course 69 · student-type 54 · campus-level 17 · staff 3.
+`slug` is **null on 13,443/13,443 rows (100%)** — re-confirms the bar-3
+lesson; nothing slug-shaped exists to index.
+
+What is actually *findable by human text*:
+
+| Universe | Count | Source |
+|---|---|---|
+| Entities with ≥1 localized-text edge | **5,850** (43.5%) | distinct `(srcKind,srcId)` in `relinks/entity_locale.jsonl` (10,964 rows) |
+| Entities bearing a display-*name* carrier (localized or `_dev` fallback) | **4,298** | name-field walk over `stubs/*.jsonl` |
+| Union (the realistic searchable set) | **7,178 = 53.4%** | measured union |
+| Id-only searchable (no human text anywhere) | **6,265** | remainder — mostly config internals, item variations, unlockable internals |
+
+Union per kind: config 3,856/8,430 · item 2,649/3,885 · metagame-node
+406/454 · room 107/116 · student-type 54/54 · course 41/69 · unlockable
+49/415 · campus-level 13/17 · staff 3/3.
+
+Display-name edges specifically (fieldPaths pinned per kind — see §2):
+**2,993 edges resolving to en text**, collapsing to **1,895 distinct
+(kind,title)** pairs; **264 collide** (top: config "Lab Work" ×53,
+"Specialist Book Report" ×51 — self-study assignment families);
+320 collide ignoring kind. Text→entity must stay many-to-many; ranking
+needs kind weighting + id disambiguation. 23 titles clean to empty string
+(markup-only) — must be dropped, not indexed as "".
+
+Locale-term plane behind it: `relinks/i2_term_registry.jsonl` =
+**15,675 rows / 15,672 distinct keys / 26 source assets** (canonical:true on
+15,672; 3 legacy duplicate-ID rows). Reverse index
+`locale_term_entity.jsonl`: **6,526 distinct terms actually referenced by
+entities** — the search-relevant subset of the 15,672-key universe (the
+other ~9k keys are pure UI chrome).
+
+## §2 Text-field inventory + alias surface per kind
+
+Display-name carriers (measured at stub level):
+
+| Kind | Carrier fieldPath | rows with field | termID≠0 | termID==0 (dev-only) | no field |
+|---|---|---|---|---|---|
+| config | `Name` | 2,421 | 1,703 | 718 | 6,009 |
+| item | `LocalisedName` | 1,728 | 949 | 779 | 2,157 |
+| room | `NameWhenBuilt` | 63 | 59 | 4 | 53 |
+| metagame-node | `LocalisedName` | 241 | 195 | 46 | 213 |
+| student-type | `LocalisedNameF/M` | 27 | 27 | 0 | 27 |
+| staff | `LocalisedName` (+`Ranks[].TitleM/F` ×30) | 3 | 3 | 0 | 0 |
+| course | **none** | 0 | 0 | 0 | 69 |
+| unlockable | `LocalisedName*` (+`DisplayName.mTerm` ×55, §G7) | 28 | 20 | 8 | 387 |
+| campus-level | none localized; plain `Name` str ×13 (en dev text) | — | — | — | 17 |
+
+Structural facts that size the index:
+
+- **config** is the long tail: 344 classes; biggest text masses are NOT
+  names — `Meshes[].GeometryList[].Bones[]` (139,847 bone-name strings!),
+  texture/material paths. A naive "index every string leaf" would balloon
+  ~10× for garbage. Index only whitelisted fieldPaths.
+- **item**: `GameItemLiteDefinition` (1,728) carries `LocalisedName`;
+  `GameItemDefinition` (1,654) has **no name field at all**
+  (Description + flavour only); `GameItemVariationDefinition` (353) neither.
+  Title-complete item search needs definition-grouping first (§G3).
+- Descriptions (second text tier): config `Description` 1,737 +
+  `FlavourDescriptions[]` 745; item `Description` 1,654;
+  room `Description/LongDescription` 74/63; course `Description._dev` ×41
+  (dev placeholder text — "Brief description of the item…", NOT real copy).
+
+Alias surface (what EXISTS to match against, beyond the canonical title):
+
+| Alias material | Volume | Notes |
+|---|---|---|
+| Internal ids (verbatim) | 13,443 | CamelCase+underscore; split → **3,224 distinct id tokens** — free alias vocabulary |
+| `_dev` English fallback strings | 3,874 name-field instances | config 2,184 · item 1,458 · metagame-node 159 · room 31 · student-type 22 · unlockable 17 · staff 3 |
+| `DisplayName.mTerm` (direct term-KEY ref, not `_termID`) | 55 unlockable rows; 53 resolve in en | outside the `{_dev,_termID}` walker — §G7 |
+| `IconReference.m_SubObjectName` sprite names | item 1,290 · room-descriptor 104 · metagame 202 … | human-readable ("UI_InGame_T_Icon_Item_4Seater_Indoors") but noisy; optional |
+| slugs | **0 — 100% null** | confirmed dead end |
+
+Course names are the one hard hole: `TPC.CourseDefinition` carries no name
+field. Probed conventions against `locales/en.jsonl`: qualification-chain
+suffix (`Characters/…/<tail>_Qualification_Name`) resolves **12/28**
+(9/28 with the `Teacher/` prefix alone); `Courses/Courses/<X>_Name` exists
+for 18 keys but the def→X mapping is non-mechanical (`Course_Clowns`→
+`Clown_Name`, `Course_Computing`→`Computer_Name`). Ledgered §G2.
+
+## §3 Localization / tokenization measurements
+
+Stage-4 planes: 13 locale files + base overlay under `extracted/locales/`
+(**23.1 MB** for the 13; `base-overlay-report.json`: 15,665 shared keys,
+2,824 empty locale cells skipped, termStatusForTranslation 15,402).
+Row counts: en 15,665 · others 15,371–15,457 · **zero empty texts** in
+emitted rows.
+
+Tokenization reality check (word-char runs, lowercased, per row-unique):
+
+| Locale | rows | med len | avg len | CJK-bearing rows | rows with NO whitespace | vocab (runs) |
+|---|---|---|---|---|---|---|
+| en | 15,665 | 17 | 47 | 4 | 3,716 | 11,897 |
+| de | 15,445 | 20 | 56 | 4 | 5,553 | 18,356 |
+| fr | 15,445 | 21 | 55 | 4 | 3,734 | 13,970 |
+| it | 15,445 | 20 | 51 | 4 | 3,828 | 15,060 |
+| es | 15,440 | 21 | 52 | 4 | 3,784 | 15,622 |
+| pt-BR | 15,443 | 20 | 50 | 4 | 3,780 | 14,823 |
+| pl | 15,445 | 20 | 51 | 4 | 3,781 | 23,037 |
+| tr | 15,443 | 18 | 48 | 4 | 3,654 | 23,445 |
+| ru | 15,422 | 19 | 48 | 4 | 3,822 | 22,470 |
+| ko | 15,457 | 8 | 26 | 15,213 (98.4%) | 3,986 (25.8%) | 28,594 |
+| ja | 15,371 | 9 | 27 | 12,775 (83.1%) | 12,840 (83.5%) | 21,564 |
+| zh-Hans | 15,445 | 5 | 17 | 15,183 (98.3%) | 14,721 (95.3%) | 22,451 |
+| zh-Hant | 15,446 | 5 | 17 | 15,196 (98.4%) | 14,730 (95.3%) | 22,586 |
+
+Verdicts: **whitespace tokenization works for 10 locales incl. ko**
+(Korean spaces normally). **zh-Hans/zh-Hant are unusable without
+character-bigram (or CJK segmenter) indexing** — median 5-char strings with
+no spaces, only ~2.1 runs/row (under-segmentation proven). **ja is mixed** —
+needs bigram fallback alongside whitespace runs.
+
+Cross-locale identity (text == en text): **ru 30.5%**, ja 16.5%, de 14.3%,
+pt-BR 13.4%, fr 10.2%, zh/ko ≈1.3% — sizable untranslated-fallback layers
+(§G5); proper nouns (item names) survive identically everywhere, which is
+what makes cross-locale alias matching cheap.
+
+Markup hygiene: en rows carry `<style="…">`/`<br>` tags on 6.0% of rows and
+`{PLACEHOLDER}` braces on 4.8% — the indexer must strip tags and exclude
+placeholder braces from tokens (same cleaning as the title-collision probe).
+
+Collision dimension (informs shard-vs-single): within-locale duplicate
+texts mapping to >1 key: en 1,570 · zh-Hans 1,668 · ko 1,702 · tr 1,625 …
+(~9–11% of texts) — per-locale indexes remain many-to-many; no locale is
+collision-free enough to invert text→entity naively.
+
+Registry `locales[]` is **empty on all 15,675 rows** — verified against the
+26 LanguageSource dumps themselves (`mTerms[].Languages` cells are genuinely
+empty in-source; text ships per-locale bundle instead). Spec-R4's per-term
+availability contract is therefore unmet by upstream data; search derives
+availability by joining `locales/*.jsonl` directly (§G1).
+
+## §4 Vocabulary stats + typo-tolerance feasibility
+
+- Vocab per locale: **11,897 (en) … 28,594 (ko)** — table §3. Plus 3,224
+  internal-id tokens (en side).
+- Stopword candidates are measurable from the same run: en
+  the/a/to/of/and/in/'s/you/for/it · fr de/la/le/à/un/les · de die/und/der/
+  zu/das · es de/la/a/que/el · pt-BR de/o/a/para/e/que · tr bir/ve/için ·
+  ru в/и/не/на · pl w/na/się/z/i · ja 構内放送-style domain words dominate
+  after latin fragments. A frozen per-locale stoplist of ~10–20 entries is
+  enough at this scale; or skip stopwords entirely (titles dominate).
+- **Typo tolerance: trivially feasible.** Worst-case vocab 28.6k terms;
+  Levenshtein-automaton / BK-tree / SymSpell over ≤30k terms answers d≤2
+  queries in low milliseconds client-side; even a brute-force scan per
+  keystroke is viable. No server infra required — the whole index fits in
+  memory (payload math in §6).
+- Edit-distance caveat for zh/ja: edit distance applies to bigrams, not
+  whitespace words; bigram vocab for zh ≈ tens of thousands of 2-char
+  sequences — still small.
+
+## §5 Competitor search bar (observed floor)
+
+Probes 2026-08-26, one attempt per surface (+1 UA retry where walled),
+browser-UA curl:
+
+| Site | Access | Observed search mechanics |
+|---|---|---|
+| new-world.guide | **200** (home 706 KB; `/db/items/weapon` 544 KB) | Ships **Algolia instantsearch.js 4.48.0** (bundle chunk `2603-…`, lazy-loaded — not on home/list-page critical path). Search UI i18n keys present: `search_items`, `search_string`, `searching_items_includes`, `search_perks`, `search_in_luck_tree`, `search_not_found`. Floor = hosted-SaaS instant results-as-you-type with built-in typo tolerance + facet filters. Single-locale: `lang="en-US"`, no hreflang found. |
+| wikily.gg | **200** (game page 206 KB) | Next.js RSC site; header "Search" label present; `/search` route **404**; no search library/index detectable in landing HTML + 16 fetched chunks (lazy chunk not identified — behavior not fully measurable via curl). Per-game scoped search implied by IA. No hreflang. |
+| metaforge.app | **403 twice** (browser UA, then `Claude-User` UA retry once — Cloudflare challenge) | Walled. Question it would have answered: whether planner/search is client-side instant-filter over a bundled index, and any per-locale routing. |
+
+Floor to beat, stated honestly: competitors demonstrate instant
+type-ahead over entity names (nw.guide via Algolia) and kind-scoped
+filtering; neither shows per-locale search on the surfaces reachable.
+**Per-locale search across 13 locales is our differentiator, not a copied
+bar** — and it is cheap at our scale (§6). An ABP browser pass could extend
+this (one attempt each, rule 10); routed to the UX piece, not blocking here.
+
+## §6 Index-artifact shape options
+
+Sizing inputs (measured): entity-relevant term texts (6,526 keys × 13
+locales) = **9.45 MB raw** (~0.67–0.84 MB/locale, id+text+overhead);
+full locale planes 23.1 MB; titles-only subset ≈ 2,993 name edges
+(ESTIMATE <150 KB/locale raw). Any Lunr/MiniSearch-style structure lands
+within ~2–3× of its source text — i.e. **single-digit MB total, well under
+1 MB gzipped per locale shard**.
+
+Options:
+
+- **A. One combined index** (all locales, lang-tagged docs): simplest
+  rebuild, one hash manifest; but every locale route ships everything
+  unless the server slices it — wasteful given route-coded locale URLs.
+- **B. Per-locale shards** `search/<loc>.jsonl` (+ `search/manifest.json`
+  with sha256 + buildId + row counts): aligns with [DR-2026-08-20-locale-urls]
+  routing (`/de/`, `/pt-BR/`…), en canonical at bare path, independent
+  per-locale rebuild, ~1 MB/shard. **Recommended.**
+- **C. Two-plane split inside each shard**: titles-only block (header
+  instant box) + descriptions block (DB-page deep search) — lets the shell
+  hydrate only the tiny title plane. Optional refinement of B; measure
+  before committing.
+
+Row grammar proposal (per doc): `{kind, id, termKey?, fieldClass(name|
+description|alias), loc, text, weight}` — `kind` rides free on every edge,
+so filter-by-kind costs nothing. Alias block carries: id tokens, `_dev`
+strings, `DisplayName.mTerm` resolutions, (when §G2 closes) curated course
+aliases.
+
+Rebuild hooks: the runner already emits `.stage-stamps/<stage>.json`
+(exitCode 0/2 semantics + script-hash deps) — a `search` builder should
+re-run iff `relink`/`localisation` stamps changed, write sorted UTF-8 LF
+JSONL + hash manifest byte-deterministically (pack conventions). **Exit-2
+tolerance is mandatory:** relink's current steady state IS exit 2
+(73 missing matrix cells, 1,137 dangling GUIDs, 5 registryMisses, bar-3
+floor unmet `sourcesApplied=0` per RELATIONS/matrix) — search builds from
+what landed and ledgers its own gaps; it never blocks on floors owned by
+other pieces.
+
+## §7 Feasibility verdicts
+
+1. Instant filter-as-you-type over entity titles — **GO** (≤1 MB/locale,
+   ≤29k vocab; client-side, zero infra).
+2. Typo tolerance (edit distance ≤2) — **GO** at measured vocab sizes.
+3. Per-locale shards — **REQUIRED**, not optional: 12 locales differ from
+   en materially; route-coded URLs make shard-per-locale the natural seam.
+4. CJK — **GO with conditions:** zh-Hans/zh-Hant require char-bigram
+   indexing; ja requires bigram fallback; ko is standard whitespace.
+5. Filter-by-kind — **GO**, free on the proposed row grammar.
+6. Alias/id search — **GO**: 3,224 id tokens + 3,874 `_dev` strings are
+   already on disk; zero new extraction needed.
+7. Course-title search — **PARTIAL** (§G2): 41 marketing courses carry only
+   dev-placeholder descriptions; 28 course defs need curated aliases or a
+   code-analysis unblock.
+8. Item-title completeness — **PARTIAL** (§G3): full/variation definitions
+   lack name fields; grouping needed before titles are meaningful.
+9. Overall: the corpus supports a search experience at or above the
+   observable competitor floor WITHOUT hosted search infrastructure.
+
+## §8 Gap ledger + open questions
+
+| # | Gap (measured) | Unblock |
+|---|---|---|
+| G1 | `i2_term_registry.jsonl` `locales[]` empty on all 15,675 rows — spec-R4 per-term availability contract unmet because source dumps store empty `Languages[]`; text lives per-locale bundle | None for search (derive from `locales/*.jsonl`). Route a spec/R4 honesty note to the relink owners. |
+| G2 | Course display names: no hard carrier; best convention resolves 12/28; `Courses/Courses/*_Name` (18 keys) non-mechanically mapped | Curated alias file OR logic-piece code analysis of course-name lookup |
+| G3 | 6,265 entities (46.6%) carry no human text — id-only; item full/variation defs (2,007 rows) lack name fields entirely | Site-scope decision (which kinds get pages) owned by Documentator/orchestrator; definition-grouping is a data-layer question |
+| G4 | 779 item + 718 config + 46 metagame name-fields are `_termID==0` dev-only (English-only titles) | Acceptable fallback; flag per-record |
+| G5 | Untranslated fallback rates: ru 30.5%, ja 16.5%, de 14.3%, pt-BR 13.4% identical-to-en | Data reality, not fixable by us; per-locale quality noted for launch QA (#53) |
+| G6 | metaforge.app walled (403 ×2) — planner/search UX unobserved | One ABP attempt in the UX piece, if wanted |
+| G7 | `DisplayName.mTerm` (55 rows, 53 resolvable) sits outside the `{_dev,_termID}` walker → absent from `entity_locale.jsonl` | Small relink amendment candidate — owner-routed (relink formally closed) |
+| G8 | campus-level names are plain English dev strings ("All buildings", "Test Level", "Mark's Test Scenario"); 4 of 17 are null | Scope decision: sandbox/dev levels likely shouldn't be publicly indexed |
+
+Open questions for the Documentator:
+
+1. Index titles-only, or titles+descriptions (option C)? Payload says both
+   fit; the call is UX, not size.
+2. Should the 6.5k-term UI-chrome exclusion hold (i.e., search entities
+   only), or should guide/news content join the same index later?
+3. Confirm shard naming follows route-coded locale paths exactly
+   (`pt-BR`, `zh-Hans`, …) and en doubles as the bare-path canonical.
+
+§END
