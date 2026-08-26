@@ -1,0 +1,295 @@
+# Reviewer piece-07 — spec review round 1 (locale-proof)
+
+**Date:** 2026-08-26 · **Scope:** [`docs/specs/piece-07-locale-proof.mdx`](../specs/piece-07-locale-proof.mdx)
+(Revision 1 registration) reviewed before any build pair seats. Inputs
+read in full: the spec; fact base
+[`../scout-report-piece-07-locales.mdx`](../scout-report-piece-07-locales.mdx)
+(rev 2) +
+[`verifyA-scout-piece07.mdx`](../verifications/verifyA-scout-piece07.mdx) +
+[`verifyB-scout-piece07.mdx`](../verifications/verifyB-scout-piece07.mdx);
+format precedent
+[`../specs/piece-01-extraction-pipeline.mdx`](../specs/piece-01-extraction-pipeline.mdx)
++ [`../specs/piece-02-relinking.mdx`](../specs/piece-02-relinking.mdx);
+ruling style
+[`../rulings/orchestrator-piece03-scope.mdx`](../rulings/orchestrator-piece03-scope.mdx)
++ [`orchestrator-piece04-scope.mdx`](../rulings/orchestrator-piece04-scope.mdx);
+repo-root `AGENTS.md`, `promptForDB.md`,
+`_foundation/localization-architecture.md` (the spec binds §5.4/§5.5);
+pack `tools/tpc_common.py::STAGES`.
+
+**Method:** beyond the document pass, every load-bearing number in §2 was
+RE-MEASURED on this machine against the committed `extracted/` corpus at
+buildId 20226581 (python walks over the 13 locale tables, registry,
+`entity_locale.jsonl`, `locale_join_report.json`, stubs,
+`base-overlay-report.json`) — the same primary artifacts the verifiers
+used. Findings below cite measured evidence wherever the spec and the
+corpus disagree.
+
+---
+
+## Fact-fidelity audit (checklist 1) — PASS, corrections K1–K6 fully resident
+
+The stale-figure hunt came back clean. Verified against the corpus this
+session:
+
+| Figure in spec | Corpus re-measure | Match |
+|---|---|---|
+| union 15,666 · all-13 15,369 · 98.10 % union / 98.07 % registry | 15,666 / 15,369 / 98.1042 % / 98.0666 % | exact |
+| per-locale rows/holes (F4, incl. ja 15,371/**295**, en 15,665/1) | all 13 cell-for-cell | exact |
+| ru≡en framing 301 raw / 297 translated-elsewhere (F8) | 301 raw; 297 under de-differs (see F2 below) | exact under de-filter |
+| F6 identity `registryKeys − rows`: en 7 · ko 215 · ja 301 | 7 / 215 / 301 | exact |
+| registry 15,675 / 15,672; UI census 2,218 / 532 / 1,686; 52 ns; orphan-A 9,148 / 9,146 (UI 1,686 distinct-key vs 1,688 row) | all exact | exact |
+| entity_locale 10,964 edges / 5,850 entities; census 20,070-class figures via join report (registryHits 10,964, misses 5) | exact | exact |
+| unjoined Σ 7,593 with per-kind map config 5,252 · item 1,850 · unlockable 372 · metagame-node 64 · course 28 · campus-level 17 · room 10 · student-type 0 · staff 0 | recomputed from stubs − joins | exact |
+| base-overlay 0-byte availability file today; compositionPolicy mixed + differingTextSharedKeys 15,665; worked example `Items/Library/Reception_Giant_Name` en=ru="Giant Library Reception"; 3 `Code/…` keys present in `en.jsonl` | all confirmed | exact |
+
+No occurrence of 297-without-framing, 98.11 %, "all 17" (13/17 + four
+verbatim ids used), missing fallback-symbol quotes (all four quoted),
+or the pre-correction UI census (2,218/532/1,686 everywhere, universe
+named). C1–C5 are all folded in. Cross-references check out: lane #22 =
+i18n UI in PROGRESS.mdx's W-D-polish band; piece-08 §G2 names the same
+alias lever; `tpc_common.py::STAGES` currently holds exactly the seven
+stages AC1 enumerates past.
+
+---
+
+## Findings
+
+### F1 — CRITICAL — §5 transition paragraph sanctions silent destruction of the canonical file and contradicts its own invariants
+
+Location: spec §5 "Transition safety" bullet; §1 ("the only cross-stage
+change is the ownership amendment").
+
+What's wrong. Three connected defects:
+
+1. After stage 7 lands, the file holds 5,850 v2 rows. The bullet still
+   says an isolated `--only emit-stub-datasets` run "may still emit its
+   legacy 0-row v1 file — harmless" and that "consumers reading the v1
+   schema mid-transition see 0 rows (**today's status quo**)". Post-
+   landing that overwrite is NOT today's status quo — it destroys the
+   §5.4 single source and silently reopens the exact G1 gap this piece
+   exists to close, until someone remembers to rerun `--only
+   locale-proof`. Patch-day stage-by-stage reruns make this a realistic
+   sequence, not a hypothetical.
+2. The same bullet asserts "no stage ever deletes or truncates a file it
+   does not own" while stage 5, having lost ownership, still writes
+   (truncates) the path. "The single-writer invariant survives: exactly
+   ONE stage owns the path" is false under the paragraph's own text.
+3. "Stage 5's emission clause is retired" is ambiguous between retiring
+   a DOC clause and removing the CODE path. §5 routes three DOC deltas
+   to documentator seats and is silent on (a) whether
+   `tools/stage5_emit_stubs.py` stops writing the file, and (b) the fate
+   of stage-5's availability tests (piece-01 §3 acceptance "is
+   regenerated on every run…" + §8 stage-5 fixture bullets).
+
+Fix. Pick one, explicitly, as part of THIS piece's contract:
+
+- Preferred: retire the emission in CODE inside this piece (delete/guard
+  the stage-5 write — a few lines — and delete or repoint its two
+  availability assertions/tests), keeping single-writer literally true;
+  or
+- keep the interim dual-emission but make it loud: stage 5 must detect
+  non-v1/non-empty content at the path and refuse (exit 1 naming the
+  conflict) instead of clobbering; and pin that only full runs may heal
+  the path.
+
+### F2 — MAJOR — AC5/L1 identity tier: expected value 297 is reproducible only under an unstated predicate
+
+Location: §L1 `identityToPivot` schema (`identicalButTranslatedElsewhere`);
+AC5 ("297 translated-elsewhere"); F8's gloss "(= translated elsewhere)".
+
+What's wrong. Measured this session: of the 301 `Items/*_Name` keys where
+ru == en, **297 differ in de** but **301 differ in SOME other holding
+locale** (the residual 4 — `Items/DLC_Ghost/Mausoleum_Name`,
+`Items/DLC_Space/Planetarium_Name`, `Items/Ghost_DLC/Dolly_Name`,
+`Items/Ghost_DLC/Theremin_Name` — are identical-to-en in de yet differ
+elsewhere). The field NAME ("translated elsewhere") implements to 301;
+the pinned expected value 297 exists only under "de differs"
+(verifyA #7 said exactly this). An honest builder fails AC5 or fudges.
+
+Fix. Pin the predicate verbatim in `metricRule`, e.g.
+`identicalButTranslatedElsewhere := <locale>==en AND de != en` (the
+informative tier — it isolates keys untranslated in BOTH ru and de), or
+re-freeze the number under whichever predicate is chosen; state how the
+tier evaluates for the other 12 locales the artifact recomputes.
+
+### F3 — MAJOR — L6 dangling-miss shape contradicts the measured corpus
+
+Location: §L6 `registry_completeness.json` sample (`dangling:
+[{termId: …, dev: "WantsMessage", onIds: [both ids]}]`); AC8 "the two
+dangling IDs exact".
+
+What's wrong. Measured (`locale_join_report.json` unresolvedIds + the
+two stub payloads): there are **TWO DISTINCT termIds** — `-1451566921`
+on `Unused_PersonalGoal_Item_Gym_Vaulting_Horse` and `-1172386361` on
+`Unused_PersonalGoal_Item_AnyExterior` — and the `_dev` string is
+`"Wants a {ITEM}"` on both. `WantsMessage` is the FIELD PATH, not the
+dev value. The pinned one-object shape implies a single shared termId
+and mislabels dev; a builder following it must fabricate a grouping or
+drop a termId, and no verifier can reconcile AC8 against the corpus
+through it.
+
+Fix. Pin one row per dangling termId:
+`{termId: -1451566921, fieldPath: "WantsMessage", dev: "Wants a {ITEM}", srcKind: "item", onIds: ["Unused_PersonalGoal_Item_Gym_Vaulting_Horse"]}`
+plus the `-1172386361` twin — sorted by termId.
+
+### F4 — MAJOR — RELATIONS.md edit routed to a seat that cannot hold it
+
+Location: §5 Routing bullet ("RELATIONS.md's R4 routing note gains one
+sentence … owned by the piece-01/piece-02 documentator seats").
+
+What's wrong. RELATIONS.md is a GENERATED artifact — piece-02 §R7 pins
+it as regenerated mechanically by `stage6_relink.py` from matrix +
+ledgers, byte-deterministic, reruns byte-identical. A hand-edited
+sentence is silently reverted on the next relink run (patch day).
+
+Fix. Route the sentence into the generator (stage-6 code/template input)
+as a code delta owned alongside the piece-1 revision, or drop the
+RELATIONS.md leg and record the pointer in piece-02 prose only — either
+way, name the mechanism, not just the seat.
+
+### F5 — MAJOR — Tripwire semantics undefined for exact-match-direction members
+
+Location: §L6.3 comparison rules; §6 regressionVector directions.
+
+What's wrong. Directions are pinned as higher-better / lower-better /
+"structural counts exact-match", but the four comparison bullets only
+define worse/equal/better for DIRECTIONAL members. A CHANGED
+exact-match member at the same buildId (matrixKeyDiff 0→1, orphansB
+0→2, chromeSurfaces 16→15) satisfies neither "any member WORSE by its
+pinned direction" nor "strictly better/equal" — exit behavior is
+implementer's choice. AC10 only exercises a coverage-count drop, so the
+gap ships untested.
+
+Fix. Add one rule — any CHANGE in an exact-match-direction member counts
+as worse ⇒ `REGRESSION:` line + baseline untouched + exit 1 — and a
+fixture leg that flips one structural member.
+
+### F6 — MAJOR — Optional alias-input branch has no test leg
+
+Location: §4 OPTIONAL input paragraph vs §10 (L2/L3/runner bullets).
+
+What's wrong. The alias-present branch is first-class contract (course
+name-columns computed THROUGH `course-name-aliases.jsonl`,
+`inferred:true` + method carried per cell, method recorded in the
+metricRule appendix, `course-name-join-open` suppressed) — and §10 never
+exercises it. Dormant contracted code without a fixture violates this
+pipeline's own precedent (untriggerable arms stay synthetically tested;
+piece-1 Revision 5 kept the R8 arms tested precisely for this reason).
+TestWriter building blind will ship the branch untested.
+
+Fix. One fixture leg: alias-present tree asserts inferred:true course
+cells + method recording + `course-name-join-open` absence; the
+already-specified alias-absent legs assert the open-hole ledger.
+
+### F7 — MINOR — Exit-code precedence overlap
+
+AC13's "`2` iff `_ledger.jsonl` non-empty" and "`1` on validation/schema
+failure or REGRESSION" can co-fire (open ledgers + regression). Pin
+precedence explicitly: 1 > 2 > 0.
+
+### F8 — MINOR — Wrong fact anchor in AC7
+
+AC7 cites "per-kind decomposition == F14" for the nine-kind unjoined
+list; F14 carries only config/item/unlockable/campus-level. The list is
+derived and correctly anchored one section up (L2: "MUST decompose per
+kind as F10−F11"). Fix AC7's citation to F10−F11.
+
+### F9 — MINOR — Config DRIFT note has no pinned location
+
+F13/AC5 require config columns to ship "WITH the `DRIFT:` note" but name
+no artifact key or run-section field where a verifier can assert it.
+Pin one (e.g. `kinds.config.nameRoleNote` or a run-section key).
+
+### F10 — MINOR — `dumpCsLine` provenance ambiguous and source-conflicted
+
+The L4 template freezes line refs (~L546889 etc.) while the body says
+the stage greps dump.cs when present. Scout §4.4 and verifyB attack 4
+disagree on one ref (~L546887 vs ~L546889 for TryGetFallbackTranslation),
+so freezing either embeds a known conflict, and frozen lines go stale
+across builds. Pin: `dumpCsLine` is MEASURED from this run's grep
+(fresh wins, DRIFT-printable); the quoted signatures stay the pinned
+constants.
+
+### F11 — MINOR — Identity denominators: ja/ru hold only 897 of the 905 name keys
+
+Measured: `Items/*_Name` held — 905 by eleven locales, **897 by ja and
+ru** (8 keys are holes). L1 pins a flat `keysTotal: 905` while
+"recomput[ing] all 13"; AC5 says "over 905 keys". The integers 301/297/0
+verify regardless, but per-locale counters range over HELD keys. Emit
+`keysHeld` per locale (numerator/denominator discipline is already the
+spec's own rule) and adjust the AC5 phrasing.
+
+### F12 — MINOR — L5 surface kinds pinned for only 3 of 16 surfaces
+
+`kind` ∈ keyed|prose is pinned for editorial-prose, seo-meta-templates,
+untranslated-filler; the other 13 are author's choice. One line: default
+keyed, exceptions listed. (AC11 stays mechanical either way; the byte
+contract doesn't.)
+
+### F13 — MINOR — Q2 routed to the owner, but it is not an owner gate
+
+AGENTS rule 6 (closed-loop) reserves owner Hard STOPs for domain/
+trademark, hub name, credentials, legality. Link-row membership for
+identical-to-pivot cells is a product call the orchestrator (or product
+panel) owns; the provisional adoption already makes it non-blocking.
+Re-route "Owner/policy ruling whenever convenient" accordingly.
+
+### F14 — MINOR — "NO additional or missing keys" vs conditional `axes`
+
+§L3 freezes the row shape with no missing keys, then omits `axes` when
+absent upstream. Pin `axes` as the single optional key so a strict
+schema validator and the prose agree.
+
+### F15 — MINOR — Residue class label misleads its stated consumers
+
+`machine-facing` is defined as the residue class, which swallows 28
+courses and ~331 unlockables (372 − 41 literals) — player-facing
+entities that merely lack joins. §9 routes site IA (Q1 page-universe
+decisions) to these very classes. Rename the residue
+(`unclassified-residue`) or split a fifth class; data unchanged.
+
+---
+
+## Checklist summaries
+
+- **AC quality (2):** fourteen ACs, thirteen mechanically checkable as
+  written (formula + expected value + artifact present). Exceptions:
+  AC5 (predicate ambiguity, F2; DRIFT-note location, F9), AC8 (dangling
+  shape unfollowable, F3), AC10 (exact-match branch unspecified, F5).
+  Nothing requires author's-eye judgment once F2/F3/F5/F9 land.
+- **Stage contract completeness (3):** L1–L6 each carry inputs, outputs,
+  determinism (inherited piece-1 discipline), failure modes, and ledger
+  policy; exit codes loud. Edge cases: first run ever = covered
+  (create + informational); interrupted rerun convergence = covered by
+  temp+rename + equal-vector no-op; partial/isolated rerun = covered
+  EXCEPT the stage-5 clobber window (F1); changed structural member =
+  uncovered (F5).
+- **§5 amendment (4):** single-writer is the right direction and the G1
+  diagnosis is correct (0-byte file confirmed on disk). Retirement is
+  NOT fully specified: doc routing yes; code/test fate and the clobber
+  window no (F1); the RELATIONS.md leg is mechanically unsound (F4).
+- **Fixture/test plan (5):** buildable blind — mini-roster fixtures,
+  hand-computed expectations, both symbolCheck branches, runner legs and
+  client-gated gating ("auto-SKIP without the extracted corpus" —
+  correctly keyed to the corpus, not TPC_GAME_DIR, matching the stage's
+  hostless nature). Gap: alias-present branch (F6).
+- **Scope honesty (6):** non-goals are real and load-bearing; no silent
+  grab from lane #22 (the manifest DESCRIBES its work, ships data only)
+  or piece-08 (alias measurement explicitly out; input contract only).
+  Emission-root reasoning (`extracted/locales/proof/` + the one
+  architecture-canonical exception) is sound and argued.
+- **Open questions (7):** correctly orchestrator-level for the §5
+  amendment and the site-side questions; Q2 mis-routed to the owner
+  (F13); none belong to the arbiter that this table wrongly holds.
+
+## Verdict
+
+**FIX-REQUIRED** — F-list: F1 (CRITICAL), F2, F3, F4, F5, F6 (MAJOR),
+F7–F15 (MINOR). Fifteen findings; F1–F6 block seating the build pair,
+F7–F15 fold into the same revision pass. The measured fact base is
+excellent — every §2 figure reproduced from the corpus this session —
+the defects are concentrated in one ownership-amendment transition
+paragraph and four contract-pin gaps.
+
+END OF reviewer-piece07-spec-r1
