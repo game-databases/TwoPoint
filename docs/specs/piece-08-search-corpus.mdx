@@ -1,0 +1,721 @@
+# Piece 8 — Search Corpus Spec (Two Point Campus)
+
+**Audience:** CodeWriter + TestWriter. This document is the contract for
+the search-corpus piece. Facts are grounded in
+[`../scout-report-piece-08-search.mdx`](../scout-report-piece-08-search.mdx)
+(revision 2 — S1–S5 applied: item titles mechanically reachable via the
+variation→Lite 353/353 and `_Lite` twin 1,652/1,654 joins; course
+resolution 19/28 mechanical, ~24/28 with the token map, curated residue
+4–7 rows; expanded planning floor 10,200 = 75.9 % alongside the narrow
+7,178 = 53.4 %; titles sizing corrected), both verifier verdicts
+([`../verifications/verifyA-scout-piece08.mdx`](../verifications/verifyA-scout-piece08.mdx)
+PASS-WITH-CORRECTIONS,
+[`../verifications/verifyB-scout-piece08.mdx`](../verifications/verifyB-scout-piece08.mdx)
+PASS-WITH-CORRECTIONS), the frozen pipeline contracts
+([piece-01](piece-01-extraction-pipeline.mdx) Revisions 2–7,
+[piece-02](piece-02-relinking.mdx),
+[piece-07](piece-07-locale-proof.mdx)), and four orchestrator
+pre-rulings recorded in §4 (stage number 12; exit-2 discrimination;
+mandatory per-locale shards; pending-relink-edge consumption posture).
+Where a number here conflicts with scout prose, this file wins — every
+figure in §2 carries its verification source, and the sizing metrics
+that the scout quoted loosely are RE-MEASURED and defined per metric in
+§2/F14–F18 (three distinct byte metrics; never mix them).
+
+---
+
+## 1. Goal
+
+ONE additive entrypoint stage turns the verified entity/locale corpus
+into the search data layer FRAMEWORK [§2.9](../../FRAMEWORK.md) requires
+— a pipeline-owned index artifact, derived, disposable, and rebuilt
+from committed inputs:
+
+- New stage id **`search-corpus`**, script
+  `tools/stage12_search_corpus.py`, registered ADDITIVELY in
+  `tools/tpc_common.py::STAGES` LAST in the enumeration. Every existing
+  stage byte-behaves identically.
+- **Purely derived stage:** it opens NO bundles, imports NO UnityPy,
+  and needs NO game dir. Its entire upstream set is committed
+  `extracted/` artifacts plus two optional DATA input files (§4
+  Inputs). Consequences: it runs hostless on the real corpus, the media
+  carve-out guard cannot regress, and the fixture tree covers it
+  without synthetic Unity bytes.
+- **Emission root `extracted/search/`:**
+  - **13 per-locale document shards** `shards/<locale>.jsonl` — one
+    document per searchable entity present in that locale (pre-ruling:
+    per-locale shards are MANDATORY; option A's combined lang-tagged
+    index is rejected because every route-coded locale would ship
+    everything).
+  - **13 titles-only projections** `titles/<locale>.jsonl` — the slim
+    hydration plane the shell loads for the instant box (option C's
+    two-plane split, shipped rather than deferred).
+  - **One hash manifest** `manifest.json` (sha256 per shard + universe,
+    analyzer, alias, collision, sizing, and rebuild-provenance blocks)
+    and `hashes.json` over every emitted file.
+- **Carrier-definition-explicit universe:** the conservative variant
+  (**7,178**) and the expanded planning floor (**10,200** = 75.9 %)
+  are BOTH computed every run from pinned component recipes, the delta
+  DRIFT-tracked (§S1). The index plans against the expanded floor.
+- **Alias layer:** course-name resolution encoded as three mechanical
+  families + normalization rules + a 7-entry token map + a CURATED DATA
+  INPUT FILE seeded with the residual rows (§S3); collision handling
+  preserves the measured many-to-many truth (264 colliding title
+  pairs, "Lab Work" ×53) instead of inverting text→entity.
+- **Tokenization:** per-locale analyzer configuration shipped IN the
+  manifest — whitespace standardizers for ten locales including ko,
+  char-bigram for zh-Hans/zh-Hant, mixed strategy for ja — with
+  measured vocab stats embedded so the client can budget edit-distance-2
+  typo tolerance (feasible at the measured 11.9k–28.6k vocab; no
+  Algolia-class infra).
+- **Determinism:** byte-stable reruns, hash manifests, temp+rename
+  write discipline, and the piece-1 exit-code contract extended with
+  the PRECISE relink-exit-2 discrimination rule of §S5 (tolerate the
+  declared steady state; never mask a real relink regression).
+
+Everything else — ranking implementation, MiniSearch instantiation,
+UI, hosted search infrastructure, guide/news corpus — stays out (§7).
+
+## 2. Measured facts the stage relies on
+
+All figures measured 2026-08-26 on `extracted/` at buildId **20226581**
+(stage-4 run exit 0; stage-6 run `2026-08-25T23:49:25Z` exit 2
+completed-with-ledger). Verification source per row: vA =
+[verifyA](../verifications/verifyA-scout-piece08.mdx), vB =
+[verifyB](../verifications/verifyB-scout-piece08.mdx), doc = freshly
+re-measured by this spec's documentator probes (same day, same tree).
+Seeds, never constants: drift prints a `DRIFT:` line and the fresh
+measurement wins (piece-2 §2 rule).
+
+| # | Fact | Value | Source |
+|---|---|---|---|
+| F1 | Stub universe | **13,443 rows / 9 kinds**: config 8,430 · item 3,885 · metagame-node 454 · unlockable 415 · room 116 · course 69 · student-type 54 · campus-level 17 · staff 3; `slug` null on 13,443/13,443 (100 %) | vA #1a/#1b |
+| F2 | Localized-edge universe **A** | `relinks/entity_locale.jsonl` = 10,964 rows → **5,850** distinct `(srcKind,srcId)` with ≥1 localized-text edge | vA #1c |
+| F3 | Narrow-carrier set (stub-side) | **4,298** rows whose pinned name-class carrier bears text (`_termID≠0`, or `_termID==0` with non-empty `_dev`, or plain non-empty string for campus-level) | vA #1d |
+| F4 | **Conservative universe = 7,178** (53.4 %) | A(5,850) ∪ carriers(4,298), overlap 2,970 — reproduced digit-for-digit by this spec's probe (doc) | vA #1e; doc |
+| F5 | Conservative per-kind | config 3,856 · item 2,649 · metagame-node 406 · room 107 · student-type 54 · course 41 · unlockable 49 · campus-level 13 · staff 3 | vA #1f |
+| F6 | Expanded planning floor | **10,200 = 75.9 %** (vB attack A3); independent verifier recomputation **10,107 = 75.2 %** with differing boundary choices (nested `States[].Name`, course-alias rows) — the floor is recipe-dependent inside a ~±0.9 % band; id-only remainder outside it ≈ 3,243 | vB #4; vA corrections |
+| F7 | Expanded extra components (this spec's pinned recipe) | plain-string `Name` literals on any kind ×**1,456** (doc; incl. campus-level 13) · config `LocalisedName` instances ×**552**, `Title` ×**547**, `DisplayName` ×**170** · room `Name` locstr rows ×**49** · unlockable `DisplayName.mTerm` resolving in en ×**53** (of 55 rows) · unlockable `DescriptiveName` ×**27** | doc; vB A3; vA #3d |
+| F8 | Item-title joins (ceiling) | variation `GameItem` int refs resolve to Lite `DefinitionID` **353/353**; full defs with `<id>_Lite` twin **1,652/1,654** — ceiling add **2,005** titles. NOT yet emitted by piece-02 (`item_item.jsonl`'s 155 rows are unrelated PPtr edges) — a relink-family work item, consumed here IF present, never re-derived | vB #3; vA #3g; doc |
+| F9 | Display-name edge truth | 2,993 name edges resolve to en text → **2,059 distinct term keys** (probe-reproduced); **1,895** distinct (kind,title); **264 collide** — top ("config","Lab Work") ×53, ("config","Specialist Book Report") ×51; 320 collide ignoring kind; **23 titles clean to empty** after tag+placeholder stripping (drop, never index "") | vA #2a/#2b; doc |
+| F10 | Registry + reverse index | registry 15,675 rows / 15,672 distinct keys / canonical-on-key / `locales[]` empty on all rows / **25** distinct sourceAssets (26 counts dump files — vA correction C1); reverse index **6,526** terms actually referenced by entities; remainder ≈9,146 = UI chrome, OUT of search scope | vA #2c/#2e; vB C1 |
+| F11 | Alias material on disk | internal-id split → **3,224** distinct id tokens · `_dev` English fallbacks **3,874** ROWS (row-basis; instance-count 3,919 — cite the basis, vA #3c): config 2,184 · item 1,458 · metagame-node 159 · room 31 · student-type 22 · unlockable 17 · staff 3 · `DisplayName.mTerm` 55 rows / 53 resolve (outside the `{_dev,_termID}` walker, G7) | vA #3b/#3c/#3d |
+| F12 | Long-tail guard | config spans **344** classes; `Meshes[].GeometryList[].Bones[]` alone = **139,847** bone-name strings — naive index-every-string balloons ~10× for garbage; whitelisted fieldPaths ONLY | vA #3f |
+| F13 | Locale planes | 13 tables + base overlay = **23,107,394 B (23.1 MB)**; rows en 15,665 … ko 15,457 … ja 15,371; zero whitespace-empty emitted texts; cross-locale identity vs en: ru 30.5 % · ja 16.5 % · de 14.3 % · pt-BR 13.4 % · fr 10.2 % · zh/ko ≈1.3 % | vA #4a/#4b/#4e |
+| F14 | Sizing metric (a) — TITLE TEXT BYTES | sum of UTF-8 title-text bytes per locale over the 2,059-key narrow set: **29,645 B (zh-Hant) … 62,286 B (ru)**, en 34,044 (doc probe). The scout's "51–100 KB raw" band used a looser denominator — superseded by this per-metric definition | doc |
+| F15 | Sizing metric (b) — KEY-LINE BYTES | the same 2,059-key set serialized as `{id,text}` JSONL lines: **157–189 KB/locale** (vA #6b, en 164 KB); vB measured **163–212 KB** (avg 178) over its 2,655-key superset. Quoted honestly as ≈**0.16–0.21 MB/locale** — THIS is the metric behind the scout's serialized figure | vA #6b; vB A5 |
+| F16 | Sizing metric (c) — SHIPPED DOC PLANES | per-entity documents cost more than key-lines: measured en anchors — titles projection ≈**249 B/doc** rich schema, **0.94 MB @ 3,793 docs**; full docs (with id-token aliases, pre-descriptions) **1.74 MB**. Expected shipped planes: titles projection ≈0.6–1.6 MB/locale, full shards ≈1.4–3.0 MB/locale (bands pinned as AC4, not estimates) | doc |
+| F17 | Entity-relevant reference plane | 6,526 referenced keys × 13 locales = **9.45 MB raw** (exact 9,454,777 B), **0.67 (zh-Hant) – 0.84 (ru) MB/locale**; full locale planes 23.1 MB for contrast | vA #6a |
+| F18 | Tokenization reality | vocab 11,897 (en) … 28,594 (ko) — full 13-locale table in scout §3, cell-for-cell verifier-confirmed; ko is WHITESPACE-safe (its "CJK" column counts Hangul syllables; Han ideographs ≈0 — vB C4); zh-Hans/zh-Hant **95.3 %** no-whitespace rows → char-bigram REQUIRED; ja mixed (83.5 % no-ws); markup tags on 6.0 % of en rows (any-tag reading), `{PLACEHOLDER}` braces 4.8 %; within-locale colliding texts en 1,570 · zh-Hans 1,668 · ko 1,702 · tr 1,625 (10.0–11.0 % of rows) | vA #4c/#4d/#4f/#4g; vB C4/C5 |
+| F19 | Relink steady state (exit 2) | `matrix.json` 100 cells = 73 missing / 24 modeled / 3 partial · `_dangling_guids.jsonl` 1,137 rows · `locale_join_report.registryMisses` 5 · bar-3 floor unmet (`sourcesApplied=0`) · `.stage-stamps/relink.json` carries `{exitCode:2, identity, outputs{relpath:sha256}}` | vA #6c; vB A6; doc (stamp shape) |
+| F20 | Course-name surface | 69 courses = 28 `TPC.CourseDefinition` + 41 `TPC.MarketingCourseDefinition`; NO name field on either; on-disk `_Name` families: qualification chain `Characters/**/<X>_Qualification_Name` ×**28** · `Courses/Courses/<X>_Name` ×**18** · `Courses/DLC_{Space,Ghost}/<X>_Name` ×**9** · `Marketing/Courses[/Minor]/[Long_]<X>_Name` ×**24** · `Research/Courses/<X>_Name` ×**4**; resolution band: strict suffix 10/28 (vA #3i) → plural-normalized 14/28 (vB A1) → union 17/28 mechanical (vB #2) → ~24/28 with the 7-entry token map; genuinely nameless: `Course_SpaceExplorer`, `Course_SummerSchool`, `Course_Archaeology_Easter_23` (seasonal), `Course_KnightSchool_LordBlaggard` (shares Knight School) | vA #3i; vB A1 |
+| F21 | Course resolution UNDER THE PINNED RECIPE (§S3.2) | families {qual 28, cc 18, dlc 9} + casefold + plural ±s + last-underscore-segment rule: **16/28** without the token map, **23/28** with it; + curated seed rows (§S3.4) → **25/28**, open **3** (Easter seasonal, SummerSchool, SpaceExplorer) — satisfies the ≥24/28 gate with residue inside the 4–7 band (doc probe) | doc |
+
+## 3. Competitor search bar + product constraints the index serves
+
+Measured live by the scout (§5) and re-verified token-for-token by vB
+attack A4 (one attempt per walled surface, AGENTS rule 10):
+
+- **new-world.guide — the instant-UX floor:** Algolia instantsearch.js
+  **4.48.0**, lazy-loaded (chunk `2603-23dd55c8c80ad584.js`, 113,820 B,
+  version string verified; absent from home critical path); hosted-SaaS
+  results-as-you-type with built-in typo tolerance + facet filters;
+  i18n keys `search_items` / `search_string` /
+  `searching_items_includes` / `search_perks` / `search_not_found`;
+  **single-locale** (`lang="en-US"`, zero hreflang).
+- **wikily.gg — per-game scoped, search surface unobservable:** Next.js
+  RSC; header "Search" label; `/search` → 308 → `/search/` → **404**
+  (per-game `/ark-survival-ascended/search/` also 404); no
+  algolia/typesense/meilisearch/lunr/minisearch/flexsearch hit in
+  landing HTML + 16 chunks. (Its PAGE grid routes 24 hreflang locales —
+  piece-07 §3 — but no per-locale SEARCH mechanics are observable.)
+- **metaforge.app — walled** (403 ×2 incl. the authorized crawler-UA
+  retry; stopped per rule 10). Question it would have answered: whether
+  planner/search is a client-side instant filter and any per-locale
+  routing.
+
+**Floor statement for this piece:** competitors demonstrate instant
+type-ahead over entity names and kind-scoped filtering; NEITHER
+demonstrates per-locale entity search on any observable surface. Our
+**13-locale routed search** — shards keyed to the route-coded locale
+paths of [DR-2026-08-20-locale-urls], pivot `en` at the bare path — is
+the differentiator, and it is cheap at our scale (F16/F17: single-digit
+MB per locale plane, zero hosted infra). Design constraints the artifact
+must therefore protect:
+
+1. **Never let an en-only index become the primary surface** for a
+   non-pivot route; every locale route hydrates its own shard.
+2. **Instant filtering is the interaction law**
+   ([DR-2026-08-22-search-is-not-a-page],
+   [DR-2026-08-22-inputs-answer-as-you-type]): a header field, results
+   replace page content in place from two characters, no submit control.
+   Document shards + client-side MiniSearch instantiation satisfy this
+   at ≤10.2k docs/locale; the DATA layer ships documents + analyzer
+   config, never a library-coupled prebuilt index.
+3. **Typo tolerance budget is a shipped fact, not hope:** the manifest
+   embeds per-locale vocab stats; worst case 28,594 terms makes client
+   Levenshtein-d≤2 (BK-tree/SymSpell) feasible — the manifest states it
+   (`typoBudget`), the client implements it.
+4. **Many-to-many honesty:** 264 colliding (kind,title) pairs mean
+   text→entity inversion is forbidden architecture; documents stay
+   keyed by entity, ranking hints ride the manifest (kindWeights), id
+   disambiguation is always available.
+
+## 4. Stage 12 — `search-corpus`
+
+> **Orchestrator pre-rulings enforced here** (binding, recorded 2026-08-26):
+> (1) stage number **12** per the canonical registry relink=6 · maps=7 ·
+> logic=8 · locale-proof=9 · contracts=10 · media=11 · search-corpus=12;
+> (2) rebuild hooks tolerate relink's steady-state exit 2 WITHOUT masking a
+> real relink regression — the precise discrimination is §S5.3;
+> (3) per-locale shards mandatory (zh-Hans/Hant char-bigram required; ko
+> standard; vocab makes client-side edit-distance-2 feasible — no
+> Algolia-class infra); (4) the pending relink edges (variation→Lite,
+> definition→`_Lite` twins) are piece-02-family work — this stage CONSUMES
+> them IF present and LEDGER-DEGRADES to the narrower universe when
+> absent, with a loud DRIFT line (§S1.4). Note: sibling specs
+> (pieces 03/04/06/07) each claim a `stage7_*` filename — a doc-level
+> numbering collision owned by those seats; this spec pins ONLY
+> `stage12_search_corpus.py` and registers LAST in `--list`.
+
+- **Stage id:** `search-corpus` (entrypoint `--list` enumerates it
+  LAST; twelfth stage per the canonical registry).
+- **Script:** `tools/stage12_search_corpus.py` + shared
+  `tools/search_util.py` (universe walker, course resolver, analyzer
+  census, shard writers). Registered in `tools/tpc_common.py::STAGES`
+  with script-hash deps
+  `["stage12_search_corpus.py", "search_util.py", "tpc_common.py",
+  "log_util.py"]`. No UnityPy import anywhere in the stage.
+- **Inputs (upstream set — all committed artifacts; ANY missing required
+  input ⇒ exit 3 naming it, runner pre-check, piece-1 pattern):**
+  `identity.json`; `.stage-stamps/relink.json`;
+  `.stage-stamps/localisation.json`; `stubs/<kind>.jsonl` ×9;
+  `relinks/entity_locale.jsonl`; `relinks/i2_term_registry.jsonl`;
+  `relinks/locale_term_entity.jsonl`; `relinks/matrix.json`;
+  `relinks/guid_bridge_report.json`; `relinks/locale_join_report.json`;
+  `locales/<locale>.jsonl` ×13; `locales/locale-matrix.json`.
+  OPTIONAL inputs (absence is a LEDGER ROW, never a failure):
+  - `relinks/item_item.jsonl` — scanned for the two pending edge shapes
+    (§S1.4); absence or zero matching rows ⇒ `joinState:"pending"` +
+    `item-title-joins-absent` ledger row + loud
+    `DEGRADED-UNIVERSE:` line quantifying the miss against the 2,005
+    ceiling (pre-ruling 4).
+  - `data/sources/derived/course-name-aliases.jsonl` — the curated
+    course alias table, SHARED with
+    [piece-07 §4](piece-07-locale-proof.mdx) (one input closes both
+    consumers; row shape `{courseId, termKey, method, inferred:true,
+    sourceRefs[]}`, sorted by `courseId`). Seeded content is pinned in
+    §S3.4. Absence ⇒ `alias-input-absent` ledger row and the
+    mechanical-only resolution floor applies.
+- **Console/write discipline:** inherited unchanged from piece-1 §4 —
+  UTF-8 stdout/stderr, explicit `encoding="utf-8"` + `newline="\n"`,
+  sorted enumeration + sorted JSON keys, NO wall-clock timestamps inside
+  outputs, temp-file + atomic-rename writes, byte-identical reruns.
+- **Exit codes (piece-1 contract unchanged):** `0` success · `1` stage
+  failure — schema/self-validation breakage OR a same-buildId UPSTREAM
+  REGRESSION per §S5.3 (artifacts NOT written in that case) ·
+  `2` completed-with-ledger — open ledgers named in `_ledger.jsonl`
+  (the EXPECTED steady state on this corpus: pending item joins, open
+  course residue, G4 dev-only flags) · `3` environment/gate refusal.
+
+Sub-passes run in order; each appends its counters to the
+EXTRACTION-LOG run section (key names pinned — the log is the
+acceptance surface).
+
+### S1 — Universe resolution (dual carrier definitions)
+
+1. **Pinned conservative recipe (asserts == 7,178):** walk the 9 stub
+   files; a row is a NARROW CARRIER iff its pinned name-class
+   fieldPath holds a LocalisedString struct bearing text
+   (`_termID != 0`, or `_termID == 0` with non-empty `_dev`), or —
+   campus-level only — a plain non-empty `Name` string. Pinned paths:
+   config `Name` · room `NameWhenBuilt` · staff `LocalisedName` ·
+   item/metagame-node/unlockable/student-type `LocalisedName*` ·
+   campus-level plain `Name`. Universe = A(F2) ∪ narrow-carriers(F3).
+   Assert equality with 7,178 and per-kind F5 — deviation is an exit-1
+   validation failure (this recipe is fully mechanical and
+   verifier-reproduced digit-for-digit).
+2. **Pinned expanded recipe (computed every run):** union of the
+   conservative universe with the F7 components — plain-string `Name`
+   literals (any kind), dev-bearing sentinel structs on the expanded
+   config name-class fields (`LocalisedName`/`Title`/`DisplayName`),
+   room `Name` locstr rows, unlockable `DisplayName.mTerm` (resolving)
+   + `DescriptiveName`, item-title joins AS EMITTED (§S1.4), and
+   course-convention resolutions (§S3). Every component count is
+   emitted beside the union so boundary disputes are data, not prose
+   (the verifier band 10,107–10,200 exists precisely because
+   boundaries differ).
+3. **Dual-floor reporting (pre-ruling-enforced):** the run section and
+   `manifest.universe` carry BOTH counts every run — `narrow` (7,178
+   asserted) and `expanded` — plus `planningFloor: {value: 10200,
+   share: "75.9%"}` and a mandatory
+   `DRIFT: expanded <n> vs planning floor 10200 (<share>%); delta
+   attributable to <named boundary components>` line. `idOnly` =
+   13,443 − expanded, decomposed per kind. Planning NEVER silently
+   narrows to the conservative variant.
+4. **Pending-relink-edge consumption (pre-ruling 4).** Scan EVERY
+   `relinks/<src>_<dst>.jsonl` pair file for `srcKind=="item"` and
+   `dstKind=="item"` rows; classify: `evidence.fieldPath == "GameItem"`
+   → variation→Lite edge; `method` starting `name-convention:` with a
+   `_Lite` twin payload → full→Lite edge. Counts feed `joinState`:
+   - `variationRefs` expected ≤353, `twinEdges` expected ≤1,652
+     (measured ceilings F8 — more is impossible, fewer means pending);
+   - `joinState:"emitted"` iff both counts equal their ceilings,
+     else `"pending"` with `pendingJoinCandidates = 2005 − emitted`;
+   - pending ⇒ `item-title-joins-absent` ledger row + the loud
+     `DEGRADED-UNIVERSE: item titles short by <n> of 2005 — relink `
+     `emission owed (piece-02 family)` line. This stage NEVER derives
+     those edges from stubs itself — counting candidates for the
+     ceiling diagnostic is measurement; emitting them is relink's job.
+5. **Whitelist guard (F12):** the only fieldPaths eligible for text
+   indexing are the pinned name/description/alias classes of §S2/§S3.
+   Any walker encounter of mesh/bone/material/path strings is a defect,
+   not content: assert `bonesIndexed == 0`.
+
+### S2 — Per-locale document shards
+
+One document per (searchable entity, locale) — the record carries the
+entity's whole searchable surface for that locale.
+
+Frozen row shape (exact key set; NO additional or missing keys):
+
+```json
+{"kind":"room","id":"Room_Archaeology_Display","slug":null,
+ "visibility":"public","weight":1.0,
+ "name":{"text":"Archaeology Display",
+         "termKey":"Rooms/Rooms/Room_Archaeology_Display_Name",
+         "basis":"localized"},
+ "aliases":[{"text":"archaeology","class":"id-token"}],
+ "descriptions":[{"text":"…","termKey":"…"}],
+ "icon":{"subObjectName":"UI_InGame_T_Icon_Room_Archaeology_Display",
+         "guid":"…"},
+ "buildId":20226581}
+```
+
+- **Membership rule (locale purity, localization-architecture §1):** a
+  document exists in locale L iff the entity has ≥1 NON-EMPTY text
+  RESOLVED IN L — a localized term edge with text in L's table, or an
+  `mTerm` key resolving in L, or (any locale) a plain literal.
+  Literal-bearing and dev-only entities therefore ship in the **en
+  shard only** (the pivot); no locale shard ever contains another
+  locale's fill (pivot-fill banned, piece-07 L4 posture). The manifest
+  reports `devOnlyDocs` per kind (G4 population: 779 item + 718 config
+  + 46 metagame-node name-fields) so the site can implement its own
+  declared fallback by merging the en shard as a SECONDARY corpus —
+  an explicit site-lane choice, never baked into the shards.
+- **Name resolution priority (pinned):** localized name-class edge
+  (first in sorted `(fieldPath,dstId)` order) → `mTerm` resolution →
+  plain literal → convention/curated (courses, §S3). `basis` enum:
+  `localized | mterm | literal | dev-fallback | convention | curated`.
+  student-type: `LocalisedNameF` is the name, `LocalisedNameM` rides
+  as a `name-variant` alias; staff `Ranks[].TitleM/F` (30 instances)
+  ride as `name-variant` aliases.
+- **Cleaning (before any text lands):** strip `<[^>]+>` tags and
+  `\{[^{}]+\}` placeholders; texts cleaning to empty are DROPPED and
+  counted (expect 23 name titles, F9) — never indexed as `""`.
+  Descriptions are drawn ONLY from RESOLVED localized edges whose
+  fieldPath contains `Description` (config `Description`/
+  `FlavourDescriptions[]`, item `Description`, room
+  `Description`/`LongDescription`); `_dev` placeholder prose (course
+  ×41 "Brief description of the item…") is NEVER a description — dev
+  text surfaces only as a name fallback or `dev-string` alias.
+- **Field slots:** `slug` stays `null` today (F1: 100 % null) — the
+  slot exists so a site-layer slug regime can land without schema
+  churn. `icon` carries `IconReference.m_SubObjectName` (+GUID when
+  present) as a REFERENCE only — icon bytes/CDN paths are the media
+  piece's contract; sprite names are NOT aliases (noise, scout §2
+  "optional"; census recorded in the manifest as
+  `excluded.spriteNameCarriers` with the flip path named).
+- **Visibility (G8 scope decision, Documentator-owned per scout §8):**
+  enum `public | internal`. The measured campus-level dev roster ships
+  `visibility:"internal"` — verbatim: `Blank Level`, `Free Play
+  Level`, `IL3 Video 1`…`IL3 Video 5`, `IL3 Demo Level`,
+  `Mark's Test Scenario`, `September 2020 Milestone`,
+  `Test Level` (11 rows). Public: `All buildings`, `Knight Level`.
+  The 4 null-name campus-levels emit no document at all. Flipping the
+  roster is editing one pinned list, not code.
+- **Sort/order:** shards sorted by `(kind,id)`; all arrays sorted
+  (aliases by `(class,text)`); UTF-8 LF JSONL, compact separators,
+  sorted JSON keys — byte-stable reruns.
+- **Titles projections** `titles/<locale>.jsonl`: the slim slice
+  `{kind, id, t}` (`t` = cleaned name text, verbatim from the shard's
+  `name.text`) — the shell's instant-box hydration plane. Derived
+  strictly from the same run's shard (asserted row-for-row).
+
+### S3 — Alias layer
+
+1. **Classes (enum, frozen):** `id-token` (verbatim internal id split
+   on non-alphanumeric runs, lowercased, length ≥2, pure digits
+   dropped, deduped — vocabulary 3,224, F11) · `name-variant`
+   (M/F forms, Ranks titles) · `dev-string` (the `_dev` English
+   fallback, attached when a localized name EXISTS — 3,874-row basis)
+   · `convention` (course family/token-map resolutions) · `curated`
+   (seed-table rows). `mTerm` resolutions are NAMES (basis `mterm`),
+   not aliases.
+2. **Course-name resolution encoding (pinned recipe, F21):**
+   - Families, priority order: qualification chain
+     `Characters/**/<X>_Qualification_Name` (28) >
+     `Courses/Courses/<X>_Name` (18) >
+     `Courses/DLC_{Space,Ghost}/<X>_Name` (9) >
+     `Marketing/Courses[/Minor]/[Long_]<X>_Name` (24) >
+     `Research/Courses/<X>_Name` (4).
+   - Candidate generation per course id: strip the
+     `Course_` / `Marketing_Course_` / `Marketing_Minor_Course_`
+     prefix; strip a trailing `_Long`; generate {tail, tail±plural-s,
+     LAST underscore segment, last±s}; apply the token map; match
+     casefold against family tails in priority order.
+   - Token map (7 entries, frozen DATA): `Computing→Computer`,
+     `Magic→Wizardry`, `Spy→SpySchool`, `VeryHard→Hard`,
+     `Grease→Greaser`, `CheeseAlien→AlienCheese`,
+     `HumanityAlien→Alien`.
+   - Expected yields (F21): 16/28 mechanical without the map, 23/28
+     with it; **gate: ≥24/28 WITH the seed table** (probe: 25/28);
+     the 41 marketing courses resolve through the same index — every
+     unresolved row is ledgered, none silently dropped.
+   - Resolutions are emitted as alias/name material with
+     `inferred:true` semantics carried in the manifest's
+     `courseResolution` block (method per row:
+     `family:<name>` / `plural-fold` / `last-segment` / `token-map` /
+     `curated`), never faked to `hard`.
+3. **Curated seed table (DATA INPUT, committed).**
+   `data/sources/derived/course-name-aliases.jsonl` — shared with
+   piece-07 (row shape above). SEED CONTENT pinned (the 4–7-row
+   residue class of the scout, shrunk by the recipe):
+   - `Course_PerformingArts → Characters/Qualifications/Teacher/
+     Music_Qualification_Name` (method `curated`; rename, F15/F20)
+   - `Course_KnightSchool_LordBlaggard → Courses/Courses/
+     KnightSchool_Name` (method `curated`; shares "Knight School",
+     vB A1)
+   - Optional additional rows MUST follow the same shape; the stage
+     validates every row's `termKey` against the registry/en table and
+     FAILS exit 1 on a dangling curated key (bad data is louder than
+     missing data).
+4. **Collision handling:** text→entity stays many-to-many by
+   construction (documents keyed by entity). The manifest's
+   `collisions` block publishes the measured truth —
+   `{collidingPairs: 264, topPairs: [{"config","Lab Work",53},
+   {"config","Specialist Book Report",51}], ignoreKindCollisions: 320,
+   withinLocaleDuplicateTexts: {en: 1570, "zh-Hans": 1668, ko: 1702,
+   tr: 1625}}` — recomputed each run, reconciled against F9/F18 with
+   `DRIFT:` on movement. Ranking disambiguation (kind weighting + id)
+   is a CLIENT concern guided by `kindWeights`.
+
+### S4 — Tokenization + analyzer census
+
+1. **Analyzer assignments (frozen 13-entry table, F18):**
+
+   | tokenizer | locales |
+   |---|---|
+   | `whitespace` | en, de, es, fr, it, pl, pt-BR, ru, tr, **ko** |
+   | `cjk-bigram` | zh-Hans, zh-Hant |
+   | `mixed` (whitespace runs + bigram fallback) | ja |
+
+   Common config per locale: `lowercase: true`,
+   `stripMarkupTags: true`, `stripPlaceholders: true`,
+   `stoplist: []` (v1 ships NO stoplist — titles dominate and vocab
+   stays trivial; the reversal path is one manifest field),
+   `asciiFolding: none` (Turkish İ/dotless-i folding is a client
+   normalization choice; recorded, not decided here).
+2. **Vocab census (recomputed every run):** per locale — rows, distinct
+   word-char-run tokens, median/avg token-count-per-row, CJK-bearing
+   rows, no-whitespace rows — the scout §3 table's columns, embedded in
+   `manifest.analyzers.<locale>` and reconciled against the measured
+   range endpoints (en 11,897 … ko 28,594; tr 23,445 under the
+   tokenize-then-lowercase order, vA #4c note). Drift prints `DRIFT:` ;
+   fresh wins.
+3. **Typo budget block:** `manifest.typoBudget = {maxVocabObserved,
+   ceilingAssumed: 30000, strategy: "client-side levenshtein-d2",
+   feasibility: "measured", infra: "none-hosted"}` — the claim "no
+   Algolia-class infra needed" is a shipped, checkable fact (bigram
+   vocab for zh noted as the edit-distance substrate there).
+4. **Bigram note:** zh/ja analyzers operate on character bigrams of the
+   CLEANED text; the shards store cleaned original text only —
+   tokenization is a client-load step driven by this config (keeps
+   artifacts portable and library-free).
+
+### S5 — Assembly, manifest, rebuild hook + exit-2 discrimination
+
+1. **`manifest.json`** (sorted keys, deterministic): `meta` (buildId,
+   stage, script deps, `sourceStamps: {relinkIdentity,
+   localisationIdentity}` copied from the consumed stamps);
+   `universe` (§S1 dual floors + components + perKind + idOnly);
+   `shards` (per locale: docs, bytes, sha256; titles docs/bytes/sha256);
+   `analyzers` (§S4); `aliasVolumes` (`{idTokens: 3224, devStrings:
+   3874, mTermRows: 55, mTermResolved: 53}`);
+   `titleKeySets` (`{narrow: {edges: 2993, keys: 2059, enResolvePct:
+   100}, expandedWalker: {keys: 2748}}`);
+   `sizes` (planes 23,107,394 B; entityRelevant 9,454,777 B;
+   perMetric bands F14/F15/F16 — all three metrics, labeled);
+   `kindWeights` (frozen ranking hint: item 1.0, room 1.0, course 1.0,
+   staff 1.0, student-type 0.9, unlockable 0.8, metagame-node 0.6,
+   config 0.5, campus-level 0.3); `visibilityRoster` (§S2 list);
+   `collisions` (§S3.4); `courseResolution` (§S3.2); `typoBudget`;
+   `joinState`; `excluded` (`{spriteNameCarriers, uiChromeTerms: 9146,
+   bonesIndexed: 0}`). No wall-clock timestamps anywhere.
+2. **`hashes.json`:** sha256 over EVERY emitted file of this stage,
+   sorted by relpath, itself excluded. Double-run byte-identity is
+   checked by comparing this manifest (AC7).
+3. **Rebuild hook + THE EXIT-2 DISCRIMINATION RULE (pre-ruling 2,
+   precise).** The stage declares its trigger: re-emit iff its own
+   stamp identity mismatches, OR the consumed `relink` /
+   `localisation` stamp identities (or their recorded output hashes)
+   differ from `manifest.meta.sourceStamps`. On trigger, classify
+   upstream health BEFORE writing anything:
+   - **Existence/exit class:** required input absent, `relink` stamp
+     absent, or `relink.exitCode ∉ {0, 2}`, or
+     `localisation.exitCode != 0` → **exit 3** naming the artifact.
+     Exit 2 is relink's DECLARED steady state (F19) — it is never a
+     refusal reason.
+   - **Structural validity:** `matrix.json` must parse with
+     `cellsTotal == 100`; core relations must be non-empty and
+     schema-valid → violations are **exit 1**.
+   - **Steady-state bounds (pinned seeds at buildId 20226581; any
+     bound breach at the SAME buildId = REAL regression → print
+     `RELINK-REGRESSION: <member> bound<b> measured<m>` for every
+     breached member, WRITE NOTHING, exit 1):**
+     `statusCounts.missing ≤ 73` · `modeled ≥ 24` ·
+     `danglingDistinctGuids ≤ 1,137` · `registryMisses ≤ 5` ·
+     `entity_locale rows ≥ 10,964` · `registry rows ≥ 15,675` ·
+     `referenced terms ≥ 6,526` · per-locale table rows within
+     `[15,371, 15,665]`.
+   - **BuildId changed:** `DRIFT:` summary old→new per headline
+     member, bounds REBASED to fresh measurements, fresh wins — never
+     a regression verdict across builds (piece-07 L6 precedent).
+   - **Improved member** (fewer missing/dangling/misses, more edges):
+     informational `DRIFT:`, fresh value becomes the new seed.
+   Rationale: tolerance never masks — at a fixed buildId, deterministic
+   reruns reproduce identical upstream counts, so ANY bound breach is
+   an upstream code/content change, and refusing to overwrite a healthy
+   index with a shrunken one is the anti-masking behavior.
+4. **`_ledger.jsonl`** — one row per open gap:
+   `{code, severity: "info"|"gap", detail, unblock, buildId}`, sorted
+   by `(code, detail)`. Pinned codes: `item-title-joins-absent`
+   (pending ceiling delta) · `course-name-open` (the ≤4 unresolved
+   course ids, reasons: seasonal / dev-superceded / unreferenced) ·
+   `alias-input-absent` · `dev-only-names` (G4 counts per kind,
+   severity info) · `mt-unresolved` (2 rows) · `campus-level-scope`
+   (G8 note, info: internal roster applied). Empty file valid iff
+   nothing is open — UNREACHABLE on today's corpus ⇒ **exit 2 is the
+   honest steady state**.
+
+### Run-section keys (pinned, appended per pass)
+
+```
+S1: stubRows=13443 / universeNarrow=7178 / universeExpanded /
+    universeComponents{…} / planningFloorDelta / joinState /
+    variationRefs / twinEdges / pendingJoinCandidates / idOnlyRemainder
+S2: docsEmitted / perLocaleDocs{…} / cleanedEmptyDropped=23 /
+    devOnlyDocs{…} / localePureViolations=0 / bonesIndexed=0
+S3: idTokenVocab / devAliases / mTermResolved / courseMechanical /
+    courseWithSeedTable / courseOpen / marketingResolved /
+    marketingOpen / collisionPairs=264
+S4: analyzerAssignments{…} / vocabPerLocale{…} / markupRowsStripped
+S5: shardFiles=26 / manifestBytes / hashesCount / ledgerRows /
+    rebuildTrigger{reason} / upstreamVerdict
+```
+
+## 5. Output contracts (additions under `extracted/`)
+
+```
+extracted/
+├── data-note: curated inputs live OUTSIDE extracted/, at pack level:
+│     data/sources/derived/course-name-aliases.jsonl   # §S3.3 seed table (shared with piece-07)
+└── search/                          # stage search-corpus ONLY (every file below)
+    ├── manifest.json                # S5: universe/analyzers/alias/collision/sizing/provenance blocks
+    ├── hashes.json                  # S5: sha256 over every emitted file (self-excluded)
+    ├── _ledger.jsonl                # S5: open gaps (codes pinned; empty valid iff none)
+    ├── shards/                      # FULL per-locale document shards (route-coded names verbatim)
+    │   ├── en.jsonl                 # pivot — also the bare-path canonical plane
+    │   ├── de.jsonl  es.jsonl  fr.jsonl  it.jsonl  ja.jsonl  ko.jsonl
+    │   ├── pl.jsonl  pt-BR.jsonl  ru.jsonl  tr.jsonl
+    │   └── zh-Hans.jsonl  zh-Hant.jsonl
+    └── titles/                      # SLIM instant-box projections ({kind,id,t})
+        └── <locale>.jsonl           # same 13 names, derived from shards/ row-for-row
+```
+
+Ownership: EVERY path above is written by `stage12_search_corpus.py`
+alone. No existing stage gains or loses a writer. Locale filenames are
+the route-coded BCP-47 tags VERBATIM (`pt-BR`, `zh-Hans`, …; open
+question 3 confirmed); `en` doubles as the bare-path canonical plane
+per [DR-2026-08-20-locale-urls]. EXTRACTION-LOG/.stage-stamps/
+.pipeline-meta stay runner-owned. All JSONL sorted + UTF-8 + LF; all
+JSON sorted-keys; atomic renames; `buildId` on 100 % of rows/documents
+(user-facing surfaces later may carry buildId only — AGENTS rule 3
+two-class rule).
+
+## 6. Acceptance criteria (mechanical, whole piece)
+
+1. **Entrypoint:** `python run_all.py --list` enumerates twelve stages
+   ending `..., search-corpus` (canonical registry order); `make list`
+   equivalent; `--only search-corpus` runs in isolation on a prepared
+   tree (client mode: `--skip search-corpus` then `--only
+   search-corpus`; hostless smoke: `tests/build_fixture_tree.py --stage
+   search-corpus` materializes §4's upstream set synthetically — mini
+   stubs + relink JSONLs + 2 locale tables + stamps; NO Unity bytes).
+2. **Universe (AC by carrier definition):** `universeNarrow == 7,178`
+   EXACT with per-kind F5 decomposition; every expanded component
+   equals its F7/F8 seed (1,456 / 552 / 547 / 170 / 49 / 53 / 27;
+   joins ≤ 353 + 1,652); `expanded == |union(components)|` internally
+   consistent and `expanded == ceiling − pendingJoinCandidates`;
+   planning-floor DRIFT line printed with share of 13,443; `idOnly ==
+   13443 − expanded`.
+3. **Shards:** exactly 13 shard files + 13 title projections, locale
+   names character-exact; every document schema-valid (exact key sets,
+   enums for `basis`/`visibility`/alias `class`); sorted `(kind,id)`;
+   per-locale doc counts == manifest; locale purity — zero docs in
+   L≠en without a locale-resolved text in L
+   (`localePureViolations == 0`); the 23 cleaned-to-empty titles
+   dropped and counted; `slug == null` on 100 % of docs;
+   `bonesIndexed == 0`.
+4. **Size bands (honest, measured):** full shard per locale within
+   **[1.0, 3.5] MB**; titles projection per locale within **[0.3,
+   1.6] MB**; Σ full shards ≤ **28.4 MB** (the ≤3× entity-relevant
+   source law over 9.45 MB); manifest `sizes` block carries all three
+   metrics (F14 text bytes, F15 key-line bytes 0.16–0.21 MB/locale,
+   F16 shipped planes) — no band may quote a metric it does not name.
+5. **Alias layer:** id-token vocabulary == 3,224 distinct; `dev-string`
+   aliases reconcile with the 3,874-row basis; mTerm 55 rows → 53
+   resolved + 2 ledgered; course resolution **≥24/28** over the 28
+   `TPC.CourseDefinition` rows WITH the seed table present (open ≤ 4,
+   each in `course-name-open` with a reason); mechanical-only floor
+   ≥16/28 asserted when the alias input is ABSENT (degraded mode);
+   marketing courses resolved-or-ledgered with zero silent drops;
+   collisions block equals F9/F18 seeds.
+6. **Tokenization:** analyzer table equals the §S4 assignment exactly
+   (ko under `whitespace` — the Hangul/Han distinction is contractual);
+   vocab stats within the measured endpoint range (en 11,897 low end …
+   ko 28,594 high end, `DRIFT:` on movement, fresh wins); cleaning
+   rules demonstrably strip tags + placeholders (fixture-covered).
+7. **Determinism:** running `--only search-corpus` twice yields
+   byte-identical declared outputs (`hashes.json` equality; log/
+   stamps/meta excluded); interrupted-run convergence holds (temp+
+   rename); manifest carries no timestamps.
+8. **Exit-2 discrimination (fixture-proven, all five branches):**
+   (a) relink stamp exitCode 3 → exit 3 naming it; (b) steady state
+   73/1,137/5 → proceeds, exit 2 with ledgers; (c) same-buildId
+   dangling GUIDs 1,138 → `RELINK-REGRESSION:` line + **exit 1 +
+   artifacts unwritten**; (d) same-buildId `entity_locale` 10,963 →
+   exit 1; (e) buildId bump with moved counts → `DRIFT:` + rebase,
+   never exit 1.
+9. **Manifest completeness:** every §S5.1 block present; every sha256
+   matches its file; `buildId` on 100 % of docs/rows;
+   `sourceStamps` equal the consumed stamps' identities (the rebuild
+   trigger's memory).
+10. **Carve-out guard intact:** the stage opens no bundles and emits no
+    media bytes — piece-1's media-extension grep over `extracted/`
+    still passes; nothing outside `extracted/search/` (+ the two
+    staged optional reads) is written.
+
+## 7. Explicit non-goals (later pieces own these)
+
+- Any inverted-index/library artifact (MiniSearch JSON, Lunr bundle) —
+  the stage ships DOCUMENTS + analyzer config; index instantiation is
+  the site lane's, per FRAMEWORK §2.9.
+- Ranking, scoring, typo-correction IMPLEMENTATION, UI, the header
+  search field, empty states — site lanes behind the AGENTS rule-8
+  gate; this stage ships `kindWeights` + vocab budgets as hints.
+- Hosted search infrastructure of any kind — excluded by measurement
+  (F16/F17) and by pre-ruling 3.
+- Guide/news/marketing-content corpus in the index — v1 is ENTITIES
+  only (the 9,146-term UI-chrome exclusion HOLDS); extending scope is
+  a new input contract, routed (§8).
+- Emitting the pending item-title joins into `relinks/*` — piece-02
+  family work (AGENTS rule 8 routing); this stage consumes or
+  ledger-degrades, never derives (pre-ruling 4).
+- `DisplayName.mTerm` walker extension in `entity_locale.jsonl` (G7) —
+  relink amendment candidate, owner-routed; consumed here read-only.
+- PROOF.md reconciliation — the PROOF piece consumes THESE artifacts.
+- Machine translation of anything (localization-architecture §6);
+  G5's untranslated-fallback rates are reported facts, not work.
+- Modifying stage-4/stage-6/stage-7 outputs — read-only over
+  everything except its own directory.
+
+## 8. Open questions routed back (none block the build)
+
+| Question | Resolution route |
+|---|---|
+| Default hydration plane for the shell: titles-only box + lazy full shard (option C as shipped), or full-shard-only? Both planes exist, so the call is pure UX | UX piece at site phase; payload math settled here |
+| Should guide/news/editorial content ever join the same index? v1 excludes it; a `sourceClass` field would be the seam | Site IA lanes; needs a new upstream contract first |
+| Shard naming == route-coded locale paths with `en` as bare-path canonical | CONFIRMED by this spec per [DR-2026-08-20-locale-urls]; site lane consumes filenames verbatim |
+| campus-level public/internal roster (11 internal pinned here) | Documentator decision applied (scout §8 G8 routing); owner flips by editing the roster list, no code change |
+| metaforge.app planner/search internals (walled 403 ×2) | One ABP attempt in the UX piece if wanted (rule 10 posture unchanged) |
+| Sibling-spec `stage7_*` numbering collision (pieces 03/04/06/07) vs the canonical registry | Arbiter/orchestrator own the renumber; THIS spec's `stage12_search_corpus.py` pin is independent of that cleanup |
+| Stoplist introduction (v1 ships none) | Revisit only if description-plane noise measurably hurts ranking — one manifest field |
+
+## 9. Test obligations (TestWriter contract)
+
+**Fixture-based (hostless; synthetic artifacts only — mini roster of
+2 locales + 3 kinds, hand-computed expectations):**
+
+- S1: universe walker over fixture stubs + `entity_locale` — narrow ==
+  hand-computed exact; expanded component table sums; join scanner
+  classifies `GameItem`-path rows vs `name-convention:` twin rows vs
+  unrelated PPtr rows; pending-mode DEGRADED line + ledger row;
+  whitelist guard trips on a planted bone-string field.
+- S2: document emitter — name priority chain (localized > mterm >
+  literal > convention), F/M variant aliasing, cleaning (tags,
+  placeholders, empty-drop counter), locale purity violation detector,
+  visibility roster application, titles projection derived row-for-row,
+  sort/dedup determinism, exact-key-set schema validator.
+- S3: course resolver unit tests — every family regex, plural fold
+  both directions, last-segment rule (`Course_Ghost_Ghostbusting` →
+  `GhostBusting` tail), token map (all 7), curated-row validation incl.
+  the exit-1 dangling-termKey case; collision counters on a fixture
+  with known multiplicities.
+- S4: analyzer assignment table (13 entries, ko→whitespace); vocab
+  census on fixture tables with hand-computed vocab; cleaning
+  percentages; typoBudget emitter.
+- S5: manifest builder (block presence, sha256 agreement, no
+  timestamps); hashes self-exclusion; ledger codes + sort; **exit-code
+  matrix** — the five §6.8 branches as fixtures (stamp exitCode 3 /
+  steady 73-1137-5 / GUIDs 1,138 / entity_locale 10,963 / buildId
+  bump); rebuild-trigger firing when a consumed stamp identity changes;
+  runner: `--list` twelve stages ending `search-corpus`; `--only`
+  isolation; prepared-tree builder covers the upstream set; stamp
+  invalidation on script-hash change; interrupted-run convergence;
+  carve-out guard still green.
+
+**Client-gated integration (auto-SKIP without the extracted corpus):**
+
+- Full-corpus run against the real tree: AC2–AC6 exact figures as
+  written; expected verdict **exit 2** with the pinned ledger set
+  (pending item joins ≈2,005, course-open ≤4, dev-only G4 counts,
+  mt-unresolved 2, campus-level-scope note).
+- Idempotence: `--only search-corpus` double-run hash-equal on the real
+  tree; en shard doc count ≥ 7,000 and every non-en shard ≥ 4,500
+  (sanity floors derived from A = 5,850 and expanded ≈ 8.8k; breaches
+  indicate upstream collapse already caught by §S5.3 bounds).
+- Regression drill on real data: copy the tree, decrement one tracked
+  member (e.g. drop one `entity_locale` row), rerun at the same
+  buildId → exit 1 with the `RELINK-REGRESSION:` line naming the
+  member, and the previously emitted `extracted/search/` tree
+  byte-unchanged.
+
+## Revision 1 (registration)
+
+First registration of this spec, 2026-08-26. Grounding:
+[`../scout-report-piece-08-search.mdx`](../scout-report-piece-08-search.mdx)
+revision 2, verified by
+[verifyA](../verifications/verifyA-scout-piece08.mdx) (PASS-WITH-
+CORRECTIONS: 25-not-26 source assets; course band 10–14/28 strict;
+titles-only raised to ≈160–190 KB/locale) and
+[verifyB](../verifications/verifyB-scout-piece08.mdx) (PASS-WITH-
+CORRECTIONS: item titles BROKEN-as-stated → join-reachable 353/353 +
+1,652/1,654; course resolution DOWNGRADED to 17/28 mechanical /
+~24/28 with token map; 53.4 % re-labeled direct-carrier floor with
+expanded 10,200 = 75.9 %) — all three correction sets are RESIDENT in
+this spec, not pending. Registers: stage id `search-corpus` (twelfth
+stage, canonical registry; `stage7_*` sibling collision routed);
+emission root `extracted/search/` (shards + titles + manifest +
+hashes + ledger); the dual carrier-definition universe with both
+floors computed every run (7,178 asserted exact; 10,200 planning
+floor DRIFT-tracked); the §S5.3 exit-2 discrimination bounds as the
+binding rebuild contract; the shared curated course-alias input
+(`data/sources/derived/course-name-aliases.jsonl`, seeded with 2
+rows, shared with piece-07); the frozen 13-entry analyzer table
+(ko=whitespace, zh-Hans/zh-Hant=cjk-bigram, ja=mixed); the three
+distinct sizing metrics (F14/F15/F16) replacing the scout's loose
+single figure. Expected first-run verdict: exit 2 with the pinned
+ledger set — honest steady state, not failure.
+
+§END
