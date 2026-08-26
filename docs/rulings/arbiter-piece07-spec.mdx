@@ -1,0 +1,331 @@
+# Arbiter ruling — arbiter-piece07-spec (ruling round 1, locale-proof)
+
+**Arbiter:** arbiter-piece07 (PrepareTask step 5; rules, does not fix;
+spawned no subagents; wrote only this file — nothing committed).
+**Date:** 2026-08-26. **Subject:**
+[`docs/specs/piece-07-locale-proof.mdx`](../specs/piece-07-locale-proof.mdx)
+**Revision 2**, claiming full application of the 15-finding F-list in
+[`docs/reviews/reviewer-piece07-spec-r1.mdx`](../reviews/reviewer-piece07-spec-r1.mdx).
+This ruling gates the spec to build.
+
+**Read in full for this ruling:** the Rev 2 spec (to its `§END`);
+the reviewer F-list (to sentinel);
+[`../scout-report-piece-07-locales.mdx`](../scout-report-piece-07-locales.mdx)
+(rev 2),
+[`../verifications/verifyA-scout-piece07.mdx`](../verifications/verifyA-scout-piece07.mdx),
+[`../verifications/verifyB-scout-piece07.mdx`](../verifications/verifyB-scout-piece07.mdx);
+[`../../_foundation/localization-architecture.md`](../../../_foundation/localization-architecture.md)
+(to sentinel; §5.4/§5.5 binding);
+ruling precedents
+[orchestrator-piece03-scope](orchestrator-piece03-scope.mdx),
+[orchestrator-piece04-scope](orchestrator-piece04-scope.mdx),
+[arbiter-001-piece-01](arbiter-001-piece-01.mdx),
+[arbiter-002-piece-01-build](arbiter-002-piece-01-build.mdx);
+repo-root `AGENTS.md` (sentinel seen), `promptForDB.md`;
+cross-spec sources
+[piece-01-extraction-pipeline.mdx](../specs/piece-01-extraction-pipeline.mdx)
+(incl. Revision 7),
+[piece-02-relinking.mdx](../specs/piece-02-relinking.mdx) (§R4/§4/AC3/§7),
+and the stage-registration claims of
+[piece-03](../specs/piece-03-maps.mdx),
+[piece-04](../specs/piece-04-logic.mdx),
+[piece-05](../specs/piece-05-contracts.mdx),
+[piece-06](../specs/piece-06-media.mdx),
+[piece-08](../specs/piece-08-search-corpus.mdx);
+pack `PROGRESS.mdx` wave state; `tools/tpc_common.py::STAGES`;
+`tools/stage5_emit_stubs.py` (write sites);
+disk state of `extracted/relinks/locale_availability.jsonl`.
+
+---
+
+## Part 1 — Per-finding verification of the claimed Rev 2 application
+
+Every finding was spot-checked directly against the Rev 2 text; the
+load-bearing ones were additionally checked against disk and the fact
+base. Method note: beyond the document pass, this arbiter independently
+reconciled the spec's arithmetic — the presence histogram
+Σ(#locales × keys) = 199,797 + 552 + 297 + 10 + 18 + 3 + 30 + 205 =
+**200,912**, which equals Σ(per-locale rows) over F4's thirteen values
+exactly (en 15,665 … ja 15,371). Two independent derivations of one
+measured quantity agreeing cell-for-cell is strong evidence the frozen
+seeds are internally coherent. Disk premises verified: the availability
+file is **0 bytes** on this checkout, and `stage5_emit_stubs.py:697`
+still writes it via `build_locale_availability` (:337/:694) — F1's
+premises are true today.
+
+| Finding | Where verified in Rev 2 | Verdict |
+|---|---|---|
+| F1 CRITICAL — in-code handover, clobber window closed | §5 numbered deliverables (emission REMOVED from `tools/stage5_emit_stubs.py`; TWO test assertions removed/repointed; three-line refusal guard exiting 1 naming the conflict); the sanctioning transition bullet DELETED; §1's cross-stage line now reads "byte-behaves identically EXCEPT the two small code deltas"; §10 retirement legs (byte-unchanged hash, stale-checkout refusal exit 1, no surviving stage-5 assertion) | **APPLIED-CORRECTLY** |
+| F2 MAJOR — 297 predicate frozen | §L1 `metricRule` verbatim: `identicalAndDeDiffers := byteIdenticalToEn AND text(de) != text(en)`, de comparator FROZEN for all 13 rows, counters over HELD keys; residual-4 keys (`Mausoleum`/`Planetarium`/`Dolly`/`Theremin`) emitted as a list so 301−297 is data; Rev-1 field name retired (appears only in retirement notes, lines 228/822); AC5 re-pinned to 301/297 under the named predicate | **APPLIED-CORRECTLY** |
+| F3 MAJOR — dangling-miss shape | §L6.1 sample = ONE ROW PER termId (`-1451566921` Gym_Vaulting_Horse, `-1172386361` AnyExterior), `fieldPath:"WantsMessage"`, `dev:"Wants a {ITEM}"`, `srcKind:"item"`; numeric sort `-1451566921 < -1172386361` holds; AC8 quotes both rows verbatim | **APPLIED-CORRECTLY** |
+| F4 MAJOR — RELATIONS.md generator-template delta | §5 routes the sentence into the RELATIONS.md section of `tools/stage6_relink.py` as a code delta owned by this piece; hand-edit explicitly banned; fallback route (piece-02 prose + `availability-canonical-path` info ledger row) also avoids hand-edits. Ruled IN SCOPE below (R4) | **APPLIED-CORRECTLY** |
+| F5 MAJOR — exact-match tripwire semantics | §L6.3 third bullet: any CHANGE in an exact-match member counts as WORSE ⇒ `REGRESSION:` line + baseline untouched + exit 1; AC10 exercises the flip (fixture `chromeSurfaces` 16→15 / `matrixKeyDiff` 0→1); client-gated leg added; §10 runner obligation extended | **APPLIED-CORRECTLY** |
+| F6 MAJOR — alias-PRESENT test leg | §10 L2 bullet: fixture tree WITH `data/sources/derived/course-name-aliases.jsonl` asserting `inferred:true` course cells, method in the matrix appendix, `course-name-join-open` ABSENT; alias-absent legs keep the open-hole ledger | **APPLIED-CORRECTLY** |
+| F7 MINOR — exit precedence | AC13 pins **1 > 2 > 0** with the co-fire case named (open ledgers + regression → exit 1, both named in run section); §10 tests the precedence | **APPLIED-CORRECTLY** |
+| F8 MINOR — AC7 citation | AC7 now derives the nine-kind unjoined list from **F10−F11**; this arbiter recomputed all nine differences (8,430−3,178 … 17−0) — each matches the pinned list and Σ = 7,593 | **APPLIED-CORRECTLY** |
+| F9 MINOR — DRIFT-note location | Pinned to `kinds.config.nameRoleNote` (course keeps its F15 note there; config carries the scout tie-break note), plus run-section `configIdentityDriftNoted=true\|false`; AC5 names the location for verifier assertion | **APPLIED-CORRECTLY** |
+| F10 MINOR — `dumpCsLine` provenance | Signatures stay PINNED constants (match scout §4.4 + verifyB attack 4 token-for-token); `dumpCsLine` MEASURED from this run's grep, fresh wins, DRIFT-printable; no AC pins a line number | **APPLIED-CORRECTLY** |
+| F11 MINOR — identity denominators | `keysHeld` per locale in the schema; expectations 905 × eleven locales, **897** ja/ru; AC5 ranges counters over HELD keys | **APPLIED-CORRECTLY** |
+| F12 MINOR — L5 surface kinds | DEFAULT `keyed` for all 16; only `editorial-prose` + `seo-meta-templates` are `prose` (subsumes untranslated-filler=keyed, consistent with §L4 `fillerKeyReserved` being a keyed chrome key); AC11 enforces the enum | **APPLIED-CORRECTLY** |
+| F13 MINOR — Q2 routing | §9 reroutes Q2 to orchestrator/product-panel under [DR-2026-08-17-closed-loop], correctly no longer an owner Hard STOP; provisional adoption makes it non-blocking | **APPLIED-CORRECTLY** |
+| F14 MINOR — optional `axes` | §L3 pins `axes` as THE ONE OPTIONAL key (omitted iff absent upstream; strict validator treats all others as required); §10 L3 tests passthrough/omission | **APPLIED-CORRECTLY** |
+| F15 MINOR — residue label | Renamed `unclassified-residue` with the explicit consumer warning (label ≠ "not player-facing"; swallows 28 courses + ~331 unlockables); Revision registration records it | **APPLIED-CORRECTLY** |
+
+Stale-figure sweep clean: `98.11`, "all 17 rows", `keysTotal`,
+`machine-facing`, bare `translatedElsewhere` — absent (the only 2,214 /
+1,688 occurrences are F17/F20 legitimately NAMING the alternative
+universes with "cite the universe, never mix"). Fact fidelity stands as
+the reviewer found it: excellent.
+
+**15 / 15 APPLIED-CORRECTLY. No finding was applied wrong, and none was
+silently weakened.**
+
+---
+
+## Part 2 — Rulings on the routed questions
+
+### R1 — Stage numbering: piece-07 conforms to the canonical registry; script becomes `tools/stage9_locale_proof.py`
+
+The registry is not a proposal — it is RESIDENT in the approved-direction
+spec corpus: piece-04 AC1 pins it verbatim ("canonical registry indices:
+verify-client=0 … relink=6, maps=7, logic=8, with locale-proof=9,
+contracts=10, media=11, search-corpus=12"), piece-06 claims position 11
+and explicitly notes "older drafts numbered the locale-proof script
+`stage7_locale_proof.py`; that predates the re-based registry," and
+piece-08 routes the collision to arbiter/orchestrator. Piece-07 Rev 2 is
+the last non-conforming sibling: it pins `tools/stage7_locale_proof.py`
+(three places), "eight stages total" (three places), and an AC1 that
+enumerates EXACTLY eight ids ending `locale-proof`. That collides
+head-on with piece-03's `maps` (also "eight stages total", also an
+exact-eight AC1) and with piece-04's nine-stage enumeration.
+
+**Ruled:** locale-proof takes canonical registry index **9**; script
+`tools/stage9_locale_proof.py` (explicit-9 naming, the pattern piece-05
+already adopted as "explicit-10 naming, slot taken"); script-hash deps
+become `["stage9_locale_proof.py", "tpc_common.py", "log_util.py"]`.
+Registration stays ADDITIVE in `tools/tpc_common.py::STAGES` after the
+last currently-registered stage (today: after `relink`). The data layer
+is untouched by this — locale-proof's upstream set (§4) contains only
+stage ≤ 6 artifacts, so nothing about inputs, outputs, or ordering
+authority changes.
+
+**AC1 must be rewritten in the piece-04 form** (which already solved
+this): the assertion is stated against the canonical ORDER —
+`locale-proof` appears after `relink` and before any canonically-later
+sibling IF that sibling is registered — failing loudly on any other
+position; absolute stage COUNT is asserted only on the fixture tree the
+TestWriter controls. An exact absolute enumeration ("exactly eight") is
+wrong in a four-way parallel batch (W-C-tail seats #10/#35/#36/#38
+concurrently; `PROGRESS.mdx`) because whichever piece seats second breaks
+whichever piece pinned first. The phrase "eight stages total" becomes
+"canonical registry index 9; `--list` shows it appended after the last
+registered stage until its predecessors land; ordering authority is the
+canonical registry, not append accident" (piece-06's own formulation).
+
+These are mechanical transcriptions of this ruling, binding on the
+build pair via this file; they ride the next spec touch (Rev 3
+registration or the build brief) and are verified at build review —
+they do NOT reopen PrepareTask.
+
+### R2 — `metricRule` vocabulary: ACCEPTED, with two structural consequences declared
+
+The frozen predicates are sound and uniform:
+`byteIdenticalToEn := non-empty text(locale) == text(en)`;
+`identicalAndDeDiffers := byteIdenticalToEn AND text(de) != text(en)`;
+de stays comparator for all 13 rows; counters range over HELD keys.
+Freezing ONE comparator for all rows is what makes ru≡en an instance of
+a uniform table rather than a special case — the right cut, and the
+residual-4 emission turns the 301−297 delta into data.
+
+Two degenerate rows follow from the freeze and are DECLARED EXPECTED,
+not bugs (no AC contradicts them):
+
+- the **de** row has `identicalAndDeDiffers` structurally **0**
+  (self-comparison: `text(de) != text(en)` can never hold when
+  `byteIdenticalToEn(de)` does);
+- the **en** row has `byteIdenticalToEn` == all held keys (trivially
+  true), and its `identicalAndDeDiffers` reads as "keys where de differs
+  from en" — informative, just semantically different from the other
+  rows.
+
+CodeWriter emits them under the same rule; TestWriter may assert these
+structural facts on fixtures; a future reviewer may not file either as
+a defect. The L2 name-edge metricRule ("first fieldPath containing
+'name', sorted `(srcKind,srcId,fieldPath,dstId)` order") is exactly the
+rule verifyA reconstructed to exact agreement on five kinds — accepted
+as-is, with config's tie-break honesty handled by F9's pinned DRIFT
+note.
+
+### R3 — L6 row shapes: ledger granularity and vector-member naming PINNED
+
+Two under-pins survived the reviewer round; pinned here so
+CodeWriter/TestWriter cannot diverge:
+
+1. **Ledger granularity.** "One row per open gap" + the `(code, detail)`
+   sort key + "(2 IDs)" / "per-class breakdown in detail" admit two
+   readings. Bound: **one row per underlying open item for enumerable
+   IDs; one aggregate row for counted populations** —
+   `registry-miss-dangling` = 2 rows (one per termId; detail carries
+   termId/dev/srcKind/id) · `registry-miss-closable` = 1 row (detail
+   lists the 3 `Code/…` keys) · `entity-unjoined` = 1 row (per-class
+   breakdown in detail) · `course-name-join-open`, `alias-input-absent`,
+   `dlc-out-of-install-scope` = 1 row each ⇒ **`ledgerRows` == 7 on
+   today's corpus**; the run section names `code=rowcount` pairs. Sort
+   by `(code, detail)` is then meaningful and deterministic.
+2. **regressionVector member names.** The pinned member LIST is given
+   but expanded-member spelling was open. Bound: flat dotted-path keys —
+   `unionKeys`, `allThirteenKeys`, `rows.<locale>` ×13, `holes.<locale>`
+   ×13, `resolvedEdges`, `registryMisses`, `coverageNumerator`,
+   `availabilityRowCount`, `joined.<kind>` ×9, `availRows.<kind>` ×9,
+   `registryRows`, `registryDistinctKeys`, `matrixKeyDiff`,
+   `orphansAKeys`, `orphansB`, `uiReferenced`, `chromeSurfaces`
+   (**57 members**). Baseline `.baseline.json` stores the same shape, so
+   `REGRESSION:` lines print stable member paths old→new. Locale/kind
+   spellings are the pinned vocabularies verbatim (`pt-BR`, `zh-Hans`,
+   `metagame-node`, …).
+
+Both pins are additive clarifications of standing text — no AC changes
+meaning.
+
+### R4 — The §5 amendment is RATIFIED, including the stage-6 template delta
+
+The ownership transfer is technically forced, not stylistic:
+
+- §5.4 names `relinks/locale_availability.jsonl` THE single source for
+  link rows/sitemaps/coverage stats; the file measures 0 bytes (verified
+  on disk) — G1 is real and both verifiers confirmed both halves.
+- Only a POST-relink stage can derive the relation (it consumes
+  `entity_locale.jsonl` + `i2_term_registry` + the 13 tables); stage 5's
+  own join procedure was REFUTED in piece-2 §R4 and honestly yields zero
+  rows. Keeping stage 5 as writer keeps the standard's file dead.
+- Forward-only DAG survives: locale-proof runs after relink, consumes
+  stage-6 outputs, and stage 5 never depends on it.
+
+This supersedes two prior ownership pins — arbiter-001 R3 ("stage 5 sole
+owner") and piece-02 §R4 — exactly as arbiter-001's own accepted-change
+framework anticipates: requirements evolve through ruled amendments, and
+this one is part of an approved-spec revision. The in-code handover (F1)
+is the strongest version of it: single-writer literally true at every
+moment, no dual-emission window, no healing run owed.
+
+**Stage-6 edit ruled IN SCOPE.** RELATIONS.md is generated
+(piece-2 §R7); the only durable way to change its text is the generator
+— the fallback route (prose + info ledger row) exists but is NOT taken.
+Precedent: piece-05 already lands additive deltas inside
+`stage2/stage4/stage6` (including its own RELATIONS.md routing
+paragraph), so cross-piece additive edits to stage scripts are
+established pack practice. Piece-02's non-goals bind piece-02, not later
+pieces.
+
+**Refusal-guard scoping (implementation pin).** The guard must be
+CALLER-SCOPED to stage 5 — never an unconditional check inside a helper
+shared with stage 7's emitter: stage 7 legitimately rewrites the path
+with v2 rows, and an unconditional "target holds non-v1/non-empty ⇒
+refuse" guard in, e.g., `log_util.write_jsonl` would refuse stage 7's
+own second run. Condition the guard on stage-5-originated invocation of
+the legacy path (caller flag or stage-5-local wrapper); the §10
+stale-checkout fixture then proves the guard while the double-run
+hash-equality leg proves stage 7 unaffected.
+
+**Lane split for the two test assertions.** F1's force — handover in
+CODE, inside this piece — is intact either way, but execution follows
+the repo lane map (arbiter-002: CODE = `tools/` + `run_all.py`; TEST =
+`tests/`): CodeWriter delivers the emission removal, the refusal guard,
+and the stage-6 template line; **TestWriter delivers the two stage-5
+assertion repointings** as part of §10's retirement legs. Do NOT have
+both lanes editing `tests/` concurrently.
+
+### R5 — Piece-01 amendment: REQUIRED, and owned by the documentator/orchestrator seat
+
+Piece-01 currently pins stage-5 availability ownership in FOUR places
+(Revision 2/R3 note; stage-4 "NOT written here" clause; stage-3 §SOLE
+OWNER block + acceptance "regenerated on every run…"; §4 layout comment;
+§8 stage-5 fixture bullets + client-gated availability bullet) and pins
+the `--list` universe through Revision 7 (seven stages). Piece-07 §5
+routes the availability-clause retirements but is silent on the stage
+registration half. **Ruled:** piece-01 gains **Revision 8** covering BOTH:
+
+1. availability-clause retirement (§3 stage-5 acceptance sentence, §4
+   layout line, §8 stage-5 fixture bullets, §8 client-gated bullet) —
+   as already routed by §5; and
+2. the locale-proof registration entry (§5.1 `--list` enumeration,
+   §5.2 prepared-tree upstream set for the new stage, §8 fixture bullet)
+   written REGISTRY-AWARE per R1, not as a hardcoded count.
+
+Owner: the documentator/orchestrator seat — the piece-01 file is outside
+the piece-07 build pair's write scope, exactly as piece-02 §7 routed its
+Revision 7 ("that file is outside this piece's write scope"). Timing:
+rides piece-07's landing; the `tpc_common.py::STAGES` registration
+itself is the CodeWriter deliverable and needs no doc to execute.
+Until Revision 8 lands, THIS ruling + Rev 2 §5 govern where the texts
+conflict.
+
+### R6 — Piece-02 language: extend the routed delta by two supersession marks
+
+Piece-07 §5 routes "piece-2 §4/AC3 lose their
+`locale_availability.jsonl` exception line." Two more forward-looking
+spots go stale under the amendment and MUST join the same doc-delta
+round (documentator seat, one line each):
+
+- §R4's ownership pin ("stage 5 KEEPS sole ownership …") gains a dated
+  supersession note pointing to piece-07 §5 / this ruling. (The OTHER
+  half of that pin — "this piece NEVER writes that file" — remains true
+  forever; stage 6 still never touches the path.)
+- §7's endgame open-question row ("Full retirement … Owner/orchestrator
+  decides after this piece lands") is marked RESOLVED via piece-07 §5.
+
+Without these, the next agent reading piece-02 sees a live pin
+contradicting the amended reality and may "restore" stage-5 ownership.
+Historical narrative (piece-2 §1's description of the 0-byte file)
+stays untouched — it was true when written.
+
+### R7 — Cross-piece seam notes (non-blocking)
+
+- **piece-05 overlap:** both piece-07 (one sentence) and piece-05
+  (routing paragraph + `_uncontained_addresses` ledger) add additive
+  lines to `stage6_relink.py`'s RELATIONS.md region. No semantic
+  conflict; whichever lands second rebases. Orchestrator awareness only.
+- **piece-03's AC1** still pins exact-eight ending `maps` — the same
+  defect R1 fixes here. Out of MY subject scope; flagged for piece-03's
+  arbiter round (Part 3, item 3).
+- **Sequencing:** locale-proof has NO data dependency on maps/logic
+  outputs, so the W-C-tail four-way batch is safe as planned; R1's
+  registry-aware AC form removes the enumeration coupling that would
+  otherwise make the batch order-sensitive.
+
+---
+
+## Part 3 — Orchestrator-routed residue (none block the build pair)
+
+1. **Q2 ratification (product):** link-row membership when a locale's
+   cell is present-but-identical-to-pivot. Provisional adoption
+   (presence counts; identity surfaced per-row/per-cell) is data-safe
+   and reversible at one rule; product-panel/orchestrator ratify at
+   convenience under [DR-2026-08-17-closed-loop]. Not an owner Hard STOP.
+2. **Q1/Q4 (site IA):** internal-kernel page universe and chrome rollout
+   order — consumed downstream from `unjoined_entities.jsonl` classes +
+   manifest shipRule; belong to the site lanes, pre-declared non-goals
+   here.
+3. **Sibling numbering sweep:** piece-03's exact-eight AC1/"eight stages
+   total" needs the piece-04/R1 treatment at its own arbiter round;
+   confirm piece-05/06/08 remain aligned (they already are). Orchestrator
+   owns the sweep; piece-07's half is settled by R1.
+4. **Piece-01 Revision 8 scheduling:** assign the documentator seat per
+   R5 (content fully specified there; execution is clerical).
+
+---
+
+## Verdict
+
+**SPEC-READY.** All fifteen findings verified APPLIED-CORRECTLY; the
+fact base survived independent arithmetic reconciliation; the one real
+residual defect (stage numbering vs the canonical registry) is a routed
+question that falls inside this arbiter's delegated authority and is
+settled bindingly by R1–R3 above, with R4–R6 pinning the amendment's
+execution so no dual-owner or stale-pin window survives. The build pair
+may seat against Rev 2 **as amended by this ruling** — R1's renames and
+AC1 rewrite, R3's two pins, R4's guard scoping and lane split are
+binding parts of the contract and are checked at build review. Nothing
+here reopens PrepareTask; no commits made from this seat.
+
+END OF arbiter-piece07-spec
