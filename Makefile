@@ -9,13 +9,18 @@ PY    ?= python
 GAME  ?=
 ONLY  ?=
 
-.PHONY: help setup extract stage list
+.PHONY: help setup extract stage list contracts
 
 help:
 	@$(PY) run_all.py --help
 
 list:
 	@$(PY) run_all.py --list
+
+# piece-05: the contracts validator suite (same module the pipeline stage
+# delegates to). Exit 2 = completed-with-known-ledger (EXPECTED-RED).
+contracts:
+	@$(PY) tools/stage10_check_contracts.py $(ROOT_FLAG)
 
 setup:
 	$(PY) -m venv .venv

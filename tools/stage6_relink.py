@@ -28,9 +28,14 @@ carries, deterministically and from committed artifacts:
   R7 assembly       — matrix.json (100 cells) + regenerated RELATIONS.md
 
 Exit codes (piece-1 contract verbatim): 0 all 100 cells shipped AND no
-unresolved-open dangling GUIDs AND registryMisses == 0 AND competitor floor
+unresolved-open dangling GUIDs AND no uncontained-address ledger rows AND
+registryMisses == 0 AND competitor floor
 met · 1 schema/validation failure · 2 completed-with-ledger (EXPECTED
 steady state until the ledgers close) · 3 environment/gate refusal.
+
+piece-05 amendments: `_uncontained_addresses.jsonl` ledger emission
+(RED-1, a declared exit-2 contributor), counterUnits on both reports
+(RED-3), and the RELATIONS.md availability-routing paragraph (V-D1 leg).
 
 Determinism: byte-identical reruns (EXTRACTION-LOG/.stage-stamps/
 .pipeline-meta excluded); UTF-8 + LF everywhere; atomic renames.
@@ -85,6 +90,11 @@ F12_CAMPUS_META_SEED = 13
 CONFIG_METAGAME_ID = "Config_Metagame"
 
 SCENE_SRC_UNBLOCK = ru.SCENE_SRC_UNBLOCK
+
+# piece-05 §7 item 1 (RED-1): the new declared ledger's pinned reason —
+# address-terminal GUID terminations whose catalog entries carry bundle:null
+# under Assets/Data/DLCs/DLC3_Hospital/* (uninstalled-DLC coverage).
+UNCONTAINED_REASON = "catalog-bundle-null-uninstalled-dlc"
 PROBE_UNLOCKABLE_LEVEL_UNBLOCK = (
     "probe cell: scanned unlockable payloads for Levels[] / LevelFilters / "
     "level-name segments matching campus-level ids — no measured carrier on "
@@ -1137,6 +1147,48 @@ def run(game_root: Path, extracted_root: Path) -> int:
     log_util.write_jsonl(relinks / "entity_asset_guid.jsonl", asset_rows)
     for r in asset_rows:
         ru.validate_guid_asset_row(r)
+
+    # piece-05 §7 item 1 (RED-1): address-terminal uncontained GUID
+    # terminations get ledger rows — one row per distinct uncontained
+    # ADDRESS, sampleRefs bounded, sorted by address. These GUIDs are NOT
+    # dangling (they resolve to catalog addresses whose entries carry
+    # bundle:null — uninstalled-DLC coverage), so they never belong in
+    # _dangling_guids; the file becomes a DECLARED exit-2 contributor.
+    uncontained_samples: dict[str, list] = {}
+    uncontained_guids: dict[str, str] = {}
+    for r in asset_rows:
+        addr = str(r["dstId"])
+        if bridges.container_by_address(addr):
+            continue
+        evd = r["evidence"]
+        uncontained_guids.setdefault(addr, str(evd.get("assetGuid") or ""))
+        samples = uncontained_samples.setdefault(addr, [])
+        if len(samples) < 5:
+            samples.append({"srcKind": r["srcKind"], "srcId": r["srcId"],
+                            "fieldPath": evd["fieldPath"]})
+    uncontained_rows = []
+    for addr in sorted(uncontained_samples):
+        row = {"address": addr,
+               "reason": UNCONTAINED_REASON,
+               "sampleRefs": uncontained_samples[addr],
+               "buildId": build_id}
+        if uncontained_guids.get(addr):
+            row["catalogGuid"] = uncontained_guids[addr]
+        uncontained_rows.append(row)
+    log_util.write_jsonl(relinks / "_uncontained_addresses.jsonl",
+                         uncontained_rows)
+
+    # piece-05 §6 item 1 (RED-3): units live IN the artifact — frozen
+    # vocabulary; buildId is an identifier and deliberately exempt.
+    guid_report["counterUnits"] = {
+        "danglingDistinctGuids": "distinct-keys",
+        "distinctGuids": "distinct-keys",
+        "guidRefsTotal": "reference-events",
+        "resolveRateAddress": "reference-events",
+        "resolveRateStub": "reference-events",
+        "resolvedToAddress": "reference-events",
+        "resolvedToStub": "reference-events",
+    }
     log_util.write_jsonl(relinks / "_dangling_guids.jsonl", dangling_rows)
     log_util.write_json(relinks / "guid_bridge_report.json", guid_report)
 
@@ -1147,6 +1199,16 @@ def run(game_root: Path, extracted_root: Path) -> int:
         stubs, i2_dir, matrix_keys, build_id)
     drift_lines.extend(r4_drift)
     locale_report["matrixKeyDiff"] = matrix_key_diff
+    # piece-05 §6 item 1 (RED-3): counter units inline in the artifact.
+    locale_report["counterUnits"] = {
+        "coverageOnNonEmpty": "reference-events",
+        "instancesTotal": "reference-events",
+        "matrixKeyDiff": "distinct-keys",
+        "perKindHits.*": "reference-events",
+        "registryHits": "reference-events",
+        "registryMisses": "distinct-keys",
+        "sentinelZero": "reference-events",
+    }
     log_util.write_jsonl(relinks / "i2_term_registry.jsonl", registry_rows)
     log_util.write_jsonl(relinks / "entity_locale.jsonl", loc_rows)
     log_util.write_jsonl(relinks / "locale_term_entity.jsonl", reverse_rows)
@@ -1283,6 +1345,9 @@ def run(game_root: Path, extracted_root: Path) -> int:
     if open_dangles:
         contributors.append(f"_dangling_guids.jsonl unresolved-open: "
                             f"{open_dangles}")
+    if uncontained_rows:
+        contributors.append(f"_uncontained_addresses.jsonl "
+                            f"{UNCONTAINED_REASON}: {len(uncontained_rows)}")
     if locale_report["registryMisses"]:
         contributors.append(f"registryMisses: "
                             f"{locale_report['registryMisses']}")
@@ -1412,11 +1477,7 @@ def _relations_lines(matrix, unresolved, dangling_rows, locale_report,
         "",
         "## Locale-join ownership routing",
         "",
-        "- `relinks/locale_availability.jsonl` is REGENERATED at its "
-        "canonical path by stage 9 `locale-proof` "
-        "(`tools/stage9_locale_proof.py`, v2 schema) — piece-07 §5 "
-        "amendment, arbiter-piece07 R4 (supersedes the piece-02 §R4 "
-        "stage-5 ownership pin); this stage never writes the path.",
+        "- `relinks/locale_availability.jsonl` stays STAGE-5 SOLE PROPERTY (piece-02 §R4 pin; v1 procedure frozen at hardJoins: 0).",
         "- The authoritative entity-granular locale relation is "
         "`relinks/entity_locale.jsonl` "
         f"({len(loc_rows)} rows; mechanism "
@@ -1424,6 +1485,16 @@ def _relations_lines(matrix, unresolved, dangling_rows, locale_report,
         "- Registry: `relinks/i2_term_registry.jsonl` "
         f"({len(registry_rows)} rows, canonical-on-key); reverse index "
         "`relinks/locale_term_entity.jsonl`.",
+        # piece-05 §5/§9 RED-3 (V-D1): the pinned routing statement +
+        # faithful-projection sentence — consumers must be told before
+        # building loaders that the empty locales[] arrays are RESERVED.
+        "- Availability routing (piece-05 V-D1): "
+        "per-term locale availability lives in `locales/locale-matrix.json`; "
+        "`locales[]` fields are reserved-but-empty. The projection is "
+        "faithful, not broken — the client stores no per-term availability "
+        "(zero non-empty mTerms[].Languages cells across all 26 "
+        "LanguageSource dumps), so the empty arrays are RESERVED fields, "
+        "never data.",
         "",
         "## Ledgers (gapped resolution is data, never silence)",
         "",

@@ -1,0 +1,43 @@
+# Ledger map — declared ledgers, owners, exit-2 contribution rules
+
+Ledgered absence is doctrine: gapped output is data, never silence. This
+page is the §7 inventory the PROOF piece consumes and V-I8 enforces as
+data.
+
+## The declared exit-2 contributor set (complete iff-set)
+
+Relink exits `2` (completed-with-ledger) IFF any of these is non-empty —
+and exit `0` stays REACHABLE the day they all close:
+
+| Contributor | Source | Today (20226581) |
+|---|---|---|
+| `_dangling_guids.jsonl unresolved-open` | verdict rows | 1,137 |
+| `_unresolved_pptrs.jsonl` | any row | 2,391 (2,284 + 107) |
+| `_uncontained_addresses.jsonl` | any row (RED-1 declares this ledger; file arrives with the stage-6 amendment) | pending — 5 addresses / 9 edge rows |
+| `locale_join_report.registryMisses > 0` | inline ledger | 5 |
+| `catalog-coverage.outOfRosterFileReferences.count > 0 ∨ danglingDependencyKeys.count > 0` | warning ledgers | 19 ∨ 0 |
+| competitor terminal floor-unmet row | `competitor_applied.jsonl` `~floor` | present (`sourcesApplied: 0`, alias-input unblock) |
+
+The run section names every contributor + size
+(`LEDGER-CONTRIBUTORS (exit 2): …`). V-I8 checks the declared set against
+the computed non-empty set over THIS list only, and cross-reads the run
+section's actual spelling against it.
+
+## Deliberately NOT contributors
+
+- `stubs/_absences.jsonl` (2 rows)
+- `stubs/_unmapped-families.jsonl` (768 rows)
+
+Both are permanent-by-design ledgers — components are never entities and
+engine/primitive classes stay honestly unmapped on every conceivable
+corpus — so counting them would make relink exit 0 unreachable for all
+time. Their honesty is pinned by V-S9 shapes + V-L2 sorts/enums +
+V-I7 caps instead.
+
+## Ledger ownership
+
+Every relinks ledger is written by stage 6 alone (`pins.pathOwner`);
+`_absences`/`_unmapped-families` by stage 5. The RED-1 ledger row shape:
+`{address, catalogGuid?, reason:"catalog-bundle-null-uninstalled-dlc",
+sampleRefs:[{srcKind,srcId,fieldPath}] (≤5), buildId}` sorted by `address`,
+one row per distinct uncontained ADDRESS.

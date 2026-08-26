@@ -1,0 +1,126 @@
+# Stage 6 — relinks: pairs, bridges, registry/locale, reports, ledgers
+
+Pair rows carry the frozen 9-key envelope (+`sourceAxes` on the single
+axes-carrier row); evidence keysets are exact per method. Matrix pairs[]
+are row-major over the node universe; Σ cardinality.edges == pair rows
+(V-R1). The GUID bridge replays BIT-EXACT from sibling artifacts through
+the pure seam `relink_util.run_guid_bridge` off the sidecar's full
+guidIndex (V-R8, CLIENT-GATED). Exit 2 is the designed steady state until
+the [ledger map](../ledger-map.mdx) closes.
+
+```pins
+{
+  "bridgeReportFields": [
+    "buildId",
+    "danglingDistinctGuids",
+    "distinctGuids",
+    "guidRefsTotal",
+    "resolveRateAddress",
+    "resolveRateStub",
+    "resolvedToAddress",
+    "resolvedToStub"
+  ],
+  "bridgeReportValues": {
+    "danglingDistinctGuids": 1137,
+    "distinctGuids": 5584,
+    "guidRefsTotal": 20170,
+    "resolveRateAddress": 0.7987109568666336,
+    "resolveRateStub": 0.1857709469509172,
+    "resolvedToAddress": 16110,
+    "resolvedToStub": 3747
+  },
+  "bundleClosure": {
+    "manifest sourceBundle": 114,
+    "pair evidence bundles": null,
+    "stub source.bundle": 11
+  },
+  "evidenceKeysets": {
+    "assetguid-catalog": [
+      "assetGuid",
+      "catalogAddress",
+      "fieldPath"
+    ],
+    "pptr-cross-file": [
+      "dstBundle",
+      "dstCab",
+      "dstPathId",
+      "extFileId",
+      "fieldPath",
+      "refCount",
+      "resolvedVia",
+      "srcBundle",
+      "srcPathId"
+    ],
+    "pptr-same-file": [
+      "dstBundle",
+      "dstPathId",
+      "fieldPath",
+      "refCount",
+      "srcBundle",
+      "srcPathId"
+    ]
+  },
+  "joinReport": {
+    "instancesTotal": 20070,
+    "registryMisses": 5,
+    "sentinelZero": 9101,
+    "unresolvedIdCount": 5
+  },
+  "joinReportFields": [
+    "buildId",
+    "codeRefTerms",
+    "coverageOnNonEmpty",
+    "instancesTotal",
+    "matrixKeyDiff",
+    "perKindHits",
+    "registryHits",
+    "registryMisses",
+    "sentinelZero",
+    "unresolvedIds"
+  ],
+  "ledgers": {
+    "danglingUnresolvedOpen": 1137,
+    "pptrReasonCounts": {
+      "pathId exists in the resolved file but is not an emitted stub entity": 2284,
+      "same-file pathId is not an emitted stub entity and the bundle carries no scene flag": 107
+    }
+  },
+  "matrix": {
+    "cells": 100,
+    "joinKeyDist": {
+      "AssetGUID(m_AssetGUID)->catalog.guid->container-address->pathId": 1,
+      "PPtr(m_FileID,m_PathID)": 23,
+      "none-established": 76
+    },
+    "joinKeyVocabulary": [
+      "AssetGUID(m_AssetGUID)->catalog.guid->container-address->pathId",
+      "LocalisedString(_termID)->I2-termID->Term-key",
+      "PPtr(m_FileID,m_PathID)",
+      "name-equality(<rule>)",
+      "none-established"
+    ],
+    "mechanismDist": {
+      "hard": 24,
+      "inferred": 76
+    },
+    "nodes": 10,
+    "statusDist": {
+      "missing": 73,
+      "modeled": 24,
+      "partial": 3
+    }
+  },
+  "pairFiles": 24,
+  "pairRows": 24583,
+  "sourceAxesCarrierRows": 1,
+  "uiCoverage": {
+    "documentedGap": 335,
+    "genericContainerRows": 1,
+    "mappedSchema": 9
+  },
+  "uncontainedCarveOut": {
+    "addresses": 5,
+    "edgeRows": 9
+  }
+}
+```

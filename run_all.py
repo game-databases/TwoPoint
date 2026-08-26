@@ -80,6 +80,40 @@ UPSTREAMS = {
         "relinks/locale_term_entity.jsonl",
         "relinks/locale_join_report.json",
     ],
+    # piece-05 check-contracts (canonical index 10): pure-read validator
+    # suite over the emitted corpus. The heavy-artifact policy requires the
+    # PERSISTED sidecar (absent ⇒ exit 3 naming it; --scan-catalog is the
+    # stage's own bootstrap/audit lane). The RED-1 ledger
+    # `_uncontained_addresses.jsonl` is deliberately NOT required — its
+    # absence IS the registered EXPECTED-RED state until the amendment
+    # lands.
+    "check-contracts": [
+        "identity.json",
+        "EXTRACTION-LOG.md",
+        "bundle-roster.jsonl",
+        "addressables/catalog-mini-report.json",
+        "addressables/catalog-coverage.json",
+        "harvest/export-manifest.jsonl",
+        "harvest/externals.jsonl",
+        "media-catalogue.jsonl",
+        "locales/base-overlay-report.json",
+        "locales/locale-matrix.json",
+        "stubs/_absences.jsonl",
+        "stubs/_unmapped-families.jsonl",
+        "relinks/matrix.json",
+        "relinks/entity_asset_guid.jsonl",
+        "relinks/guid_bridge_report.json",
+        "relinks/_dangling_guids.jsonl",
+        "relinks/_unresolved_pptrs.jsonl",
+        "relinks/i2_term_registry.jsonl",
+        "relinks/entity_locale.jsonl",
+        "relinks/locale_term_entity.jsonl",
+        "relinks/locale_join_report.json",
+        "relinks/ui_link_coverage.jsonl",
+        "relinks/competitor_applied.jsonl",
+        "relinks/bridges/cab_index.jsonl",
+        "relinks/bridges/container_index.jsonl",
+    ],
 }
 
 STAGE_TOOLS = {
@@ -92,6 +126,8 @@ STAGE_TOOLS = {
     "relink": "UnityPy",
     # piece-07: purely derived — committed artifacts in, proof artifacts out
     "locale-proof": "stdlib",
+    # piece-05: pure-read validator suite (stdlib; zero-write over extracted/)
+    "check-contracts": "stdlib",
 }
 
 

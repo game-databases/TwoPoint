@@ -1,0 +1,31 @@
+# Stage 3 — harvest + media catalogue
+
+Every export filename embeds `<bundle-stem>_<signed-int64 pathId>` —
+60,582 of 167,069 manifest rows hold NEGATIVE path_ids, so the sign is
+contract, not decoration (Rev 6 lesson; V-S10 enforces the grammar).
+Media classes are catalogue-only; media-catalogue rows reconcile with the
+carved census per class (V-R3) and cab objects with the census total
+(V-R2).
+
+```pins
+{
+  "censusFiles": 176,
+  "censusObjectsTotal": 2026658,
+  "exportManifestRows": 167069,
+  "externalsRefsTotal": 1781,
+  "externalsRows": 222,
+  "fallbackTrueBundles": 176,
+  "mediaClassCounts": {
+    "AnimationClip": 7985,
+    "AudioClip": 5624,
+    "Font": 24,
+    "Mesh": 19249,
+    "Shader": 213,
+    "Sprite": 6789,
+    "SpriteAtlas": 47,
+    "Texture2D": 7977,
+    "VideoClip": 31
+  },
+  "mediaRows": 47939
+}
+```

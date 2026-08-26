@@ -185,7 +185,13 @@ def run(dummy_out_dir: Path, scripting_assemblies_path: Path,
         "assemblyIndexPresent": covered,
         "hierarchyRowCount": len(hierarchy_rows),
         "hierarchySource": source[0],
+        # piece-05 §6 item 2 (RED-3): the count's UNIT is stated beside the
+        # key — stage 1 renders this as
+        # `registryCount(covered classes; files = N): M` because the log's
+        # counter counts covered CLASSES while the id-registries DIRECTORY
+        # holds FILES (two units, one number — F15's inline-units case).
         "registryCount": len(registry_rows),
+        "registryFiles": sum(len(members) for _n, members in registry_rows),
         "dllParseErrors": len(errors),
     }
 

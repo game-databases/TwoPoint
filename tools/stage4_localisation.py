@@ -33,6 +33,12 @@ locale bundles). TermStatus distributions are reported as evidence counts.
 
 Stage 5 is the SOLE OWNER of `relinks/locale_availability.jsonl`; this stage
 never writes under relinks/ (R3).
+
+piece-05 amendments: per-locale run-section rows carry the
+`(emission-events)` unit annotation and print `duplicateKeysOverwritten`
+(RED-2); the counter persists into base-overlay-report.json.evidence and
+the report gains a static counterUnits dict from the frozen vocabulary
+(RED-3).
 """
 from __future__ import annotations
 
@@ -461,6 +467,39 @@ def run(game_root: Path, extracted_root: Path) -> int:
     ev["localeCellsSkippedEmptyTotal"] = sum(
         e.get("cellsSkippedEmpty", 0) for lbl, e in per_locale_evidence.items()
         if lbl != "BASE-OVERLAY")
+    # piece-05 §6 item 3 (RED-2): the overwrite counter is PRINTED in the
+    # run section below AND PERSISTED here — the units bridge between
+    # emission events and distinct-key lines (+5/locale today) is real
+    # data, never drift. Closes scout OQ1 (both surfaces serve different
+    # readers: the run section is the acceptance surface, the report the
+    # machine surface V-U2 reads).
+    dup_by_locale = {
+        lbl: per_locale_evidence.get(lbl, {}).get("duplicateKeysOverwritten", 0)
+        for lbl in tc.EMITTED_LOCALES}
+    ev["duplicateKeysOverwritten"] = {
+        "byLocale": dup_by_locale,
+        "total": sum(dup_by_locale.values())}
+    # piece-05 §6 item 1 (RED-3): units live IN the artifact — frozen
+    # vocabulary, every numeric leaf covered, buildId exempt (identifier).
+    report["counterUnits"] = {
+        "evidence.baseCellsSkippedAbsent": "skipped-cells",
+        "evidence.baseCellsSkippedEmpty": "skipped-cells",
+        "evidence.baseOnlyKeys": "distinct-keys",
+        "evidence.baseRowCount": "deduped-rows",
+        "evidence.differingTextSharedKeys": "distinct-keys",
+        "evidence.duplicateKeysOverwritten.byLocale.*": "emission-events",
+        "evidence.duplicateKeysOverwritten.total": "emission-events",
+        "evidence.englishOnlyKeys": "distinct-keys",
+        "evidence.englishRowCount": "deduped-rows",
+        "evidence.identicalTextSharedKeys": "distinct-keys",
+        "evidence.localeCellsSkippedEmptyTotal": "skipped-cells",
+        "evidence.localeRowsEmittedTotal": "emission-events",
+        "evidence.registrySources": "objects",
+        "evidence.registryTerms": "walked-terms",
+        "evidence.sharedKeys": "distinct-keys",
+        "evidence.termStatusForTranslation": "deduped-rows",
+        "evidence.termStatusNotForTranslation": "deduped-rows",
+    }
     log_util.write_json(locales_dir / "base-overlay-report.json", report)
 
     matrix_keys = build_locale_matrix(tables)
@@ -486,15 +525,21 @@ def run(game_root: Path, extracted_root: Path) -> int:
         "- relinksWrittenHere: false (stage 5 is sole owner)",
     ]
     # per-locale evidence lines, incl. TermStatus distribution joined against
-    # the base registry (statuses live ONLY in the registry on this client)
+    # the base registry (statuses live ONLY in the registry on this client).
+    # Unit annotations are inline beside the keys they govern (piece-05 §6
+    # item 2): `rows` counts EMISSION EVENTS including duplicate-key
+    # overwrites while the file holds one line per DISTINCT key.
     for label in sorted(per_locale_evidence):
         e = per_locale_evidence[label]
-        line = (f"- {label}: rows={e.get('rowsEmitted', 0)} "
+        line = (f"- {label}: rows={e.get('rowsEmitted', 0)}"
+                f"(emission-events) "
                 f"skippedEmpty={e.get('cellsSkippedEmpty', 0)} "
                 f"skippedAbsent={e.get('cellsSkippedAbsent', 0)} "
                 f"categories={e.get('categoriesDecoded', 0)} "
                 f"sources={e.get('languageSources', 0)} "
-                f"malformed={e.get('malformedEntries', 0)}")
+                f"malformed={e.get('malformedEntries', 0)} "
+                f"duplicateKeysOverwritten="
+                f"{e.get('duplicateKeysOverwritten', 0)}")
         if label != "BASE-OVERLAY":
             dist = _status_distribution(tables[label], status_by_key)
             line += f" termStatus={dist}"

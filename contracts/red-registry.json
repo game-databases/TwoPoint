@@ -1,0 +1,33 @@
+{
+  "entries": [
+    {
+      "break": "RED-1",
+      "fix": "piece-05-amendments",
+      "key": "uncontained-address-ledger",
+      "summary": "9 entity_asset_guid rows terminate at 5 DLC3_Hospital addresses whose catalog entries carry bundle:null with NO ledger row anywhere (F12). Fixing amendment: tools/stage6_relink.py emits extracted/relinks/_uncontained_addresses.jsonl during the R3 pass and registers it in the §7 contributor enumeration. V-X2's carve-out equality leg is dormant (not red) until the file exists; V-L1 carries the red.",
+      "validators": ["V-L1"]
+    },
+    {
+      "break": "RED-2",
+      "fix": "piece-05-amendments",
+      "key": "overwrite-counter-invisible",
+      "summary": "duplicateKeysOverwritten is computed in tools/stage4_localisation.py but printed nowhere and persisted nowhere — the units bridge between 200,977 emission events and 200,912 distinct-key lines is unexpressible on paper (F9). Fixing amendment: stage-4 prints per-locale duplicateKeysOverwritten beside the rows(emission-events) annotation and persists {byLocale,total} into base-overlay-report.json.evidence. Closes scout OQ1 (both surfaces).",
+      "validators": ["V-U2"]
+    },
+    {
+      "break": "RED-3",
+      "fix": "piece-05-amendments",
+      "key": "counter-units-undocumented",
+      "summary": "No emitted report carries counterUnits; guid_bridge_report counts REFERENCES but says so only in a code docstring; stage-1's registryCount unit likewise implicit (F11/F15). Fixing amendment: generators emit static counterUnits dicts from the frozen vocabulary across their three emitters (stage 2 catalog-coverage, stage 4 base-overlay-report, stage 6 bridge+join reports) and the stage-1 line annotates covered classes vs files.",
+      "validators": ["V-U1"]
+    },
+    {
+      "break": "RED-3",
+      "fix": "piece-05-amendments",
+      "key": "availability-routing-note-relations",
+      "summary": "RELATIONS.md does not yet carry the pinned availability-routing statement + faithful-projection sentence; consumers could trust reserved-but-empty locales[] fields (G4). Fixing amendment: the stage-6 RELATIONS.md template gains the routing paragraph; the exceptions sheet ships with this layer carrying it already.",
+      "validators": ["V-D1"]
+    }
+  ],
+  "note": "Deliberately-red validators awaiting their fixing amendment (piece-05 §9). Every failing validator MUST be listed here or the suite exits 1; registered reds exit 2 loudly and non-silently. AC2 end state: registry empty, suite green."
+}

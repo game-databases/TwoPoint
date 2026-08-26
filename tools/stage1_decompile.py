@@ -183,7 +183,18 @@ def run(game_root: Path, extracted_root: Path, tool_override: str | None = None)
         f"- dummyDllImages: {dummy_count} (gate: non-empty set; "
         "Assembly-CSharp.dll not required)",
     ]
-    lines += [f"- {k}: {v}" for k, v in sorted(structural_summary.items())]
+    for key, value in sorted(structural_summary.items()):
+        if key == "registryCount":
+            # piece-05 §6 item 2 (RED-3): the counter's unit is inline —
+            # covered CLASSES vs the id-registries DIRECTORY's FILES.
+            lines.append(
+                f"- registryCount(covered classes; "
+                f"files = {structural_summary.get('registryFiles', '?')}): "
+                f"{value}")
+        elif key == "registryFiles":
+            continue
+        else:
+            lines.append(f"- {key}: {value}")
     if metadata_version >= tc.METADATA_VERSION_WALL:
         lines.append(f"- escalationTrigger: {tc.CPP2IL_ESCALATION_MESSAGE}")
     log_util.append_run_section(extracted_root, "decompile", lines)

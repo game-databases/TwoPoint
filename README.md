@@ -42,7 +42,7 @@ piece 1 runs. Domain + tier are the one standing owner item
 | `.agents/` | agent prompts + logs | exists |
 | `Makefile` + `run_all.py` | single reproducible extraction entrypoint ([DR-2026-08-18-pipeline]) | piece 1 deliverable |
 | `tools/` | pack-local pipeline scripts | piece 1 deliverable |
-| `contracts/` | emitted dataset contracts | later pieces |
+| `contracts/` | emitted dataset contracts (pins + validators: `make contracts`) | piece-05 |
 | `extracted/` (+ `EXTRACTION-LOG.md`, `VALIDATION-REPORT.md`, `RELATIONS.md`, `PROOF.md`) | extraction outputs | created by piece 1 |
 | `design/`, `site/`, `data/sources/MANIFEST.md` | design tokens, site, source manifest | gated behind data completeness (AGENTS rule 8) |
 

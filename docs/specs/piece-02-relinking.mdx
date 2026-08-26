@@ -18,6 +18,29 @@ current tree — the mechanisms they blocked are this piece's core work.
 
 ---
 
+## Revision note (piece-05 deltas routed here, 2026-08-26)
+
+Piece-05's contracts layer amends five piece-02-owned surfaces; each is
+additive and mirrored in
+[`contracts/`](../../contracts/README.mdx) +
+[`tools/stage10_check_contracts.py`](../../tools/stage10_check_contracts.py):
+
+1. §5.7 contributor iff-set extended per piece-05 §7: `_uncontained_addresses.jsonl`
+   (any row) and the catalog-coverage counts join the DECLARED exit-2 set;
+   `_absences.jsonl` / `_unmapped-families.jsonl` stay deliberately NOT
+   contributors (permanent-by-design).
+2. §4 tree += `relinks/_uncontained_addresses.jsonl` (stage 6 sole writer,
+   reason `catalog-bundle-null-uninstalled-dlc`, sorted by address).
+3. §R6 competitor rowshape SUPERSEDED-AS-MEASURED — pointer V-S9:
+   measured rows carry `samples`/`terminal`/`floorRequired`/
+   `sourcesApplied`/`unblock`; the spec'd `wall{}` object occurs on 0 rows.
+4. §R7 generator template += the availability-routing paragraph (piece-05
+   V-D1 pins its presence; composes additively with piece-07's template line).
+5. §R3 field lists unchanged, one additive object: both reports gain a
+   static `counterUnits` dict from the frozen vocabulary (RED-3).
+
+---
+
 ## 1. Goal
 
 The landed corpus holds complete *rows* (13,443 stub entities across 9

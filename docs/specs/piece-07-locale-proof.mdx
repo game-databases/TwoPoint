@@ -982,3 +982,11 @@ Expected first-run verdict: exit 2 with the pinned ledger set — honest
 steady state, not failure.
 
 §END
+
+**Revision note (piece-05 RF-1 routing), 2026-08-26.** Piece-05's
+ownership pins are HANDOVER-AWARE and move WITH this spec's §5 handover:
+its `pins.pathOwner` entry for `relinks/locale_availability.jsonl`
+flips stage5→locale-proof and `locale_availability.report.json` joins
+the relinks owned set exactly when this spec lands — no other piece-05
+edit required; V-I9/V-S10 are order-robust in either landing sequence
+(canonical order locale-proof=9 < contracts=10).

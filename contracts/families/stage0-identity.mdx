@@ -1,0 +1,54 @@
+# Stage 0 — client identity + bundle roster
+
+`identity.json` carries exactly 13 top-level keys and anchors the pin
+build scope; `bundle-roster.jsonl` is one row per corpus bundle under the
+frozen six-key envelope, sorted by `relpath`. Domain splits are pinned
+constants (V-S2): movement of any of them is a reviewable re-pin, never
+drift. V-R7 re-enumerates the three corpus dirs against this roster on
+any machine holding the game dir.
+
+```pins
+{
+  "identityTopKeys": [
+    "appid",
+    "addressablesVersion",
+    "buildId",
+    "dumper",
+    "expectedBundles",
+    "languageSetting",
+    "localeBundleCount",
+    "metadataVersion",
+    "sceneCounts",
+    "settingsHash",
+    "targetBuildId",
+    "unityVersion",
+    "versionString"
+  ],
+  "roster": {
+    "dirClass": {
+      "base": 158,
+      "dlc-ghost": 8,
+      "dlc-space": 10
+    },
+    "keyset": [
+      "buildId",
+      "bytes",
+      "dirClass",
+      "localeFlag",
+      "relpath",
+      "sceneFlag"
+    ],
+    "localeFlag": {
+      "base": 1,
+      "named": 13,
+      "null": 162
+    },
+    "rows": 176,
+    "sceneFlag": {
+      ".unity": 25,
+      "none": 150,
+      "seasonal-scenes": 1
+    }
+  }
+}
+```

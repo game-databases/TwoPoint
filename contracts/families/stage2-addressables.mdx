@@ -1,0 +1,45 @@
+# Stage 2 — addressables trio + catalog-mini-report sidecar
+
+catalog.json (397,431,200 B) is the heavy artifact: default runs NEVER
+open it — catalog-level pins verify against the persisted emit-time
+sidecar `addressables/catalog-mini-report.json` (six-key schema, V-S8),
+and `--scan-catalog` streams catalog.json once to re-derive it
+byte-for-byte (V-I2 agreement, AC6). The duplicate key and the null-bundle
+population are documented exceptions — see
+[exceptions.mdx](exceptions.mdx).
+
+```pins
+{
+  "coverage": {
+    "bundlesUnreferenced": 0,
+    "danglingDependencyKeys": 0,
+    "distinctBundlesReferenced": 176,
+    "outOfRosterFileReferences": 19
+  },
+  "dependencyEdgesTotal": 3939716,
+  "distinctKeys": 56659,
+  "duplicateKeyAddress": "Style Sheets/Default Style Sheet",
+  "duplicateKeyCount": 1,
+  "duplicateKeyValue": "f952c082cb03451daed3ee968ac6c63e",
+  "keysTotal": 56660,
+  "kindCounts": {
+    "address": 2516,
+    "guid": 54144
+  },
+  "miniReportTopKeys": [
+    "bundleUniverse",
+    "counts",
+    "duplicateKeys",
+    "guidIndex",
+    "meta",
+    "nullBundleAddresses"
+  ],
+  "nullAddressRows": 329,
+  "nullBundleRows": {
+    "addressKind": 1832,
+    "guidKind": 43480,
+    "total": 45312
+  },
+  "rowsWithNoDependencies": 11491
+}
+```

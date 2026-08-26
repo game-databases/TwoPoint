@@ -1,0 +1,55 @@
+# contracts/ — the pinned dataset contract layer
+
+This tree is the machine-checkable contract over every emitted dataset
+family under `extracted/` (piece-05). Facts are grounded in
+[`../docs/specs/piece-05-contracts.mdx`](../docs/specs/piece-05-contracts.mdx)
+(Revision 3), its arbiter ruling, and the verified scout round against
+buildId **20226581**.
+
+## Layout
+
+| File | Role |
+|---|---|
+| `pins.json` | MACHINE source of truth — every pinned constant, enum domain, uniqueness claim, reconciliation, unit definition, ownership rule, build scope. Sorted keys, UTF-8, LF. |
+| `red-registry.json` | Deliberately-red validators awaiting their fixing amendment (§9). Committed input; EXPECTED-RED exits 2 loudly. |
+| `counter-units.mdx` | Frozen unit vocabulary + per-counter dictionary + the transform registry behind the load-time gate. |
+| `ledger-map.mdx` | Declared ledgers, owners, exit-2 contribution rules (§7). |
+| `families/*.mdx` | Human per-family contracts. Each carries a fenced ` ```pins ` block that MUST canonically equal the family's `pins.json` slice — the runner re-renders it on every run (V-D3); stale prose numbers fail. |
+
+## How to run
+
+```
+python tools/stage10_check_contracts.py            # full suite (44 validators)
+python tools/stage10_check_contracts.py --scan-catalog
+make contracts
+```
+
+Exit codes: `0` all green · `1` contract broken (unexpected FAIL,
+PIN-STALE, PIN-MISMATCH, unit-gate refusal) · `2` completed-with-known-ledger
+(every failing validator is registered EXPECTED-RED in red-registry.json) ·
+`3` inputs missing (cannot check).
+
+## Re-pinning after a game patch
+
+Pins are the product promise; movement is a reviewable event — never
+silence.
+
+1. Run the pipeline to the new buildId (`run_all.py <game>`).
+2. Run this stage. Every constant-scoped validator reports PIN-STALE (exit
+   1) instead of pretending to pass; `--warn-stale` downgrades to INFO for
+   exploratory runs.
+3. Re-measure each drifted pin from the artifacts, update `pins.json`
+   (and the family MDX blocks — they are checked against it), correct any
+   stale prose, and commit BOTH in one reviewed commit. Measured numbers
+   win; prose gets corrected.
+4. Derived identities (the `V-R*` reconciliations) never go stale — they
+   recompute. If one fails, an emitter broke; fix the emitter, never the
+   identity.
+
+## Ownership
+
+Everything under `extracted/` is pipeline-emitted and local-only
+(`.gitignore`: `extracted/**` except `*.md`). This tree is repo-plane and
+tracked unconditionally; git history here IS the contract change history.
+`pins.pathOwner` enforces exactly-one-writer per extracted path —
+handover-aware for the piece-07 `locale_availability.jsonl` move.

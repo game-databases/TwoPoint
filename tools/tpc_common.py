@@ -141,6 +141,14 @@ STAGES = [
     # Purely derived: opens no bundles, needs no game dir, imports no UnityPy.
     ("locale-proof", "tools/stage9_locale_proof.py",
      ["stage9_locale_proof.py", "tpc_common.py", "log_util.py"]),
+    # piece-05 contracts stage (canonical registry index 10 — after
+    # locale-proof=9, before media=11; registered ADDITIVELY per the
+    # orchestrator stage-index registry, gaps allowed while siblings pend).
+    # NON-EMITTING: declared outputs [] — the stamp records identity
+    # script-hash + exitCode only. Pure-read over extracted/ (zero-write).
+    ("check-contracts", "tools/stage10_check_contracts.py",
+     ["stage10_check_contracts.py", "contracts_lib.py", "relink_util.py",
+      "tpc_common.py", "log_util.py"]),
 ]
 STAGE_IDS = [sid for sid, _script, _deps in STAGES]
 

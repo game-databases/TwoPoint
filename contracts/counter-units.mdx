@@ -1,0 +1,99 @@
+# Counter units — the frozen vocabulary + per-counter dictionary
+
+Every emitted report whose fields carry counts declares a `counterUnits`
+object mapping each numeric field to a unit string from the frozen
+vocabulary below (piece-05 §6). A number can be RIGHT and still mislead
+everyone who reads it when its unit lives only in code — so the unit lives
+IN the artifact, enforced by V-U1, and cross-unit arithmetic is licensed
+only through a named transform from the [registry](#transforms) below,
+enforced at LOAD time by V-U3.
+
+## Frozen unit vocabulary
+
+`reference-events | deduped-rows | distinct-keys | emission-events |
+walked-terms | skipped-cells | bytes | objects`
+
+Exactly eight strings. Validators reject any value outside this set.
+`buildId` is an identifier, not a counter: it is exempt from unit coverage
+on every artifact (`counterUnitExemptFields` in [pins.json](pins.json)).
+
+Coverage rule (V-U1): every numeric leaf up to depth 3 carries a unit —
+either spelled directly (`evidence.registryTerms`) or via one ancestor
+wildcard entry (`evidence.duplicateKeysOverwritten.byLocale.*`). Arrays are
+sample containers, not counters, and carry no units.
+
+## Per-counter dictionary
+
+### `relinks/guid_bridge_report.json` (stage 6)
+
+| Field | Unit | Reading |
+|---|---|---|
+| `guidRefsTotal` | reference-events | GUID references walked out of stub payloads — one event per ref, pre-dedup |
+| `distinctGuids` | distinct-keys | distinct asset GUIDs among those refs |
+| `resolvedToAddress` | reference-events | refs whose GUID resolves to ≥1 catalog address |
+| `resolvedToStub` | reference-events | refs with ≥1 stub-entity candidate hit (rates over REFS per the generator docstring) |
+| `danglingDistinctGuids` | distinct-keys | GUIDs resolving to no catalog key |
+| `resolveRateAddress` / `resolveRateStub` | reference-events | ratios over the same ref-event basis |
+
+The counters count REFERENCES, not rows: `resolvedToStub − assetguid pair
+rows = 1` is exactly one collapsed dedup tuple
+(`Item_Union_Stage_Floor → ItemValidator_SinglePlace`, `Validators[]`,
+2 refs → 1 tuple).
+
+### `relinks/locale_join_report.json` (stage 6)
+
+| Field | Unit |
+|---|---|
+| `instancesTotal` | reference-events |
+| `sentinelZero` | reference-events |
+| `registryHits` | reference-events |
+| `registryMisses` | distinct-keys |
+| `coverageOnNonEmpty` | reference-events |
+| `matrixKeyDiff` | distinct-keys |
+| `perKindHits.*` | reference-events |
+
+### `locales/base-overlay-report.json` (stage 4)
+
+| Field | Unit |
+|---|---|
+| `evidence.baseRowCount`, `evidence.englishRowCount` | deduped-rows |
+| `evidence.sharedKeys`, `.identicalTextSharedKeys`, `.differingTextSharedKeys`, `.baseOnlyKeys`, `.englishOnlyKeys` | distinct-keys |
+| `evidence.registrySources` | objects |
+| `evidence.registryTerms` | walked-terms |
+| `evidence.termStatusForTranslation`, `.termStatusNotForTranslation` | deduped-rows |
+| `evidence.baseCellsSkippedEmpty`, `.baseCellsSkippedAbsent`, `.localeCellsSkippedEmptyTotal` | skipped-cells |
+| `evidence.localeRowsEmittedTotal` | emission-events |
+| `evidence.duplicateKeysOverwritten.total` | emission-events |
+| `evidence.duplicateKeysOverwritten.byLocale.*` | emission-events |
+
+### `addressables/catalog-coverage.json` (stage 2)
+
+| Field | Unit |
+|---|---|
+| `keysTotal` | distinct-keys |
+| `distinctBundlesReferenced` | distinct-keys |
+| `danglingDependencyKeys.count` | distinct-keys |
+| `outOfRosterFileReferences.count` | reference-events |
+
+### Run-section keys (checked as data by V-U3's table; stage-4 instance by V-U2)
+
+- stage-4 per-locale `rows` is `rows(emission-events)` — EMISSION EVENTS
+  including duplicate-key overwrites; the file holds one line per DISTINCT
+  key. The difference (+5/locale today) is REAL DATA, never drift.
+- stage-4 per-locale `duplicateKeysOverwritten=N` — overwrite events
+  (emission-events), printed AND persisted (RED-2 closes scout OQ1).
+- stage-1 `registryCount(covered classes; files = N)` — EXTRACTION-LOG's
+  `registryCount` counts covered CLASSES while the registry DIRECTORY holds
+  FILES; both numbers now sit beside the key (F15's second inline-units case).
+
+## transforms
+
+Fenced registry parsed by the runner at load time. A reconciliation whose
+left/right units differ may load ONLY if its transform name appears here;
+otherwise V-U3 refuses to run ANY check (exit 1 before output). First and
+currently only registration:
+
+```transforms
+events-minus-distinct-lines: emission-events − distinct-keys == overwrite-events
+    licenses: V-U2's flagship identity rowsLogged − fileLines == duplicateKeysOverwritten — and nothing else
+```

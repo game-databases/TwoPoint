@@ -42,6 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import aa_catalog
+import contracts_lib as cl
 import log_util
 import tpc_common as tc
 import unitypy_util as uu
@@ -402,7 +403,30 @@ def run(game_root: Path, extracted_root: Path) -> int:
         "outOfRosterFileReferences": {
             "count": len(out_of_roster), "sample": out_of_roster[:20]},
     }
+    # piece-05 §6 item 1 (RED-3): units live IN the artifact.
+    coverage["counterUnits"] = {
+        "danglingDependencyKeys.count": "distinct-keys",
+        "distinctBundlesReferenced": "distinct-keys",
+        "keysTotal": "distinct-keys",
+        "outOfRosterFileReferences.count": "reference-events",
+    }
     log_util.write_json(out_dir / "catalog-coverage.json", coverage)
+
+    # piece-05 §3.3: the catalog-mini-report sidecar — derived through the
+    # ONE shared derivation in contracts_lib (the same one --scan-catalog
+    # re-runs byte-for-byte off the persisted document). Written post-parse
+    # where the document is already in memory; temp-file + atomic-rename;
+    # local-only like every emitted dataset. meta.catalogSha256 ties it to
+    # this exact catalog.json bytes.
+    mini_catalog_sha = log_util.sha256_file(out_dir / "catalog.json")
+    cl.write_mini_report_atomic(extracted_root, cl.derive_mini_report(
+        keys_out, [r["relpath"] for r in roster], coverage,
+        (out_dir / "catalog.json").stat().st_size,
+        mini_catalog_sha,
+        meta={"buildId": build_id,
+              "addressablesVersion":
+                  settings_parsed.get("m_AddressablesVersion"),
+              "settingsHash": settings_parsed.get("m_SettingsHash")}))
 
     lines = [
         "- exitCode: 0",
@@ -420,6 +444,8 @@ def run(game_root: Path, extracted_root: Path) -> int:
         f"- outOfRosterFileReferences: {len(out_of_roster)} "
         "(warning ledger — references to bundles absent from this install; "
         "never fatal)",
+        f"- catalogMiniReport: emitted (catalog.json sha256 "
+        f"{mini_catalog_sha[:12]}…; sidecar local-only)",
     ]
     stats = decoded.get("meta") or {}
     if stats:

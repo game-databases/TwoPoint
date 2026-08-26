@@ -1,0 +1,50 @@
+# Stage 5 — stubs + ledgers
+
+Nine kinds over the frozen kind↔filename map; one 9-key envelope plus
+optional `axes[]` on merged-duplicate rows only; twins (`@<8hex>`)
+biject with `fields.id` verbatim (V-I5). `_absences.jsonl` and
+`_unmapped-families.jsonl` are permanent-by-design ledgers — deliberately
+NOT exit-2 contributors ([../ledger-map.mdx](../ledger-map.mdx)); their
+honesty is pinned by shapes/sorts/caps only.
+
+```pins
+{
+  "axesRows": {
+    "config": 4,
+    "metagame-node": 2
+  },
+  "engineFieldKeys": [
+    "m_Enabled",
+    "m_GameObject",
+    "m_Name",
+    "m_Script"
+  ],
+  "kindFiles": {
+    "campus-level": "campus-levels.jsonl",
+    "config": "configs.jsonl",
+    "course": "courses.jsonl",
+    "item": "items.jsonl",
+    "metagame-node": "metagame-nodes.jsonl",
+    "room": "rooms.jsonl",
+    "staff": "staff.jsonl",
+    "student-type": "student-types.jsonl",
+    "unlockable": "unlockables.jsonl"
+  },
+  "rowsByKind": {
+    "campus-level": 17,
+    "config": 8430,
+    "course": 69,
+    "item": 3885,
+    "metagame-node": 454,
+    "room": 116,
+    "staff": 3,
+    "student-type": 54,
+    "unlockable": 415
+  },
+  "twinsByKind": {
+    "config": 12,
+    "item": 3,
+    "metagame-node": 2
+  }
+}
+```

@@ -1,0 +1,1115 @@
+{
+  "buildScope": {
+    "buildId": 20226581
+  },
+  "coldArms": {
+    "dangling.verdict": [
+      "removed-content",
+      "resolved-editor-only",
+      "resolved-scene"
+    ],
+    "matrix.joinKey": [
+      "LocalisedString(_termID)->I2-termID->Term-key",
+      "name-equality(<rule>)"
+    ],
+    "matrix.mechanism": [
+      "logic"
+    ],
+    "pair.method": [
+      "code-analysis:<descriptor>",
+      "competitor-model:<source-id>",
+      "i2-termid-registry",
+      "name-convention:<rule>"
+    ]
+  },
+  "counterUnitExemptFields": [
+    "buildId"
+  ],
+  "docPins": {
+    "faithfulProjection": "The projection is faithful, not broken",
+    "familyBlocks": {
+      "stage0-identity.mdx": "stage0",
+      "stage1-decompile.mdx": "stage1",
+      "stage2-addressables.mdx": "stage2",
+      "stage3-harvest.mdx": "stage3",
+      "stage4-locales.mdx": "stage4",
+      "stage5-stubs.mdx": "stage5",
+      "stage6-relinks.mdx": "stage6"
+    },
+    "routingStatement": "per-term locale availability lives in `locales/locale-matrix.json`; `locales[]` fields are reserved-but-empty"
+  },
+  "enums": {
+    "_unmapped.evidence": [
+      "component MonoBehaviour",
+      "engine/primitive component namespace",
+      "no seeded kind covers this class",
+      "unresolved-generic dump"
+    ],
+    "absences.absenceType": [
+      "no-identifier"
+    ],
+    "asset.resolvedVia": [
+      "catalog-guid+container-index"
+    ],
+    "catalog.kind": [
+      "address",
+      "guid"
+    ],
+    "dangling.verdict": [
+      "removed-content",
+      "resolved-editor-only",
+      "resolved-scene",
+      "unresolved-open"
+    ],
+    "matrix.joinKey": [
+      "AssetGUID(m_AssetGUID)->catalog.guid->container-address->pathId",
+      "LocalisedString(_termID)->I2-termID->Term-key",
+      "PPtr(m_FileID,m_PathID)",
+      "name-equality(<rule>)",
+      "none-established"
+    ],
+    "matrix.mechanism": [
+      "hard",
+      "logic",
+      "inferred"
+    ],
+    "matrix.status": [
+      "modeled",
+      "partial",
+      "missing"
+    ],
+    "media.class": [
+      "AnimationClip",
+      "AudioClip",
+      "Font",
+      "Mesh",
+      "Shader",
+      "Sprite",
+      "SpriteAtlas",
+      "Texture2D",
+      "VideoClip"
+    ],
+    "media.contentAxis": [
+      "base",
+      "dlc-space",
+      "dlc-ghost"
+    ],
+    "overlay.compositionPolicy": [
+      "base-over-english",
+      "english-only",
+      "english-over-base",
+      "mixed"
+    ],
+    "pair.method": [
+      "assetguid-catalog",
+      "code-analysis:<descriptor>",
+      "competitor-model:<source-id>",
+      "i2-termid-registry",
+      "name-convention:<rule>",
+      "pptr-cross-file",
+      "pptr-same-file"
+    ],
+    "pptrs.reason": [
+      "pathId exists in the resolved file but is not an emitted stub entity",
+      "same-file pathId is not an emitted stub entity and the bundle carries no scene flag"
+    ],
+    "registry.termStatus": [
+      0,
+      1
+    ],
+    "registry.termType": [
+      0
+    ],
+    "roster.dirClass": [
+      "base",
+      "dlc-ghost",
+      "dlc-space"
+    ],
+    "roster.sceneFlag": [
+      ".unity",
+      "none",
+      "seasonal-scenes"
+    ],
+    "stub.axes": [
+      "base",
+      "dlc-ghost",
+      "dlc-space"
+    ],
+    "stub.kind": [
+      "campus-level",
+      "config",
+      "course",
+      "item",
+      "metagame-node",
+      "room",
+      "staff",
+      "student-type",
+      "unlockable"
+    ],
+    "stub.method": [
+      "seeded-class-heuristic",
+      "seeded-family-heuristic"
+    ],
+    "ui.status": [
+      "documented-gap",
+      "mapped-schema"
+    ]
+  },
+  "exceptions": [
+    {
+      "anchor": "### catalog duplicate key",
+      "id": "catalog-duplicate-key",
+      "numbers": [
+        "f952c082cb03451daed3ee968ac6c63e",
+        2,
+        56660,
+        56659
+      ]
+    },
+    {
+      "anchor": "### catalog bundle null",
+      "id": "catalog-bundle-null",
+      "numbers": [
+        45312,
+        43480,
+        1832,
+        329
+      ]
+    },
+    {
+      "anchor": "### stub slug null by design",
+      "id": "stub-slug-null",
+      "numbers": [
+        13443,
+        100
+      ]
+    },
+    {
+      "anchor": "### locales reserved-but-empty",
+      "id": "locales-reserved-empty",
+      "numbers": [
+        15675,
+        10964,
+        6526,
+        0
+      ]
+    }
+  ],
+  "exitCodeContributors": {
+    "members": {
+      "catalog-out-of-roster-or-dangling": "catalog-coverage.outOfRosterFileReferences.count > 0 OR danglingDependencyKeys.count > 0; size = outOfRoster + dangling counts",
+      "competitor-floor-unmet": "a competitor_applied terminal floor-unmet row exists; size 1/0",
+      "dangling-guids-open": "any _dangling_guids row with verdict unresolved-open; size = count of those rows",
+      "registry-misses": "locale_join_report.registryMisses > 0; size = the counter",
+      "uncontained-addresses": "any _uncontained_addresses row; size = row count (RED-1 declares this ledger)",
+      "unresolved-pptrs": "any _unresolved_pptrs row; size = row count"
+    }
+  },
+  "families": {
+    "flat": {
+      "harvest/export-manifest.jsonl": {
+        "keyset": [
+          "bytes",
+          "class",
+          "outRelPath",
+          "pathId",
+          "sourceBundle"
+        ],
+        "optionalKeys": [],
+        "rows": 167069
+      },
+      "harvest/externals.jsonl": {
+        "keyset": [
+          "bundle",
+          "externals",
+          "sourceFile"
+        ],
+        "optionalKeys": [],
+        "rows": 222
+      },
+      "media-catalogue.jsonl": {
+        "keyset": [
+          "bundle",
+          "bytesEstimate",
+          "class",
+          "contentAxis",
+          "name",
+          "pathId"
+        ],
+        "optionalKeys": [],
+        "rows": 47939
+      },
+      "relinks/bridges/cab_index.jsonl": {
+        "keyset": [
+          "buildId",
+          "bundle",
+          "cab",
+          "objects"
+        ],
+        "optionalKeys": [],
+        "rows": 222
+      },
+      "relinks/bridges/container_index.jsonl": {
+        "keyset": [
+          "address",
+          "buildId",
+          "bundle",
+          "class",
+          "pathId"
+        ],
+        "optionalKeys": [],
+        "rows": 49855
+      },
+      "relinks/i2_term_registry.jsonl": {
+        "keyset": [
+          "buildId",
+          "canonical",
+          "locales",
+          "sourceAsset",
+          "termId",
+          "termKey",
+          "termStatus",
+          "termType"
+        ],
+        "optionalKeys": [],
+        "rows": 15675
+      },
+      "relinks/ui_link_coverage.jsonl": {
+        "keyset": [
+          "buildId",
+          "definitionClasses",
+          "exportedCount",
+          "gapReason",
+          "impliedFamilies",
+          "joins",
+          "status",
+          "surfaceId",
+          "uiClass",
+          "unblock"
+        ],
+        "optionalKeys": [
+          "genericContainerClasses"
+        ],
+        "rows": 344
+      }
+    },
+    "ledgers": {
+      "_uncontained_addresses": {
+        "optional": [
+          "catalogGuid"
+        ],
+        "reason": "catalog-bundle-null-uninstalled-dlc",
+        "required": [
+          "address",
+          "buildId",
+          "reason",
+          "sampleRefs"
+        ]
+      }
+    },
+    "owned": {
+      "relinks": [
+        "relinks/_uncontained_addresses.jsonl",
+        "relinks/locale_availability.jsonl",
+        "relinks/locale_availability.report.json"
+      ]
+    },
+    "relations": {
+      "relinks/_dangling_guids.jsonl": {
+        "optional": [
+          "unblock"
+        ],
+        "predicate": null,
+        "required": [
+          "assetGuid",
+          "buildId",
+          "sampleRefs",
+          "verdict"
+        ]
+      },
+      "relinks/_unresolved_pptrs.jsonl": {
+        "optional": [],
+        "predicate": null,
+        "required": [
+          "buildId",
+          "extFileId",
+          "extPath",
+          "fieldPath",
+          "m_PathID",
+          "reason",
+          "srcId",
+          "srcKind"
+        ]
+      },
+      "relinks/competitor_applied.jsonl": {
+        "optional": [
+          "artifactRelPath",
+          "dispositions",
+          "floorRequired",
+          "samples",
+          "sourcesApplied",
+          "terminal",
+          "unblock"
+        ],
+        "predicate": null,
+        "required": [
+          "buildId",
+          "rung",
+          "sourceId"
+        ]
+      },
+      "relinks/entity_asset_guid.jsonl": {
+        "optional": [],
+        "predicate": "asset-guid",
+        "required": [
+          "buildId",
+          "dstId",
+          "dstKind",
+          "evidence",
+          "inferred",
+          "mechanism",
+          "method",
+          "srcId",
+          "srcKind"
+        ]
+      },
+      "relinks/entity_locale.jsonl": {
+        "optional": [],
+        "predicate": "entity_locale-locale-term",
+        "required": [
+          "buildId",
+          "dstId",
+          "dstKind",
+          "evidence",
+          "inferred",
+          "mechanism",
+          "method",
+          "srcId",
+          "srcKind"
+        ]
+      },
+      "relinks/locale_term_entity.jsonl": {
+        "optional": [],
+        "predicate": null,
+        "required": [
+          "buildId",
+          "locales",
+          "termKey",
+          "usages"
+        ]
+      },
+      "stubs/_absences.jsonl": {
+        "optional": [],
+        "predicate": null,
+        "required": [
+          "absenceType",
+          "buildId",
+          "count",
+          "evidence",
+          "kind",
+          "samples",
+          "scannedBundles",
+          "scannedClasses"
+        ]
+      },
+      "stubs/_unmapped-families.jsonl": {
+        "optional": [],
+        "predicate": null,
+        "required": [
+          "bundles",
+          "class",
+          "evidence",
+          "objectCount"
+        ]
+      }
+    },
+    "stage0": {
+      "identityTopKeys": [
+        "appid",
+        "addressablesVersion",
+        "buildId",
+        "dumper",
+        "expectedBundles",
+        "languageSetting",
+        "localeBundleCount",
+        "metadataVersion",
+        "sceneCounts",
+        "settingsHash",
+        "targetBuildId",
+        "unityVersion",
+        "versionString"
+      ],
+      "roster": {
+        "dirClass": {
+          "base": 158,
+          "dlc-ghost": 8,
+          "dlc-space": 10
+        },
+        "keyset": [
+          "buildId",
+          "bytes",
+          "dirClass",
+          "localeFlag",
+          "relpath",
+          "sceneFlag"
+        ],
+        "localeFlag": {
+          "base": 1,
+          "named": 13,
+          "null": 162
+        },
+        "rows": 176,
+        "sceneFlag": {
+          ".unity": 25,
+          "none": 150,
+          "seasonal-scenes": 1
+        }
+      }
+    },
+    "stage1": {
+      "assemblyIndexEntries": 148,
+      "dummyDllImages": 101,
+      "hierarchyCountMethod": "pure-python ECMA-335 metadata reader over DummyDll/*.dll",
+      "hierarchyRowCount": 20037,
+      "idRegistryFiles": 1792,
+      "registryCountCoveredClasses": 1900
+    },
+    "stage2": {
+      "coverage": {
+        "bundlesUnreferenced": 0,
+        "danglingDependencyKeys": 0,
+        "distinctBundlesReferenced": 176,
+        "outOfRosterFileReferences": 19
+      },
+      "dependencyEdgesTotal": 3939716,
+      "distinctKeys": 56659,
+      "duplicateKeyAddress": "Style Sheets/Default Style Sheet",
+      "duplicateKeyCount": 1,
+      "duplicateKeyValue": "f952c082cb03451daed3ee968ac6c63e",
+      "keysTotal": 56660,
+      "kindCounts": {
+        "address": 2516,
+        "guid": 54144
+      },
+      "miniReportTopKeys": [
+        "bundleUniverse",
+        "counts",
+        "duplicateKeys",
+        "guidIndex",
+        "meta",
+        "nullBundleAddresses"
+      ],
+      "nullAddressRows": 329,
+      "nullBundleRows": {
+        "addressKind": 1832,
+        "guidKind": 43480,
+        "total": 45312
+      },
+      "rowsWithNoDependencies": 11491
+    },
+    "stage3": {
+      "censusFiles": 176,
+      "censusObjectsTotal": 2026658,
+      "exportManifestRows": 167069,
+      "externalsRefsTotal": 1781,
+      "externalsRows": 222,
+      "fallbackTrueBundles": 176,
+      "mediaClassCounts": {
+        "AnimationClip": 7985,
+        "AudioClip": 5624,
+        "Font": 24,
+        "Mesh": 19249,
+        "Shader": 213,
+        "Sprite": 6789,
+        "SpriteAtlas": 47,
+        "Texture2D": 7977,
+        "VideoClip": 31
+      },
+      "mediaRows": 47939
+    },
+    "stage4": {
+      "baseOverlayRows": 15672,
+      "dupTermKeys": [
+        "Characters/DLC_Hospital/Archetypes/Doctor_M_Name",
+        "Characters/DLC_Hospital/Archetypes/Nurse_F_Description",
+        "UI/General/PrestigeLevel",
+        "UI/Inspector/MedicalIssuesCured",
+        "UI/Inspector/PastoralIssuesCured"
+      ],
+      "dupTermKeysPerLocale": 5,
+      "evidenceCounterNames": [
+        "baseCellsSkippedAbsent",
+        "baseCellsSkippedEmpty",
+        "baseOnlyKeys",
+        "baseRowCount",
+        "differingTextSharedKeys",
+        "englishOnlyKeys",
+        "englishRowCount",
+        "identicalTextSharedKeys",
+        "localeCellsSkippedEmptyTotal",
+        "localeRowsEmittedTotal",
+        "registrySources",
+        "registryTerms",
+        "sharedKeys",
+        "termStatusForTranslation",
+        "termStatusNotForTranslation"
+      ],
+      "lineCounts": {
+        "BASE-OVERLAY": 15672,
+        "de": 15445,
+        "en": 15665,
+        "es": 15440,
+        "fr": 15445,
+        "it": 15445,
+        "ja": 15371,
+        "ko": 15457,
+        "pl": 15445,
+        "pt-BR": 15443,
+        "ru": 15422,
+        "tr": 15443,
+        "zh-Hans": 15445,
+        "zh-Hant": 15446
+      },
+      "linesTotal": 216584,
+      "localeEventsTotal": 200977,
+      "localeLinesTotal": 200912,
+      "matrixKeys": 15672
+    },
+    "stage5": {
+      "axesRows": {
+        "config": 4,
+        "metagame-node": 2
+      },
+      "engineFieldKeys": [
+        "m_Enabled",
+        "m_GameObject",
+        "m_Name",
+        "m_Script"
+      ],
+      "kindFiles": {
+        "campus-level": "campus-levels.jsonl",
+        "config": "configs.jsonl",
+        "course": "courses.jsonl",
+        "item": "items.jsonl",
+        "metagame-node": "metagame-nodes.jsonl",
+        "room": "rooms.jsonl",
+        "staff": "staff.jsonl",
+        "student-type": "student-types.jsonl",
+        "unlockable": "unlockables.jsonl"
+      },
+      "rowsByKind": {
+        "campus-level": 17,
+        "config": 8430,
+        "course": 69,
+        "item": 3885,
+        "metagame-node": 454,
+        "room": 116,
+        "staff": 3,
+        "student-type": 54,
+        "unlockable": 415
+      },
+      "twinsByKind": {
+        "config": 12,
+        "item": 3,
+        "metagame-node": 2
+      }
+    },
+    "stage6": {
+      "bridgeReportFields": [
+        "buildId",
+        "danglingDistinctGuids",
+        "distinctGuids",
+        "guidRefsTotal",
+        "resolveRateAddress",
+        "resolveRateStub",
+        "resolvedToAddress",
+        "resolvedToStub"
+      ],
+      "bridgeReportValues": {
+        "danglingDistinctGuids": 1137,
+        "distinctGuids": 5584,
+        "guidRefsTotal": 20170,
+        "resolveRateAddress": 0.7987109568666336,
+        "resolveRateStub": 0.1857709469509172,
+        "resolvedToAddress": 16110,
+        "resolvedToStub": 3747
+      },
+      "bundleClosure": {
+        "manifest sourceBundle": 114,
+        "pair evidence bundles": null,
+        "stub source.bundle": 11
+      },
+      "evidenceKeysets": {
+        "assetguid-catalog": [
+          "assetGuid",
+          "catalogAddress",
+          "fieldPath"
+        ],
+        "pptr-cross-file": [
+          "dstBundle",
+          "dstCab",
+          "dstPathId",
+          "extFileId",
+          "fieldPath",
+          "refCount",
+          "resolvedVia",
+          "srcBundle",
+          "srcPathId"
+        ],
+        "pptr-same-file": [
+          "dstBundle",
+          "dstPathId",
+          "fieldPath",
+          "refCount",
+          "srcBundle",
+          "srcPathId"
+        ]
+      },
+      "joinReport": {
+        "instancesTotal": 20070,
+        "registryMisses": 5,
+        "sentinelZero": 9101,
+        "unresolvedIdCount": 5
+      },
+      "joinReportFields": [
+        "buildId",
+        "codeRefTerms",
+        "coverageOnNonEmpty",
+        "instancesTotal",
+        "matrixKeyDiff",
+        "perKindHits",
+        "registryHits",
+        "registryMisses",
+        "sentinelZero",
+        "unresolvedIds"
+      ],
+      "ledgers": {
+        "danglingUnresolvedOpen": 1137,
+        "pptrReasonCounts": {
+          "pathId exists in the resolved file but is not an emitted stub entity": 2284,
+          "same-file pathId is not an emitted stub entity and the bundle carries no scene flag": 107
+        }
+      },
+      "matrix": {
+        "cells": 100,
+        "joinKeyDist": {
+          "AssetGUID(m_AssetGUID)->catalog.guid->container-address->pathId": 1,
+          "PPtr(m_FileID,m_PathID)": 23,
+          "none-established": 76
+        },
+        "joinKeyVocabulary": [
+          "AssetGUID(m_AssetGUID)->catalog.guid->container-address->pathId",
+          "LocalisedString(_termID)->I2-termID->Term-key",
+          "PPtr(m_FileID,m_PathID)",
+          "name-equality(<rule>)",
+          "none-established"
+        ],
+        "mechanismDist": {
+          "hard": 24,
+          "inferred": 76
+        },
+        "nodes": 10,
+        "statusDist": {
+          "missing": 73,
+          "modeled": 24,
+          "partial": 3
+        }
+      },
+      "pairFiles": 24,
+      "pairRows": 24583,
+      "sourceAxesCarrierRows": 1,
+      "uiCoverage": {
+        "documentedGap": 335,
+        "genericContainerRows": 1,
+        "mappedSchema": 9
+      },
+      "uncontainedCarveOut": {
+        "addresses": 5,
+        "edgeRows": 9
+      }
+    }
+  },
+  "notExit2Contributors": [
+    "stubs/_absences.jsonl",
+    "stubs/_unmapped-families.jsonl"
+  ],
+  "pathOwner": {
+    "invariant": "exactly-one-writer per extracted/ path at any moment; map entries name the CURRENT canonical writer per the pack's stage registry (RF-1)",
+    "paths": {
+      "RELATIONS.md": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "atomic_write_text\\(extracted_root / \"RELATIONS\\.md\""
+          ]
+        ]
+      },
+      "addressables/catalog-coverage.json": {
+        "expect": "stage2_harvest_catalog.py",
+        "writers": [
+          [
+            "stage2_harvest_catalog.py",
+            "write_json\\(out_dir / \"catalog-coverage\\.json\""
+          ]
+        ]
+      },
+      "addressables/catalog-mini-report.json": {
+        "expect": "stage2_harvest_catalog.py",
+        "writers": [
+          [
+            "stage2_harvest_catalog.py",
+            "mini-report"
+          ]
+        ]
+      },
+      "addressables/catalog.json": {
+        "expect": "stage2_harvest_catalog.py",
+        "writers": [
+          [
+            "stage2_harvest_catalog.py",
+            "write_json\\(out_dir / \"catalog\\.json\""
+          ]
+        ]
+      },
+      "addressables/settings.snapshot.json": {
+        "expect": "stage2_harvest_catalog.py",
+        "writers": [
+          [
+            "stage2_harvest_catalog.py",
+            "write_json\\(out_dir / \"settings\\.snapshot\\.json\""
+          ]
+        ]
+      },
+      "bundle-roster.jsonl": {
+        "expect": "stage0_verify_client.py",
+        "writers": [
+          [
+            "stage0_verify_client.py",
+            "write_jsonl\\(extracted_root / \"bundle-roster\\.jsonl\""
+          ]
+        ]
+      },
+      "harvest/export-manifest.jsonl": {
+        "expect": "stage3_harvest_bundles.py",
+        "writers": [
+          [
+            "stage3_harvest_bundles.py",
+            "write_jsonl\\(harvest_dir / \"export-manifest\\.jsonl\""
+          ]
+        ]
+      },
+      "harvest/externals.jsonl": {
+        "expect": "stage3_harvest_bundles.py",
+        "writers": [
+          [
+            "stage3_harvest_bundles.py",
+            "write_jsonl\\(harvest_dir / \"externals\\.jsonl\""
+          ]
+        ]
+      },
+      "identity.json": {
+        "expect": "stage0_verify_client.py",
+        "writers": [
+          [
+            "stage0_verify_client.py",
+            "write_json\\(extracted_root / \"identity\\.json\""
+          ]
+        ]
+      },
+      "locales/<locale>.jsonl x13": {
+        "expect": "stage4_localisation.py",
+        "writers": [
+          [
+            "stage4_localisation.py",
+            "locales_dir / f\"\\{locale\\}\\.jsonl\""
+          ]
+        ]
+      },
+      "locales/base-overlay-report.json": {
+        "expect": "stage4_localisation.py",
+        "writers": [
+          [
+            "stage4_localisation.py",
+            "write_json\\(locales_dir / \"base-overlay-report\\.json\""
+          ]
+        ]
+      },
+      "locales/base-overlay.jsonl": {
+        "expect": "stage4_localisation.py",
+        "writers": [
+          [
+            "stage4_localisation.py",
+            "write_jsonl\\(locales_dir / \"base-overlay\\.jsonl\""
+          ]
+        ]
+      },
+      "locales/locale-matrix.json": {
+        "expect": "stage4_localisation.py",
+        "writers": [
+          [
+            "stage4_localisation.py",
+            "write_json\\(locales_dir / \"locale-matrix\\.json\""
+          ]
+        ]
+      },
+      "media-catalogue.jsonl": {
+        "expect": "stage3_harvest_bundles.py",
+        "writers": [
+          [
+            "stage3_harvest_bundles.py",
+            "write_jsonl\\(extracted_root / \"media-catalogue\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/_dangling_guids.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"_dangling_guids\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/_uncontained_addresses.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"_uncontained_addresses\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/_unresolved_pptrs.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"_unresolved_pptrs\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/bridges/cab_index.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "\"bridges\" / \"cab_index\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/bridges/container_index.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "\"bridges\" / \"container_index\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/competitor_applied.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"competitor_applied\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/entity_asset_guid.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"entity_asset_guid\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/entity_locale.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"entity_locale\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/guid_bridge_report.json": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_json\\(relinks / \"guid_bridge_report\\.json\""
+          ]
+        ]
+      },
+      "relinks/i2_term_registry.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"i2_term_registry\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/locale_availability.jsonl": {
+        "note": "HANDOVER-AWARE (piece-07 §5, landed): candidates are a LIVE stage-5 legacy write call and the stage locale-proof emitter; exactly one may exist at any moment — two concurrent writers or zero is a loud FAIL in either landing order",
+        "writers": [
+          [
+            "stage5_emit_stubs.py",
+            "(?<!def )write_locale_availability_legacy\\("
+          ],
+          [
+            "stage9_locale_proof.py",
+            "locale_availability\\.jsonl"
+          ]
+        ]
+      },
+      "relinks/locale_join_report.json": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_json\\(relinks / \"locale_join_report\\.json\""
+          ]
+        ]
+      },
+      "relinks/locale_term_entity.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"locale_term_entity\\.jsonl\""
+          ]
+        ]
+      },
+      "relinks/matrix.json": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_json\\(relinks / \"matrix\\.json\""
+          ]
+        ]
+      },
+      "relinks/ui_link_coverage.jsonl": {
+        "expect": "stage6_relink.py",
+        "writers": [
+          [
+            "stage6_relink.py",
+            "write_jsonl\\(relinks / \"ui_link_coverage\\.jsonl\""
+          ]
+        ]
+      },
+      "stubs/<kind>.jsonl x9": {
+        "expect": "stage5_emit_stubs.py",
+        "writers": [
+          [
+            "stage5_emit_stubs.py",
+            "write_jsonl\\(stubs_dir / KIND_FILES\\[kind\\]"
+          ]
+        ]
+      },
+      "stubs/_absences.jsonl": {
+        "expect": "stage5_emit_stubs.py",
+        "writers": [
+          [
+            "stage5_emit_stubs.py",
+            "write_jsonl\\(stubs_dir / \"_absences\\.jsonl\""
+          ]
+        ]
+      },
+      "stubs/_unmapped-families.jsonl": {
+        "expect": "stage5_emit_stubs.py",
+        "writers": [
+          [
+            "stage5_emit_stubs.py",
+            "write_jsonl\\(stubs_dir / \"_unmapped-families\\.jsonl\""
+          ]
+        ]
+      }
+    }
+  },
+  "reconciliations": [
+    {
+      "id": "cab==census",
+      "left": "relinks/bridges/cab_index.objects Σ",
+      "leftUnit": "objects",
+      "right": "harvest/census/bundles objectsByClass Σ",
+      "rightUnit": "objects",
+      "validator": "V-R2"
+    },
+    {
+      "id": "guid-bridge-replay",
+      "left": "guid_bridge_report counters (reference events)",
+      "leftUnit": "reference-events",
+      "right": "replayed bridge counters via relink_util.run_guid_bridge",
+      "rightUnit": "reference-events",
+      "validator": "V-R8"
+    },
+    {
+      "id": "locale-events-vs-file-lines",
+      "left": "localisation run-section rowsLogged (emission events incl. duplicate-key overwrites)",
+      "leftUnit": "emission-events",
+      "right": "locales/<label>.jsonl distinct-key lines",
+      "rightUnit": "distinct-keys",
+      "transform": "events-minus-distinct-lines",
+      "validator": "V-U2"
+    },
+    {
+      "id": "matrix-edges==pair-rows",
+      "left": "matrix cardinality.edges Σ",
+      "leftUnit": "deduped-rows",
+      "right": "24 <src>_<dst>.jsonl row Σ",
+      "rightUnit": "deduped-rows",
+      "validator": "V-R1"
+    },
+    {
+      "id": "media==carved-census",
+      "left": "media-catalogue per-class rows (one catalogue row per carved-class object)",
+      "leftUnit": "objects",
+      "right": "census objectsByClass per carved class",
+      "rightUnit": "objects",
+      "validator": "V-R3"
+    },
+    {
+      "id": "registry==matrix-keys",
+      "left": "i2_term_registry distinct termKeys",
+      "leftUnit": "distinct-keys",
+      "right": "locale-matrix.json keys",
+      "rightUnit": "distinct-keys",
+      "validator": "V-R4"
+    },
+    {
+      "id": "reverse-usages==entity-locale",
+      "left": "locale_term_entity usages[] Σ (one reference instance per entity_locale row)",
+      "leftUnit": "reference-events",
+      "right": "entity_locale rows",
+      "rightUnit": "reference-events",
+      "validator": "V-R5"
+    },
+    {
+      "id": "roster==enumerated-bundles",
+      "left": "bundle-roster rows",
+      "leftUnit": "deduped-rows",
+      "right": "enumerated *.bundle count over the three corpus dirs",
+      "rightUnit": "deduped-rows",
+      "validator": "V-R7"
+    }
+  ],
+  "sampleCaps": {
+    "absenceSamples": 25,
+    "danglingSampleRefs": 5,
+    "joinUnresolvedSampleRefs": 5
+  },
+  "unitVocabulary": [
+    "bytes",
+    "deduped-rows",
+    "distinct-keys",
+    "emission-events",
+    "objects",
+    "reference-events",
+    "skipped-cells",
+    "walked-terms"
+  ]
+}

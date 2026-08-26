@@ -1,0 +1,46 @@
+# Exception sheet — read BEFORE building loaders
+
+Four measured realities look like defects and are not. Consumers (the site
+builder first among them) must be told about each before writing a loader.
+Every number below is interpolated from [../pins.json](../pins.json) and
+enforced there by V-D2; the layer re-checks it on every run.
+
+### catalog duplicate key
+
+`catalog.json` `key` is NOT unique: exactly **1** duplicated value
+(`f952c082cb03451daed3ee968ac6c63e`) appears **2** times across
+**56660** rows (**56659** distinct), and the two rows are canonical-JSON
+BYTE-IDENTICAL — a legal Addressables duplicate registration.
+**Consumer rule:** key→row dict-building MUST be collision-aware;
+last-wins silently drops one row. Pin: duplicates always byte-identical,
+count build-scoped (V-I2).
+
+### catalog bundle null
+
+`bundle` is null on **45312** of 56,660 rows (**43480** guid-kind +
+**1832** address-kind); `address` is null on **329** rows. For guid-kind
+rows the `address` IS the container address and owning-bundle resolution
+goes through `bridges/container_index.jsonl`.
+**Consumer rule:** owning-bundle lookup = catalog → container_index
+ladder, never `row.bundle` direct.
+
+### stub slug null by design
+
+`slug` is null on **100**% of **13443** stub rows BY DESIGN. Display names
+derive via `entity_locale.jsonl` → per-locale tables; the site layer owns
+slug generation policy (owner-routed).
+**Consumer rule:** never key anything off `slug`; derive names from the
+locale join.
+
+### locales reserved-but-empty
+
+`locales[]` is empty on ALL `i2_term_registry` (**15675**) rows,
+`entity_locale.evidence` (**10964**) rows and `locale_term_entity`
+(**6526**) rows because the client stores NO per-term availability: zero
+non-empty `mTerms[].Languages` cells across all 26 LanguageSource dumps —
+translations live in the per-locale category TextAssets (stage-4 route).
+The code implements piece-02 §R4 faithfully; the client's storage shape
+falsified the premise. The projection is faithful, not broken — that
+sentence is itself part of the pinned text (V-D1 greps it).
+
+**Consumer rule:** per-term locale availability lives in `locales/locale-matrix.json`; `locales[]` fields are reserved-but-empty — treat them as RESERVED fields, never data.

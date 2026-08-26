@@ -1,0 +1,19 @@
+# Stage 1 — decompile outputs
+
+The DummyDll set is multi-image by design (no Assembly-CSharp.dll on this
+client); the hierarchy-equality evidence lives IN assembly-index.json's
+stamp block (`hierarchyRowCount` + counting-method string), a good pin
+precedent. The id-registries directory holds FILES while the logged
+`registryCount` counts covered CLASSES — the unit now sits beside the key
+in every future run section (RED-3).
+
+```pins
+{
+  "assemblyIndexEntries": 148,
+  "dummyDllImages": 101,
+  "hierarchyCountMethod": "pure-python ECMA-335 metadata reader over DummyDll/*.dll",
+  "hierarchyRowCount": 20037,
+  "idRegistryFiles": 1792,
+  "registryCountCoveredClasses": 1900
+}
+```

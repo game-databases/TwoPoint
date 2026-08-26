@@ -1,0 +1,61 @@
+# Stage 4 — locales, base overlay, reports
+
+Per-locale run-section `rows` are EMISSION EVENTS including duplicate-key
+overwrites; each file emits one line per DISTINCT key. The difference
+(+5/locale today, same five duplicated Term keys everywhere) is real
+data — a naive `rows == wc -l` pin would itself be the bug, which is why
+the mixed-unit identity is licensed only through the
+`events-minus-distinct-lines` transform (V-U3 gate). RED-2 makes
+`duplicateKeysOverwritten` printed AND persisted so the units close on
+paper.
+
+```pins
+{
+  "baseOverlayRows": 15672,
+  "dupTermKeys": [
+    "Characters/DLC_Hospital/Archetypes/Doctor_M_Name",
+    "Characters/DLC_Hospital/Archetypes/Nurse_F_Description",
+    "UI/General/PrestigeLevel",
+    "UI/Inspector/MedicalIssuesCured",
+    "UI/Inspector/PastoralIssuesCured"
+  ],
+  "dupTermKeysPerLocale": 5,
+  "evidenceCounterNames": [
+    "baseCellsSkippedAbsent",
+    "baseCellsSkippedEmpty",
+    "baseOnlyKeys",
+    "baseRowCount",
+    "differingTextSharedKeys",
+    "englishOnlyKeys",
+    "englishRowCount",
+    "identicalTextSharedKeys",
+    "localeCellsSkippedEmptyTotal",
+    "localeRowsEmittedTotal",
+    "registrySources",
+    "registryTerms",
+    "sharedKeys",
+    "termStatusForTranslation",
+    "termStatusNotForTranslation"
+  ],
+  "lineCounts": {
+    "BASE-OVERLAY": 15672,
+    "de": 15445,
+    "en": 15665,
+    "es": 15440,
+    "fr": 15445,
+    "it": 15445,
+    "ja": 15371,
+    "ko": 15457,
+    "pl": 15445,
+    "pt-BR": 15443,
+    "ru": 15422,
+    "tr": 15443,
+    "zh-Hans": 15445,
+    "zh-Hant": 15446
+  },
+  "linesTotal": 216584,
+  "localeEventsTotal": 200977,
+  "localeLinesTotal": 200912,
+  "matrixKeys": 15672
+}
+```
