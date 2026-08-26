@@ -1,0 +1,234 @@
+# TestReviewer — testreviewer-piece07-build (stage 9 locale-proof suite)
+
+**Seat:** TestReviewer (fresh seat, blind-pair build review). **Date:** 2026-08-26.
+**Subject:** `tests/test_stage9_locale_proof.py` + `tests/_prooflib.py` at HEAD
+(blind `f259a4e` + reconciliation `0295df6`) audited as a PROOF of
+[`../specs/piece-07-locale-proof.mdx`](../specs/piece-07-locale-proof.mdx)
+Revision 3 + [`../rulings/arbiter-piece07-spec.mdx`](../rulings/arbiter-piece07-spec.mdx);
+implementation cross-read (`tools/stage9_locale_proof.py`,
+`tools/stage5_emit_stubs.py`, `run_all.py::UPSTREAMS`,
+`tools/tpc_common.py::STAGES`) to verify the tests bite it.
+
+**Method:** every checklist item executed against disk; suite executed once by
+this seat (`--basetemp=D:/tpc_pytmp/tr07`) — **54 passed · 1 skipped ·
+0 failed in 61.85 s** (skip: `test_A_make_list_equivalent`, reason
+`environment: no make binary on PATH`). All four client-gated real-corpus
+legs RAN (committed corpus present) and passed. Two teeth probes were run as
+real mutations of the implementation, then restored byte-exact (working tree
+verified clean for every file this seat touched; nothing committed).
+
+---
+
+## 1. AC coverage map (checklist 1)
+
+| AC | Failing leg(s) | Status |
+|---|---|---|
+| 1 entrypoint/registry | `test_A_registry_entry_canonical_index9` (order > relink, before later siblings IF present, script+deps pinned), `test_A_list_shows_order_and_script`, `test_A_only_isolation_on_fixture_tree`; absolute count only as canonical floor per R1 | covered |
+| 2 upstream gate | `test_B_missing_upstream_exits3_naming_it` + `test_B_no_partial_writes_before_gate_passes` | covered |
+| 3 headline reproduction | C-block fixture census + `test_N_full_corpus_exact_figures` (F2–F7 cell-for-cell incl. histogram, F4 rows/holes, Challenge 115/119-ja, Levels 32, quirks, 7 base-only keys verbatim) | covered |
+| 4 entity census | `test_D_census_block_exact` (arithmetic SHAPE (7−2)/7) + `test_N` (20070/9101/10964/5 · 10959/10964 = 0.99954 · per-kind joined/name-bearing) | covered |
+| 5 identity seeds | `test_C_identity_to_pivot_two_tier_framing` + `test_N` (ru 301/297, residual-4 emitted, keysHeld 905×11 + 897 ja/ru, `identicalInEveryHoldingLocale == 0`, five pinned rates, worked example en==ru=="Giant Library Reception") | covered |
+| 6 availability derivation | `test_E_row_count_derives_by_formula` (independent dedupe) + `test_E_row_schema_membership_and_sort` + `test_N` formula on real data | covered |
+| 7 unjoined reconciliation | `test_D_unjoined_entities_classified` + `test_N` (7,593; per-kind; campus 13+4 with four ids verbatim; kernels 1,438; coincidence) | covered (see MINOR-2 weakening) |
+| 8 registry completeness | `test_H_registry_completeness_exact` + `test_H_miss_ledger_shape` + `test_H_dropped_code_dev_key_fails_loudly` + `test_N` | covered |
+| 9 determinism | `test_I_double_run_byte_identical` (in-place --force + twin root) + `test_I_hole_files_byte_stable_at_fixed_buildid` + `test_L_interrupted_run_converges` + `test_N_real_double_run_idempotent` | covered |
+| 10 regression tripwire | J block: drop → exit 1 naming member old→new + baseline untouched; unchanged rerun no false positive; exact-match flip; improvement rewrites; buildId bump → DRIFT never rc 1; `test_N_real_tripwire_drop_one_table_row` | covered |
+| 11 chrome manifest | `test_G_manifest_surfaces_and_enum` (16 ids, prose XOR-set, zero coverage) + `test_G_game_data_side_agrees_with_registry` + `test_N` game-side census | **GAP — see MAJOR-1**: `reusableNamespaces` 164/143/187 unasserted |
+| 12 fallback law | F block (both symbolCheck branches driven hostless) + `test_N` (15672/0/26/25/15677, F6 identity ×13, UNPROVABLE, pinned signatures) | covered |
+| 13 exit codes + precedence | `test_J_closed_corpus_exits_zero` (0), `test_N_real_steady_state_exit2_and_ledger_set` (2 + pinned 7-row ledger set + dangling termIds), B legs (3), J legs (1), `test_J_precedence_regression_beats_open_ledgers` (1>2>0, ledgers named alongside) | covered |
+| 14 carve-out guard | `test_E_stage_is_read_only_outside_allowed_paths` (hash before==after outside ALLOWED_WRITES) + `test_L_carveout_guard_still_green` | covered |
+
+## 2. Teeth quality (checklist 2) — empirically probed
+
+Two real mutations were applied to the implementation, the targeted legs re-run,
+and the tree restored byte-exact afterward:
+
+1. **Tripwire disabled** (`worse_members` short-circuited to `[]`):
+   `test_J_same_buildid_drop_is_regression_exit1`,
+   `test_J_exact_match_member_any_change_is_worse`,
+   `test_J_precedence_regression_beats_open_ledgers` ALL FAILED
+   (`precedence 1>2: got 2`). The REGRESSION semantics are load-bearing, not
+   decorative.
+2. **Refusal guard disabled** (`guard_locale_availability_write` no-op'd):
+   `test_K_refusal_guard_stale_checkout` FAILED (`DID NOT RAISE`), while
+   `test_K_emit_stubs_leaves_availability_byte_untouched` stayed green —
+   correctly so: the byte-untouched leg proves the emission REMOVAL (§5 item 1),
+   the direct-call leg proves the retained CHOKE POINT guard (§5 item 3).
+   Complementary, not redundant.
+3. Availability v2 schema (analytical trace): dropping any required v2 key or
+   emitting v1 rows trips `test_E_row_schema_membership_and_sort`
+   (required-keys assert + extra-keys assert with `axes` as THE one optional);
+   `schemaVersion == 2` is separately asserted in
+   `test_E_row_count_derives_by_formula`.
+4. Half-up rounding tooth is real: `pct(1,160)` tie value distinguishes
+   HALF_UP `0.63%` from banker's `0.62%`; the formatter symbol resolves to the
+   implementation's `pct` (leg passed, no impl-missing skip).
+5. Tripwire semantics have three DISTINCT legs: same-buildId REGRESSION (J2),
+   cross-buildId DRIFT + baseline rewrite (J5), equal-rerun-stable with
+   baseline BYTE-untouched (J1). Exact-match flip (J3) and strict-improvement
+   rewrite (J4) complete the §L6.3 state machine.
+
+## 3. Deletability probe (checklist 3 — the piece-02 question)
+
+| Policy block deleted | Does anything fail? |
+|---|---|
+| Refusal guard (`stage5_emit_stubs.guard_locale_availability_write`) | YES — `test_K_refusal_guard_stale_checkout` (empirically confirmed). A rename without replacement fails LOUD as impl-missing. |
+| Baseline tripwire (`evaluate_baseline` regression branch / `.baseline.json` write) | YES — three J legs red (empirically confirmed); additionally `test_H_summary_regression_vector_shape` demands `.baseline.json` with matching vector + `previousVerdict`. |
+| Availability v2 schema checks (membership subsets, required-key set, `schemaVersion: 2`) | YES — E-block legs (see §2.3). |
+| **`gameDataSide.reusableNamespaces` (Input 164 · General 143 · UI_Settings_source 187)** | **NO — nothing fails. This is the piece-02 pattern at block scale: the block is deletable with the suite green ⇒ MAJOR-1 / T-1.** |
+| Consumer warning (`evidence.locales []`) | YES — `test_H_registry_completeness_exact` asserts its text; the implementation additionally exits 1 if the projection stops being empty. |
+
+## 4. Fixture honesty (checklist 4)
+
+Oracle spot-checks against the spec §2 fact base (well over the required 10,
+all character-exact): F3 histogram cells; F4 per-locale rows AND holes
+(incl. ja **295**, ru 244, es 226); F5 Challenge/Levels anatomy; F8 301/297 +
+residual-4 verbatim + keysHeld denominators + worked example; F9 census quad +
+10959/10964 = 0.99954; F10 stub rows ×9; F11 joined ×9; F10−F11 unjoined ×9
+(each difference recomputed: Σ = 7,593); F14 kernel 1,438 + campus 13/4 +
+coincidence 3; F16 15,675/15,672/3 + 15,400/275; F17 6526/10964/5850 +
+9,148/9,146 + UI 1,686; F18 closable trio + BOTH dangling rows exact
+(termId −1451566921 < −117238361 ordering numeric, fieldPath/dev/onIds verbatim);
+F19 15672/0/26/25/15677 + 7 base-only keys sorted; F20 2218/532/1686/52/11312;
+R3 ledger granularity summing to 7.
+
+One seed needed adjudication and the SUITE IS RIGHT: F11/F13 record config
+name-bearing as 2,627 ("rule yields 2,627"). Recomputed from primaries
+(`extracted/relinks/entity_locale.jsonl`, pinned first-name-edge rule) this
+seat measures **2,613** (item 1,077 · room 105 · metagame-node 195 ·
+unlockable 23 · student-type 27 · staff 3 all match F11 exactly). The suite's
+2,613 pin is the fresh measurement winning under the pack's own drift doctrine,
+with the DRIFT note at its pinned location `kinds.config.nameRoleNote`
+(asserted) — flagged below as MINOR-6 for the spec's next touch.
+
+Dialect fidelity: fixture `entity_locale` / `i2_term_registry` /
+`locale_term_entity` row key sets are IDENTICAL to the committed stage-6
+outputs on disk (`buildId,dstId,dstKind,evidence,inferred,mechanism,method,
+srcId,srcKind` etc.); sentinel-zero instances are excluded AND counted;
+registry misses land ONLY in `locale_join_report.unresolvedIds`. The
+edge-writing violations the reconciler fixed (blind version wrote unresolved
+edges with empty `dstId` into `entity_locale.jsonl`) are gone — none remain.
+
+## 5. Skip hygiene (checklist 5)
+
+Only ONE skip materialized in the executed run: `make` absent from PATH (loud,
+env-gated, reason printed in the summary). All other conditional skips are
+gated and currently non-firing: the percent-formatter leg resolves its symbol;
+`test_L_upstream_change_invalidates_stamp` finds mutable locale tables declared
+in `run_all.py::UPSTREAMS["locale-proof"]` and runs; the interrupted-run leg
+caught its window. Client-gated legs skip only when corpus inputs are missing.
+
+Reconciliation narrowing audit (git `f259a4e..0295df6`, ≥5 legs compared):
+
+- strengthened: C-identity residual (exact dict incl. extras), alias-PRESENT
+  leg (per-cell `inferred:true` at the pinned schema location + corpus rebuilt
+  WITH the alias term keys in its registry), H orphan histogram (JSON object →
+  ordered complete array with desc-count/tie-asc order preserved), hashes
+  manifest (any-spelling → BOTH amended-root paths required).
+- corrected-to-contract (not narrowing): D census numerator (7,9)→(5,7)
+  matches AC4's pinned arithmetic; en `nameIdenticalToEn` 0→2 implements R2's
+  DECLARED-STRUCTURAL degeneracy; config name-bearing 2,627→2,613 (§4 above).
+- surface move, documented in-line: K stale-checkout leg runner-driven →
+  direct invocation of the module-local choke point — forced by §5 item 1
+  itself (once the live emission is removed NO runner path can reach the
+  legacy writer; the blind leg contradicted the retirement it also demanded).
+  A scoping control was ADDED (empty target must pass — no blanket refusal).
+  Net strength: equivalent-plus.
+- No assertion was replaced by a skip anywhere in the diff.
+
+## 6. Findings
+
+### MAJOR
+
+- **MAJOR-1 — AC11 partially uncovered: `reusableNamespaces` is deletable with
+  the suite green.** Location: `tests/_prooflib.py:215-217` defines
+  `REAL["inputNamespace"]=164`, `REAL["generalNamespace"]=143`,
+  `REAL["uiSettingsSource"]=187`; grep confirms ZERO references in
+  `tests/test_stage9_locale_proof.py`. Neither
+  `test_G_game_data_side_agrees_with_registry` (asserts only
+  topLevelNamespaces/freeNarrativeKeys/localizeBindings) nor
+  `test_N_full_corpus_exact_figures` (same) touches
+  `gameDataSide.reusableNamespaces`. Evidence: deleting the block from
+  `tools/stage9_locale_proof.py` (which computes Input/General prefix censuses
+  and the `I2LS_UI_Settings` sourceAsset count at :1146-1149) fails no test —
+  the implementation's drift seeds print `DRIFT:` lines but DRIFT lines gate
+  nothing. F20/AC11 pin these three figures explicitly
+  ("164 · 143 · 187"). This is the piece-02 lesson recurring at block scale.
+
+### MINOR
+
+- **MINOR-1 — dead assertion.** `tests/test_stage9_locale_proof.py:1280`
+  (`test_K_stage9_rerun_does_not_refuse_on_populated_v2`):
+  `assert "refus" in (...) or True` cannot fail. Toothless line posing as a
+  check; delete it or assert something real (e.g. no `PROBLEM:` line, exit
+  code stability across the rerun).
+- **MINOR-2 — weakened coincidence pin (AC7/F14).**
+  `tests/test_stage9_locale_proof.py:1750-1752`:
+  `assert ids == {"Idle","Food","Drink"} or len(coincident)==3` — any THREE
+  wrong rows satisfy it. The membership half and the count half are each
+  pinned facts; the disjunction ORs away exactly the protection.
+- **MINOR-3 — optional-key relaxation.** Reconciliation changed
+  `assert cupid["coincidesWithEnTermText"] is False` to
+  `assert not cupid.get(...)` (:604), which also accepts emitting explicit
+  `false`. §L2 pins `coincidesWithEnTermText?` as omit-if-not-applicable;
+  strict-optionality (key absent) is the faithful reading and costs one
+  `not in` check.
+- **MINOR-4 — `holeNamespaces` hostless-blind.** The C block never asserts
+  `key_plane.holeNamespaces`; only the client-gated leg does (Challenge
+  115/119-ja, Levels 32, en None). On a corpus-less host the field could be
+  dropped without a fixture-level failure. One-line fixture oracle exists
+  (`FixtureInfo.hole_namespaces()` already derives it).
+- **MINOR-5 — worked example not read through emitted evidence.** AC5 says the
+  `Items/Library/Reception_Giant_Name` en==ru assertion lives "in the emitted
+  evidence"; `test_N` reads the two locale tables directly instead. Fact
+  strength equal, surface different — acceptable, noted for the record.
+- **MINOR-6 — spec seed staleness (doc flag, not a test defect).** Spec F13's
+  parenthetical "(rule yields 2,627)" and F11's config name-bearing figure do
+  not hold on today's corpus: the pinned rule measures 2,613 (this seat,
+  independent recomputation; suite agrees). Next spec touch should correct the
+  seed the way Rev 2 corrected the ru≡en framing — the suite already ships the
+  honest value beside the pinned DRIFT note.
+
+### Observations (non-binding)
+
+- The exact-match flip leg (J3) drives via baseline corruption rather than a
+  reality flip (spec's example flips chromeSurfaces/matrixKeyDiff in the
+  fixture); same comparison path, weaker end-to-end story. Acceptable given
+  chromeSurfaces is tool-owned and matrixKeyDiff divergence needs a
+  purpose-built fixture.
+- `unionKeys` sits in VECTOR_EXACT: a same-buildId UNION growth (new key in one
+  table) reads as REGRESSION exit 1. Defensible under "structural counts
+  exact-match"; unpinned either way; no leg drives it.
+- This checkout has not yet run locale-proof against the REAL extraction root
+  (no `extracted/locales/proof/`, availability file still 0 bytes, zero
+  EXTRACTION-LOG sections) — the client-gated legs exercised scratch copies.
+  First real-root run should land as the exit-2 steady state with ledgerRows=7.
+
+## 7. Verdict
+
+The suite is genuinely load-bearing: teeth were proven by mutation, not
+asserted; the tripwire state machine, precedence, retirement legs and both
+emission roots are covered; fixtures are hand-computed, dialect-clean, and in
+the one place the spec seeds were stale the suite measured fresh and won. What
+blocks APPROVE is exactly one coverage hole in the piece-02 mold — three pinned
+F20 figures whose whole artifact block can vanish silently — plus two cheap
+tooth repairs.
+
+**GAPS-REQUIRED**
+
+- **T-1:** Add failing legs for `gameDataSide.reusableNamespaces`: on the
+  fixture, compute Input/General prefix censuses and the UI_Settings
+  sourceAsset count from the fixture registry and assert the emitted block
+  equals them (so the computation is bound, not just present); client-gated,
+  assert the three keys exist and equal `REAL["inputNamespace"]`,
+  `REAL["generalNamespace"]`, `REAL["uiSettingsSource"]` (164/143/187).
+  Deleting the block must go red.
+- **T-2:** Remove the dead `or True` assertion in
+  `test_K_stage9_rerun_does_not_refuse_on_populated_v2`
+  (tests/test_stage9_locale_proof.py:1280).
+- **T-3:** Tighten the AC7 coincidence pin in `test_N_full_corpus_exact_figures`
+  to membership AND count: exactly `{"Idle","Food","Drink"}` and
+  `len(coincident) == 3` — drop the `or`.
+
+T-1 is the substantive gate; T-2/T-3 are one-line repairs rideable in the same
+touch. Re-review after landing may be a diff-only pass against §6.

@@ -1,0 +1,256 @@
+# CodeReviewer piece-07 BUILD — stage 9 locale-proof (reconciled implementation)
+
+**Seat:** CodeReviewer, build-gate round for
+[`docs/specs/piece-07-locale-proof.mdx`](../specs/piece-07-locale-proof.mdx)
+Rev 3 + [`../rulings/arbiter-piece07-spec.mdx`](../rulings/arbiter-piece07-spec.mdx).
+**Date:** 2026-08-26. **Code under review:** `tools/stage9_locale_proof.py`
+and its helpers as of HEAD (`0295df6`; HEAD advanced to `9ba57df`
+mid-review by a concurrent lane — verified via `git log 0295df6..HEAD`
+that none of the five reviewed paths moved between the two, so every
+finding below stands at both).
+
+**Read in full for this review:** Rev 3 spec (to `§END`); the arbiter
+ruling (to sentinel); scout report r2 (to `§END`); the full source of
+`tools/stage9_locale_proof.py` (1,855 lines), `tools/log_util.py`,
+`tools/tpc_common.py::STAGES`, `tools/stage5_emit_stubs.py` (retirement
+region + call graph), `tools/stage6_relink.py` (RELATIONS region);
+commits `7fa73fc`, `f259a4e`, `0295df6` (diffs read in full);
+`tests/_prooflib.py::REAL` oracle and the reconciliation deltas in
+`tests/test_stage9_locale_proof.py`.
+
+---
+
+## Method
+
+Static audit of every sub-pass against the pinned schemas, seeds, and
+rulings, **plus a live double execution** of the stage hostless. To keep
+the shared `extracted/` untouched by a reviewer, the corpus inputs were
+copied to two fresh scratch roots (`D:/tpc_pytmp/cr07/run1`,
+`D:/tpc_pytmp/cr07/run2`) and the stage was executed from HEAD-pinned
+copies of `stage9_locale_proof.py` + `tpc_common.py` + `log_util.py`
+(extracted with `git show HEAD:` — immune to the concurrently dirty
+working tree):
+
+1. run1 first execution → **exit 2**, zero `DRIFT:` lines on stderr.
+2. run1 rerun (same root) → **exit 2**, `.baseline.json` byte-untouched
+   (sha before == after; `previousVerdict` still `first-run`) — reconciler
+   ruling 1 (equal-rerun baseline untouched) confirmed live.
+3. run2 independent root → **exit 2**; `diff -r` of the entire proof dir +
+   both `relinks/` emissions against run1: **byte-identical**, including
+   `hashes.json` (AC9; the only stdout delta is the expected
+   first-run-vs-ok verdict console line, which is outside byte identity).
+4. Negative legs on a run3 copy: hidden input → **exit 3** naming
+   `relinks/locale_join_report.json`; dropped one `en` table row after a
+   clean baseline → **exit 1** with `REGRESSION: rows.en 15665->15664` +
+   `REGRESSION: unionKeys 15666->15665`, baseline untouched, availability
+   file intact (failed runs write nothing), and the failure run-section
+   names **both** the regression problems and the full 7-row ledger —
+   precedence 1 > 2 > 0 exactly as AC13/F7 pins.
+
+## What checks out (verified, not assumed)
+
+- **Every §2 seed reproduces with zero DRIFT** on the real corpus:
+  union 15,666 · all-thirteen 15,369 · 98.10 %/98.07 % · histogram
+  cell-for-cell (F3) · per-locale rows/holes (F4, ja 295) · ja holes
+  Challenge 119/Levels 32/Meta 44 (F5) · F6 identity holds all 13 ·
+  quirks incl. the 7 base-only keys verbatim · ru≡en 301/297 with
+  `keysHeld` 905 eleven locales / 897 ja+ru (F8) · census
+  20,070/9,101/10,964/5 · coverage 10959/10964 = "0.99954" · joined and
+  stub rows per kind (F10/F11 except F2 below) · name-identity seeds
+  item 10.96/23.03 · unlockable 86.96/91.30 · room 19.05 · student-type
+  37.04 · metagame-node 28.21 (F13 exact under the pinned rule) ·
+  availability 5,850 = distinct `(srcKind,srcId)` · unjoined 7,593 with
+  campus split 13+4 (four ids verbatim) · kernel Σ 1,438 by prefix
+  (713/231/141/134/219) · exactly 3 `coincidesWithEnTermText` rows ·
+  registry 15,675/15,672/3 non-canonical/status 15,400–275/termType 0 ·
+  orphans A 9,148/9,146 with the COMPLETE 52-entry namespace histogram
+  (UI 1,686, desc-count/tie-asc) · B 0 · CodeRef 586 · misses split 3
+  closable (each asserted present in `locales/en.jsonl` at emit time) +
+  2 dangling ONE-PER-termId ascending `-1451566921 < -1172386361` with
+  fieldPath/dev/srcKind/onIds verbatim (F18/F3) · base overlay
+  15,672/0/26/25/15,677/"mixed" (F19) · symbols measured fresh
+  (~L546887/~L546872/~L547700/~L548930), signatures pinned,
+  `fallbackOrder` UNPROVABLE · F20 census 2,218/532/1,686 · 164/143/187 ·
+  52 namespaces · 11,312 bindings · ledger exactly 7 rows at the pinned
+  granularity, sorted `(code,detail)`.
+- **Determinism provable from code + proven live**: sorted enumeration
+  everywhere a set is reduced (audited each pass), sorted-keys JSON/LF/
+  atomic-rename via `log_util`, no wall-clock in outputs; `hashes.json`
+  spans BOTH roots (both `relinks/` entries present), excludes itself and
+  `.baseline.json`, and every digest re-verifies.
+- **The five reconciler rulings implemented**: (1) equal rerun → verdict
+  `ok`/action `untouched`, baseline bytes frozen — proven live; (2)
+  `residualIdenticalInDe` generalized to all 13 rows under the same
+  frozen predicates, compact in practice (largest list 14 keys; de row
+  structurally bie=14/didd=0 per arbiter R2; ru list == the pinned
+  residual-4 verbatim); (3) closability probe `Code/<fieldPath>` then
+  `Code/<_dev>` reproduces the pinned 3/2 split and is honestly
+  documented in the `derive_misses` docstring; (4) config columns ship
+  measured values with the `kinds.config.nameRoleNote` DRIFT text at the
+  pinned location + `configIdentityDriftNoted=true` — see finding F2;
+  (5) alias input resolved beside the extraction root, hermetic for
+  fixtures, pack-equivalent for real runs.
+- **§5 amendment deltas**: stage-5 emission block REMOVED with **zero
+  live call sites** (`write_locale_availability_legacy` defined, never
+  called; only `stubs_dir` is rmtree'd, `relinks/` untouched); refusal
+  guard correctly CALLER-SCOPED (module-local choke point; passes
+  absent/empty/genuine-v1, refuses non-v1 with exit 1 naming the
+  conflict — stage 9 never routes through it); `STAGE_OUTPUTS` handover
+  landed (availability moved emit-stub-datasets → locale-proof, hole-file
+  universe appended, `.baseline.json` excluded); `tpc_common.STAGES`
+  order canonical (maps 7, logic 8, locale-proof 9, check-contracts 10,
+  media 11 — additive, registry-aware per R1); `run_all.UPSTREAMS` gates
+  the 13 tables (runner pre-check + stamp invalidation).
+- **Single-writer law**: swept every module at HEAD for the path — only
+  stage 9 writes it; `relink_util` actively protects it;
+  `stage0/stage4/stage6` references are comments/template text.
+- **Carve-out**: no UnityPy import (docstring mention only), no bundle
+  opens, no media bytes.
+
+---
+
+## Findings
+
+### F1 MAJOR — The §5/item-4 stage-6 RELATIONS.md template delta is NOT in effect at HEAD (concurrent commit reverted it)
+
+`7fa73fc` landed the ruled-in-scope generator edit: the
+`_relations_lines` availability bullet became "REGENERATED at its
+canonical path by stage 9 `locale-proof` … supersedes the piece-02 §R4
+stage-5 ownership pin". Fifteen minutes later, `9c7439c` (piece-05 /
+stage-10 CodeWriter sharing this file) rebuilt the region from a stale
+buffer and **restored the superseded text** —
+`git show 9c7439c -- tools/stage6_relink.py` deletes the stage-9 routing
+sentence and re-adds "`locale_availability.jsonl` stays STAGE-5 SOLE
+PROPERTY (piece-02 §R4 pin…)". At current HEAD the blob greps 0 for
+"REGENERATED at its". Consequences: the next `relink` run regenerates
+`extracted/RELATIONS.md` attributing sole ownership to stage 5,
+contradicting the ratified amendment — precisely the stale-pin hazard
+arbiter R6 warned turns agents into restorers of dead ownership — and a
+scoped deliverable of this piece is absent from HEAD even though the
+commit claiming it exists. Mitigations already visible: the working tree
+holds an uncommitted re-application of the same delta, and piece-05's own
+V-D1 paragraph coexists cleanly with it (different bullets). **Fix:** land
+the two-bullet coexistence as a commit (stage-9 routing sentence + V-D1
+paragraph), and add a suite leg asserting `_relations_lines` output names
+`locale-proof` so the next shared-file rebased edit cannot silently
+revert it again.
+
+### F2 MAJOR — Config name-bearing denominator diverges from the spec pin (measured 2,613 vs F11/AC4's 2,627) with no DRIFT line and no governance record
+
+Live measurement: `kinds.config.perLocale.*.nameBearingEntities ==
+2,613` (ru rate 30.50 %, ja 18.45 % — the scout percentages indeed do not
+reproduce). Spec F11 pins config name-bearing **2,627**, F13 states
+"(rule yields 2,627)", and AC4 requires name-bearing counts to "equal F11
+exactly". The reconciliation round re-based the client-gated oracle to
+2,613 (`test_N`, comment: "not F11's stale seed") — the measurement is
+honest and every other kind matches F11 exactly — but the divergence from
+the written contract is **silent at every layer a verifier reads**: (a)
+`SEEDS` contains no name-bearing members, so unlike every other pinned
+figure this one never prints a `DRIFT:` line naming old→new; (b) the
+emitted `CONFIG_NAME_ROLE_NOTE` documents only the scout *percentage*
+mismatch, not the 2,627→2,613 denominator divergence from the spec's own
+pin; (c) `grep -r '2613|2627' docs/` finds nothing — the doctrine lives
+only in a test comment and an untracked-by-docs commit message. A
+verifier running AC4-as-written fails against the artifact with no
+emitted explanation. **Fix (any one suffices, first is cheapest):** add
+name-bearing seeds to `SEEDS` + `drift.check` so fresh-wins prints
+`DRIFT:`; and/or record the doctrine beside its siblings (a short
+rulings/reviews note covering all five reconciliation rulings — see
+Observation O1).
+
+### F3 MINOR — Dead verdict branch in `measure_symbol_lines`
+
+`tools/stage9_locale_proof.py:1059`: inside the symbol loop,
+`verdict = "verified-with-drift-symbol-line-missing"` is assigned when a
+token is not found, but the function unconditionally returns
+`"verified"` on the next line — the computed value can never be emitted.
+Behavior happens to match the pinned two-value enum
+(`verified|skipped-no-dump.cs`), but if `dump.cs` exists yet none of the
+four symbols are found, the artifact claims `verified` with four
+`dumpCsLine: null` entries and nothing prints. Either drop the dead
+assignment or convert it to a `Drift.check` line (enum stays clean, loss
+still surfaces).
+
+### F4 MINOR — L5 consumes an upstream that §4's input universe does not declare
+
+`run()` reads `relinks/ui_link_coverage.jsonl` (optional, absence ⇒
+bindings 0) to measure `localizeBindings`. That path is in neither §4's
+enumerated upstream set, `REQUIRED_INPUTS`, nor `run_all.UPSTREAMS`. DAG
+is safe (it is a declared stage-6 output) and the 11,312 seed guards it
+via DRIFT, but the stage's declared input contract is incomplete — the
+test-side comment calls it the "measured-OPTIONAL L5 substrate", the spec
+and gate never do. Add it to the optional-input documentation (and, if
+desired, UPSTREAMS-free optional handling mirroring the alias input's
+pattern).
+
+### F5 MINOR — AC6's programmatic cross-check weakened to an inequality
+
+AC6 pins row count "== `locale_join_report.registryHits` deduplicated —
+asserted programmatically". Measured reality: `registryHits` is the RAW
+edge counter (10,964), not a deduplicated entity count, so the code
+asserts `len(rows) == len(grouped)` (true by construction) plus
+`resolved_seen (5,850) <= registryHits (10,964)`. Net effect: the load-
+bearing guard for the 5,850 figure is the seed DRIFT check, not the
+pinned equality. Honest (an equality against 10,964 would be wrong), but
+the deviation from AC6's wording deserves a one-line comment at the check
+site or an oracle-computed dedup comparison.
+
+### F6 MINOR — Per-cell `inferred:true` keyed by kind, not by resolution path
+
+`pass_l2` sets `inferred = bool(alias_map) and kind == "course"` on ALL
+course cells whenever the alias input is present — including courses
+whose effective name edge came from the client fieldPath rule, or none
+(unresolved courses stay ledgered yet their cells still claim
+inferred). Spec §L2: "`inferred:true` appears ONLY on course rows
+computed through the optional alias input." Latent only today (alias
+input absent on this corpus; fixture legs use a total table), but the
+flag should ride the per-entity `name_edges[key]["source"] ==
+"alias-input"` predicate instead of the kind test.
+
+### F7 MINOR — Stale inline ownership comments survive in three HEAD modules
+
+`tools/stage4_localisation.py:34` ("Stage 5 is the SOLE OWNER…"),
+`tools/relink_util.py:11` and `:129` ("stage-5 SOLE property"), and
+`tools/stage0_verify_client.py:38` still describe the pre-amendment
+world. None were in this piece's scoped write set (only the RELATIONS.md
+template line was), but they are the same hazard R6 routed doc
+supersession marks for: an agent reading `relink_util`'s header could
+"restore" stage-5 ownership in good faith. Route a one-line-each comment
+update to the documentator sweep alongside piece-01 Rev 8 / piece-02
+marks.
+
+### Observation O1 (non-blocking) — The five reconciliation rulings have no home outside commit `0295df6`
+
+All five are implemented and (except F2) commented at their code sites,
+but no `docs/rulings/*` or `docs/reviews/*` record records them, and the
+commit message subject ("interface reconciliation") does not name them.
+Given this batch's demonstrated shared-tree race (F1 happened within 15
+minutes), a short ruling note listing the five deviations from Rev-3-as-
+written — equal-rerun baseline untouched; `residualIdenticalInDe`
+generalization; fieldPath-then-dev probe; config 2613 doctrine; alias
+beside-root — would make the next auditor's job tractable.
+
+---
+
+## Verdict
+
+The stage itself is in excellent shape: every pinned schema, seed, sort,
+subset assertion, exit code, and determinism property checked out live on
+the real corpus with zero DRIFT, and the reconciler rulings are real
+improvements implemented as described. What gates the build is not the
+stage but the landing around it: a concurrent lane reverted the ruled
+stage-6 template delta out of HEAD (F1), and the one place the corpus
+disagrees with the spec's own pinned figure (F2) is currently silent.
+Both are one-commit fixes; neither requires touching stage 9's logic.
+
+**FIX-REQUIRED**
+1. **F1** — restore the stage-9 availability-routing bullet in
+   `tools/stage6_relink.py::_relations_lines` at HEAD (coexisting with
+   piece-05's V-D1 paragraph) + a suite leg pinning the template text.
+2. **F2** — make the config name-bearing divergence self-announcing:
+   `SEEDS`/`drift.check` members for name-bearing counts (fresh wins,
+   DRIFT printed), and record the 2613 doctrine outside `tests/`.
+3. F3, F4, F5, F6, F7 — apply in the same or follow-up round; none
+   blocks alone.
+
+§END codereviewer-piece07-build
