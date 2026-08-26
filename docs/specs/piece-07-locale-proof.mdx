@@ -1,0 +1,726 @@
+# Piece 7 — Locale Coverage Proof Spec (Two Point Campus)
+
+**Audience:** CodeWriter + TestWriter. This document is the contract for
+the locale-coverage proof piece. Facts are grounded in
+[`../scout-report-piece-07-locales.mdx`](../scout-report-piece-07-locales.mdx)
+(revision 2 — corrections K1–K6 applied), both verifier verdicts
+([`../verifications/verifyA-scout-piece07.mdx`](../verifications/verifyA-scout-piece07.mdx),
+[`../verifications/verifyB-scout-piece07.mdx`](../verifications/verifyB-scout-piece07.mdx)
+— both PASS-WITH-CORRECTIONS, corrections already folded into the rev-2
+report), [`../../_foundation/localization-architecture.md`](../../_foundation/localization-architecture.md)
+(read in full; §5.4 and §5.5 bind this piece), and the frozen pipeline
+contracts ([piece-01](piece-01-extraction-pipeline.mdx) Revisions 2–7,
+[piece-02](piece-02-relinking.mdx)). Where a number here conflicts with
+scout prose, this file wins — it cites the corrected rev-2 figures
+(ru≡en **301/297** framing; **98.10 %** headline; **13/17**
+campus-level literals; UI census **2,218/532/1,686**).
+
+---
+
+## 1. Goal
+
+ONE additive entrypoint stage turns the verified locale inventory into
+the proof artifacts extraction-doctrine Principle two demands —
+completeness is PROVEN from primary artifacts, never claimed:
+
+- New stage id **`locale-proof`**, script `tools/stage7_locale_proof.py`,
+  registered ADDITIVELY in `tools/tpc_common.py::STAGES` AFTER `relink`
+  (eight stages total). Every existing stage byte-behaves identically;
+  the only cross-stage change is the ownership amendment of §5 (one
+  file changes writer).
+- **Purely derived stage:** it opens NO bundles and needs NO game dir.
+  Its entire upstream set is committed `extracted/` artifacts (§4
+  Inputs). Consequences: it runs hostless on the real corpus, the media
+  carve-out guard cannot regress, and the fixture tree covers it without
+  synthetic Unity bytes.
+- **Emission root `extracted/locales/proof/`.** Justification: the
+  artifacts audit and extend the stage-4 locale domain, so they sit
+  beside the tables they prove (`extracted/locales/`); dropping seven
+  new files into `relinks/` would muddy piece-2 §4's frozen per-file
+  ownership map. THE ONE EXCEPTION is
+  `extracted/relinks/locale_availability.jsonl`, which is regenerated AT
+  ITS ARCHITECTURE-CANONICAL PATH because
+  [localization-architecture.md §5.4](../../_foundation/localization-architecture.md)
+  names that path verbatim as "the single source for the §2 link row,
+  per-locale sitemaps, and coverage stats" — leaving it an empty 0-byte
+  file is exactly scout gap **G1**. See §5.
+- The five proof targets, mapped from the report:
+  1. **Kind×locale coverage matrix** (report §2) — key-plane census +
+     entity-plane per-kind rates + per-key hole enumerations +
+     identity-to-pivot table.
+  2. **`locale_availability.jsonl` regeneration** (report §5/G1) —
+     deterministic rebuild from `entity_locale.jsonl` + the 13 tables;
+     row counts derivable by the report §2.2 math; byte-stable; hashed.
+  3. **Fallback law artifact** (report §4) — base overlay = pure master
+     registry; named bundles self-contained; runtime fallback ORDER
+     marked unprovable with the declarations cited; site consumes
+     omit-or-declared-filler semantics (§5.5).
+  4. **Site-UI namespace split** (report §5) — game-data coverage vs
+     site-chrome ×13 (zero client coverage), emitting the gap manifest
+     the W-D-polish lane #22 i18n scaffolding consumes.
+  5. **Term-registry completeness** (report §3) — orphans both
+     directions, status split, registry↔matrix diff 0, miss ledger.
+
+Everything else — page-per-locale rendering, chrome authoring, sitemap
+generation, course alias measurement — stays out (§8 Non-goals).
+
+## 2. Measured facts the stage relies on
+
+All figures measured 2026-08-26 on `extracted/` at buildId **20226581**
+(stage-4 run `2026-08-25T03:13:17Z` exit 0; stage-6 run
+`2026-08-25T23:49:25Z` exit 2 completed-with-ledger), independently
+re-measured by BOTH verifiers. They are SEEDS to reconcile against:
+drift prints a `DRIFT:` line and the fresh measurement wins — never a
+silent stale constant (piece-2 §2 rule).
+
+| # | Fact | Value | Source |
+|---|---|---|---|
+| F1 | Locale roster | 14 `localeFlag != null` roster rows = unnamed base overlay + 13 text locales `{en, pt-BR, zh-Hans, zh-Hant, fr, de, it, ja, ko, pl, ru, es, tr}`; payload Σ **6,541,486 B**; all `dirClass: base`; `identity.json.localeBundleCount == 14`; pivot = `en` (spec.md `locales.canonical`) | report §1; verifyA #1 |
+| F2 | Key-plane universe | union of the 13 emitted tables = **15,666** distinct keys; registry universe (adds base-only text-less keys) = **15,672** | report §2.1; verifyA #2 |
+| F3 | Presence histogram (keys × #locales holding them) | `13→15,369 · 12→46 · 11→27 · 10→1 · 9→2 · 3→1 · 2→15 · 1→205` (sums 15,666); all-13 share **98.10 %** on the union, **98.07 %** on the registry universe | report §2.1; verifyB attack 3 |
+| F4 | Per-locale rows / union-holes | en 15,665/1 · ko 15,457/209 · zh-Hant 15,446/220 · zh-Hans 15,445/221 · fr=de=it=pl 15,445/221 · pt-BR 15,443/223 · tr 15,443/223 · es 15,440/226 · ru 15,422/244 · ja 15,371/**295** | report §2.1; verifyA #2 |
+| F5 | Hole anatomy | `Challenge/*` 115 holes in EVERY non-en locale (119 in ja); `Levels/*` 32 in every non-en locale; en holds 0 Challenge/Levels holes; next namespace trails far behind (Meta 44 ja / 16–21 elsewhere) | report §2.1; verifyA #8 |
+| F6 | Empty-cells identity | `emptyCellsSkipped(locale) == registryKeys − tableRows(locale)` (en 7, ko 215 … ja 301) — stage-4 skip-empty counts are recoverable arithmetically; the report's "215–301" band reproduces exactly | derived; report §2.1/§4.3 |
+| F7 | Key-plane quirks | en misses exactly `UI/General/NameSeparator` (held only by zh-Hans/zh-Hant/ja); 205 single-locale keys all en (Challenge 115 + Levels 32 + Advisor 17 + Objectives 13 + Characters 8 + rest); 15 `Meta/CareerGoals/*` keys held only by {en,ko}; 7 base-only-vs-en keys (verbatim list in report §4.2) | report §2.1/§4.2; verifyA spot-checks |
+| F8 | Identity-to-pivot (ru) | **301** of 905 `Items/*_Name` keys byte-identical ru==en; **297** of those differ in de (= translated elsewhere ⇒ genuinely untranslated ru); 100 % Latin-script, zero Cyrillic; **0** of 905 identical-to-en in every holding locale; worked example `Items/Library/Reception_Giant_Name` en=ru="Giant Library Reception" | report §2.1 (rev-2 framing); verifyA #7 REFUTED→corrected; verifyB attack 5 |
+| F9 | LocalisedString census | **20,070** instances · **9,101** sentinel-zero (`_termID == 0`) · **10,964** resolve · **5** registry misses · `coverageOnNonEmpty = 0.99954` | report §2.2; verifyB #6 |
+| F10 | Stub rows ×9 kinds | config 8,430 · item 3,885 · room 116 · metagame-node 454 · unlockable 415 · course 69 · student-type 54 · staff 3 · campus-level 17 — Σ **13,443** | report §2.2; verifyA #4a |
+| F11 | Joined entities (≥1 resolved edge) | Σ **5,850**: config 3,178 · item 2,035 · room 106 · metagame-node 390 · unlockable 43 · course 41 · student-type 54 · staff 3 · campus-level **0**; name-bearing: config 2,627 · item 1,077 · room 105 · metagame-node 195 · unlockable 23 · course **0** · student-type 27 · staff 3 | report §2.2; verifyA #4a/#4b |
+| F12 | Entity-plane coverage seeds | item any/full 100.0 everywhere except ja 99.2/ru 99.2; rooms+student-types 100/100; metagame-node 99.0; unlockable 100; course descriptions 100 ×13; config any 98.8–99.0 / full 97.8–98.1 | report §2.2; verifyA #3 |
+| F13 | Name-identity-to-en seeds (pinned rule: edge whose `evidence.fieldPath` contains `name`, FIRST such edge per entity in sorted `(srcKind,srcId,fieldPath,dstId)` order; denominator = name-bearing entities) | item ja 10.96 % / ru 23.03 % · unlockable ja 86.96 % / ru 91.30 % · room ru 19.05 % · student-type ru 37.04 % · metagame-node ru 28.21 % — all EXACT under the pinned rule; config does NOT reproduce under any tried tie-break (scout printed 30.95 ru / 18.39 ja over an implied 2,613 denominator; rule yields 2,627) ⇒ config columns ship the pinned-rule values with a `DRIFT:` note; zh minimum 7.35 % reproduces exactly | verifyA #3; verifyB #12/#13 |
+| F14 | English-only kernels | campus-level **13/17** rows carry plain English `Name` literals; 4 have NO `Name` field: `Config_UniversityLevel`, `Config_UniversityLevel_Puzzle_Remix`, `Config_UniversityLevel_ZeroMoney_Remix`, `LevelScenarioV2_FreePlay_City`; unlockable 372 no-join, 41 non-empty EN literals, exactly 3 coincidental EN-term-value collisions (`Idle`,`Food`,`Drink`); item 1,850 no-join with kernel prefixes `Item_Editor*` 713 + `Unused_Item*` 231 + `Item_LS*` 141 + `A_LS_Variation*` 134 + `Variation_*` 219 (Σ 1,438); config 5,252 no-join | report §2.2; verifyA; verifyB attacks 1–2 (C1/C5 applied) |
+| F15 | Course name hole | all 41 course edges carry `fieldPath:"Description"`; ZERO name-role terms; naive id-stem convention resolves **0/69** (`Course_Clowns`→`Clown_Name`, `Course_Spy`→`SpySchool_Name`, `Course_PerformingArts`→`Music_Name`, `Course_Magic`→`Wizardry_Name`); candidate key families exist (`Courses/Courses/*_Name` 36, `Courses/DLC_*` 14, `Marketing/Courses/*_Name`, `Meta/CareerChallenges/Course_*_Name` 17) | report §2.2/G2; verifyB attack 1 (C3) |
+| F16 | Registry | 15,675 rows / 15,672 distinct keys, canonical-on-key (3 extra rows, all `UI/*`); TermStatus **15,400** ForTranslation / **275** NotForTranslation (raw walk 15,402/275); `termType ≡ 0`; per-row `locales[] ≡ []` (master registry holds keys/statuses only — CONSUMER WARNING: `entity_locale.evidence.locales` is always `[]`, never read as "available in no locale"); `matrixKeyDiff = 0` both directions | report §3; verifyA; verifyB #7/#8 |
+| F17 | Usage projection | 6,526 distinct referenced keys; 10,964 usage edges over 5,850 entities; orphans direction B (referenced ∉ registry) = **0**; orphans direction A (never referenced) = **9,148 rows / 9,146 keys**, namespace histogram led with UI **1,686** (distinct-key convention; row-convention 1,688), ArchetypeNames 1,535 · Names 908 · VO 901 · Levels 773 · SubGoals 516 · Challenge 477 · FlavourTraits 400 | report §3; verifyA; verifyB #8 |
+| F18 | Registry misses | **5** IDs; 3 closable today — `_dev` string IS the key under `Code/` (`Code/InspectorItem_TooltipRequiresJanitorMechanics`, `Code/Staff_Unassigned`, `Code/InspectorItem_TooltipCancelUpgrade`, all present in `locales/en.jsonl`); 2 dangling `WantsMessage` on `Unused_PersonalGoal_Item_{Gym_Vaulting_Horse,AnyExterior}`; `I2LS_CodeRef` contributes 586 fully-registered runtime terms | report §3; verifyB #9 |
+| F19 | Base overlay | `base-overlay.jsonl` = **15,672 rows, 0 with non-empty text** (pure master registry); decoded from 26 `I2.Loc.LanguageSourceAsset` MonoBehaviours (25 term-bearing `I2LS_*` + `I2LS_TEMPLATE` 0-term); 15,677 raw terms; `base-overlay-report.json.compositionPolicy = "mixed"` with `differingTextSharedKeys = 15,665` — measured semantics: base carries NO text, "mixed" encodes the key-set delta only (**G7 caveat**); named bundles hold 25 category TextAssets each, self-contained | report §1/§4; verifyA #5; verifyB #3 |
+| F20 | Site-UI census | `UI/` = **2,218** distinct registry keys = **532** referenced by entities + **1,686** free (registry-key universe; union-universe variant 2,214 exists — cite the universe, never mix); `Input` 164; `General` 143; `UI_Settings` source 187; **52** top-level namespaces; **11,312** `I2.Loc.Localize` bindings | report §5 (rev-2 census); verifyA; verifyB #15/#18 |
+| F21 | Install scope (G8) | locale tables ship text for content this install lacks — `Items/DLC_Hospital/*` (753 keys) + `dlc-preorder-*` exist while Medical School/preorder are out-of-roster; coverage claims state install scope (base + Space Academy + School Spirits); DLC-scoped keys tagged by namespace | report §8 G8; verifyB #17 |
+
+## 3. Competitor language-UX bar (spec context)
+
+Measured live by the scout and re-verified token-for-token by verifyB
+attack 6 (curl `Claude-User`, one request each):
+
+- **wikily.gg — the floor to match:** 24 hreflang locales `cs de en es
+  es-la es-mx fr hu id it ja ko nl pl pt pt-br ru th tr uk vi zh-cn
+  zh-hk zh-tw` + `x-default` → bare-path English; locale in the URL,
+  pivot unprefixed (same contract as [DR-2026-08-20-locale-urls]);
+  complete site-chrome dictionary shipped per locale in the page
+  payload (`"no_results":"No results"` / DE `"Keine Ergebnisse"`);
+  explicit partial-translation empty state
+  `"no_other_languages": "No other languages available yet."`.
+- **metaforge.app — no bar:** single-locale English, zero hreflang, 403
+  to curl, error page `lang="en-US"`.
+
+Bar statement for this piece: the proof artifacts must make our
+language UX *derivable* — availability-driven link rows from a measured
+file (§5.4), per-locale coverage stats with honest holes surfaced
+(wikily's `no_other_languages` posture, backed by numbers instead of
+prose), unique per-locale title/meta FEEDS (gap manifest §L5), never
+mixed locales on one page, declared filler policy. Rendering is a site
+lane's job; this piece ships the data layer that makes it provable.
+
+## 4. Stage 7 — `locale-proof`
+
+- **Stage id:** `locale-proof` (entrypoint `--list` enumerates it AFTER
+  `relink`; eight stages total).
+- **Script:** `tools/stage7_locale_proof.py`. Registered in
+  `tools/tpc_common.py::STAGES` with script-hash deps
+  `["stage7_locale_proof.py", "tpc_common.py", "log_util.py"]`. No
+  UnityPy import anywhere in the stage.
+- **Inputs (upstream set — all committed artifacts; ANY missing ⇒ exit
+  3 naming it, runner pre-check, piece-1 pattern):**
+  `identity.json`; `bundle-roster.jsonl`;
+  `locales/<locale>.jsonl` ×13; `locales/base-overlay.jsonl`;
+  `locales/base-overlay-report.json`; `locales/locale-matrix.json`;
+  `stubs/<kind>.jsonl` ×9; `relinks/entity_locale.jsonl`;
+  `relinks/i2_term_registry.jsonl`;
+  `relinks/locale_term_entity.jsonl`;
+  `relinks/locale_join_report.json`.
+  OPTIONAL input (absence is a ledger row, never a failure):
+  `data/sources/derived/course-name-aliases.jsonl` — the shared
+  course-id → term-key alias table (row shape
+  `{courseId, termKey, method, inferred:true, sourceRefs[]}`, sorted by
+  `courseId`) that closes G2 for BOTH this piece and piece-08's search
+  (report §G2: "one alias input closes both consumers"). When present,
+  course name-columns compute THROUGH it with `inferred:true` + method
+  carried per cell; unresolved courses stay ledgered. When absent, the
+  course name-hole ships open (F15).
+- **Vocabularies imported, never re-declared:** the 9-kind ↔ filename
+  map and the 13-entry BCP-47 set come from `tpc_common.py` (piece-1
+  stage-4/stage-5 pins). Pivot locale `en`. Locale arrays sort
+  lexicographically by code; percent strings round HALF-UP at 2 dp
+  from integer counts (rates are ALWAYS emitted beside their integer
+  numerator/denominator — a bare percentage is never load-bearing).
+- **Console/write discipline:** inherited unchanged from piece-1 §4 —
+  UTF-8 stdout/stderr, explicit `encoding="utf-8"` + `newline="\n"`,
+  sorted enumeration + sorted JSON keys, no wall-clock timestamps inside
+  outputs, temp-file + atomic-rename writes, byte-identical reruns.
+- **Exit codes (piece-1 contract unchanged):** `0` success ·
+  `1` stage failure — schema/self-validation breakage OR a coverage
+  REGRESSION vs the same-buildId baseline (§L6 tripwire; every worsened
+  vector member printed as a loud `REGRESSION: <member> old→new` line)
+  · `2` completed-with-ledger — open ledgers named in `_ledger.jsonl`
+  (the EXPECTED steady state on this corpus: 2 dangling misses, the
+  7,593-row unjoined ledger, the open course name-hole, absent alias
+  input, G8 scope note) · `3` environment/gate refusal.
+
+Sub-passes run in order; each appends its counters to the EXTRACTION-LOG
+run section (key names pinned per pass — the log is the acceptance
+surface).
+
+### L1 — Key-plane census
+
+Walk the 13 tables + registry + matrix; recompute everything in F2–F7.
+
+- `extracted/locales/proof/key_plane.json`:
+  ```json
+  {"meta": {"buildId": 20226581,
+            "universes": {"unionOf13Tables": 15666, "registry": 15672},
+            "localeRoster": ["de","en","es","fr","it","ja","ko","pl",
+                             "pt-BR","ru","tr","zh-Hans","zh-Hant"]},
+   "presenceHistogram": {"13": 15369, "12": 46, "11": 27, "10": 1,
+                         "9": 2, "3": 1, "2": 15, "1": 205},
+   "allThirteenShare": {"numerator": 15369, "denominator": 15666,
+                        "rate": "98.10%", "registryUniverseRate": "98.07%"},
+   "perLocale": {"<locale>": {"rows": 0, "unionHoles": 0,
+                              "shareOfUnion": "0.00%",
+                              "registryDelta": 0,
+                              "emptyCellsSkipped": 0}},
+   "holeNamespaces": {"<locale>": {"Challenge": 115, "Levels": 32}},
+   "quirks": {"enMissingKeys": ["UI/General/NameSeparator"],
+              "singleLocaleKeys": {"count": 205, "allEn": true},
+              "enPlusKoCluster": {"namespace": "Meta/CareerGoals",
+                                  "count": 15},
+              "baseOnlyVsEn": ["Buildings/BuildingGeneric_Description",
+                               "Levels/DLC_Hospital/LakeHospital/Inbox_Fires_Title_Unused",
+                               "UI/EmptyStringNoTranslate",
+                               "UI/General/DLC/MSStore",
+                               "UI/Messages/MissionStatus",
+                               "UI/Messages/Suggestion",
+                               "UI/General/NameSeparator"]},
+   "identityToPivot": {"namespace": "Items/*_Name",
+                       "keysTotal": 905,
+                       "<locale>": {"byteIdenticalToEn": 0,
+                                    "identicalButTranslatedElsewhere": 0,
+                                    "identicalInEveryHoldingLocale": 0}}}
+  ```
+  `emptyCellsSkipped` MUST satisfy the F6 identity
+  `registryKeys − rows(locale)` for all 13 locales (asserted — it is
+  the arithmetic reconciliation between stage-4's skip counts and this
+  census). `identityToPivot` carries the ru≡en framing for EVERY locale
+  (ru ships 301/297 per F8; the artifact recomputes all 13).
+- `extracted/locales/proof/key_holes/<locale>.jsonl` ×13 — ONE ROW PER
+  MISSING KEY, the hole enumeration the acceptance criteria freeze:
+  `{"termKey": "...", "namespace": "Challenge", "alsoMissingIn":
+  ["ja"], "buildId": 20226581}` sorted by `termKey`; `namespace` =
+  first `/`-segment; `alsoMissingIn` = the OTHER locales missing the
+  same key (sorted). Hole lists must be BYTE-STABLE across reruns at a
+  fixed buildId (AC9).
+
+### L2 — Entity-plane kind×locale matrix
+
+Join chain rewalked from primaries (NOT copied from the report):
+stub payload `{_dev, _termID}` → `i2_term_registry` (every ID
+lookup-valid, canonical-on-key) → term key → per-locale cell.
+
+- `extracted/locales/proof/kind_locale_matrix.json` — the proof core:
+  ```json
+  {"meta": {"buildId": 20226581, "kinds": ["config","item","room","course",
+             "staff","student-type","unlockable","metagame-node",
+             "campus-level"],
+            "metricRule": "first fieldPath containing 'name', sorted "
+                          "(srcKind,srcId,fieldPath,dstId) order"},
+   "census": {"instancesTotal": 20070, "sentinelZero": 9101,
+              "resolvedEdges": 10964, "registryMisses": 5,
+              "coverageOnNonEmpty": {"numerator": 10959, "denominator": 10964,
+                                     "rate": "0.99954"}},
+   "kinds": {"<kind>": {"stubRows": 0, "joinedEntities": 0,
+             "perLocale": {"<locale>": {
+               "anyTermPresent": 0, "allTermsPresent": 0,
+               "anyRate": "0.00%", "fullRate": "0.00%",
+               "nameBearingEntities": 0,
+               "nameIdenticalToEn": 0, "nameIdentityRate": "0.00%",
+               "inferred": false}}},
+             "nameRoleNote": null}}
+  ```
+  `inferred:true` appears ONLY on course rows computed through the
+  optional alias input (method recorded in `metricRule` appendix);
+  `nameRoleNote` is `null` for every kind except `course`, which
+  carries the F15 hole statement verbatim (0 name-role terms; alias
+  input path; 0/69 convention refutation) — the cross-reference to
+  piece-08's shared lever lives HERE, in data, not prose.
+- `extracted/locales/proof/unjoined_entities.jsonl` — the 7,593 stub
+  rows with zero resolved edges (13,443 − 5,850), classified so the
+  omission is DATA, never silence:
+  `{"kind","id","class","nameLiteral?","coincidesWithEnTermText?",
+    "kernelPrefix?","buildId"}` sorted by `(kind,id)`. Class vocabulary
+  pinned: `english-only-literal` (non-empty plain-EN display literal —
+  campus-level 13, unlockable 41) · `no-display-field` (campus-level 4,
+  F14 ids verbatim) · `internal-kernel` (item prefix map
+  `Item_Editor*|Unused_Item*|Item_LS*|A_LS_Variation*|Variation_*` —
+  1,438 of item's 1,850) · `machine-facing` (residue, dominated by
+  config `Action_*`). `coincidesWithEnTermText:true` on exactly the 3
+  unlockable rows (`Idle`,`Food`,`Drink`). Per-class counts land in the
+  run section and MUST decompose per kind as F10−F11:
+  config 5,252 · item 1,850 · unlockable 372 · metagame-node 64 ·
+  course 28 · campus-level 17 · room 10 · student-type 0 · staff 0.
+
+### L3 — Availability regeneration
+
+Rebuilds `extracted/relinks/locale_availability.jsonl` from
+`entity_locale.jsonl` + the 13 tables (report §5/G1 unblock; §2.2 math).
+Row population = every distinct `(srcKind, srcId)` with ≥1 RESOLVED
+edge — the §5.4 link-row/sitemap universe. Zero-join entities are
+deliberately NOT rows here (they have no page in any locale); their
+enumeration + classification is L2's `unjoined_entities.jsonl`, and the
+pair is reconciled by AC7.
+
+Row shape (frozen; NO additional or missing keys):
+
+```json
+{"kind":"item","id":"Item_Door_Building_Archaeology_Display",
+ "availableLocales":["de","en","es","fr","it","ja","ko","pl","pt-BR",
+                     "ru","tr","zh-Hans","zh-Hant"],
+ "partialLocales":[],
+ "namedLocales":["de","en","es","fr","it","ja","ko","pl","pt-BR","ru",
+                 "tr","zh-Hans","zh-Hant"],
+ "identityToPivotLocales":["ru"],
+ "fieldPresence":{"en":["Description","Name"],"ru":["Description","Name"]},
+ "axes":["base"],
+ "buildId":20226581}
+```
+
+- Membership rules (pinned): `availableLocales` = ≥1 joined term with
+  NON-EMPTY text in that locale (the §2 link-row membership rule;
+  scout Q2 recommendation ADOPTED — presence counts, identity does not
+  disqualify, and the identity residue is surfaced per-row via
+  `identityToPivotLocales` + per-cell rates in L2, so flipping the
+  policy later touches one rule, not the schema). `partialLocales` =
+  some but not all joined terms present. `namedLocales` = ≥1 name-role
+  term non-empty. `fieldPresence` = locale → fieldPaths with non-empty
+  text (subset relationship asserted). `axes` inherited from stub rows'
+  `axes` when present, omitted when absent (piece-2 R2 rule).
+- Sort: lexicographic by `(kind, id)`; all locale arrays sorted.
+- Sidecar `extracted/relinks/locale_availability.report.json`:
+  `{"schemaVersion": 2, "rowCount", "perKindRowCounts",
+    "formula": "distinct (srcKind,srcId) in entity_locale.jsonl "
+               "with >=1 registry-resolved edge",
+    "localeSet": [13 pinned], "buildId"}` — the machine-readable
+  statement that the v1 0-byte file is gone and WHY the row count is
+  what it is (AC6 derives it independently).
+
+### L4 — Fallback law artifact
+
+`extracted/locales/proof/fallback_law.json` — the declarative contract
+site lanes consume instead of guessing client behavior:
+
+```json
+{"meta": {"buildId": 20226581},
+ "baseOverlay": {"role": "master-registry", "rows": 15672,
+   "rowsWithNonEmptyText": 0, "languageSources": 26,
+   "termBearingSources": 25, "rawTermsDecoded": 15677,
+   "storageShape": "26 LanguageSourceAsset MonoBehaviours (mTerms[] "
+                   "keys/statuses/columns); named bundles instead hold "
+                   "25 category TextAssets per locale",
+   "compositionPolicyEmitted": "mixed",
+   "measuredSemantics": "base carries NO text; 'mixed' encodes the "
+                        "key-set delta only (G7 caveat)",
+   "baseOnlyKeysVsEn": [7 keys verbatim]},
+ "namedBundles": {"selfContained": true,
+   "emptyCellsSkippedPerLocale": {"en": 7, "ko": 215, "ja": 301},
+   "borrowingRule": "none - no locale table ever holds another "
+                    "locale's text; absence is preserved verbatim"},
+ "runtimeFallback": {
+   "pathExistence": "PROVEN (declarations; bodies absent from dump.cs)",
+   "symbols": [
+     {"name": "LanguageSourceData.TryGetFallbackTranslation(TermData, "
+              "out string Translation, int langIndex, string "
+              "overrideSpecialization, bool skipDisabled)",
+      "dumpCsLine": "~L546889"},
+     {"name": "LanguageSourceData.LoadLanguageData(int languageIndex, "
+              "string langData, bool UnloadOtherLanguages, bool "
+              "useFallback, bool onlyCurrentSpecialization, bool "
+              "forceLoad)", "dumpCsLine": "~L546872"},
+     {"name": "LocalizationManager.GetTranslation(...) / "
+              "TryGetTranslation(...)", "dumpCsLine": "~L547700+"},
+     {"name": "TermData.GetTranslation(int idx, string specialization, "
+              "bool editMode)", "dumpCsLine": "~L548930"}],
+   "fallbackOrder": "UNPROVABLE at the data layer - Il2CppDumper "
+                    "emits no method bodies; keys missing from a "
+                    "locale demonstrably render in-game, so resolution "
+                    "runs through this declared path, priority order "
+                    "unknown",
+   "symbolCheck": "verified|skipped-no-dump.cs"},
+ "siteSemantics": {"policy": "omit | declared-filler",
+   "authority": "localization-architecture.md §5.5",
+   "pivotFillBanned": true,
+   "fillerKeyReserved": "site-chrome namespace, never game data"}}
+```
+
+`symbolCheck`: IF `extracted/decompiled/il2cppdumper/dump.cs` exists,
+grep the four symbol names once (deterministic substring pass) and set
+`verified`; ELSE emit `skipped-no-dump.cs` — the quoted signatures are
+constants pinned by scout §4.4 + verifyB attack 4 (both measured
+2026-08-26), never invented by this stage.
+
+### L5 — Site-UI namespace split + chrome gap manifest
+
+`extracted/locales/proof/site_ui_gap_manifest.json` — separates
+game-data coverage from site-chrome obligation and hands lane #22 its
+work list:
+
+```json
+{"meta": {"buildId": 20226581},
+ "gameDataSide": {
+   "uiNamespace": {"registryKeys": 2218, "referencedByEntities": 532,
+                   "free": 1686, "universe": "distinct registry keys "
+                                              "under 'UI/'"},
+   "reusableNamespaces": {"Input": 164, "General": 143,
+                          "UI_Settings_source": 187},
+   "topLevelNamespaces": 52,
+   "localizeBindings": 11312,
+   "freeNarrativeKeys": 9146,
+   "note": "game UI strings describe GAME screens; reusable as "
+           "game-faithful labels, never as site chrome"},
+ "siteChromeSide": {
+   "clientCoverageKeys": 0,
+   "localesRequired": 13,
+   "shipRule": "chrome-complete per locale (localization-arch §4)",
+   "surfaces": [{"surfaceId": "nav-labels", "kind": "keyed",
+                 "clientCoverageKeys": 0, "locales": 13},
+                {"surfaceId": "editorial-prose", "kind": "prose",
+                 "clientCoverageKeys": 0, "locales": 13}]}}
+```
+
+Surface vocabulary PINNED (16 rows, all present, none droppable):
+`nav-labels · buttons-actions · filters-sort · tooltips-help ·
+empty-states · error-pages · search-states · pagination ·
+map-controls · tool-ui (builder/planner/calculator) · ugc-surfaces
+(sign-in/comments/corrections/screenshot-upload) · consent-banner ·
+editorial-prose · seo-meta-templates · locale-switcher ·
+untranslated-filler`. `kind` ∈ `keyed|prose` (`seo-meta-templates` and
+`editorial-prose` are `prose`; the filler is `keyed` and is the
+§L4 `siteSemantics.fillerKeyReserved` counterpart). Every row carries
+`clientCoverageKeys: 0` — the measured fact that NONE of these strings
+exist anywhere in the client corpus (mixing namespaces is an explicit
+defect, localization-architecture §4).
+
+### L6 — Registry completeness + assembly + tripwire
+
+1. `extracted/locales/proof/registry_completeness.json` — F16–F18 as
+   emitted facts: `{rows: 15675, distinctKeys: 15672, nonCanonicalRows: 3,
+   statusSplit: {"ForTranslation": 15400, "NotForTranslation": 275},
+   termTypeUniform: 0, localesProjectionEmpty: true, matrixKeyDiff: 0,
+   referencedKeys: 6526, usageEdges: 10964, distinctEntities: 5850,
+   orphansA: {rows: 9148, keys: 9146, countConvention: "distinct-keys",
+              namespaces: {complete 52-entry histogram, sorted desc by
+              count, tie asc by name}},
+   orphansB: 0, codeRefTerms: 586,
+   registryMisses: {total: 5, closableViaCodeDev:
+     ["Code/InspectorItem_TooltipRequiresJanitorMechanics",
+      "Code/Staff_Unassigned", "Code/InspectorItem_TooltipCancelUpgrade"],
+     dangling: [{termId: ..., dev: "WantsMessage",
+                 onIds: ["Unused_PersonalGoal_Item_Gym_Vaulting_Horse",
+                         "Unused_PersonalGoal_Item_AnyExterior"]}]},
+   consumerWarnings: ["entity_locale.evidence.locales is [] on every "
+                      "row - never read as 'available in no locale'"]}`.
+   The three `closableViaCodeDev` keys are ASSERTED present in
+   `locales/en.jsonl` at emit time (F18) — if any goes missing, that is
+   an exit-1 validation failure, not a stale constant.
+2. `extracted/locales/proof/summary.json` — headline block (rates +
+   counts mirrored from L1/L2/L3/L6) plus the flat INTEGER-only
+   `regressionVector`: pinned member list = unionKeys, allThirteenKeys,
+   per-locale rows ×13, per-locale unionHoles ×13, resolvedEdges,
+   registryMisses, coverageNumerator, availabilityRowCount,
+   per-kind joinedEntities ×9, per-kind availability rows ×9,
+   registryRows, registryDistinctKeys, matrixKeyDiff, orphansAKeys,
+   orphansB, uiReferenced, chromeSurfaces. Directions pinned per member
+   (coverage counts higher-better; hole counts and misses lower-better;
+   structural counts exact-match).
+3. `extracted/locales/proof/.baseline.json` — tripwire state
+   `{buildId, vector, previousVerdict}`; EXCLUDED from `hashes.json`
+   (same exclusion class as `.pipeline-meta.json`). Comparison rules:
+   - same buildId, vector equal → baseline untouched;
+   - same buildId, any member WORSE by its pinned direction → print
+     `REGRESSION:` lines (every worsened member, old→new), DO NOT
+     rewrite baseline, **exit 1**;
+   - same buildId, strictly better/equal → rewrite baseline, continue;
+   - DIFFERENT buildId → `DRIFT:` summary (old vs new headline), rewrite
+     baseline, fresh wins — NEVER a regression verdict across builds;
+   - baseline absent (first run) → create, informational line.
+4. `extracted/locales/proof/hashes.json` — sha256 over EVERY emitted
+   file of this stage (both roots), sorted by relpath, itself and
+   `.baseline.json` excluded. Double-run byte-identity is checked by
+   comparing this manifest (AC9).
+5. `extracted/locales/proof/_ledger.jsonl` — one row per open gap:
+   `{code, severity: "info"|"gap", detail, unblock, buildId}` sorted by
+   `(code, detail)`. Pinned codes: `registry-miss-dangling` (2 IDs) ·
+   `registry-miss-closable` (3, until the walk extends to code-ref
+   creation sites) · `entity-unjoined` (7,593, per-class breakdown in
+   detail) · `course-name-join-open` (names piece-08's shared alias
+   lever; absent when the alias input is present and total) ·
+   `alias-input-absent` · `dlc-out-of-install-scope` (G8, severity
+   info: `Items/DLC_Hospital/*` + `dlc-preorder-*` keys ship text for
+   uninstalled content; coverage claims state install scope). Empty
+   file valid iff nothing is open — unreachable on today's corpus
+   (⇒ exit 2 is the honest steady state).
+
+### Run-section keys (pinned, appended per pass)
+
+```
+L1: localeRosterSize=13 / unionKeys / allThirteenKeys /
+    perLocaleRows{…} / perLocaleUnionHoles{…} / holeFilesEmitted=13 /
+    emptyCellIdentityHold=true
+L2: instancesTotal / sentinelZero / resolvedEdges / registryMisses /
+    coverageOnNonEmpty / kindCellsEmitted=117 / unjoinedRows /
+    unjoinedClasses{…}
+L3: availabilityRows / perKindAvailabilityRows{…} / rowsWithAxes
+L4: baseOverlayRows / baseOverlayEmptyTextRows / symbolCheck
+L5: uiRegistryKeys / uiReferenced / uiFree / localizeBindings /
+    chromeSurfaces=16
+L6: registryRows / registryDistinctKeys / matrixKeyDiff / orphansAKeys /
+    orphansB / ledgerRows / regressionVerdict / baselineAction
+```
+
+## 5. Ownership amendment — `relinks/locale_availability.jsonl`
+
+**Registered change (part of this approved spec; the piece-01/piece-02
+doc edits are ROUTED to their seats, not executed by stage code — the
+piece-2 §7 precedent):**
+
+- Today: piece-1 Revision 2/R3 made stage 5 sole owner; piece-2 §R4
+  re-pinned "stage 5 KEEPS sole ownership; this piece NEVER writes that
+  file" and routed consumers to `entity_locale.jsonl`; the file measures
+  **0 bytes / 0 rows** while §5.4 names it THE single source
+  (verifyA claim 6 — CONFIRMED both halves). Scout G1 offers exactly two
+  unblocks: regenerate from `entity_locale` + tables, or amend the pack
+  spec to declare the substitution. Scout Q3 recommends regenerate
+  INSIDE this piece "so the standard's file path stays true".
+- **Decision: regenerate at the canonical path; stage `locale-proof`
+  becomes its SOLE writer.** Stage 5's emission clause is retired (its
+  seeded join procedure was REFUTED in piece-2 §R4 and honestly yields
+  0 rows; `joinEvidence` in the stage-5 run sections already documents
+  the zero-yield). The single-writer invariant survives: exactly ONE
+  stage owns the path, it merely changes identity.
+- Forward-only DAG preserved: `locale-proof` consumes stage-6 outputs
+  and runs AFTER `relink`; stage 5 never depends on it.
+- Transition safety until the piece-1 revision lands: an isolated
+  `--only emit-stub-datasets` run may still emit its legacy 0-row v1
+  file — harmless, because every FULL run (and any `--only locale-proof`)
+  rewrites the path atomically afterward; the runner orders
+  `locale-proof` last; no stage ever deletes or truncates a file it does
+  not own. Consumers reading the v1 schema mid-transition see 0 rows
+  (today's status quo), never garbage.
+- Schema: the v2 row shape of §L3 replaces the v1 shape outright; the
+  v1 schema was "intentionally foreign" (piece-2 AC3 wording) and had
+  zero rows, so no migration exists or is owed.
+- Routing: piece-1 gains a Revision note (§3 stage-5 outputs + §4
+  layout line + §8 stage-5 fixture bullets lose the availability
+  clauses); piece-2 §4/AC3 lose their `locale_availability.jsonl`
+  exception line; RELATIONS.md's R4 routing note gains one sentence
+  pointing at the regenerated file. All three edits are one-line-class
+  doc deltas, owned by the piece-01/piece-02 documentator seats.
+
+## 6. Output contracts (additions under `extracted/`)
+
+```
+extracted/
+├── relinks/
+│   ├── locale_availability.jsonl       # STAGE 7 owner (§5 amendment):
+│   │                                   #   5,850 v2 rows, sorted (kind,id)
+│   └── locale_availability.report.json # stage 7: schemaVersion/formula/counts
+├── locales/
+│   └── proof/                          # stage locale-proof ONLY (every file below)
+│       ├── summary.json                # L6: headlines + integer regressionVector
+│       ├── key_plane.json              # L1: histogram, per-locale census, quirks, identity
+│       ├── key_holes/                  # L1: <locale>.jsonl ×13, one row per missing key
+│       ├── kind_locale_matrix.json     # L2: 9 kinds × 13 locales cells + census
+│       ├── unjoined_entities.jsonl     # L2: 7,593 zero-join rows, classified
+│       ├── fallback_law.json           # L4: registry-vs-tables law + symbols + site policy
+│       ├── site_ui_gap_manifest.json   # L5: game-data vs site-chrome ×13 (lane #22 input)
+│       ├── registry_completeness.json  # L6: F16–F18 as facts + warnings
+│       ├── hashes.json                 # L6: sha256 manifest over every emitted file
+│       ├── _ledger.jsonl               # L6: open gaps (codes pinned; empty valid iff none)
+│       └── .baseline.json              # L6 tripwire state (hash-excluded)
+```
+
+Ownership: EVERY path above is written by `stage7_locale_proof.py`
+alone. No existing stage gains or loses a writer EXCEPT the §5
+amendment. EXTRACTION-LOG/.stage-stamps/.pipeline-meta stay runner-owned.
+All JSONL sorted + UTF-8 + LF; all JSON sorted-keys; atomic renames;
+`buildId` on 100% of rows (user-facing surfaces later may carry buildId
+only — AGENTS rule 3 two-class rule).
+
+## 7. Acceptance criteria (mechanical, whole piece)
+
+1. **Entrypoint:** `python run_all.py --list` enumerates exactly
+   `verify-client, decompile, harvest-catalog, harvest-bundles,
+   localisation, emit-stub-datasets, relink, locale-proof` — eight
+   stages, that order; `make list` equivalent; `--only locale-proof`
+   runs in isolation on a prepared tree (client mode: `--skip
+   locale-proof` then `--only locale-proof`; hostless smoke:
+   `tests/build_fixture_tree.py --stage locale-proof` materializes §4's
+   upstream set synthetically — mini roster + tables + stubs + relink
+   JSONLs, no Unity bytes needed).
+2. **Upstream gate:** any missing input ⇒ exit 3 NAMING it; the stage
+   never partially writes before the pre-check passes.
+3. **Headline reproduction (client-gated, exact):** union 15,666 ·
+   all-thirteen 15,369 · rates printed as 98.10 % (union) and 98.07 %
+   (registry) WITH universes named; histogram equals F3 cell-for-cell;
+   per-locale rows equal F4 (en 15,665 … ja 15,371); `Challenge` holes
+   = 115 per non-en locale (119 ja), `Levels` = 32 per non-en locale,
+   0 for en; `enMissingKeys == ["UI/General/NameSeparator"]`;
+   single-locale 205 all-en; en+ko cluster 15; the 7 base-only keys
+   verbatim.
+4. **Entity census exact:** 20,070 / 9,101 / 10,964 / 5;
+   coverageOnNonEmpty printed as 10959/10964 = 0.99954; per-kind
+   joined + name-bearing counts equal F11 exactly.
+5. **Identity seeds exact under the pinned rule:** item ja 10.96 % /
+   ru 23.03 % · unlockable ja 86.96 % / ru 91.30 % · room ru 19.05 % ·
+   student-type ru 37.04 % · metagame-node ru 28.21 %; config ships
+   pinned-rule values WITH the `DRIFT:` note (scout figures were
+   tie-break-ambiguous — F13); ru≡en framing printed as 301 raw /
+   297 translated-elsewhere / 0 identical-in-all over 905 keys, and
+   `Items/Library/Reception_Giant_Name` asserted en==ru==
+   "Giant Library Reception" in the emitted evidence.
+6. **Availability derivation:** row count ==
+   distinct `(srcKind,srcId)` in `entity_locale.jsonl` == **5,850**
+   (== `locale_join_report.registryHits` deduplicated — asserted
+   programmatically, the §2.2 formula); per-kind counts == F11; every
+   row's locale arrays ⊆ the pinned 13; `fieldPresence` keys ⊆
+   `availableLocales`; `partialLocales ⊆ availableLocales`;
+   `identityToPivotLocales ⊆ namedLocales`; report.json rowCount agrees.
+7. **Unjoined reconciliation:** `unjoined_entities.jsonl` rows ==
+   13,443 − availabilityRows == **7,593**; per-kind decomposition ==
+   F14 (config 5,252 · item 1,850 · unlockable 372 · metagame-node 64 ·
+   course 28 · campus-level 17 · room 10 · student-type 0 · staff 0);
+   campus-level splits 13 `english-only-literal` + 4 `no-display-field`
+   with the four ids verbatim; unlockable carries exactly 3
+   `coincidesWithEnTermText:true` rows; item kernel-prefix rows
+   Σ 1,438.
+8. **Registry completeness:** 15,675 / 15,672 / `matrixKeyDiff == 0`
+   asserted both directions at emit time; status 15,400/275; orphans
+   A 9,148/9,146 + B 0; miss ledger 5 with the three `Code/…` keys
+   asserted present in `locales/en.jsonl` and the two dangling IDs
+   exact; consumer warning present.
+9. **Determinism:** running `--only locale-proof` twice yields
+   byte-identical declared outputs (hashes.json equality; log/stamps/
+   meta/baseline excluded); hole files byte-stable across reruns at a
+   fixed buildId; interrupted-run convergence holds (temp+rename).
+10. **Regression tripwire:** a fixture run whose second iteration
+    DROPS any vector member (e.g. one locale loses a table row) exits 1
+    with `REGRESSION:` lines naming member + old→new; an unchanged
+    rerun exits per ledgers WITHOUT a false positive; a fixture buildId
+    bump produces `DRIFT:` lines + baseline rewrite and NEVER exit 1.
+11. **Chrome manifest:** exactly the 16 pinned surfaceIds, all
+    `clientCoverageKeys: 0`, `locales: 13` each, kind enum respected;
+    game-side census equals F20 (2,218/532/1,686 · 164 · 143 · 187 ·
+    52 · 11,312).
+12. **Fallback law:** baseOverlay block equals F19 (15,672 / 0 / 26 /
+    25 / 15,677; the 7 keys); `emptyCellsSkippedPerLocale` satisfies
+    the F6 identity for all 13 locales; the four symbol declarations
+    present with dump.cs refs; `fallbackOrder` states UNPROVABLE;
+    siteSemantics carries omit-or-declared-filler with pivotFillBanned.
+13. **Exit codes:** `0` iff every ledger closed AND vector non-worse;
+    `2` iff `_ledger.jsonl` non-empty (run section names every
+    contributing ledger + size — TODAY'S EXPECTED STEADY STATE);
+    `1` on validation/schema failure or REGRESSION; `3` on missing
+    upstream.
+14. **Carve-out guard intact:** the stage opens no bundles and emits no
+    media bytes — piece-1's media-extension grep over `extracted/`
+    still passes.
+
+## 8. Explicit non-goals (later pieces own these)
+
+- Page-per-locale rendering, hreflang emission, sitemap generation,
+  locale switchers, chrome AUTHORING (the manifest DESCRIBES the work,
+  lane #22 executes it) — site lanes behind the AGENTS rule-8 gate.
+- Course-name alias MEASUREMENT (producing
+  `data/sources/derived/course-name-aliases.jsonl`) — shared with
+  piece-08's search convention lane; this piece only defines the input
+  contract and consumes it when present.
+- Extending the registry walk to close the 3 closable misses or the 2
+  dangling `WantsMessage` IDs — a piece-2-family probe; ledgered here.
+- Modifying stage-4/stage-6 outputs, `locale-matrix.json`, the registry,
+  or `entity_locale.jsonl` — this stage is read-only over everything
+  except §5's one amended path and its own proof directory.
+- Machine translation of anything (localization-architecture §6).
+- PROOF.md reconciliation — the PROOF piece consumes THESE artifacts;
+  this stage never writes PROOF.md.
+
+## 9. Open questions routed back (none block the build)
+
+| Question | Resolution route |
+|---|---|
+| §5 ownership amendment (stage 7 takes the canonical availability path; stage-5 emission retired) — the alternative is a pack-spec substitution declaration naming `entity_locale.jsonl` authoritative | Orchestrator confirms at spec review; scout Q3 recommends regenerate (adopted here) |
+| Link-row membership when a locale's cell is present-but-identical-to-English (scout Q2) — ADOPTED PROVISIONALLY: presence counts, identity surfaced per-row/per-cell so a policy flip is a one-rule change | Owner/policy ruling whenever convenient; artifact unaffected structurally |
+| Internal-kernel page universe (scout Q1: `Item_Editor*` 713, `Unused_Item*` 231, variant kernels ≈275) and chrome rollout order (scout Q4: all-13 launch vs staged en/de/fr/es/ja) | Site IA lanes; consume `unjoined_entities.jsonl` classes + the manifest's shipRule; do not affect this stage |
+| Config name-identity tie-break (scout's 30.95/18.39 not reproducible under any tried rule — F13) | Closed for THIS piece: pinned rule wins, `DRIFT:` note preserves the discrepancy; re-derive only if the owner asks |
+
+## 10. Test obligations (TestWriter contract)
+
+**Fixture-based (hostless; synthetic artifacts only — mini roster of
+e.g. 3 locales + base, 2 kinds, hand-computed expectations):**
+
+- L1: census builder over fixture tables — histogram, per-locale
+  rows/holes, `emptyCellsSkipped == registry − rows` identity (positive
+  + violated-case assert), hole-file sort + `alsoMissingIn` join,
+  identity-to-pivot counting incl. the 301/297-style two-tier framing
+  on synthetic data.
+- L2: matrix cells from a fixture `entity_locale.jsonl` (any/full/name
+  metrics; pinned first-name-edge rule incl. a tie case), census
+  reconciliation against the join report, unjoined classifier (all five
+  classes reachable; kernel-prefix matcher; coincidence flag).
+- L3: availability emitter — membership rules, partial vs available vs
+  named sets, axes passthrough/omission, sort, §2.2-formula assertion,
+  report sidecar agreement.
+- L4: fallback_law emitter over fixture base-overlay + report JSON;
+  symbolCheck both branches (dump.cs present with the four names →
+  `verified`; absent → `skipped-no-dump.cs`).
+- L5: manifest validator — 16 surfaces, XOR-free but enum + zero-
+  coverage enforced; census block agreement.
+- L6: completeness emitter (diff-0 assert, orphan histograms, miss
+  ledger incl. the en.jsonl-presence check failing LOUDLY on a fixture
+  that drops a `Code/…` key); hashes.json self-exclusion; ledger codes
+  + sort.
+- Runner: `--list` shows eight stages in order; `--only locale-proof`
+  isolation; prepared-tree builder covers the upstream set; exit-code
+  mapping 0/1/2/3 incl. ledger enumeration; stamp invalidation on
+  script-hash change; interrupted-run convergence; carve-out guard
+  still green.
+
+**Client-gated integration (auto-SKIP without the extracted corpus):**
+
+- Full-corpus run against the real tree: AC3–AC8 and AC11–AC12 exact
+  figures as written; exit 2 with the pinned ledger set
+  (2 dangling + closable + 7,593 unjoined + course-name open +
+  alias-absent + G8 note).
+- Idempotence: `--only locale-proof` double-run hash-equal on the real
+  tree.
+- Tripwire on real data: mutate ONE locale table copy in a scratch root
+  (drop one row) → rerun against the same baseline → exit 1 with the
+  `REGRESSION:` line naming that locale's rows member.
+
+## Revision 1 (registration)
+
+First registration of this spec, 2026-08-26. Grounding:
+[`../scout-report-piece-07-locales.mdx`](../scout-report-piece-07-locales.mdx)
+revision 2 (corrections K1–K6 applied — ru≡en 301/297 framing; 98.10 %
+headline; 13/17 campus-level literals; fallback symbols quoted; course
+alias-table requirement cross-referenced to piece-08; UI census
+2,218/532/1,686), verified by
+[verifyA](../verifications/verifyA-scout-piece07.mdx) and
+[verifyB](../verifications/verifyB-scout-piece07.mdx) — both
+PASS-WITH-CORRECTIONS, corrections already resident in the rev-2
+report; every figure in §2 re-measured by both verifiers independently.
+Registers: stage id `locale-proof` (eighth stage); emission root
+`extracted/locales/proof/`; the §5 ownership amendment on
+`relinks/locale_availability.jsonl` (doc edits routed, not executed
+here); the pinned config tie-break rule (F13); the optional
+course-alias input contract shared with piece-08. Expected first-run
+verdict: exit 2 with the pinned ledger set — honest steady state, not
+failure.
+
+§END
