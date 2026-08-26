@@ -20,11 +20,18 @@ with the measured gap attached. No speculative re-ingestion now.
 ## R3 — Native-analysis piece (G1/G8)
 
 Deferred, not cancelled. Ledger-only for now. Trigger condition: the
-moment a site piece genuinely needs a code-computed constant (the known
-case: G4 XP→grade cut-offs for calculators #43), the orchestrator
-schedules a scoped native-analysis piece over GameAssembly.dll guided by
-script.json. Until then no lane spends time on native tracing — data-
-driven surfaces ship first.
+moment a site piece genuinely needs a code-computed constant, the
+orchestrator schedules a scoped native-analysis piece over
+GameAssembly.dll guided by script.json.
+
+**UPDATE 2026-08-26 (verification round):** the known trigger case is
+mostly RESOLVED IN DATA — `Config_UISprite.Grades[9]` serializes the
+per-grade Threshold ladder (F 0 … AA 90) consumed by
+`UISpriteConfig.GetGrade(score)`, and staff need-decay carriers landed in
+`ECPCharacterAttributes`. Only the XP→score normalization feeding
+`GetGrade` remains unproven; if calculators #43 need it, THAT single
+constant is the scoped native target. Until then no lane spends time on
+native tracing — data-driven surfaces ship first.
 
 ## R4 — Never-invent law restated
 
