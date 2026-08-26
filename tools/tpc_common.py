@@ -155,6 +155,15 @@ STAGES = [
     ("check-contracts", "tools/stage10_check_contracts.py",
      ["stage10_check_contracts.py", "contracts_lib.py", "relink_util.py",
       "tpc_common.py", "log_util.py"]),
+    # piece-08 search-corpus stage (canonical registry index 12 — the
+    # canonically-later sibling of media=11; spec Rev 3,
+    # docs/specs/piece-08-search-corpus.mdx). Registered ADDITIVELY
+    # after the last currently-registered stage — ordering authority
+    # is the canonical registry, never append position. Purely derived:
+    # opens no bundles, needs no game dir, imports no UnityPy.
+    ("search-corpus", "tools/stage12_search_corpus.py",
+     ["stage12_search_corpus.py", "search_util.py", "tpc_common.py",
+      "log_util.py"]),
 ]
 STAGE_IDS = [sid for sid, _script, _deps in STAGES]
 

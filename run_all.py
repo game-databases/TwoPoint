@@ -132,6 +132,29 @@ UPSTREAMS = {
         "relinks/bridges/cab_index.jsonl",
         "relinks/bridges/container_index.jsonl",
     ],
+    # piece-08 search-corpus (canonical index 12): committed flat artifacts
+    # PLUS the two consumed stage stamps — a changed relink/localisation
+    # stamp identity IS the declared rebuild trigger (spec §S5.3). The
+    # per-locale tables are NOT enumerated here: the REQUIRED table set
+    # resolves inside the stage from locales/*.jsonl (a hostless mini
+    # fixture names fewer than 13). OPTIONAL inputs — the item-item pair
+    # scan and the curated alias table — are ledger-degraded, never gates.
+    "search-corpus": [
+        "identity.json",
+        ".stage-stamps/relink.json",
+        ".stage-stamps/localisation.json",
+        "locales/locale-matrix.json",
+        "stubs/items.jsonl", "stubs/unlockables.jsonl", "stubs/rooms.jsonl",
+        "stubs/campus-levels.jsonl", "stubs/courses.jsonl",
+        "stubs/configs.jsonl", "stubs/staff.jsonl",
+        "stubs/metagame-nodes.jsonl", "stubs/student-types.jsonl",
+        "relinks/entity_locale.jsonl",
+        "relinks/i2_term_registry.jsonl",
+        "relinks/locale_term_entity.jsonl",
+        "relinks/matrix.json",
+        "relinks/guid_bridge_report.json",
+        "relinks/locale_join_report.json",
+    ],
 }
 
 STAGE_TOOLS = {
@@ -149,6 +172,9 @@ STAGE_TOOLS = {
     "locale-proof": "stdlib",
     # piece-05: pure-read validator suite (stdlib; zero-write over extracted/)
     "check-contracts": "stdlib",
+    # piece-08: purely derived — committed artifacts + stamps in,
+    # search shards/manifest out (stdlib; opens zero bundles)
+    "search-corpus": "stdlib",
 }
 
 

@@ -275,30 +275,81 @@ STAGE_OUTPUTS = {
     # emitted (empty ledgers valid). `_manifest.sha256` hashes these very
     # inputs, so it is fingerprinted too and rerun-equality reads it.
     "maps": [
-        "maps/coordinate_law.json,
-        "maps/loadassets_read.json,
-        "maps/levels.jsonl,
-        "maps/scenarios.jsonl,
-        "maps/plots.jsonl,
-        "maps/plots_tiletypes.jsonl,
-        "maps/rooms.jsonl,
-        "maps/rooms_tiles.jsonl,
-        "maps/item_placements.jsonl,
-        "maps/students.jsonl,
-        "maps/staff_records.jsonl,
-        "maps/landscape_layers.jsonl,
-        "maps/landscape_maps.jsonl,
-        "maps/terrain_decode.json,
-        "maps/door_validators.jsonl,
-        "maps/door_placement_index.jsonl,
-        "maps/door_id_space.json,
-        "maps/named_plots.jsonl,
-        "maps/imagery_candidates.jsonl,
-        "maps/imagery_predicates.json,
-        "maps/join_report.json,
-        "maps/_manifest.sha256,
-        "maps/_absences.jsonl,
-        "maps/_unresolved_placements.jsonl,
+        "maps/coordinate_law.json",
+        "maps/loadassets_read.json",
+        "maps/levels.jsonl",
+        "maps/scenarios.jsonl",
+        "maps/plots.jsonl",
+        "maps/plots_tiletypes.jsonl",
+        "maps/rooms.jsonl",
+        "maps/rooms_tiles.jsonl",
+        "maps/item_placements.jsonl",
+        "maps/students.jsonl",
+        "maps/staff_records.jsonl",
+        "maps/landscape_layers.jsonl",
+        "maps/landscape_maps.jsonl",
+        "maps/terrain_decode.json",
+        "maps/door_validators.jsonl",
+        "maps/door_placement_index.jsonl",
+        "maps/door_id_space.json",
+        "maps/named_plots.jsonl",
+        "maps/imagery_candidates.jsonl",
+        "maps/imagery_predicates.json",
+        "maps/join_report.json",
+        "maps/_manifest.sha256",
+        "maps/_absences.jsonl",
+        "maps/_unresolved_placements.jsonl",
+    ],
+    # stage 8 (piece-04): the FIXED declared-output universe of
+    # `extracted/logic/**` — every path is always emitted (empty ledgers
+    # valid), so the closed set is static. LOGIC.md is the tracked layer;
+    # digests land in the EXTRACTION-LOG run section, never inside logic/.
+    "logic": [
+        "logic/LOGIC.md",
+        "logic/_gaps.jsonl",
+        "logic/course-progression/prerequisite-taxonomy.json",
+        "logic/course-progression/courses.jsonl",
+        "logic/course-progression/modules.jsonl",
+        "logic/course-progression/prerequisites.jsonl",
+        "logic/course-progression/prerequisite-nonmembers.jsonl",
+        "logic/course-progression/course-unlock-edges.jsonl",
+        "logic/course-progression/attrition.jsonl",
+        "logic/economy/money-taxonomy.json",
+        "logic/economy/finance-configs.jsonl",
+        "logic/economy/kudosh-ledger.jsonl",
+        "logic/economy/research-costs.jsonl",
+        "logic/grading/grade-ladder.json",
+        "logic/grading/term-pass-grades.jsonl",
+        "logic/grading/assessment-scoring.jsonl",
+        "logic/grading/xp-score-normalization.json",
+        "logic/needs-decay/staff-decay.jsonl",
+        "logic/needs-decay/student-decay.jsonl",
+        "logic/needs-decay/student-core11-decay.jsonl",
+        "logic/needs-decay/interactions.jsonl",
+    ],
+    # stage 11 (piece-06): the always-on text artifacts + the tracked layer
+    # (MEDIA-EXPORT.md). web/** binaries are covered through hashes.sha256;
+    # the flag-gated course-icon-carrier-report.json is deliberately not a
+    # declared output (its presence rides the --probe-course-carrier flag,
+    # like the data-dependent relink pair files ride their closed universe).
+    "media": [
+        "media/export-manifest.jsonl",
+        "media/index.jsonl",
+        "media/hashes.sha256",
+        "media/crosscheck-report.json",
+        "media/_missing_icons.jsonl",
+        "media/_pptr_residue.jsonl",
+        "media/_skipped_classes.jsonl",
+        "media/MEDIA-EXPORT.md",
+    ],
+    # stage 12 (piece-08): the fixed trio plus the per-locale shard/title
+    # planes, appended in stage_outputs() from the shared EMITTED_LOCALES
+    # table (a hostless mini fixture names fewer than 13 — absent files
+    # hash "" like any born-empty artifact).
+    "search-corpus": [
+        "search/manifest.json",
+        "search/hashes.json",
+        "search/_ledger.jsonl",
     ],
 }
 
@@ -350,6 +401,12 @@ def stage_outputs(stage_id: str) -> list[str]:
     if stage_id == "locale-proof":
         import tpc_common as tc
         outs += [f"locales/proof/key_holes/{locale}.jsonl"
+                 for locale in tc.EMITTED_LOCALES]
+    if stage_id == "search-corpus":
+        import tpc_common as tc
+        outs += [f"search/shards/{locale}.jsonl"
+                 for locale in tc.EMITTED_LOCALES]
+        outs += [f"search/titles/{locale}.jsonl"
                  for locale in tc.EMITTED_LOCALES]
     if stage_id == "relink":
         import relink_util
