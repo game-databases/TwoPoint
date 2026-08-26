@@ -141,6 +141,13 @@ STAGES = [
     # committed artifacts only (no bundle opens, no game dir).
     ("maps", "tools/stage7_maps.py",
      ["stage7_maps.py", "maps_util.py", "tpc_common.py", "log_util.py"]),
+    # piece-04 logic stage — canonical registry index 8: AFTER relink=6
+    # (maps=7 seats before it when the maps piece registers), BEFORE any
+    # canonically-later sibling. Registered ADDITIVELY per the orchestrator
+    # stage-index registry; ordering authority is the canonical registry,
+    # not append accident. Opens ZERO asset bundles and needs NO game dir.
+    ("logic", "tools/stage8_logic.py",
+     ["stage8_logic.py", "logic_util.py", "tpc_common.py", "log_util.py"]),
     # piece-07 locale-proof stage (canonical registry index 9, arbiter
     # R1; registered ADDITIVELY after the last currently-registered stage
     # — ordering authority is the canonical registry, not append accident).
@@ -155,12 +162,21 @@ STAGES = [
     ("check-contracts", "tools/stage10_check_contracts.py",
      ["stage10_check_contracts.py", "contracts_lib.py", "relink_util.py",
       "tpc_common.py", "log_util.py"]),
-    # piece-08 search-corpus stage (canonical registry index 12 — the
-    # canonically-later sibling of media=11; spec Rev 3,
-    # docs/specs/piece-08-search-corpus.mdx). Registered ADDITIVELY
-    # after the last currently-registered stage — ordering authority
-    # is the canonical registry, never append position. Purely derived:
-    # opens no bundles, needs no game dir, imports no UnityPy.
+    # piece-06 media export stage (canonical registry index 11 — after
+    # contracts=10, before search-corpus=12; registered ADDITIVELY after
+    # the last currently-registered stage — ordering authority is the
+    # canonical registry, not append accident). CLIENT-GATED WHOLESALE
+    # (binding pin P1 of arbiter-piece06-spec): no game dir resolving ⇒
+    # the runner auto-SKIPs it; exit 3 is reserved for missing upstream
+    # ARTIFACTS while the game dir resolves.
+    ("media", "tools/stage11_media.py",
+     ["stage11_media.py", "media_util.py", "unitypy_util.py",
+      "tpc_common.py", "log_util.py"]),
+    # piece-08 search-corpus stage (canonical registry index 12 — after
+    # media=11; spec Rev 3, docs/specs/piece-08-search-corpus.mdx).
+    # Registered ADDITIVELY after the last currently-registered stage —
+    # ordering authority is the canonical registry, never append position.
+    # Purely derived: opens no bundles, needs no game dir, imports no UnityPy.
     ("search-corpus", "tools/stage12_search_corpus.py",
      ["stage12_search_corpus.py", "search_util.py", "tpc_common.py",
       "log_util.py"]),

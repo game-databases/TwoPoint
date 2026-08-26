@@ -76,6 +76,31 @@ UPSTREAMS = {
         "decompiled/il2cppdumper/dump.cs",
         "harvest/monobehaviours",
     ],
+    # piece-04 §3 logic upstream set — ALL committed artifacts; the stage
+    # opens ZERO asset bundles and needs NO game dir (purely derived).
+    "logic": [
+        "identity.json",
+        "stubs/items.jsonl", "stubs/unlockables.jsonl", "stubs/rooms.jsonl",
+        "stubs/campus-levels.jsonl", "stubs/courses.jsonl",
+        "stubs/configs.jsonl", "stubs/staff.jsonl",
+        "stubs/metagame-nodes.jsonl", "stubs/student-types.jsonl",
+        "stubs/_absences.jsonl",
+        "harvest/monobehaviours/configs/TPC.CourseDefinition",
+        "harvest/monobehaviours/configs/TPC.StudentDefinition",
+        "decompiled/structural/class-hierarchy.jsonl",
+        "decompiled/structural/id-registries/TPS.Game.BudgetType.jsonl",
+        "decompiled/structural/id-registries/TPS.Game.TPC.EAttribute.jsonl",
+        "decompiled/structural/id-registries/TPS.Game.TPC.EGrade.jsonl",
+        "decompiled/structural/id-registries/TPS.Game.TPC.EStaffStat.jsonl",
+        "relinks/matrix.json",
+        "relinks/config_config.jsonl",
+        "relinks/i2_term_registry.jsonl",
+        "relinks/entity_locale.jsonl",
+        "relinks/bridges/cab_index.jsonl",
+        "relinks/bridges/container_index.jsonl",
+        "harvest/externals.jsonl",
+        "harvest/export-manifest.jsonl",
+    ],
     # piece-07 §4: locale-proof upstream set — committed flat artifacts
     # only (purely derived; no game dir). The per-locale tables ARE part of
     # the pinned §4 gate set ("locales/<locale>.jsonl x13"), so they are
@@ -104,6 +129,20 @@ UPSTREAMS = {
         "relinks/locale_term_entity.jsonl",
         "relinks/locale_join_report.json",
     ],
+    # piece-06 media (spec §3 Inputs): landed join artifacts PLUS the game
+    # dir — every referenced sprite's HOME bundle and every hosting atlas-
+    # page bundle opens read-only under the shared fallback-version seeding.
+    # CLIENT-GATED WHOLESALE (binding pin P1): no game dir resolving ⇒ this
+    # stage auto-SKIPs before any upstream check can refuse.
+    "media": ["stubs",
+              "media-catalogue.jsonl",
+              "relinks/bridges/container_index.jsonl",
+              "relinks/bridges/cab_index.jsonl",
+              "relinks/entity_asset_guid.jsonl",
+              "harvest/externals.jsonl",
+              "addressables/catalog.json",
+              "bundle-roster.jsonl",
+              "identity.json"],
     # piece-05 check-contracts (canonical index 10): pure-read validator
     # suite over the emitted corpus. The heavy-artifact policy requires the
     # PERSISTED sidecar (absent ⇒ exit 3 naming it; --scan-catalog is the
@@ -163,6 +202,10 @@ UPSTREAMS = {
     ],
 }
 
+# Client-gated stages (piece-06 binding pin P1): when no game dir resolves
+# these auto-SKIP wholesale — never exit 3, never a degraded run.
+CLIENT_GATED_STAGES = frozenset({"media"})
+
 STAGE_TOOLS = {
     "verify-client": "stdlib",
     "decompile": "Il2CppDumper (staged)",
@@ -174,10 +217,15 @@ STAGE_TOOLS = {
     # piece-03: purely derived — committed artifacts in, maps datasets out
     # (stdlib; opens zero bundles, needs no game dir)
     "maps": "stdlib",
+    # piece-04: purely derived — committed artifacts in, logic datasets out
+    # (stdlib; opens zero bundles, needs no game dir)
+    "logic": "stdlib",
     # piece-07: purely derived — committed artifacts in, proof artifacts out
     "locale-proof": "stdlib",
     # piece-05: pure-read validator suite (stdlib; zero-write over extracted/)
     "check-contracts": "stdlib",
+    # piece-06: UnityPy decode + Pillow WebP/PNG encode
+    "media": "UnityPy+Pillow",
     # piece-08: purely derived — committed artifacts + stamps in,
     # search shards/manifest out (stdlib; opens zero bundles)
     "search-corpus": "stdlib",
@@ -343,6 +391,32 @@ def resolve_unitypy_pin(extracted_root: Path) -> str:
     return str(defaults.get("unitypyVersion") or tc.UNITYPY_PIN)
 
 
+def _selection_all_client_gated(args) -> bool:
+    """True iff the requested selection is non-empty AND every named stage
+    is client-gated (piece-06 pin P1): a bad game-dir spelling then routes
+    to wholesale auto-SKIP instead of the exit-3 refusal."""
+    if args.only:
+        return args.only in CLIENT_GATED_STAGES
+    skipped = set(filter(None, (s.strip() for s in
+                                (args.skip or "").split(","))))
+    selected = [s for s in tc.STAGE_IDS if s not in skipped]
+    return bool(selected) and all(s in CLIENT_GATED_STAGES for s in selected)
+
+
+def _probe_default_install_for_gated():
+    """Spec-pinned default install candidates for client-gated stages only.
+    Lazy import keeps the runner dependency-light."""
+    try:
+        import media_util  # noqa: PLC0415
+    except ImportError:
+        return None
+    for cand in media_util.DEFAULT_INSTALL_CANDIDATES:
+        p = Path(cand)
+        if tc._looks_like_install_root(p):
+            return p
+    return None
+
+
 def main(argv=None) -> int:
     log_util.bootstrap_console()
     parser = argparse.ArgumentParser(
@@ -385,6 +459,8 @@ def main(argv=None) -> int:
     except tc.StageError as exc:
         if args.list:
             print(f"(--list without a resolvable game dir: {exc})")
+        elif _selection_all_client_gated(args):
+            game_root = None     # pin P1: client-gated stages skip below
         else:
             print(f"ERROR: {exc}", file=sys.stderr)
             return exc.exit_code
@@ -392,11 +468,6 @@ def main(argv=None) -> int:
     if args.list:
         print_list(pack_dir, extracted_root, game_root)
         return 0
-
-    if not game_root:
-        print("ERROR: no game directory given (positional arg or TPC_GAME_DIR)",
-              file=sys.stderr)
-        return 3
 
     stage_ids = list(tc.STAGE_IDS)
     if args.only:
@@ -415,9 +486,31 @@ def main(argv=None) -> int:
             return 3
         selected = [s for s in stage_ids if s not in skipped]
 
+    gated_selected = [s for s in selected if s in CLIENT_GATED_STAGES]
+    if not game_root and gated_selected \
+            and not (args.game_dir or os.environ.get("TPC_GAME_DIR")):
+        # client-gated stages may resolve the spec-pinned DEFAULT install
+        # before skipping wholesale (piece-06 §3 hostless end-state); this
+        # probe never applies to stages that genuinely need the game dir
+        game_root = _probe_default_install_for_gated()
+
+    if not game_root:
+        ungated = [s for s in selected if s not in CLIENT_GATED_STAGES]
+        if ungated or not selected:
+            print("ERROR: no game directory given (positional arg or TPC_GAME_DIR)",
+                  file=sys.stderr)
+            return 3
+
     overall = 0
     executed: list[dict] = []
     for stage_id in selected:
+        if stage_id in CLIENT_GATED_STAGES and game_root is None:
+            print(f"[{stage_id}] SKIP (client-gated wholesale): no game dir "
+                  "resolving ($TPC_GAME_DIR or default install) — no partial "
+                  "outputs, no degraded run (piece-06 binding pin P1)")
+            executed.append({"stage": stage_id, "skipped": True,
+                             "reason": "client-gated-no-game-dir"})
+            continue
         identity = compute_stage_identity(pack_dir, extracted_root,
                                           stage_id, game_root)
         if not args.force and log_util.is_up_to_date(extracted_root,
