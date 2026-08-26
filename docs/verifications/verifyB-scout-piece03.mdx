@@ -1,0 +1,225 @@
+# verifyB — adversarial verification of `docs/scout-report-piece-03.mdx`
+
+**Agent:** verifyB-piece-03 · **Date:** 2026-08-26 · **Mandate:** break the
+report — negatives, provenance, silent assumptions, feasibility overclaims.
+verifyA owns re-measurement of headline numbers; every number below was
+nevertheless recomputed here from primary artifacts (python/jq over
+`extracted/stubs/`, `harvest/export-manifest.jsonl`, `harvest/census/bundles/`,
+`bundle-roster.jsonl`, `addressables/catalog.json`, `media-catalogue.jsonl`,
+`relinks/`, `decompiled/il2cppdumper/dump.cs`). No binaries opened; no
+pipeline runs; nothing committed.
+
+---
+
+## Attack log
+
+### A1. The negatives (priority 1)
+
+**A1a. "No doors anywhere" — attacked with decompile grep + corpus sweeps.
+ATTACK SUCCEEDED, negative BROKEN.**
+
+- `dump.cs` contains a full door subsystem outside the report's
+  TPC./TPS. spatial-name sweep: `ECDoor`, `ECDoorLogic`,
+  `ECDoorLogicAutomatic` (IComponentData; DetectionRadius/IsOpen),
+  **`EDBDoorLink : IBufferElementData {Entity Entity; float3 Position}`**
+  (TypeDefIndex 15247), `ESDoorLogic`/`ESDoorLogicAutomatic` SystemBase
+  jobs, `AutomaticSlidingDoorsComponent` (14143), and — decisive —
+  **`TPC.ItemValidator_Door : ItemValidator` (TypeDefIndex 14277)** with
+  `[SerializeField] int[] _exitToRooms / _entranceToRooms`,
+  `PositionType {Entrance, Exit, DigSite}`.
+- The corpus SHIPS this class: **54 exported
+  `TPC.ItemValidator_Door` dumps** at
+  `extracted/harvest/monobehaviours/configs/TPC.ItemValidator_Door/`
+  (e.g. `ItemValidator_Door_Room_Magic`, `_exitToRooms` 10 ints,
+  `_allowExitToAnyBuilding: 1`), plus 37 `AutomaticSlidingDoorsComponent`
+  dumps — 91 door-named manifest rows total.
+- Stubs carry **`DoorItemReachabilityUseAreaBase` /
+  `DoorItemReachabilityOffset` on all 1,654 placement-block
+  GameItemDefinitions** (fields absent from the report's own §2
+  placement-block enumeration), plus 33 door-named item names/descriptions
+  ("It's a door!" ×28, `Variation_Door_Building_*` family).
+- Scenarios PLACE them: recomputing resolved definition names over all
+  22,996 item records yields **~1,260–1,310 placements of 56 distinct
+  door item kinds** (`Item_Door_Wooden` ×232, `Item_Door_Internal` ×129,
+  …) — each with world-reachable LocalPosition + LocalRotation.
+- End-to-end chain proven with the report's OWN sample item:
+  `Item_Door_Building_Moonbase_Main`.Validators[] GUID
+  `17c6c4cad10b5cd4393880f4bb8fe9b7` → catalog address
+  `Assets/Data/DLCs/DLC1_Space/Game/Items/Validators/ItemValidator_Door_Moonbase_To_Exterior.asset`.
+- Honesty caveat (found while trying to strengthen the refutation): the
+  54 validators reference 71 distinct room-id ints which overlap
+  RoomRecord.DefinitionIDs (0/51), Room/FloorArea `_id`s (0), and config
+  pathIds (0) — a sweep of all 9,436 configs-class dumps with integer
+  `_id` matched **13 ids to `TPC.RoomType`(9)/`TPC.RoomTypeBuilding`(4)**.
+  So a complete shipped door GRAPH needs one more id-space decode, but
+  "doors are not data", G8's "0 classes, 0 fields", and §11.3's "DERIVABLE
+  ONLY … Do not promise a door overlay" are false as written. Note:
+  `PROGRESS.mdx` log line ~92 already propagates the broken negative
+  ("doors/adjacency proven absent") — correction needed there too.
+
+**A1b. "0 minimap catalog addresses" — attacked with alternate spellings.
+NEGATIVE SURVIVES.** 56,331 non-null addresses scanned;
+`minimap`/`mini-map`/`mini_map` = 0; `compass` = 0; `worldmap` = 0.
+`radar` ×5 are a MetaMap radar-dish feature texture and an Archaeology
+course prop; `overlay` ×24 are cursor/VFX/pause UI. No client map layer
+hides under alternate spellings.
+
+**A1c. "Scene Transforms never dumped" — attacked via tooling outputs,
+not dump absence. NEGATIVE SURVIVES.** Zero engine-native class rows
+(no `Transform`, `GameObject`, `MeshFilter`, `MeshRenderer`,
+`BoxCollider`, `Mesh`, `Material`, `Texture2D`) among the 167,069 export
+manifest rows; census files count them instead. Census aggregates
+reproduce to the digit: across the 26 scene-flag bundles GameObject
+141,047 · Transform 125,382 · MeshFilter 85,692 · MeshRenderer 85,543 ·
+BoxCollider 11,548 · MonoBehaviour 46,051; every row of the §5 16-level
+table matches (knight 10,706/3,036/7,294/1,710; magic 15,171/2,462/…);
+levelhud 12,858 GO / 19,451 MB / zero Transforms; seasonal 16,153 GO.
+
+**A1d. "Stubs drop `_id`: 0 of 13,443 rows" — count re-verified, escape
+routes checked. NEGATIVE SURVIVES; bridge framing fair.** Recursive key
+scan: 0 of 13,443 stub rows contain `_id`. `_id` survives in the harvest
+layer (definition dumps carry it) and `relinks/bridges/cab_index.jsonl`
+(222) + `container_index.jsonl` (49,855) exist, so G3's either/or
+framing is consistent with landed infrastructure; not mooted.
+
+### A2. Join rate 96.58% — recomputed from raw dumps
+
+Independent walk of all 51 `TPC.LevelScenarioV2` dumps: plots 1,031 ·
+rooms 5,188 · room ItemRecords 22,878 · Arrival 86 + NonArea 7 +
+NavPlotWaypoint 25 = 118 → denominator 22,996 (exact). Indexing
+GameItem{,Lite,Variation}Definition exports (3,779 entries, 7 bundles —
+exact) and resolving same-file: **22,210 resolved / 786 unresolved =
+96.582% — REPRODUCED EXACTLY**, robust under both bundle-keyed and
+cab-strict (`_sourceFile`) keying. The sample chain verifies to the
+digits (pathId 522383310774550334 → `Item_Door_Building_Moonbase_Main`,
+`_id` −572923782 = DefinitionID; room x −152 + local 17 ⇒ −135).
+
+But the **residue story is broken**: actual per-scenario residue is
+LaunchPad 464 (59%), Ghosts_Remix_V2 110, Ghosts 69, SpaceportCity 65,
+MoonBase 46, Wanted 14, Landscaping_Level 6, FreePlay_BuiltUp 6,
+Unused_Ghosts_Remix 3, Super_Built_Up 2, JoTestLevel 1. The report
+exemplifies the four smallest (sum 91 = 12%) and omits the dominant
+base-game DLC1 term. Also 771/786 have nonzero `m_FileID` (cross-file)
+but 15 have `m_FileID == 0` yet still miss the index — "the residue is
+exactly the externals use case" is true only for 98%.
+
+### A3. Provenance spot-audit (~30 numbers probed)
+
+Traced to real artifacts and CONFIRMED: stub kind counts (17/8,430/69/
+3,885/454/116/3/54/415); roster flags {none 150, .unity 25, seasonal 1};
+manifest 167,069 / 1,129 classes; scenario bundle split 43/1/4/3;
+LevelConfig split 13/9/4/2, 133 top-level keys; WorldBounds {200,16,200}
+on 27 + blank {128,10,128}; PlotCount values Tutorial 5 … Final 1 (sum
+84), DLC 11/15/18/15×2; `_ScenarioV2` 27-of-28 GUID resolutions through
+54,143 catalog guid keys incl. Part1_Early→Part3_LateGame paths; Knight
+imagery quartet + GameItemIconConfig {0, 10, (−30,45,10), 128};
+`_CameraConfig` GUID → `Config_CameraLogic.asset`;
+GridCoord@666259 (CellSize 2/Sq 4/Inv .5/Half 1), EPlotTileType@987631,
+PlotSaveData@987644, ItemSaveData@934753, LandscapeSaveData@934810,
+NavBounds@661308 (`TPS.Core.Navigation`, `_shape` present),
+WaypointEdge/Info/Graph TypeDefIndexes 16326/16327/16334; knightlevel_
+optimised exported-class six-pack (1,702/806/375/118/18/8);
+`scenes_scenes_config_level_databases` = exactly one MonoBehaviour with
+one cross-file PPtr; placement-block distributions (ApproxSizeInTiles
+1635/16/3; GridSnap 1423/119/45/34; RotationSnap 1170/299/153;
+MinCellSize n=63 mode 5×5×21; FloorHeightOffset 48/8/3/4); GraphRect 625
++ IgnoreRotation 634; matrix 100 cells, campus-level→scene 0/missing,
+campus-level→config 13/hard, metagame-node partial; entity_locale 10,964;
+registry 15,675 IDs → 15,672 keys, Levels 934 / Rooms 484 / Items 1,983 /
+Courses 932; media-catalogue environment-metamap 73 Texture2D, ui-level
+49+55, bytesEstimate caveat example (474 ≈ 109 KB) exact.
+
+NOT traced / contradicted — see verdict table: scenario size range,
+metamap 1,094, "125 level image/icon/screenshot", SpawnPoint "all 28",
+MinCellSize range, three-level PlotCount variance, terrain range 64²–256².
+
+### A4. Feasibility verdicts (§11) — argued against
+
+- V1 overview maps FEASIBLE: survives (geometry + join measured; 26-scene
+  ceiling reframing sound). Caveat fed back below on plot-count generations.
+- V2 room-footprint plots FEASIBLE: survives (bitmaps/anchors/world
+  positions verified; Tiles bitmaps read directly).
+- V3 doors NOT DATA/DERIVABLE ONLY: **FLIPS** to "partially data" (A1a).
+- V4 item pins FEASIBLE: survives numerically; residue attribution must
+  be corrected (A2).
+- V5 what stays authored: mostly survives, except plot display labels are
+  partially mineable (below).
+
+### A5. Silent scope cuts / omissions
+
+Found by walking record arrays the report did not enumerate:
+
+- **PlotActivationItemRecords: 8 placed-item records** not counted (true
+  placed-item census is 23,004, not 22,996).
+- **StudentRecords (20) and StaffGenerationRecord.StaffRecords (32)** —
+  scenario-placed people with their own records, never mentioned
+  (Wanted alone carries 14 staff).
+- **Plot naming**: 12 of 1,031 plots carry `UsePlotDisplayName: 1` with a
+  localized `DisplayName` termID (sample: PersistentName "Rocket Pad 9",
+  termID −1610423369) — §9's "plot naming in-game is generic … will be
+  derived, not mined" is wrong for those.
+- Scenario-vs-LevelConfig plot-count divergence is never reconciled:
+  e.g. `LevelScenarioV2_LaunchPad` has 18 plot records vs PlotCount 11;
+  Mitton 38 vs 9. G6 covers config-generation variance only.
+- `LevelScenarioV2_Knight 1` (11 plots/138 rooms/995 items) omitted from
+  the §3 highlights table although larger than several listed rows
+  ("largest shown" is not the selection rule that was applied).
+
+---
+
+## Verdict table
+
+| # | Claim (report loc) | Verdict | Evidence |
+|---|---|---|---|
+| 1 | Stubs 13,443 / 9 kinds; manifest 167,069 / 1,129 classes; roster 176 {150/25/1} (header) | SURVIVED | recomputed exactly |
+| 2 | 0 minimap addresses of 56,331; alternates swept (§1, §10) | SURVIVED | minimap/mini-map/compass/worldmap = 0; radar/overlay hits benign |
+| 3 | Scene Transforms census-only, never dumped (G1, §5) | SURVIVED | 0 engine-class manifest rows; census aggregates exact |
+| 4 | `_id`: 0 of 13,443 stub rows (G3) | SURVIVED | recursive scan |
+| 5 | Totals 1,031 / 5,188 / 22,996; join 96.58%; residue 786 (§3) | SURVIVED | reproduced exactly, both keyings |
+| 6 | Residue "concentrated in (Wanted 14, Super_Built_Up 2, FreePlay_BuiltUp 6, Ghosts 69)" (§3) | **BROKEN** | dominant terms LaunchPad 464 / Ghosts_Remix_V2 110 / SpaceportCity 65 / MoonBase 46 omitted; cited set = 12% |
+| 7 | `DefinitionID` ≡ `ScriptableObjectWithID._id` (§3) | **BROKEN (overstated)** | 10 of 22,210 resolved records mismatch (Lite/Variation twins); hold as PPtr-defined join, `_id` corroborating |
+| 8 | "doors are not data"; no Door\* class; G8 "0 classes, 0 fields"; §11.3 DERIVABLE ONLY (§6, §11, §12) | **BROKEN** | `TPC.ItemValidator_Door` ×54 dumped w/ `_entranceToRooms/_exitToRooms`; ECDoor/EDBDoorLink/AutomaticSlidingDoorsComponent; DoorItemReachability\* on 1,654 stubs; ~1.3k placed door items; validator GUID chain resolves via catalog. Residual truth: full graph blocked on one id-space decode (13/71 ids → RoomType/RoomTypeBuilding) |
+| 9 | "64×64-to-256×256 landscape tile maps" (§3 headline) | **BROKEN** | measured TerrainMap dims span 2×2 … 432×216 (4,082 layers) |
+| 10 | §3 "Terrain map" column (30×56 MoonBase etc.) | SURVIVED (under-labeled) | reproduces as first plot's first layer for 9/9 named scenarios |
+| 11 | SpawnPoint "(−66,0,−24) on all 28" (§4) | **BROKEN** | 26/28; second variant x=−68 besides the noted y=2.086 |
+| 12 | PlotCount variants "for three levels (Robotics 5, Spy 5, Party 5)" (§4) | **BROKEN** | Party = 5 in BOTH generations; only Robotics and Spy disagree (G6 text itself has it right) |
+| 13 | §6 code citations (lines/TypeDefIndexes, CellSize=2, tile palette, save schemas, no baked navmesh) | SURVIVED | every citation opened and matched; 0 navmesh addresses/classes |
+| 14 | §2 distributions + verbatim examples | SURVIVED | all recomputed exact (see A3) |
+| 15 | §2 "84 × FloorArea\*Definition family" | SURVIVED (ambiguous) | reconciles only as FloorArea{,Plot,DigSite}Definition = 80+2+2; visual variants excluded silently |
+| 16 | §2 campus-levels "pure seed rows: TPC.GameModePlayLevelConfig {Name, LevelConfig GUID, MetagameConfig GUID}" | SURVIVED (imprecise) | class mix 13/3/1 (GameModePlayLevelConfig/UniversityLevelConfig/LevelScenarioV2); extra fields ConsoleCommands, ShouldLoadMetaMapNoStateScene; core "no geometry" holds |
+| 17 | §8 matrix/relink claims (100 cells, empty scene cell, 13 hard config edges, entity_locale 10,964) | SURVIVED | exact |
+| 18 | §9 registry numbers (15,675/15,672; 934/484/1,983/932) | SURVIVED | exact; "37 prefixes" = 36 real prefixes + prefix-less bucket |
+| 19 | §9 "plot naming generic … derived, not mined" | **BROKEN (partial)** | 12 plots ship localized display names (e.g. "Rocket Pad 9") |
+| 20 | §10 metamap namespace 1,094 (372 tga/178 png/422 mat/50 fbx/64 prefabs/8 atlases) | UNVERIFIABLE | lowercase substring = 1,140 (376/180/434/52/70/8); case-split matches tga/fbx/atlas only; filter not reproducible, direction unaffected |
+| 21 | §10 "117 loadingscreen images" / "125 level image/icon/screenshot" / env textures 2,526 | UNVERIFIABLE | best reproduction: 117 total loadingscreen addresses (101 images); imagelevel 66, sandbox+level 101, union 68 — 125 not reproduced; env 2,497–2,500 vs 2,526 |
+| 22 | §10 media-catalogue cross-check + bytesEstimate caveat | SURVIVED | 73 / 49+55 / 474≈109 KB exact |
+| 23 | §3 sizes "765 B – 13.83 MB" | UNVERIFIABLE | matches neither manifest bytes (144 B–15.09 MB) nor on-disk JSON (914 B–81.85 MB) nor non-DLC subsets |
+| 24 | §8 "room → config carries FloorAreaDefinition (62 refs, piece-02 §1)" | SURVIVED (drifted) | current artifact: 63 FloorArea\* edges of 570 |
+| 25 | Placed-item census complete (§3) | SURVIVED (incomplete) | +8 PlotActivationItemRecords uncounted; StudentRecords 20 / StaffRecords 32 unmentioned |
+
+---
+
+## Corrections required before the Documentator consumes this report
+
+1. Rewrite §6 door sentence, §11 verdict 3, and G8 around
+   `TPC.ItemValidator_Door` (54 dumps, `_entranceToRooms/_exitToRooms`)
+   + door-item placements (~1.3k) + `DoorItemReachability*` stub fields;
+   keep an honest blocker note (validator id-space decode: RoomType/
+   RoomTypeBuilding partial match) and fix the propagated "proven absent"
+   line in `PROGRESS.mdx`.
+2. Re-attribute the 786-record residue (LaunchPad 464 first), and soften
+   the `≡` identity to a PPtr-based join rule.
+3. Fix the five numeric slips: SpawnPoint 26/28 + x=−68 variant; two
+   PlotCount-variant levels not three; terrain range 2×2–432×216; size
+   range re-measure or drop; §10 address filters re-run or relabel.
+4. Add the omitted record families (PlotActivation 8, Students 20,
+   Staff 32) and the 12 named plots to the gap ledger so the maps emit
+   covers them.
+
+## Overall verdict
+
+**PASS-WITH-CORRECTIONS** — the load-bearing discoveries (scenario layer,
+coordinate law, census, join rate, Transform/`_id`/minimap negatives)
+are independently reproduced and sound; one gating negative (doors) is
+refuted and must be corrected before spec work, alongside the residue
+attribution and the numeric fixes above.
