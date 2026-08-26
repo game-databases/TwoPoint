@@ -15,12 +15,12 @@ from pathlib import Path
 import pytest
 
 from _validators import (ADDRESSABLES_VERSION, APPID, BUILD_ID,
-                         LOCALE_BUNDLE_COUNT, METADATA_VERSION, SCENE_COUNT_PINS,
-                         SETTINGS_HASH, TARGET_BUILD_ID, TOTAL_BUNDLES,
-                         UNITY_VERSION, assert_unique_outrelpath,
-                         diff_manifests, hash_tree, locale_file_set_matches,
-                         read_json, read_jsonl, scan_tree_for_media_extensions,
-                         validate_availability_row,
+                         LOCALE_BUNDLE_COUNT, LOCALE_TABLE, METADATA_VERSION,
+                         SCENE_COUNT_PINS, SETTINGS_HASH, TARGET_BUILD_ID,
+                         TOTAL_BUNDLES, UNITY_VERSION,
+                         assert_unique_outrelpath, diff_manifests, hash_tree,
+                         locale_file_set_matches, read_json, read_jsonl,
+                         scan_tree_for_media_extensions,
                          validate_media_catalogue_row)
 
 pytestmark = pytest.mark.client_gated
@@ -249,7 +249,7 @@ def test_stage3_fallback_version_usage_recorded(tmp_path):
 
 
 @pytest.mark.heavy
-def test_stage4_locale_files_and_stage5_availability(tmp_path):
+def test_stage4_locale_files_and_availability_v2(tmp_path):
     _heavy_or_skip()
     from conftest import game_dir, run_pack
     game = game_dir()
@@ -273,8 +273,11 @@ def test_stage4_locale_files_and_stage5_availability(tmp_path):
     assert report.get("compositionPolicy") in (
         "english-only", "english-over-base", "base-over-english", "mixed")
 
+    # piece-07 §5 amendment (arbiter R4): stage locale-proof is the SOLE
+    # writer of this path and emits the v2 row shape — the retired v1
+    # vocabulary (joinInferred/joinMethod) must never reappear.
     avail = ext / "relinks" / "locale_availability.jsonl"
-    assert avail.exists(), "stage 5 sole-owner availability file missing"
+    assert avail.exists(), "availability file missing after full run (stage locale-proof owns it)"
     rows = read_jsonl(avail)
     assert rows, "availability ledger empty"
     ids = [(row.get("kind"), row.get("id")) for row in rows]
@@ -282,9 +285,18 @@ def test_stage4_locale_files_and_stage5_availability(tmp_path):
     assert len(rows) == len(distinct), (
         f"availability row count {len(rows)} != distinct joined entities {len(distinct)}")
     for i, row in enumerate(rows):
-        errs = validate_availability_row(row, where=f"availability[{i}]: ")
-        assert not errs, errs
-        assert row["fieldPresence"], f"row {i}: fieldPresence must be populated"
+        assert "joinInferred" not in row and "joinMethod" not in row, \
+            f"availability[{i}]: retired v1 row vocabulary survived"
+        for field in ("availableLocales", "partialLocales", "namedLocales",
+                      "identityToPivotLocales"):
+            v = row.get(field)
+            assert isinstance(v, list) and v == sorted(v), f"availability[{i}].{field}"
+            unknown = [x for x in v if x not in LOCALE_TABLE.values()]
+            assert not unknown, f"availability[{i}].{field}: non-BCP-47 {unknown}"
+        fp = row.get("fieldPresence")
+        assert isinstance(fp, dict) and fp, f"row {i}: fieldPresence must be populated"
+        assert set(fp) <= set(row["availableLocales"]), \
+            f"row {i}: fieldPresence keys ⊄ availableLocales"
 
 
 @pytest.mark.heavy

@@ -11,12 +11,12 @@ from pathlib import Path
 
 import pytest
 
-from _fixturelib import BIG_FAMILY_COUNT, ENTITIES, HARD_JOIN_IDS, UNMAPPED
+from _fixturelib import BIG_FAMILY_COUNT, ENTITIES, UNMAPPED
 from _impl import (JOIN_NAMES, KIND_MAP_NAMES, STUB_VALIDATE_NAMES, get_sym,
                    load_tool)
 from _validators import (BUILD_ID, KIND_TO_FILE, check_identifier_verbatim,
                          diff_manifests, hash_tree, identifier_sample_ids,
-                         read_jsonl, validate_absence_row, validate_availability_row,
+                         read_jsonl, validate_absence_row,
                          validate_stub_row, validate_unmapped_row)
 
 STAGE = "emit-stub-datasets"
@@ -209,136 +209,90 @@ def test_identifier_sample_policy_matches_pinned_shape():
     assert fn(list(big)) == got_big
 
 
-def test_join_procedure_direct_hard_convention_prose(fx_stage5):
-    """The PINNED join procedure driven directly on fixture data: exact
-    matrix-key equality -> hard; <entityId>_<role> convention -> inferred +
-    method; prose -> no join at all."""
+def test_retired_availability_builder_gone_from_stage5():
+    """piece-07 §5 item 1 / arbiter R4 (supersedes piece-2 §R4): stage 5's
+    availability emission was REFUTED and REMOVED — no availability/join
+    builder symbol may survive on the stage-5 module (reintroduction would
+    resurrect a dead writer for the canonical path stage locale-proof owns)."""
     mod = load_tool("stage5_emit_stubs.py")
     if mod is None:
         pytest.skip("impl-missing: tools/stage5_emit_stubs.py")
-    fn = get_sym(mod, *JOIN_NAMES)
-    if fn is None:
-        pytest.skip(f"impl-missing: availability/join builder (tried {JOIN_NAMES})")
-    monos = fx_stage5 / "extracted" / "harvest" / "monobehaviours"
-    import _validators as V
-    matrix_obj = V.read_json(fx_stage5 / "extracted" / "locales" / "locale-matrix.json")
-    matrix_keys = V.locate_matrix_keys(matrix_obj)
-    rows_by_kind = {
-        "item": [
-            {"id": "item_alpha", "kind": "item",
-             "source": {"bundle": "items-general_assets_all.bundle",
-                        "pathId": 101, "class": "ItemConfig"}},
-            {"id": "item_beta", "kind": "item",
-             "source": {"bundle": "items-general_assets_all.bundle",
-                        "pathId": 102, "class": "ItemConfig"}},
-            {"id": "item_gamma", "kind": "item",
-             "source": {"bundle": "items-general_assets_all.bundle",
-                        "pathId": 103, "class": "ItemConfig"}},
-        ],
-        "room": [
-            {"id": "room_main", "kind": "room",
-             "source": {"bundle": "rooms_assets_all.bundle",
-                        "pathId": 201, "class": "RoomConfig"}},
-        ],
-    }
-    out_rows = fn(rows_by_kind, matrix_keys, monos, BUILD_ID)
-    by_id = {r["id"]: r for r in out_rows}
-    # exact-match joins are HARD
-    for eid in ("item_alpha", "room_main"):
-        assert eid in by_id, f"{eid} must join HARD via exact matrix-key equality"
-        assert by_id[eid]["joinInferred"] is False
-        errs = validate_availability_row(by_id[eid], where=f"{eid}: ")
-        assert not errs, errs
-        assert by_id[eid]["fieldPresence"], f"{eid}: fieldPresence must be populated"
-    # convention-shaped joins carry inferred + method naming the convention
-    conv = [r for r in out_rows if r.get("joinInferred") is True]
-    assert conv, "no convention-shaped join produced — inferred branch dead"
-    for r in conv:
-        assert r["joinMethod"], "joinInferred=true requires joinMethod"
-    # prose-only entity never joins (procedure step 4: no other path)
-    assert "item_gamma" not in by_id
+    scopes = [mod] + ([getattr(mod, "tc")] if hasattr(mod, "tc") else [])
+    survivors = []
+    for scope in scopes:
+        for name in JOIN_NAMES:
+            if hasattr(scope, name):
+                survivors.append(f"{getattr(scope, '__name__', 'tc')}.{name}")
+    assert not survivors, (
+        "retired availability builder still resolvable on stage 5: "
+        f"{survivors} — piece-07 §5 removal hasn't landed")
 
 
-def test_availability_join_semantics(stage5_run):
-    """Join procedure (pinned): exact matrix-key equality -> joinInferred:false;
-    convention-shaped match -> true + method; no other path."""
-    r, ext = stage5_run
-    if r.returncode != 0:
-        pytest.skip("stage 5 did not complete")
-    avail_path = ext / "relinks" / "locale_availability.jsonl"
-    assert avail_path.exists(), "stage 5 is sole owner and must emit locale_availability.jsonl"
-    rows = read_jsonl(avail_path)
-    by_id = {row["id"]: row for row in rows}
-
-    for eid in HARD_JOIN_IDS:
-        assert eid in by_id, (
-            f"entity {eid!r} carries a field whose value EXACTLY equals a matrix key "
-            "— it must join HARD (joinInferred:false)")
-        row = by_id[eid]
-        assert row["joinInferred"] is False, f"{eid}: exact match must be joinInferred=false"
-        errs = validate_availability_row(row, where=f"availability[{eid}]: ")
-        assert not errs, f"availability-row contract violations: {errs}"
-        fp = row["fieldPresence"]
-        assert isinstance(fp, dict) and fp, (
-            f"{eid}: fieldPresence must be populated (locale -> joined fields)")
-        for loc, fields in fp.items():
-            assert loc in _LOCALES_SET(), f"{loc!r} is not one of the 13 locales"
-            assert all(isinstance(f, str) for f in fields)
-
-    # convention branch reachable: item_beta_title / node_research_labl are
-    # <entityId>_<role> shapes whose entity id exists but exact key differs
-    inferred_seen = [(eid, row) for eid, row in by_id.items()
-                     if row.get("joinInferred") is True]
-    assert inferred_seen, (
-        "no convention-shaped join found — the inferred branch of the pinned join "
-        "procedure never fired (item_beta/node_research fixtures target it)")
-    for eid, row in inferred_seen:
-        assert row["joinMethod"], f"{eid}: joinInferred=true requires joinMethod naming the convention"
-
-    # prose-only entity must NOT appear (no other association path exists)
-    assert "item_gamma" not in by_id, \
-        "item_gamma's prose field must not join — step 4 of the procedure: no other path"
-
-    # availableLocales ⊆ the 13 BCP-47 locales on every row
-    valid = set(_LOCALES_SET())
-    for row in rows:
-        for field in ("availableLocales", "namedLocales"):
-            v = row.get(field) or []
-            unknown = [x for x in v if x not in valid]
-            assert not unknown, f"{field} carries non-BCP-47 values {unknown}"
-
-
-def _LOCALES_SET():
-    from _validators import LOCALE_TABLE
-    return set(LOCALE_TABLE.values())
-
-
-def test_availability_regenerated_every_run(fx_stage5, tmp_path_factory):
-    """Sole-owner regeneration: tamper/deletion is repaired to byte-identical."""
+def test_availability_emission_retired_byte_untouched(fx_stage5,
+                                                      tmp_path_factory):
+    """piece-07 §5 / arbiter R4 handover (supersedes piece-1 Rev 2/R3 and
+    piece-2 §R4 ownership pins): stage `locale-proof` is the SOLE writer of
+    relinks/locale_availability.jsonl. An isolated `--only
+    emit-stub-datasets` run must leave that path BYTE-UNTOUCHED — whatever
+    it holds (v1 rows, v2 rows, anything) — while its other outputs keep
+    behaving identically. The old 'regenerated on every run' demand is
+    retired together with the emission itself."""
     from conftest import seeded_extracted_root
-    ext1 = seeded_extracted_root(fx_stage5, tmp_path_factory.mktemp("reg1"))
-    ext2 = seeded_extracted_root(fx_stage5, tmp_path_factory.mktemp("reg2"))
-    r1 = run_stage5(fx_stage5, ext1)
-    assert r1.returncode == 0, r1.stdout + r1.stderr
-    good = (ext1 / "relinks" / "locale_availability.jsonl").read_bytes()
 
-    # leg A: delete the file entirely, rerun -> regenerated
-    avail2 = ext2 / "relinks" / "locale_availability.jsonl"
-    r2 = run_stage5(fx_stage5, ext2)
+    ext = seeded_extracted_root(fx_stage5, tmp_path_factory.mktemp("retire"))
+    r = run_stage5(fx_stage5, ext)
+    assert r.returncode == 0, r.stdout + r.stderr
+    avail_path = ext / "relinks" / "locale_availability.jsonl"
+    before = avail_path.read_bytes() if avail_path.exists() else None
+    r2 = run_stage5(fx_stage5, ext, "--force")
     assert r2.returncode == 0, r2.stdout + r2.stderr
-    assert avail2.read_bytes() == good, "clean rerun diverged from first run"
+    after = avail_path.read_bytes() if avail_path.exists() else None
+    assert after == before, (
+        "stage 5 still WRITES relinks/locale_availability.jsonl — the piece-07 "
+        "§5 emission removal hasn't landed "
+        f"(before={_short(before)} after={_short(after)})")
 
-    avail2.unlink()
-    r3 = run_stage5(fx_stage5, ext2)
-    assert r3.returncode == 0, r3.stdout + r3.stderr
-    assert avail2.exists(), "deleted locale_availability.jsonl was NOT regenerated on rerun"
-    assert avail2.read_bytes() == good, "regenerated availability file is not byte-identical"
 
-    # leg B: truncate it, rerun -> repaired
-    avail2.write_bytes(b'{"broken": tru')
-    r4 = run_stage5(fx_stage5, ext2)
-    assert r4.returncode == 0, r4.stdout + r4.stderr
-    assert avail2.read_bytes() == good, "truncated locale_availability.jsonl not repaired"
+def _short(b):
+    if b is None:
+        return "(absent)"
+    import hashlib
+    return f"{len(b)}B#{hashlib.sha256(b).hexdigest()[:12]}"
+
+
+def test_availability_refusal_guard_on_populated_target(fx_stage5,
+                                                        tmp_path_factory):
+    """Refusal guard, CALLER-SCOPED TO STAGE 5: a stage-5-originated write
+    against a target holding populated non-v1/non-empty content exits 1
+    NAMING the conflict and leaves the file byte-intact. Stage locale-proof's
+    own v2 rewrites are NOT refused (caller scoping — see test_stage9's
+    double-run legs)."""
+    from conftest import seeded_extracted_root
+
+    def _v2_rows():
+        rows = []
+        for kind, fname in sorted(KIND_TO_FILE.items()):
+            rows.append({"kind": kind, "id": f"v2_probe_{kind}",
+                         "availableLocales": ["en"], "partialLocales": [],
+                         "namedLocales": [], "identityToPivotLocales": [],
+                         "fieldPresence": {}, "buildId": BUILD_ID})
+        return rows
+
+    ext = seeded_extracted_root(fx_stage5, tmp_path_factory.mktemp("guard"))
+    from _validators import write_jsonl
+    seeded = write_jsonl(ext / "relinks" / "locale_availability.jsonl",
+                         _v2_rows())
+    payload = seeded.read_bytes()
+    r = run_stage5(fx_stage5, ext, "--force")
+    assert r.returncode == 1, (
+        f"a stage-5-originated write against a populated v2 availability "
+        f"file must refuse exit 1 naming the conflict, got rc={r.returncode}\n"
+        f"{r.stdout[-700:]}{r.stderr[-700:]}")
+    combined = (r.stdout + r.stderr).lower()
+    assert "conflict" in combined or "refus" in combined or \
+        "availability" in combined, combined[-500:]
+    assert (ext / "relinks" / "locale_availability.jsonl").read_bytes() == \
+        payload, "refused run truncated or rewrote the populated file"
 
 
 def test_identifier_preservation_sample_policy(stage5_run):

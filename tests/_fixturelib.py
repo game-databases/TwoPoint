@@ -562,7 +562,26 @@ def write_seed_probe_bundles(directory: Path) -> dict[str, Path]:
 
 STAGE_ARTIFACTS = ("verify-client", "decompile", "harvest-catalog",
                    "harvest-bundles", "localisation", "emit-stub-datasets",
-                   "relink")  # piece-02 Revision 7: seventh stage, appended
+                   # piece-02 Revision 7: seventh stage, appended
+                   "relink",
+                   # piece-07 §10: locale-proof upstream set (stage-6 OUTPUTS
+                   # + locales/stubs/roster/identity), synthetic, no Unity bytes
+                   "locale-proof",
+                   # piece-03 §3/§8: maps upstream set (scenario + LevelConfig
+                   # dumps, door validators, brushes, bridges READ-ONLY,
+                   # registry, catalog guid keys, dump.cs slice) — appended so
+                   # every earlier stage index stays stable
+                   "maps",
+                   # piece-06 §3: media upstream set (stubs ×9 + catalogue +
+                   # container/cab bridges + entity_asset_guid + externals),
+                   # synthetic, zero resolvable names (F4 hostless lane)
+                   "media",
+                   # piece-04 §3: stage-8 logic upstream set (stubs ×9 +
+                   # harvest-direct course/student raws, id-registries,
+                   # class-hierarchy 24-member taxonomy, relinks pair files
+                   # + i2 registry + entity_locale, bridges, externals) —
+                   # appended so every earlier stage index stays stable
+                   "logic")
 
 
 def build_tree(out: Path, stage: str, *, full_scale=False, metadata_version=27) -> Path:
@@ -587,6 +606,18 @@ def build_tree(out: Path, stage: str, *, full_scale=False, metadata_version=27) 
         import _relinklib
         _relinklib.build_relink_upstream(extracted)
         _relinklib.stamp_probe_headers(out)
+    if stage == "locale-proof":  # piece-07 §10: §4 upstream set, synthetic
+        import _prooflib
+        _prooflib.build_locale_proof_upstream(extracted)
+    if stage == "maps":  # piece-03 §3/§8 upstream set, synthetic (TestWriter)
+        import _mapslib
+        _mapslib.build_maps_upstream(extracted)
+    if stage == "media":  # piece-06 §3 upstream set, synthetic (TestWriter)
+        import _medialib
+        _medialib.write_media_upstreams(extracted)
+    if stage == "logic":  # piece-04 §3 stage-8 upstream set (TestWriter)
+        import _logiclib
+        _logiclib.augment_fx_tree(out)
     return out
 
 
