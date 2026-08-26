@@ -54,6 +54,7 @@ data; extraction runs in place).
 | arbiter-001 | 11-item accepted-change ruling on the spec | **done** — all applied by Revision 2 |
 | fixer-003 | Two one-line residuals on Revision 2 | **done** — orchestrator spot-checked both lines (`9575203`) |
 | codewriter-001 · testwriter-001 | Piece-1 build pair: pipeline impl ∥ test suite, blind to each other | **done** — C0 closed |
+| piece-02 chain | Scout→Documentator→Reviewer×2→Arbiter→blind pair→integration→review→arbiter→fix session (F1–F14) | **done** — formally closed 2026-08-26 |
 | executor-001 | Real-corpus stage run → 3 client-reality findings | **done** — Rev 4 amendments |
 | executor-002 | Real-corpus re-run post-R4 | **blocked** — launch config lacked exec + A:\ grant; zero writes, clean read-only audit of `de04c7e` |
 | codefixer-006 | R5–R8 catalog-decoder root-cause round | **done-as-parked** — session write-denied; patch transcribed |
@@ -65,6 +66,28 @@ nothing work-blocking.
 
 ## Log
 
+- 2026-08-26: **PIECE-02 FORMALLY CLOSED — review round + full fix list
+  landed and independently verified.** Review pair: codereviewer FIX-
+  REQUIRED (6 findings) + testreviewer GAPS-REQUIRED (9 gaps); arbiter
+  confirmed all but two sub-claims (corrected by measurement: slug
+  fields are 100% null, prefix-strip resolves only 1/417 — bar-3's real
+  lever is alias-authored/internal-id inputs, routed to the owner as an
+  open question). Fix session executed **F1–F14 across 15 commits**
+  (`532974d3`…`4380c0d5`): destination-derived residue attribution,
+  matrix↔rows reconciliation, tooltip-spawner documented-gap honesty,
+  competitor samples+floor semantics, carrier-found partial cell, AC4
+  sweeps both lanes, mapper/overlay legs (+2 latent defects), cabRows
+  reconcile, exit-3 test, run-section key sweep, INVALID tripwire,
+  scene terminal pin, spec §5.1 delta note, 14-item teeth batch.
+  Regenerated artifacts: matrix honesty restored (**24 modeled / 3
+  partial / 73 missing**, was 20/6/74); R2-attribution chargedRefs=0 of
+  2391 ledger rows; bar-3 honestly `sourcesApplied=0`. Orchestrator
+  independent checks: artifact spot-checks green on every arbiter bar;
+  suites green. Bookkeeping `8bdf47cc` (scout report + competitor
+  inputs committed per spec ruling). Note: extracted JSON/JSONL is
+  local-only by pack gitignore (md-only tracking) — game data never
+  enters git. NEXT: piece-03 map geometry (scout in flight), logic
+  layer, contracts (#10), PROOF.md (#11).
 - 2026-08-25: **PIECE-02 RELINKING LANDED (pending formal review
   round).** Spec SPEC-READY (`1ec82f59`, reviewer bounce F1–F12
   applied) + Revision 7 registration (`6b601835`) + competitor models
