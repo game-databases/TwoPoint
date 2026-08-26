@@ -131,8 +131,11 @@ contracts/families/*.mdx     HUMAN per-family contracts (prose judgments +
                              the blocks; stale prose numbers fail (V-D3).
 contracts/red-registry.json  Deliberately-red validators awaiting their
                              fixing amendment (§9). Committed input.
-tools/check_contracts.py     Runner + validator implementations. Read-only
-                             over extracted/.
+tools/stage10_check_contracts.py
+                             Runner + validator implementations
+                             (explicit-10 naming per the orchestrator
+                             stage-index registry, F1). Read-only over
+                             extracted/.
 tests/test_contracts_*.py    Hostless fixture lane + mutation harness.
 ```
 
@@ -145,24 +148,78 @@ change history.
 ### 3.3 Runner integration
 
 - ONE engine, two spellings (GAME=/`TPC_GAME_DIR` precedent):
-  - standalone: `python tools/check_contracts.py [--root <extracted>]
-    [--scan-catalog] [--warn-stale]` ;
+  - standalone: `python tools/stage10_check_contracts.py
+    [--root <extracted>] [--scan-catalog] [--warn-stale]` ;
   - make target: `make contracts` (delegates to the same module);
   - pipeline: registered ADDITIVELY in `tools/tpc_common.py::STAGES` as
-    stage id `check-contracts` AFTER `relink` (piece-01 Revision 7
-    precedent; the existing seven stages byte-behave identically). The
-    stage is NON-EMITTING: declared outputs `[]`, stamp records identity
+    stage id `check-contracts` at its CANONICAL INDEX 10 (orchestrator
+    stage-index registry: relink=6 · maps=7 · logic=8 · locale-proof=9 ·
+    contracts=10 · media=11 · search-corpus=12), script
+    `tools/stage10_check_contracts.py` — explicit-10 naming, slot taken
+    whether or not siblings 7–9 have landed yet (`--list` renders
+    entries by index, gaps allowed). Piece-01 Revision 7's additive
+    pattern applies: existing stages byte-behave identically. The stage
+    is NON-EMITTING: declared outputs `[]`, stamp records identity
     script-hash + exitCode only, run section appended by the runner like
     every stage. Missing upstream artifacts ⇒ exit 3 naming them
-    (runner pre-check, piece-1 pattern). `--list` enumerates EIGHT
-    stages.
+    (runner pre-check, piece-1 pattern). Every `--list` assertion in
+    this piece is SUBSET-AND-ORDER — contains `verify-client` …
+    `relink` … `check-contracts` in canonical order — never a frozen
+    total stage count, so sibling registrations at indices 7–9 can
+    never spuriously fail this suite (F1).
 - Heavy-artifact policy: the runner NEVER parses `catalog.json`
-  (397,431,200 B). Catalog-level pins are checked against an EXTENDED
-  emit-time mini-report (§8, V-I2/V-R6) — the pattern
-  `catalog-coverage.json` already uses — persisted inside stage 2 where
-  the document is already parsed. `--scan-catalog` is an explicit audit
-  lane that streams the artifact once (`raw_decode`, verifyA method) and
-  re-derives the mini-report; default runs refuse without it.
+  (397,431,200 B) on a default run. Default runs verify catalog-level
+  pins solely against a PERSISTED emit-time sidecar and refuse (exit 3,
+  inputs-missing) if it is absent; `--scan-catalog` is the explicit
+  audit lane that streams `catalog.json` once (`raw_decode`, verifyA
+  method) and re-derives that sidecar byte-for-byte (F9).
+- **Sidecar contract** (load-bearing for five validators; specified in
+  full here so neither writer invents it — F3):
+  `extracted/addressables/catalog-mini-report.json`, written by stage 2
+  post-parse where the document is already in memory (temp-file +
+  atomic-rename; sorted keys and arrays; UTF-8 + LF; deterministic;
+  local-only like every emitted dataset):
+
+  ```json
+  {"meta": {"buildId": 20226581, "addressablesVersion": "1.21.10",
+            "settingsHash": "<…>", "sourceBytes": 397431200,
+            "catalogSha256": "<sha256 of catalog.json at emit time>"},
+   "counts": {"keysTotal": 56660, "distinctKeys": 56659,
+              "kindCounts": {"address": 2516, "guid": 54144},
+              "nullBundleRows": {"total": 45312, "guidKind": 43480,
+                                 "addressKind": 1832},
+              "nullAddressRows": 329, "rowsWithNoDependencies": 11491,
+              "dependencyEdgesTotal": 3939716},
+   "duplicateKeys": [{"key": "f952c082cb03451daed3ee968ac6c63e",
+                      "rowCount": 2, "rowsByteIdentical": true,
+                      "kind": "guid",
+                      "address": "Style Sheets/Default Style Sheet"}],
+   "bundleUniverse": {"referencedRelpaths": ["<176 roster-sorted>"],
+                      "bundlesUnreferenced": [],
+                      "outOfRosterFileReferences": ["<19>"],
+                      "danglingDependencyKeys": []},
+   "guidIndex": {"<guid>": [{"address": "<…>", "kind": "guid"}]},
+   "nullBundleAddresses": ["<every key-row address with bundle:null, "
+                           "sorted — ≈45,312 entries>"]}
+  ```
+
+  Per-validator input ruling — which side of AC6 each reads:
+
+  | Validator | Reads | Why this side |
+  |---|---|---|
+  | V-I2 | `duplicateKeys` + `counts.distinctKeys` | dupe identity + byte-identity flag only |
+  | V-R6 | `counts` + `bundleUniverse` (+ catalog-coverage cross-check) | internal-sum consistency, zero catalog touch |
+  | V-X2 (carve-out leg) | `nullBundleAddresses` membership | per-address bundle-null answer as an O(1) set test |
+  | V-L1 (RED-1 green path) | `nullBundleAddresses` + `guidIndex` candidates | termination classification without parsing 397 MB |
+  | V-R8 (CLIENT-GATED) | `guidIndex` as the R3 step-1 candidate map | bit-exact float replay needs the FULL guid→[{address}] map (~54,143 distinct keys) — no summary shape can reproduce `resolveRate*`; sized honestly as a local sidecar |
+
+  `meta.catalogSha256` ties the sidecar to its source: default runs
+  compare it against the hash recorded in
+  `.stage-stamps/harvest-catalog.json` (no rehash); `--scan-catalog`
+  recomputes everything including the hash. AC6's agreement test has
+  two well-defined sides: the streaming pass rebuilds the ENTIRE
+  mini-report and canonical-JSON byte-compares it against the persisted
+  file.
 - Determinism inherited unchanged: sorted enumeration, UTF-8 + LF, no
   wall-clock in outputs, byte-identical reruns of the report on an
   unchanged tree.
@@ -188,6 +245,7 @@ PASS [V-S3] stubs/config.jsonl 8430/8430 rows conform
 FAIL [V-R1] relinks/matrix.json expected=24583 measured=24581 hint=Σ cardinality.edges
 EXPECTED-RED [V-L1] red-registry entry=uncontained-address-ledger fix=piece-05-amendments
 PIN-STALE [V-D4] pin=buildScope.buildId pinnedBuild=20226581 currentBuild=<new>
+PIN-MISMATCH [V-S2] pin=families.stage0.roster.dirClass expected="158/10/8" measured="157/10/8"
 INFO [V-S11] enum arm 'logic' declared, 0 occurrences
 {"passed":N,"failed":N,"expectedRed":N,"stale":N,"info":N,"exit":"0|1|2"}
 ```
@@ -195,7 +253,10 @@ INFO [V-S11] enum arm 'logic' declared, 0 occurrences
 Every FAIL names: validator id, artifact, PINNED expectation, MEASURED
 value, one-line hint. That quadruple is the failure-output shape for all
 validators in §8; per-validator cells below define only the
-expected/measured payloads.
+expected/measured payloads. Two non-FAIL loud spellings share the same
+grammar (F8): `PIN-STALE` = the pin's build scope differs from the
+corpus build (§3.5); `PIN-MISMATCH` = the measured value differs from
+the pinned constant AT the pinned build. Both exit 1.
 
 ### 3.5 Derived-over-transcribed; buildScope and PIN-STALE
 
@@ -246,12 +307,16 @@ Coverage matrix (● = pins apply; ○ = explicitly none):
 |---|---|---|---|---|---|
 | stage 0 identity + roster | ● | ● | ● | ○ | ○ |
 | stage 1 decompile outputs | ● | ● | ○ | ● | ○ |
-| stage 2 catalog trio | ● | ● | ● | ○ | ● (warning ledgers) |
+| stage 2 catalog trio | ● | ● | ● | ● | ● (warning ledgers) |
 | stage 3 harvest + media | ● | ● | ● | ○ | ○ |
 | stage 4 locales + reports | ● | ● | ○ | ● | ○ |
-| stage 5 stubs + ledgers | ● | ● | ● | ○ | ● |
+| stage 5 stubs + ledgers | ● | ● | ● | ○ | ● (shapes/sorts/caps only) |
 | stage 6 relinks (pairs, bridges, registry/locale, reports, ledgers, coverage, competitor) | ● | ● | ● | ● | ● |
 | EXTRACTION-LOG run sections + `.stage-stamps/` | ○ | ● (counter↔artifact, IN UNITS) | ○ | ● | ● (contributor enumeration) |
+
+Stage-5's L cell is shapes/sorts/caps ONLY: `_absences` and
+`_unmapped-families` are permanent-by-design ledgers and are
+deliberately NOT exit-2 contributors — see §7 item 2 (F2).
 
 Reserved now, pinned by later pieces (names fixed here so they inherit
 the taxonomy instead of inventing their own):
@@ -295,9 +360,12 @@ UNIT lives only in code. Pins:
    `catalog-coverage.json`) gains a `counterUnits` object mapping each
    numeric field to a unit string from the frozen vocabulary
    `reference-events | deduped-rows | distinct-keys | emission-events |
-   walked-terms | skipped-cells | bytes | objects`. Emitted by the
-   report's own generator (deterministic static dict + counts).
-   Validator V-U1 enforces presence + vocabulary membership.
+   walked-terms | skipped-cells | bytes | objects`. Emitted by EACH
+   report's own generator (deterministic static dict + counts) — three
+   emitters own the four reports: stage 2 (`catalog-coverage.json`),
+   stage 4 (`base-overlay-report.json`), stage 6 (`guid_bridge_report.json`,
+   `locale_join_report.json`). Validator V-U1 enforces presence +
+   vocabulary membership.
 2. **Run-section keys get inline unit comments.** Every EXTRACTION-LOG
    counter that names an emitted file states its unit beside the key
    (stage-4 `rows` becomes `rows(emission-events)` or equivalent;
@@ -315,10 +383,19 @@ UNIT lives only in code. Pins:
    started this: logged `rows` are emission events, files hold distinct
    keys, and the difference (+5/locale) is REAL DATA. Enforcement is
    structural, not aspirational: every reconciliation registered in
-   `pins.json` declares `leftUnit`/`rightUnit`; the runner REFUSES TO
-   LOAD a reconciliation whose units differ without a declared transform
-   (V-U3), and the fixture lane asserts the refusal fires. There is no
-   code path left that can express the naive pin.
+   `pins.json` declares `leftUnit`/`rightUnit` from the frozen
+   vocabulary and — WHEN the two units legitimately differ — a NAMED
+   TRANSFORM drawn from a new `transforms:` section of
+   `contracts/counter-units.mdx`. The runner REFUSES TO LOAD any
+   unit-differing reconciliation whose transform name is absent from
+   that registry (exit 1 at load time, BEFORE any check runs — V-U3);
+   the fixture lane proves the refusal fires on exactly the mixed-unit
+   subtraction shape below while its transform is undeclared, and that
+   declaring the transform lets it load. First registered transform
+   (it licenses V-U2's flagship identity and nothing else):
+   `events-minus-distinct-lines: emission-events − distinct-key-lines
+   == overwrite-events`. With the gate at load time there is no code
+   path left that can express the naive pin.
 
 ## 7. Ledger-gap pins
 
@@ -343,21 +420,32 @@ residual gaps:
    is RED today, GREEN after the amendment (§9 RED-1).
 2. **`registryMisses` stays an exit-2 contributor surfaced via
    `locale_join_report.json`** (F14). The exit-code ledger contract
-   (V-I8) inventories it alongside the file-backed ledgers: exit 2 iff
-   any of `_absences.jsonl`, `_unmapped-families.jsonl`,
-   `_dangling_guids.jsonl`, `_unresolved_pptrs.jsonl`,
-   `_uncontained_addresses.jsonl`,
+   (V-I8) inventories it alongside the file-backed ledgers. DECLARED
+   EXIT-2 CONTRIBUTORS — the complete iff-set:
+   `_dangling_guids.jsonl` (∃ `unresolved-open` verdict),
+   `_unresolved_pptrs.jsonl` (any row),
+   `_uncontained_addresses.jsonl` (any row),
    `locale_join_report.registryMisses > 0`,
-   `catalog-coverage.outOfRosterFileReferences.count > 0` (or
-   `danglingDependencyKeys.count > 0`), or a competitor terminal floor
-   row is non-empty — with the run section naming every contributor +
-   size. Today: contributors = dangling 1,137 · unresolved pptrs 2,391
-   · registryMisses 5 · outOfRoster 19 · floor-unmet ⇒ exit 2, as
-   designed. PROOF (#11) consumes this exact inventory.
+   `catalog-coverage.outOfRosterFileReferences.count > 0` ∨
+   `danglingDependencyKeys.count > 0`, and a competitor terminal
+   floor-unmet row — with the run section naming every contributor +
+   size. DELIBERATELY NOT CONTRIBUTORS: `_absences.jsonl` and
+   `_unmapped-families.jsonl`. Both are permanent-by-design ledgers —
+   components are never entities and engine/primitive classes stay
+   honestly unmapped on every conceivable corpus (768-ish rows forever)
+   — so counting them would make relink exit 0 unreachable for all
+   time, exactly the outcome piece-02 §5.7/AC7 rejects ("populated
+   never demands zero gapped cells"). Their honesty is pinned instead
+   by V-S9 shapes + V-L2 sorts + V-I7 caps + stage-5's own exit
+   contract. Today: contributors = dangling 1,137 · unresolved pptrs
+   2,391 · registryMisses 5 · outOfRoster 19 · floor-unmet ⇒ exit 2,
+   as designed — and exit 0 remains REACHABLE the day those close.
+   PROOF (#11) consumes this exact inventory.
 
 ## 8. Validator catalog
 
-Names are exact; scripts implement them in `tools/check_contracts.py`.
+Names are exact; scripts implement them in
+`tools/stage10_check_contracts.py`.
 All validators are pure-read over `extracted/` (zero-write discipline,
 AC4). Expected values marked *(c)* are build-scoped constants
 (`"kind":"constant"` in pins); everything else is a derived identity
@@ -374,10 +462,10 @@ AC4). Expected values marked *(c)* are build-scoped constants
 | V-S5 | locale-rowshape | `locales/*.jsonl` ×14 | ∀ rows keyset == `{id,text}`; file set == 13 codes + `base-overlay` | 200,912 + 15,672 lines *(c)* |
 | V-S6 | flat-rowshapes | export-manifest, externals, media-catalogue, i2_term_registry, bridges/{cab,container}_index, ui_link_coverage | exact keyset per family on 100% of rows | manifest 167,069 · externals 222 · media 47,939 · registry 15,675 · cab 222 · container 49,855 · coverage 344 *(c)* |
 | V-S7 | matrix-cellshape | `relinks/matrix.json` | meta blocks present; 100 cells; per-status required keys; enums ⊆ frozen vocabularies; `pairs[]` order == row-major over `meta.nodeUniverse.nodes` (programmatic permutation check) | 100 cells; 10 nodes *(c)* |
-| V-S8 | report-shapes | catalog-coverage, settings.snapshot, base-overlay-report, guid_bridge_report, locale_join_report, assembly-index | exact field lists; `compositionPolicy` ∈ 4-enum; evidence counter COUNT == 15 names *(c)*; bridge report == 8 fields; join report field list; assembly-index stamp block carries `hierarchyRowCount` + counting-method string | as F6/F8/F11/F14/F15 *(c)* |
-| V-S9 | ledger-rowshapes | `_absences`, `_unmapped-families`, `_dangling_guids`, `_unresolved_pptrs`, `_uncontained_addresses` | exact keysets; `sampleRefs`/`samples` arrays present; `reason`/`evidence`/`verdict` ∈ declared vocabularies | shapes as F13/§7 *(c)* |
+| V-S8 | report-shapes | `addressables/catalog-mini-report.json` (§3.3 schema), catalog-coverage, settings.snapshot, base-overlay-report, guid_bridge_report, locale_join_report, assembly-index | exact field lists per artifact; mini-report top-level keys == `{meta,counts,duplicateKeys,bundleUniverse,guidIndex,nullBundleAddresses}` with `meta.catalogSha256` present; `compositionPolicy` ∈ 4-enum; overlay evidence counter COUNT == 15 names *(c)*; bridge report == 8 fields; join report field list; assembly-index stamp block carries `hierarchyRowCount` + counting-method string | as §3.3 + F6/F8/F11/F14/F15 *(c)* |
+| V-S9 | relation-and-ledger-rowshapes | ledgers `_absences`, `_unmapped-families`, `_dangling_guids`, `_unresolved_pptrs`, `_uncontained_addresses`; PLUS relation files `entity_locale.jsonl`, `entity_asset_guid.jsonl`, `locale_term_entity.jsonl`, and `competitor_applied.jsonl` | exact keysets per file (pair-schema rows for the two pair-shaped relations; `{termKey,usages[],locales,buildId}` reverse shape; competitor MEASURED shape — `samples/terminal/floorRequired/sourcesApplied/unblock` present where measured, spec'd `wall{}` object on 0 rows: G5 pinned HERE); `sampleRefs`/`samples` arrays present; `reason`/`evidence`/`verdict` ∈ declared vocabularies | shapes as F13/F14/§7 *(c)* |
 | V-S10 | filename-grammars | harvest trees, `harvest/export-manifest.jsonl`, `relinks/*` | every export stem matches signed-pathId grammar `_(\|-)\d+$` (Rev 6 lesson); `outRelPath` spellings conform; `relinks/` holds ONLY the owned file set (no strays) | 167,069 stems conform; owned-set equality *(c)* |
-| V-S11 | enum-domains | all enum-bearing families | ∀ values ∈ declared domain; separately INFO-list DECLARED∧¬OCCURRING arms (method `i2-termid-registry` etc.; matrix `logic`; joinKeys 2; dangling verdicts 3) — growth into an arm prints INFO, out-of-vocabulary FAILS | occurring sets as F3/F4/F13 *(c)* |
+| V-S11 | enum-domains | all enum-bearing families, occurrence counted PER FAMILY | ∀ values ∈ declared domain; separately INFO-list DECLARED∧¬OCCURRING arms per family — pair files: methods `i2-termid-registry` / `name-convention:<rule>` / `code-analysis:<descriptor>` / `competitor-model:<source-id>` cold (the 4 unexercised arms live ONLY here); matrix: mechanism `logic` cold, joinKeys `LocalisedString(…)->I2-termID->Term-key` + `name-equality(<rule>)` cold; `_dangling_guids`: 3 verdict arms cold; `entity_locale`: method `i2-termid-registry` OCCURRING on all 10,964 rows — NEVER listed cold (F5); growth into an arm prints INFO, out-of-vocabulary FAILS | occurring sets as F3/F4/F13 *(c)* |
 | V-S12 | buildid-coverage | every family carrying `buildId` | ∀ rows/artifacts: present ∧ == `identity.buildId` | 100% everywhere |
 | V-S13 | sort-orders | pair files, `_unresolved_pptrs`, `_dangling_guids`, `_uncontained_addresses`, matrix, catalog mini-report, roster, container/cab indexes | lexicographic by pinned keys (pair = dedup tuple; pptr = 5-tuple; guids/address = their key; roster = relpath; container = (bundle,address)) | all sorted |
 
@@ -385,14 +473,14 @@ AC4). Expected values marked *(c)* are build-scoped constants
 
 | ID | Name | Inputs | Check | Expected @20226581 |
 |---|---|---|---|---|
-| V-I1 | natural-key-uniqueness | stubs/id-per-kind, roster.relpath, export-manifest.outRelPath, container.address, (bundle,cab), (bundle,sourceFile), locale id per file, registry.termId, pair dedup tuple | duplicates == 0 per key | 176 · 167,069 · 49,855 · 222 · 222 · 15,675 · 24,583 all unique |
-| V-I2 | catalog-duplicate-key-exception | stage-2 extended mini-report (§3.3); `--scan-catalog` re-derives | distinct(key) == rows−1; exactly 1 duplicated value; its ≥2 rows byte-identical under canonical JSON | 56,660/56,659; dupe `f952c082cb03451daed3ee968ac6c63e` ×2 identical *(c)* |
+| V-I1 | natural-key-uniqueness | stubs/id-per-kind (9 kinds), roster.relpath, export-manifest.outRelPath, container.address, (bundle,cab), (bundle,sourceFile), locale id per file (14 files), registry.termId, pair dedup tuple | duplicates == 0 per key | stub ids unique within ALL 9 kinds (Σ 13,443) · relpath 176 · outRelPath 167,069 · address 49,855 · cab tuple 222 · externals tuple 222 · locale ids unique in EVERY one of the 14 files (Σ 216,584 lines) · termId 15,675 · dedup tuple 24,583 |
+| V-I2 | catalog-duplicate-key-exception | `addressables/catalog-mini-report.json` `duplicateKeys` + `counts.distinctKeys` (§3.3); `--scan-catalog` re-derives | distinct(key) == rows−1; exactly 1 duplicated value; its ≥2 rows byte-identical under canonical JSON | 56,660/56,659; dupe `f952c082cb03451daed3ee968ac6c63e` ×2 identical *(c)* |
 | V-I3 | ui-coverage-xor | `ui_link_coverage.jsonl` | status XOR: mapped ⇒ joins non-empty ∧ gapReason==null ∧ unblock==null; gap ⇒ gapReason+unblock non-empty ∧ joins empty | mapped 9 / gap 335 *(c)* |
 | V-I4 | matrix-structural-rules | `matrix.json` | partial∨missing ⇒ non-empty `unblock`; modeled ⇒ non-empty `pairFiles`; Σ cardinality.edges consistency delegated to V-R1 | 73+3 with unblock; 24 with pairFiles |
 | V-I5 | twin-bijection | `stubs/*.jsonl` | id ∋ `@<8hex>` ⟺ `fields.id` present; `fields.id` == suffix-stripped id | 17 ⇔ 17 (12/3/2) *(c)* |
 | V-I6 | byte-match-nonempty | last emit-stubs run section | `identifierByteMatch.checked > 0 ∧ mismatches == 0` (Rev 6 amendment 3 incident guard) | checked 2,128 *(c)* |
 | V-I7 | sample-caps | `_dangling_guids.sampleRefs`, `locale_join_report.unresolvedIds[].sampleRefs`, `_absences.samples` | array lengths ≤ pinned caps | ≤5 · ≤5 · ≤25 *(c)* |
-| V-I8 | exitcode-ledger-contract | §7 inventory ↔ last relink run section ↔ actual ledger files | declared-contributor list == computed non-empty set; sizes match; last relink exitCode == 2 iff set non-empty | contributors per §7 *(c)* |
+| V-I8 | exitcode-ledger-contract | §7 DECLARED iff-set ↔ last relink run section ↔ actual ledger files | declared-contributor list == computed non-empty set OVER THE §7 SET ONLY (permanent-by-design ledgers excluded — F2); sizes match; last relink exitCode == 2 iff that set is non-empty; exit 0 stays reachable | contributors per §7 Today line *(c)* |
 | V-I9 | ownership-single-writer | `pins.pathOwner` map + grep over `tools/*.py` write targets | each extracted/ path has exactly one writing script; `locale_availability.jsonl` → stage5 only; rest of `relinks/` → stage6 only; RELATIONS.md regenerated by relink only | map satisfied |
 
 ### Cross-family pins (V-X)
@@ -400,7 +488,7 @@ AC4). Expected values marked *(c)* are build-scoped constants
 | ID | Name | Inputs | Check | Expected @20226581 |
 |---|---|---|---|---|
 | V-X1 | stub-id-closure | pairs ↔ stubs | srcId/dstId (non-special dstKinds) ⊆ emitted stub ids, twins matched WITH suffix | 0 misses / 24,583 |
-| V-X2 | special-dstkind-closure | pairs ↔ registry/container/roster/catalog | `locale-term` ⊆ termKeys; `scene` ⊆ 26 roster scene ids IF any `*_scene.jsonl` exists (absence tolerated, scout G7); `asset` ⊆ container addresses MINUS the uncontained carve-out, and carve-out set == `_uncontained_addresses` population exactly | 0 misses; carve-out 5 addresses / 9 edge rows *(c)* |
+| V-X2 | special-dstkind-closure | pairs ↔ registry/`container_index`/roster/catalog-mini-report | `locale-term` ⊆ termKeys; `scene` ⊆ 26 roster scene ids IF any `*_scene.jsonl` exists (absence tolerated, scout G7); `asset` ⊆ container addresses MINUS the uncontained carve-out, carve-out membership decided by the sidecar's `nullBundleAddresses` (§3.3), and carve-out set == `_uncontained_addresses` population exactly | 0 misses; carve-out 5 addresses / 9 edge rows *(c)* |
 | V-X3 | bundle-name-closure | stub `source.bundle`, manifest `sourceBundle`, pair evidence bundles, catalog mini-report | normalized basename ∈ roster relpaths | 0 orphans (11 + 114 bundles) *(c)* |
 | V-X4 | axes-consistency | pairs ↔ stubs | `sourceAxes` present ⟺ ≥1 endpoint row carries `axes`; value == union of endpoint axes | holds on the 1 carrier row *(c)* |
 
@@ -409,14 +497,14 @@ AC4). Expected values marked *(c)* are build-scoped constants
 | ID | Name | Inputs | Check | Expected |
 |---|---|---|---|---|
 | V-U1 | units-inline-in-artifacts (**RED-3**) | guid_bridge_report, locale_join_report, base-overlay-report, catalog-coverage | `counterUnits` present; covers EVERY numeric field; values ∈ frozen unit vocabulary; bridge report's `resolvedTo*`/rates declare `reference-events` | ABSENT today → FAIL; green after §9 fix |
-| V-U2 | duplicate-keys-printed-and-persisted (**RED-2**) | localisation run section + `base-overlay-report.json.evidence` | per-locale `duplicateKeysOverwritten` PRINTED; persisted map + total; identity `rowsLogged == termsWalked − skippedEmpty` AND `rowsLogged − fileLines == duplicateKeysOverwritten` hold per locale | counter absent today → FAIL; green after §9 fix; then +5/locale *(c)* |
-| V-U3 | unit-typed-reconciliations | `pins.json.reconciliations[]` + runner self-lint | every reconciliation declares leftUnit/rightUnit from the frozen vocabulary; mismatched units without a declared transform ⇒ runner refuses to load (exit 1); fixture test proves the refusal fires | 0 unit-mismatched registrations |
+| V-U2 | duplicate-keys-printed-and-persisted (**RED-2**) | localisation run section + `base-overlay-report.json.evidence` | per-locale `duplicateKeysOverwritten` PRINTED; persisted map + total; identities `rowsLogged == termsWalked − skippedEmpty` AND `rowsLogged − fileLines == duplicateKeysOverwritten` hold per locale (the mixed-unit identity registers under the `events-minus-distinct-lines` transform, §6 item 4) | counter absent today → FAIL; green after §9 fix; then +5/locale *(c)* |
+| V-U3 | unit-typed-reconciliations | `pins.json.reconciliations[]` + `counter-units.mdx transforms:` registry + the runner load gate | every reconciliation declares leftUnit/rightUnit from the frozen vocabulary; differing units REQUIRE a transform name present in the registry, else the runner refuses to LOAD (exit 1 before any check runs); fixture proves refusal fires on the events-vs-lines shape pre-declaration and passes post-declaration | 0 undeclared mixed-unit registrations |
 
 ### Ledger-gap pins (V-L)
 
 | ID | Name | Inputs | Check | Expected |
 |---|---|---|---|---|
-| V-L1 | uncontained-address-ledger (**RED-1**) | `entity_asset_guid.jsonl` ↔ catalog mini-report ↔ `container_index.jsonl` ↔ `_uncontained_addresses.jsonl` | every asset row whose dstId has a catalog entry with `bundle:null` (equivalently: absent from container_index while catalog-resolvable) has ≥1 matching ledger row; ledger population == distinct uncontained addresses; every row carries reason `catalog-bundle-null-uninstalled-dlc` | ledger MISSING today → FAIL; green after §9 fix; then 5 rows / 9 edges *(c)* |
+| V-L1 | uncontained-address-ledger (**RED-1**) | `entity_asset_guid.jsonl` ↔ `addressables/catalog-mini-report.json` (`nullBundleAddresses`, §3.3) ↔ `bridges/container_index.jsonl` ↔ `_uncontained_addresses.jsonl` | every asset row whose dstId has a catalog entry with `bundle:null` (equivalently: absent from container_index while catalog-resolvable) has ≥1 matching ledger row; ledger population == distinct uncontained addresses; every row carries reason `catalog-bundle-null-uninstalled-dlc` | ledger MISSING today → FAIL; green after §9 fix; then 5 rows / 9 edges *(c)* |
 | V-L2 | ledger-sorts-and-shapes | all ledgers | sorts per V-S13; row shapes per V-S9; `_unresolved_pptrs` reason strings == the 2 pinned strings; `_dangling_guids` verdicts ⊆ 4-enum | 2,391 = 2,284+107; 1,137 all `unresolved-open` *(c)* |
 | V-L3 | registry-misses-exit2-contributor | `locale_join_report.json` ↔ run section | `registryMisses` counted as contributor (V-I8); `unresolvedIds` rows carry sampleRefs ≤5; count == 5 known IDs *(c)*, drift = PIN-MISMATCH | surfaced via locale_join_report.json |
 
@@ -438,16 +526,17 @@ AC4). Expected values marked *(c)* are build-scoped constants
 | V-R3 | media==carved-census | media-catalogue ↔ census carved classes | per-class count equality, 9 classes | == == on all 9 |
 | V-R4 | registry==matrix-keys | i2_term_registry ↔ locales/locale-matrix.json | bidirectional set diff == 0 over distinct termKeys | == == (15,672 today) |
 | V-R5 | reverse-index==entity-locale | locale_term_entity ↔ entity_locale | Σ usages == row count | == == (10,964 today) |
-| V-R6 | catalog-coverage-internal | extended mini-report | keysTotal == Σ kindCounts == 56,660 *(c)*; distinctBundlesReferenced == 176; unreferenced [] ; danglingDependencyKeys 0; internal sums consistent WITHOUT touching catalog.json | == == |
+| V-R6 | catalog-mini-report-internal | sidecar `counts` + `bundleUniverse` (+ catalog-coverage cross-check) | counts.keysTotal == Σ kindCounts == 56,660 *(c)*; counts.distinctKeys == keysTotal − len(duplicateKeys); referencedRelpaths == 176; unreferenced [] ; danglingDependencyKeys [] ; sums consistent WITHOUT touching catalog.json; catalog-coverage agrees with the sidecar on shared fields | == == |
 | V-R7 | roster==enumerated-bundles | roster ↔ filesystem walk of the three dirs | row count == enumerated `*.bundle` count; dirClass counts == expectedBundles | == == (176) |
-| V-R8 | guid-bridge-replay | stubs + catalog mini-report/index + container_index + roster via the pure seam `relink_util.run_guid_bridge` | replayed 7 fields == report bit-exact (floats included); universes reproduced (asset rows 15,630 membership; pair rows 3,746) — CLIENT-GATED lane | == == (values per F11) |
+| V-R8 | guid-bridge-replay | stubs + sidecar `guidIndex` (the FULL ~54,143-entry guid→[{address}] candidate map — §3.3 ruling) + container_index + roster via the pure seam `relink_util.run_guid_bridge` | replayed 7 fields == report bit-exact (floats included); universes reproduced (asset rows 15,630 membership; pair rows 3,746) — CLIENT-GATED lane | == == (values per F11) |
 
 ## 9. Red→green harness — the three confirmed breaks
 
 Post-corrections, exactly three defects remain real, measurable, and
 fixable; everything else in the scout's gap list became documentation
-(G4/G5 → §5/V-D1 and the competitor shape pinned as measured in V-S9's
-vocabulary work) or was retracted (G1's drift reading). The suite lands
+(G4 → §5/V-D1/V-D2; G5 → the `competitor_applied` rowshape leg of
+V-S9; G6 → V-I2 + §5 row 1) or was retracted (G1's drift reading). The
+suite lands
 with EXACTLY these three in `contracts/red-registry.json` — anything
 else unexpectedly red is a spec defect, not a finding:
 
@@ -485,17 +574,20 @@ contracts/                          # NEW — tracked by default policy (§3.1)
 
 extracted/relinks/
 └── _uncontained_addresses.jsonl    # NEW ledger (RED-1 fix) — local-only data
+extracted/addressables/
+└── catalog-mini-report.json        # NEW emit-time sidecar (local-only, §3.3)
 
-tools/check_contracts.py            # NEW runner + validators (read-only)
+tools/stage10_check_contracts.py    # NEW runner + validators (read-only; explicit-10 naming, F1)
 tests/test_contracts_*.py           # NEW hostless fixtures + mutation harness
 tests/build_fixture_tree.py         # += --stage check-contracts materialization
 Makefile                            # += contracts target
-run_all.py / tools/tpc_common.py    # += eighth stage registration (additive)
-tools/stage2_harvest_catalog.py     # += catalog mini-report extension (emit-time)
-tools/stage4_localisation.py        # += print+persist duplicateKeysOverwritten
-tools/stage6_relink.py              # += uncontained ledger + counterUnits + routing paragraph
+run_all.py / tools/tpc_common.py    # += stage id check-contracts registered at CANONICAL INDEX 10 (additive; gaps allowed while siblings 7–9 pend)
+tools/stage2_harvest_catalog.py     # += catalog-mini-report emission (§3.3) + catalog-coverage counterUnits
+tools/stage4_localisation.py        # += print+persist duplicateKeysOverwritten + base-overlay-report counterUnits
+tools/stage6_relink.py              # += _uncontained_addresses ledger + bridge/join-report counterUnits + RELATIONS.md routing paragraph
 README.md                           # layout row: contracts/ -> this piece
-docs/specs/piece-01-extraction-pipeline.mdx   # Revision 8 one-liner set (§3.3 stage, §10 layout note)
+docs/specs/piece-01-extraction-pipeline.mdx   # Revision 8 one-liner set (canonical stage-10 registration; layout note)
+docs/specs/piece-02-relinking.mdx             # Revision note (F10): §5.7 contributor iff-set per §7 resolution · §4 tree += _uncontained_addresses.jsonl · §R7 generator template += availability-routing paragraph · §R3 += counterUnits object
 ```
 
 Provenance: `contracts/**` and `tools/**` are repo-plane; nothing in
@@ -504,13 +596,17 @@ else here stays repo-side).
 
 ## 11. Acceptance criteria (mechanical, whole piece)
 
-1. **Entrypoint:** `python tools/check_contracts.py --root extracted`
-   and `make contracts` both run the full suite; `python run_all.py
-   --list` enumerates EIGHT stages ending `..., relink,
-   check-contracts`; `make list` equivalent; `--only check-contracts`
-   runs in isolation on a prepared tree (client mode via
-   `--skip check-contracts` then `--only`; hostless smoke via
-   `tests/build_fixture_tree.py --stage check-contracts`).
+1. **Entrypoint:** `python tools/stage10_check_contracts.py --root
+   extracted` and `make contracts` both run the full suite; `python
+   run_all.py --list` satisfies the SUBSET-AND-ORDER assertion — it
+   CONTAINS `verify-client`, `harvest-bundles`, `relink`, and
+   `check-contracts`, with `check-contracts` positioned AFTER `relink`
+   and (once registered) AFTER `locale-proof` — never a frozen total
+   stage count, so sibling registrations at canonical indices 7–9
+   cannot spuriously fail this suite (F1); `make list` equivalent;
+   `--only check-contracts` runs in isolation on a prepared tree
+   (client mode via `--skip check-contracts` then `--only`; hostless
+   smoke via `tests/build_fixture_tree.py --stage check-contracts`).
 2. **End-state color:** on the current corpus the suite exits 0 with
    ZERO EXPECTED-RED entries remaining; before the emitter amendments
    land, exactly V-L1, V-U1(+V-D1 RELATIONS.md leg), V-U2 are red and
@@ -529,16 +625,21 @@ else here stays repo-side).
    log/stamps/meta exclusions).
 5. **Determinism:** two consecutive runs produce byte-identical stdout
    reports on an unchanged tree; no timestamps anywhere in output.
-6. **Heavy-artifact policy:** default run touches `catalog.json` zero
-   times (strace-equivalent test: open-count via instrumented loader);
-   `--scan-catalog` works and agrees with the mini-report.
+6. **Heavy-artifact policy:** a default run touches `catalog.json`
+   zero times (instrumented-loader open-count) and exits 3 iff
+   `catalog-mini-report.json` is absent; `--scan-catalog` streams
+   `catalog.json` once, RE-DERIVES the entire sidecar, and the two
+   byte-compare under canonical JSON — both sides well-defined (§3.3);
+   `meta.catalogSha256` matches the stage-stamp hash on both paths.
 7. **Unit gate:** registering any reconciliation with mismatched units
    and no declared transform refuses to load (fixture-proven).
-8. **Non-regression:** the seven existing stages' outputs hash-equal a
-   pre-piece run EXCEPT the three additive extensions (mini-report
-   fields, overlay evidence block, new ledger file + counterUnits
-   blocks + one RELATIONS.md paragraph); `--only <any-of-seven>` reruns
-   stay byte-identical per piece-01 AC5.
+8. **Non-regression:** every pre-existing pipeline stage's outputs
+   hash-equal a pre-piece run EXCEPT the additive extensions enumerated
+   in §10 (mini-report + catalog-coverage counterUnits;
+   duplicateKeysOverwritten print+persist + base-overlay-report
+   counterUnits; new ledger file + bridge/join-report counterUnits + one
+   RELATIONS.md paragraph); `--only <any-existing-stage>` reruns stay
+   byte-identical per piece-01 AC5.
 9. **Exit codes:** 0/1/2/3 per §3.4, fixture-tested including the
    EXPECTED-RED→exit-2 path and the PIN-STALE→exit-1 path.
 
@@ -569,7 +670,8 @@ else here stays repo-side).
 | Q3 `locale_availability.jsonl` retirement — stays stage-5-owned honest-zero v1; consumers routed; retirement remains a piece-1 revision | Owner/orchestrator per piece-02 §7 |
 | Q4 guid_bridge derivability — SETTLED by verification: replayable bit-exact, instrumentation semantics kept, `counterUnits` emitted (RED-3) | Closed; piece-02 §R3 field list unchanged, one additive object |
 | Q5 stage-2 mini-report extension touches piece-01 territory (emitter change) | Arbiter confirms additive scope; piece-01 Rev 8 note records it |
-| Q6 eighth-stage registration mutates `--list` (seven→eight) | Arbiter confirms; piece-01 Rev 8 mirrors piece-01 Rev 7's amendment pattern |
+| Q6 stage registration — RESOLVED by the orchestrator stage-index registry: canonical index **10** recorded (relink=6 · maps=7 · logic=8 · locale-proof=9 · contracts=10); piece-01 Rev 8 records the canonical registration, not a slot count | Closed here per PR-1/F1; arbiter countersigns the recording |
+| Q7 piece-02-owned surfaces amended by this piece — §5.7 contributor iff-set (§7 resolution), §4 tree += `_uncontained_addresses.jsonl`, §R7 generator template += routing paragraph, §R3 += counterUnits object | Arbiter confirms the delta set alongside Q5; mirrored into piece-02 as a revision note (§10, F10) |
 
 ## 14. Test obligations (TestWriter contract)
 
@@ -577,11 +679,17 @@ else here stays repo-side).
 materializes minimal versions of EVERY validated family (green state),
 then the mutation harness derives red states:
 
-- runner: eight-stage `--list` ordering; `--only check-contracts`
-  isolation; exit-code mapping incl. EXPECTED-RED (registry hit → 2)
-  and PIN-STALE (bump fixture buildId → 1, `--warn-stale` → 0-with-
-  INFO); determinism double-run; zero-write assertion; missing-input →
-  3.
+- runner: SUBSET-AND-ORDER `--list` assertion (contains `relink` …
+  `check-contracts`, contracts after relink and after locale-proof once
+  registered; NO frozen total stage count — a synthetic sibling at any
+  other index must not break it); `--only check-contracts`
+  isolation; exit-code mapping incl. EXPECTED-RED (registry hit → 2),
+  PIN-STALE (bump fixture buildId → 1, `--warn-stale` → 0-with-INFO),
+  and PIN-MISMATCH (perturb a pinned constant AT the pinned build → 1);
+  determinism double-run; zero-write assertion; missing-input → 3;
+  sidecar-absent → 3; unit-refusal-at-load (register the
+  events-vs-lines shape WITHOUT its transform → load-time exit 1;
+  declare `events-minus-distinct-lines` → loads and passes).
 - V-S*: per-family keyset violations (each family mutated once);
   filename-grammar mutants (unsigned stem, stray relinks file, bad kind
   filename); enum mutants (in-vocabulary-new-arm → INFO asserted;
@@ -624,6 +732,70 @@ install; runs on NE8K against the real corpus):**
 
 ---
 
+## Revision 2 (reviewer-piece05-spec-r1 fixes applied)
+
+Executes every finding in
+[`../reviews/reviewer-piece05-spec-r1.mdx`](../reviews/reviewer-piece05-spec-r1.mdx)
+(FIX-REQUIRED: 0 CRITICAL / 3 MAJOR / 7 MINOR), 2026-08-26. The fact
+base is unchanged — the reviewer's audit found zero stale figures and
+confirmed the red→green set (PR-3) and the `contracts/`-tree decision
+(PR-2); what changed, in finding order:
+
+1. **F1:** canonical stage-index identity adopted everywhere — stage
+   `check-contracts` at CANONICAL INDEX 10, script renamed
+   `tools/stage10_check_contracts.py` (explicit-10 naming); all six
+   "eighth/EIGHT" self-numberings purged (§3.2, §3.3, §10, §11 AC1,
+   §13 Q6, Rev-1 note); every `--list` assertion rewritten as
+   SUBSET-AND-ORDER so sibling registrations at indices 7–9 can never
+   spuriously fail this suite; Q6 closed by the registry.
+2. **F2:** `_absences.jsonl` and `_unmapped-families.jsonl` removed
+   from the exit-2 contributor iff-set (permanent-by-design ledgers;
+   honesty carried by V-S9/V-L2/V-I7 instead) — V-I8 is now
+   day-one-honest against its own §7 Today enumeration, relink exit 0
+   stays reachable, and piece-02 §5.7/AC7 semantics are preserved with
+   no semantic change needing a waiver.
+3. **F3:** the stage-2 sidecar is fully contracted:
+   `extracted/addressables/catalog-mini-report.json` with a pinned
+   schema (`meta` incl. `catalogSha256` / `counts` /
+   `duplicateKeys` / `bundleUniverse` / `guidIndex` /
+   `nullBundleAddresses`), added to V-S8's report-shape row, plus a
+   per-validator input ruling — V-I2/V-R6/V-X2/V-L1 read the sidecar;
+   V-R8 replays off its FULL `guidIndex`, client-gated — and AC6's
+   agreement test given two well-defined sides.
+4. **F4:** validator count corrected to **44** (S13 + I9 + X4 + U3 +
+   L3 + D4 + R8).
+5. **F5:** V-S11 occurrence counting scoped PER FAMILY;
+   `i2-termid-registry` correctly listed as OCCURRING on all 10,964
+   `entity_locale` rows; the four cold method arms scoped to the pair
+   files only.
+6. **F6:** V-S9 extended to the four previously unpinned relation
+   rowshapes (`entity_locale`, `entity_asset_guid`,
+   `locale_term_entity`, `competitor_applied`) — repairing §9's G5
+   pointer — and V-I1's expected cells completed (incl. per-file locale
+   id uniqueness over Σ 216,584 lines).
+7. **F7:** coverage-matrix stage-2 CU cell flipped ●; §10 amendment
+   bullets now carry all four counterUnits targets across their three
+   emitters, matching §6 item 1 exactly.
+8. **F8:** cross-unit arithmetic requires a NAMED transform from the
+   new `transforms:` section of `contracts/counter-units.mdx`; first
+   registration `events-minus-distinct-lines` licenses V-U2's flagship
+   identity and nothing else; load-time refusal fixture specified;
+   `PIN-MISMATCH` added to the §3.4 grammar legend beside `PIN-STALE`.
+9. **F9:** heavy-artifact sentence disambiguated — default runs verify
+   catalog pins solely against the persisted sidecar and exit 3 iff it
+   is missing; `--scan-catalog` re-derives and byte-compares it.
+10. **F10:** piece-02-facing deltas routed — §10 gains the piece-02
+    revision-note line (contributor iff-set, §4 tree, §R7 template,
+    §R3 counterUnits object) and new Q7 routes arbiter confirmation
+    alongside Q5.
+
+Carried forward untouched (reviewer-verified clean): the entire fact
+base (§2), the tracked-layer decision and justification (§3.1), the
+red→green break set and sequencing contract (§9), derived-over-
+transcribed pinning (§3.5), the structural naive-pin ban, the exception
+sheet machinery, the mutation-teeth ACs, and the zero-write/
+determinism/heavy-artifact ACs.
+
 ## Revision 1 (initial registration)
 
 Grounded in the verified scout round
@@ -631,21 +803,23 @@ Grounded in the verified scout round
 verdicts), 2026-08-26. Establishes the complete `contracts` stage
 family as specified above: tracked layer at pack-root `contracts/`
 (§3.1); pins.json + family MDX + red-registry layer model (§3.2);
-non-emitting eighth pipeline stage `check-contracts` + `make contracts`
-(§3.3); exit codes 0/1/2/3 with EXPECTED-RED→2 and PIN-STALE→1 (§3.4);
+non-emitting pipeline stage `check-contracts` registered additively +
+`make contracts` (§3.3); exit codes 0/1/2/3 with EXPECTED-RED→2,
+PIN-STALE→1, PIN-MISMATCH→1 (§3.4);
 derived-over-transcribed pinning with build-scoped constants (§3.5);
 taxonomy classes A/B/C plus added CU/L/D (§4); four consumer-facing
 exception pins (§5); counter-unit pins with the naive-line-equality ban
 enforced structurally (§6); ledger-gap pins adding
 `_uncontained_addresses.jsonl` as a declared exit-2 contributor and
-inventorying `registryMisses` (§7); 41 named validators with formulas,
+inventorying `registryMisses` (§7); 44 named validators with formulas,
 expected values, and the standard failure payload (§8); the three-break
 red→green harness (§9); tracked output layout (§10); nine mechanical
-acceptance criteria incl. 100%-score mutation teeth (§11). Three
-additive emitter amendments authorized: stage-2 catalog mini-report
-extension, stage-4 duplicateKeysOverwritten print+persist, stage-6
-uncontained ledger + counterUnits + RELATIONS.md routing paragraph.
-No commits in this piece; implementation follows the PrepareTask
-pipeline.
+acceptance criteria incl. 100%-score mutation teeth (§11). Additive
+emitter amendments authorized: stage-2 mini-report emission +
+catalog-coverage counterUnits, stage-4 duplicateKeysOverwritten
+print+persist + base-overlay-report counterUnits, stage-6 uncontained
+ledger + bridge/join-report counterUnits + RELATIONS.md routing
+paragraph. No commits in this piece; implementation follows the
+PrepareTask pipeline.
 
 §END
