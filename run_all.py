@@ -58,6 +58,24 @@ UPSTREAMS = {
                "locales/locale-matrix.json",
                "decompiled/structural",
                "bundle-roster.jsonl"],
+    # piece-03 §3 maps upstream set — committed artifacts only; the stage
+    # opens ZERO asset bundles and needs NO game dir. The per-family dump
+    # globs (TPC.LevelScenarioV2 / TPC.LevelConfig / TPC.ItemValidator_Door
+    # / TPC.LandscapeBrush*) are re-gated INSIDE the stage, which exits 3
+    # naming the exact missing glob; the runner pre-check names the coarse
+    # roots.
+    "maps": [
+        "identity.json",
+        "bundle-roster.jsonl",
+        "harvest/export-manifest.jsonl",
+        "harvest/externals.jsonl",
+        "relinks/bridges/cab_index.jsonl",
+        "relinks/bridges/container_index.jsonl",
+        "relinks/i2_term_registry.jsonl",
+        "addressables/catalog.json",
+        "decompiled/il2cppdumper/dump.cs",
+        "harvest/monobehaviours",
+    ],
     # piece-07 §4: locale-proof upstream set — committed flat artifacts
     # only (purely derived; no game dir). The per-locale tables are NOT
     # enumerated here: the REQUIRED table set resolves from the roster's
@@ -124,6 +142,9 @@ STAGE_TOOLS = {
     "localisation": "UnityPy",
     "emit-stub-datasets": "stdlib",
     "relink": "UnityPy",
+    # piece-03: purely derived — committed artifacts in, maps datasets out
+    # (stdlib; opens zero bundles, needs no game dir)
+    "maps": "stdlib",
     # piece-07: purely derived — committed artifacts in, proof artifacts out
     "locale-proof": "stdlib",
     # piece-05: pure-read validator suite (stdlib; zero-write over extracted/)

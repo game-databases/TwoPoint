@@ -135,6 +135,12 @@ STAGES = [
     # registered ADDITIVELY — stages 0–5 byte-behave identically)
     ("relink", "tools/stage6_relink.py",
      ["stage6_relink.py", "relink_util.py", "tpc_common.py", "log_util.py"]),
+    # piece-03 maps stage — canonical registry index 7, seated between
+    # relink=6 and logic=8 per the orchestrator stage-index registry.
+    # Registered ADDITIVELY: stages 0–6 byte-behave identically. Reads
+    # committed artifacts only (no bundle opens, no game dir).
+    ("maps", "tools/stage7_maps.py",
+     ["stage7_maps.py", "maps_util.py", "tpc_common.py", "log_util.py"]),
     # piece-07 locale-proof stage (canonical registry index 9, arbiter
     # R1; registered ADDITIVELY after the last currently-registered stage
     # — ordering authority is the canonical registry, not append accident).
