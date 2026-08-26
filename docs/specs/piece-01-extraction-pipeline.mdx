@@ -11,6 +11,46 @@ figures).
 
 ---
 
+## Revision 8 (arbiter-piece07 R5 — registry registration + availability retirement)
+
+Executes the documentator-seat amendment ruled REQUIRED in
+[`../rulings/arbiter-piece07-spec.mdx`](../rulings/arbiter-piece07-spec.mdx)
+R5 (2026-08-26), covering BOTH halves it names. Stage ids 0–6, stage
+scripts, sentinels, exit codes, and every unlisted emitted-file contract
+are unchanged:
+
+1. **Canonical-registry registration entry — REGISTRY-AWARE form
+   (absolute stage-count assertions forbidden).** The `--list`
+   universe stops being a closed enumeration. Canonically-later stages
+   register ADDITIVELY in `tools/tpc_common.py::STAGES` after the last
+   currently-registered stage (today: after `relink`), in canonical
+   registry order: `maps`=7 (`tools/stage7_maps.py`), `logic`=8
+   (`tools/stage8_logic.py`), `locale-proof`=9
+   (`tools/stage9_locale_proof.py`), `contracts`=10
+   (`tools/stage10_check_contracts.py`); `media`=11
+   (`tools/stage11_media.py`) and `search-corpus`=12
+   (`tools/stage12_search_corpus.py`) stand as RESERVED-PENDING-SPEC
+   rows until their pieces' specs are final. Ordering authority is the
+   canonical registry, not append accident (piece-06 formulation);
+   §5.1 asserts canonical ORDER, never a count (arbiter-piece07 R1).
+2. **Availability-clause retirement.** Stage 9 `locale-proof` is the
+   SOLE writer of `relinks/locale_availability.jsonl` — v2 row schema,
+   regeneration law, and `locale_availability.report.json` owned by
+   [`piece-07`](piece-07-locale-proof.mdx) §L3/§6 — superseding THIS
+   file's Revision 2/R3 stage-5 sole-owner pin and piece-02 §R4, ruled
+   technically forced by arbiter-piece07 R4 (stage 5's seeded join
+   procedure was refuted in piece-02 §R4 and honestly yields zero
+   rows, while localization-architecture §5.4 names the path THE
+   single source). The stage-5 emission removal plus the CALLER-SCOPED
+   refusal guard (conditioned on stage-5-originated invocation of the
+   legacy write path, exiting 1 naming the conflict on a
+   stale-checkout write) are piece-07 CodeWriter deliverables; the DOC
+   clauses retire HERE: §3 stage-4 purpose/output/acceptance, §3
+   stage-5 SOLE OWNER block + acceptance sentence, §4 layout line,
+   §5.1/§5.2, and the §8 stage-5, runner, and client-gated bullets.
+
+---
+
 ## Revision 7 (piece-02 `relink` — seventh stage registered)
 
 Grounded in [`piece-02-relinking.mdx`](piece-02-relinking.mdx) §1/§3 —
@@ -585,8 +625,9 @@ CATALOGUE-ONLY in piece 1 (arbiter-001 R1 lane).
 **Purpose:** all 14 locale bundles → per-locale string tables keyed by
 stable ids; the unnamed base bundle decoded AND persisted raw;
 base-overlay composition classified HERE as an emitted enum. The
-canonical availability layer is NOT this stage's output — stage 5 is
-its sole owner.
+canonical availability layer (`relinks/locale_availability.jsonl`) is
+NOT this stage's output — since Revision 8 (arbiter-piece07 R4) its
+sole writer is stage 9 `locale-proof`.
 
 - **Script:** `tools/stage4_localisation.py`
 - **Inputs:** the 14 `localeFlag`-carrying roster bundles (opened under
@@ -631,10 +672,12 @@ its sole owner.
   - `extracted/locales/locale-matrix.json` — per key: presence across
     the 13 locales PLUS the base keys — the matrix INCLUDES base keys
     and strictly supersedes key-granular availability.
-  - `extracted/relinks/locale_availability.jsonl` is NOT written here.
-    Stage 5 is its SOLE owner (entity-granular); the former key-granular
-    stage-4 write to the same path created a two-schema/two-owner
-    regression hazard and is cut.
+  - `extracted/relinks/locale_availability.jsonl` is NOT written here —
+    by this stage or by stage 5: since Revision 8 (arbiter-piece07 R4)
+    its SOLE writer is stage 9 `locale-proof`
+    (`tools/stage9_locale_proof.py`). The former key-granular stage-4
+    write to the same path created a two-schema/two-owner regression
+    hazard and remains cut.
 - **Acceptance:** exits 0; the set of emitted locale files ==
   `{en, pt-BR, zh-Hans, zh-Hant, fr, de, it, ja, ko, pl, ru, es, tr}`
   exactly (13); every file non-empty, every line valid JSON with `id`
@@ -642,7 +685,8 @@ its sole owner.
   `base-overlay-report.json.compositionPolicy` ∈ the four-value enum
   with `evidence` counts > 0; matrix covers every key observed in any
   locale or in base; an `--only localisation` isolation run leaves
-  `extracted/relinks/` untouched (sole-owner rule); rerun
+  `extracted/relinks/` untouched (this stage holds no writer there —
+  the path's sole writer is stage 9, Revision 8); rerun
   byte-identical.
 
 ### Stage 5 — `emit-stub-datasets`
@@ -723,22 +767,23 @@ place rather than absent).
   class"}` (empty file valid iff nothing was unmapped) —
   discovered-but-unmapped content is never silent either.
 
-  This stage is the **SOLE OWNER** of
-  `extracted/relinks/locale_availability.jsonl`: entity-granular
-  (localization-architecture §5.4-complete), REGENERATED ON EVERY
-  stage-5 run — which satisfies §5.4's rerun clause with no second
-  writer. Row shape: `{kind, id, availableLocales[], namedLocales[],
-  fieldPresence:{<locale>:[<joined fields present>]}, joinInferred,
-  joinMethod, buildId}`. Entity→loc-key JOIN PROCEDURE (pinned,
-  deterministic — real field names stay unknown until stage 3 opens the
-  bundles, so the procedure is the contract):
-  1. collect the entity dump's string-valued fields;
-  2. a field whose value EXACTLY equals a `locale-matrix.json` key
-     joins HARD (`joinInferred:false`);
-  3. a field matching a loc-key convention shape (e.g. an
-     `<entityId>_<role>` pattern) joins `joinInferred:true` +
-     `joinMethod` recording the convention applied;
-  4. no other association path exists.
+  **Availability handover (Revision 8, arbiter-piece07 R4):** this
+  stage NO LONGER WRITES `extracted/relinks/locale_availability.jsonl`.
+  The former sole-owner pin (entity-granular, regenerated every run)
+  and its v1 row shape + seeded join procedure are RETIRED with this
+  revision: the join procedure was REFUTED in piece-02 §R4 (honest
+  yield: zero rows) and the emission block is REMOVED from
+  `tools/stage5_emit_stubs.py` by the piece-07 build pair. The path's
+  SOLE writer is now stage 9 `locale-proof`
+  (`tools/stage9_locale_proof.py`), which owns the v2 row schema +
+  regeneration law (piece-07 §L3 — replaces the v1 shape outright; no
+  migration exists or is owed). A CALLER-SCOPED refusal guard —
+  conditioned on stage-5-originated invocation of the legacy write
+  path, NEVER an unconditional check inside a write helper shared with
+  stage 9's emitter (which legitimately rewrites the file on its own
+  second pass) — exits 1 naming the conflict if the legacy path is
+  invoked while the target holds non-v1/non-empty content: the
+  patch-day clobber window cannot exist even on a stale checkout.
 - **Acceptance:** exits 0; for EVERY seeded family: non-empty
   `<kind>.jsonl` XOR `_absences.jsonl` row naming scan scope; filenames
   conform to the pinned kind↔file map; every row passes schema check
@@ -747,10 +792,10 @@ place rather than absent).
   has ≤1,000 rows, else a deterministic sorted sample of 500;
   `buildId == identity.buildId` on 100% of rows; every harvested
   MonoBehaviour class either maps to a seeded kind or has an
-  `_unmapped-families.jsonl` row; `locale_availability.jsonl` is
-  regenerated on every run, its row count == distinct joined entities,
-  and every row carries `availableLocales` + `namedLocales` +
-  `fieldPresence`; rerun byte-identical.
+  `_unmapped-families.jsonl` row; `locale_availability.jsonl` is NOT
+  written by this stage (stage 9 owns the path — Revision 8): an
+  isolated `--only emit-stub-datasets` run leaves it BYTE-UNTOUCHED
+  whether it holds v2 rows or anything else; rerun byte-identical.
 
 ## 4. Output contracts (directory layout under `extracted/`)
 
@@ -773,7 +818,7 @@ extracted/
 ├── MEDIA-CATALOGUE.md           # stage 3 rollup
 ├── media-catalogue.jsonl        # stage 3
 ├── relinks/
-│   ├── locale_availability.jsonl   # stage 5 ONLY (sole owner; entity-granular; regenerated every stage-5 run)
+│   ├── locale_availability.jsonl   # stage 9 ONLY (sole writer; v2 schema per piece-07 §L3)
 │   ├── matrix.json                 # stage 6: 100 ordered cells (10-node universe), frozen vocabularies
 │   ├── <src>_<dst>.jsonl           # stage 6: pair datasets (kind values verbatim in filenames)
 │   ├── <src>_<dst>.competitor.jsonl # stage 6: applied community deltas (overlays, never mixed into client pairs)
@@ -827,10 +872,19 @@ dirs, metadata-version wall).
 
 ## 5. Acceptance criteria (mechanical, whole piece)
 
-1. `python run_all.py --list` enumerates exactly stages
-   `verify-client, decompile, harvest-catalog, harvest-bundles,
-   localisation, emit-stub-datasets, relink` in order with
-   tool/version/status columns; `make list` equivalent.
+1. `python run_all.py --list` enumerates the registered stages in
+   CANONICAL REGISTRY ORDER with tool/version/status columns —
+   `verify-client=0, decompile=1, harvest-catalog=2,
+   harvest-bundles=3, localisation=4, emit-stub-datasets=5, relink=6`
+   always present, followed by `maps`=7 (`tools/stage7_maps.py`),
+   `logic`=8 (`stage8_logic.py`), `locale-proof`=9
+   (`stage9_locale_proof.py`), `contracts`=10
+   (`stage10_check_contracts.py`) as their pieces register them;
+   `media`=11 and `search-corpus`=12 are RESERVED-PENDING-SPEC rows.
+   REGISTRY-AWARE assertion (Revision 8): canonical ORDER only, NEVER
+   an absolute stage count — each canonically-later stage appears
+   after its registered predecessors and fails loudly on any other
+   position; `make list` equivalent.
 2. Each stage runs in isolation via `--only <id>` on a prepared tree.
    **Prepared tree, defined** (one harness, no private setups):
    *client mode* — `python run_all.py <game> --skip <target-stage>`
@@ -850,7 +904,20 @@ dirs, metadata-version wall).
    `LanguageSourceAsset` dumps + addressables/catalog.json +
    locales/locale-matrix.json + decompiled/structural/* +
    bundle-roster.jsonl (+ the game dir — the R1 bridge passes open all
-   176 bundles read-only under the shared fallback-version seeding).
+   176 bundles read-only under the shared fallback-version seeding);
+   stage 9 `locale-proof` ← committed flat artifacts only:
+   `identity.json` + `bundle-roster.jsonl` + `locales/<locale>.jsonl`
+   ×13 + `locales/base-overlay.jsonl` + `base-overlay-report.json` +
+   `locales/locale-matrix.json` + `stubs/<kind>.jsonl` ×9 +
+   `relinks/entity_locale.jsonl` + `relinks/i2_term_registry.jsonl` +
+   `relinks/locale_term_entity.jsonl` + `locale_join_report.json`
+   (+ OPTIONAL `data/sources/derived/course-name-aliases.jsonl` —
+   absence is a ledger row, never a failure). Upstream sets for the
+   remaining canonically-later stages are pinned by their OWNING SPECS,
+   not re-declared here — maps/logic/contracts per piece-03/piece-04/
+   piece-05; media/search-corpus ride their RESERVED-PENDING-SPEC rows
+   until final — and the shared fixture builder materializes whichever
+   stage is asked via `--stage <id>`.
 3. Fresh clone + game path + `make setup && make extract GAME=…`
    produces every file in §4 without a second doc.
 4. Per-stage acceptance criteria from §3 all hold (they are written as
@@ -945,12 +1012,19 @@ dir)** — fixtures are tiny synthetic files, never real game bytes:
   locale bundles exercise the same fallback-version seeding helper as
   stage 3 (Revision 4).
 - stage 5: stub-row schema validator; kind↔filename map validator;
-  absence-ledger AND `_unmapped-families` logic; entity-level
-  `locale_availability` regeneration on fixtures incl. `fieldPresence`
-  shape and the join procedure (exact-match → hard; convention-match →
-  `inferred:true` + method); identifier-verbatim spot-check helper
-  (≤1,000 rows → all, else sorted-500 sample).
-- runner: `--list` contains all six ids in order; `--only` isolation;
+  absence-ledger AND `_unmapped-families` logic;
+  availability-RETIREMENT fixtures (Revision 8) — an isolated stage-5
+  fixture run leaves `relinks/locale_availability.jsonl`
+  byte-untouched, and the caller-scoped refusal guard exits 1 naming
+  the conflict when the legacy write path fires against
+  non-v1/non-empty content (these two repointed assertions are the
+  TestWriter deliverable per the arbiter-piece07 R4 lane split);
+  identifier-verbatim spot-check helper (≤1,000 rows → all, else
+  sorted-500 sample).
+- runner: `--list` shows the registered stages in canonical registry
+  order — stages 0–6 always present, canonically-later siblings
+  appended iff registered (order asserted, count never); `--only`
+  isolation;
   stamp invalidation when a stage script's hash changes; exit-code
   mapping (0/1/2/3); log-hygiene fixtures (Revision 4) — a FAILING
   stage still appends its EXTRACTION-LOG run section, the
@@ -959,8 +1033,9 @@ dir)** — fixtures are tiny synthetic files, never real game bytes:
   parses; **interrupted-run convergence** — kill a stage
   mid-write on the fixture tree, rerun to completion, require the final
   tree to hash-equal a clean uninterrupted run (temp-file +
-  atomic-rename discipline); prepared-tree builder covers all six
-  per-stage upstream sets.
+  atomic-rename discipline); prepared-tree builder covers the stage
+  0–6 per-stage upstream sets (later stages' sets ride their owning
+  specs, §5.2).
 
 **Client-gated integration tests** — auto-SKIP (not fail) when neither
 env `TPC_GAME_DIR` nor the default install path exists:
@@ -975,8 +1050,9 @@ env `TPC_GAME_DIR` nor the default install path exists:
 - stage 3: fallback-version usage recorded and > 0 (every content
   bundle ships a `0.0.0` header on this client).
 - stage 4: 13 locale files match the BCP-47 table +
-  `base-overlay.jsonl` present; stage 5: availability row count ==
-  distinct joined entities with `fieldPresence` populated on every row.
+  `base-overlay.jsonl` present; stage 5: an isolated client-mode run
+  leaves `locale_availability.jsonl` byte-untouched (stage 9 owns the
+  path — Revision 8).
 - idempotence: stage 0 double-run hash-equal; (optional `slow` mark)
   full-pipeline double-run.
 
