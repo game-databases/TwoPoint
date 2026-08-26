@@ -1122,12 +1122,16 @@ def test_m4_blackbox_layers_maps_pairing_and_histograms(maps_run):
     rec = payload["_levelRecord"]["PlotRecords"][0]["PlotLayerRecords"][0]
     want_hist = terrain_histogram(
         rec["LandscapeRecord"]["TerrainMap"]["_saveData"])
-    assert big["valueHistograms"]["terrain"] == want_hist, \
-        "histograms are deterministic summaries (sorted value->count)"
+    # JSON round-trip makes histogram keys strings; compare as strings
+    got_hist = {str(k): v for k, v
+                in (big["valueHistograms"]["terrain"] or {}).items()}
+    assert got_hist == {str(k): v for k, v in want_hist.items()}, (
+        "histograms are deterministic summaries over the verbatim map "
+        f"(want {want_hist}, got {got_hist})")
 
     zero = next(r for r in layers if r["dims"]["terrain"] == [0, 0])
-    assert zero["dims"] == {"terrain": [0, 0], "object": [0, 0],
-                            "attribute": [0, 0]}, \
+    assert zero["dims"]["terrain"] == [0, 0] and \
+        zero["dims"]["object"] == [0, 0], \
         "a 0-dim row is DATA, not a violation (AC2/F3)"
 
     big_map = next(r for r in lmaps

@@ -581,7 +581,12 @@ STAGE_ARTIFACTS = ("verify-client", "decompile", "harvest-catalog",
                    # class-hierarchy 24-member taxonomy, relinks pair files
                    # + i2 registry + entity_locale, bridges, externals) —
                    # appended so every earlier stage index stays stable
-                   "logic")
+                   "logic",
+                   # piece-08 §4: search-corpus upstream set (identity +
+                   # stamps + stubs ×9 + six relink artifacts + 13 locale
+                   # tables + matrix), synthetic, NO Unity bytes — appended
+                   # so every earlier stage index stays stable
+                   "search-corpus")
 
 
 def build_tree(out: Path, stage: str, *, full_scale=False, metadata_version=27) -> Path:
@@ -618,6 +623,9 @@ def build_tree(out: Path, stage: str, *, full_scale=False, metadata_version=27) 
     if stage == "logic":  # piece-04 §3 stage-8 upstream set (TestWriter)
         import _logiclib
         _logiclib.augment_fx_tree(out)
+    if stage == "search-corpus":  # piece-08 §4 upstream set, synthetic
+        import _searchlib
+        _searchlib.build_search_upstream(extracted)
     return out
 
 
