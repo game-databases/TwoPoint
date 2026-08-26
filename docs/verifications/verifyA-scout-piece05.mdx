@@ -1,0 +1,147 @@
+# verifyA — independent verification of `scout-report-piece-05-contracts.mdx`
+
+**Agent:** verifyA-piece05 · **Date:** 2026-08-26 · **Target:**
+[docs/scout-report-piece-05-correction](../scout-report-piece-05-contracts.mdx)
+(read in full, 585 lines) against primary artifacts under
+`extracted/` at buildId **20226581** (relink mtime 2026-08-26T02:49,
+exit-2 steady state — same tree the scout probed).
+
+**Independence:** every number below was re-measured this session from
+disk by verifyA (python full scans / `wc -l`; no reuse of the scout's or
+verifyB's numbers). Method stated per row. Pipeline sources
+(`tools/stage4_localisation.py`, `tools/stage6_relink.py`,
+`tools/relink_util.py`) were read to adjudicate mechanisms, not trusted
+as evidence by themselves. catalog.json (397,431,200 B) was parsed twice
+independently (full `json.load` with a duplicate-key-detecting
+`object_pairs_hook`, plus an incremental `raw_decode` streaming pass);
+the GUID bridge was fully recomputed by replaying the documented ladder
+over stubs + catalog + `container_index` + roster.
+
+---
+
+## Verdict table
+
+| # | Claim (report §) | Claimed | Measured | Verdict |
+|---|---|---|---|---|
+| V1 | Locale drift: log `rows` = disk lines **+5**, all 13 locales; totals 200,977 vs 200,912 (§4, §10 G1) | +5 ×13, −65 total | Identical on both sides recounted: disk `wc -l` Σ 200,912 (en 15,665 … ja 15,371); log run-section 2026-08-25T03:13:17Z per-locale rows all exactly disk+5 (de 15,450/15,445 … en 15,670/15,665), `localeRowsEmittedTotal` 200,977 | **CONFIRMED** — mechanism adjudicated, see M1 |
+| V2 | Why +5 (§10 G1 leaves it open) | open question | **Duplicate-key-overwrite double-counting**: `rowsEmitted` increments once per term WRITE incl. overwrites (`stage4_localisation.py` `decode_i2_language_source`: `if key in rows: evidence["duplicateKeysOverwritten"] += 1` then `rowsEmitted += 1`; same in the `[i2t]` category path), while files emit `sorted(rows)` — one line per DISTINCT key. Intra-log proof in the same run section: len-based `baseOverlayRows: 15672` vs write-based `BASE-OVERLAY: rows=15677`, `englishRowCount: 15665` vs `en: rows=15670`. All 13 lines satisfy `rowsLogged = 15,677 termsWalked − skippedEmpty` (skippedAbsent=0) ⇒ exactly 5 duplicated Term keys in the shared I2 sources per locale | **CONFIRMED (mechanism identified)** — not headers/trailing records/record-definition; fix locus is the counter, artifact wins |
+| V3 | G2: **5** `entity_asset_guid` rows reference addresses absent from `container_index` (§3, §10 G2) | 5 rows | Recounted both sides: `entity_asset_guid` 15,630 rows / 4,447 distinct dstId; `container_index` 49,855 rows, address unique. **9 rows** (over **5 distinct addresses**) are dangling | **REFUTED (numeric)** — 9 offending rows; 5 is the distinct-address count. Offenders + mechanism below (M2) |
+| V4 | G3: `guid_bridge_report` counters **NOT recomputable** from artifacts; 16,110 vs 15,630 and 3,747 vs 3,746 unexplained (§3, §10 G3) | not derivable | Full independent replay reproduces **all seven report fields bit-exact** — guidRefsTotal 20,170, distinctGuids 5,584, resolvedToAddress 16,110, resolvedToStub 3,747, danglingDistinctGuids 1,137, resolveRateAddress 0.7987109568666336, resolveRateStub 0.1857709469509172 — plus the emitted universes (asset rows 15,630; pair rows 3,746; scene edges 0). Counters are **reference-level** ("rates over REFS" per docstring): 16,110 refs→address vs 15,630 deduped `(srcKind,srcId,normFieldPath,address)` rows; 3,747 hitting refs vs 3,746 deduped pairs, off-by-one = **exactly one collapsed tuple** (`item/Item_Union_Stage_Floor → config/ItemValidator_SinglePlace`, fieldPath `Validators[]`, hit by 2 refs) | **REFUTED (misattributed)** — counters ARE recomputable; the two comparisons are units mismatches. Residual defect downgraded to "units pinned only in code, never in prose/pins" |
+| V5 | `locales[]` empty on 100% of registry/entity_locale/reverse rows (§4 G4) | 100% empty | `i2_term_registry` 15,675 rows all `locales==[]`; `entity_locale.evidence.locales` all empty on 10,964; `locale_term_entity.locales` all empty on 6,526 | **CONFIRMED** |
+| V6 | catalog.json: exactly 1 duplicated key, byte-identical pair (§2 G6) | 1 dupe `f952c082cb03451daed3ee968ac6c63e` | 56,660 rows / 56,659 distinct values; exactly 1 duplicated value ×2; rows byte-identical (kind `guid`, address `Style Sheets/Default Style Sheet`, `LegacyResourcesProvider`); 0 duplicate keys within any JSON object | **CONFIRMED** |
+| V7 | catalog.json: `bundle` null on 45,312/56,660 (§2, §4) | 45,312 (= 43,480 guid + 1,832 address) | Exact: 45,312 nulls, split 43,480/1,832; `address` null 329 (all address-kind); kind dist 2,516/54,144; dep edges 3,939,716; `providerIds[0]==""`; coverage keysTotal/distinctBundles/unreferenced/dangling/outOfRoster(19) all match | **CONFIRMED** |
+| V8 | catalog.json: "12,700 rows carry zero dependencies" (§2) | 12,700 | **11,491** (dependencies never null; confirmed by two independent parses) | **REFUTED (numeric)** — corrected 11,491 |
+| V9 | matrix edges Σ == pair rows == 24,583 (§3 B2) | 24,583 == 24,583 | `cardinality.edges` Σ over the 100 cells = 24,583; Σ of the 24 `<src>_<dst>.jsonl` files = 24,583 (per-file counts match; method dist 11,980/8,857/3,746) | **CONFIRMED** |
+| V10 | cab objects Σ == census objectsByClass Σ (§2, §3) | 2,026,658 == 2,026,658 | census Σ over 176 files = 2,026,658; `cab_index` objects Σ = 2,026,658; (bundle,cab) unique 222/222. (Brief's parenthetical "2,026,656(+2)" appears nowhere on disk or log — measured/logged value is 2,026,658 everywhere) | **CONFIRMED** |
+| V11 | registry ↔ locale-matrix key sets identical (§3 F7) | diff == 0 both ways | registry 15,675 rows → 15,672 distinct termKeys (3 keys ×2 IDs, canonical true 15,672/false 3); matrix 15,672 keys; set diffs 0/0 | **CONFIRMED** |
+| V12 | id-closure 0 misses (~35k join rows, §3) | 0 unresolved | pair `srcId` ⊆ stub ids: 0 misses / 24,583; non-special `dstId` closure: 0 misses; `entity_locale.dstId` ⊆ termKey: 0 misses / 10,964; reverse Σ usages = 10,964 == rows; dedup tuple unique 24,583/24,583 | **CONFIRMED** |
+| V13 | stub `slug` 100% null across 13,443 (§4) | 13,443/13,443 | Per-kind scan: slug null on every row of all 9 kinds (Σ 13,443) | **CONFIRMED** |
+| V14 | 17 twins ⇔ `fields.id` presence, mechanically consistent (§2) | 17 = 17 | Exactly 17 ids carry `@<8hex>`; exactly those 17 rows carry `fields.id`; `fields.id == id-base` verbatim on all 17 (config 12, item 3, metagame-node 2) | **CONFIRMED** |
+| V15 | competitor_applied drifted from piece-02 §R6 shape (§2 G5) | extra `samples`/`terminal`/`floorRequired`/`sourcesApplied`/`unblock`; spec'd `wall:{...}` never occurs | All 3 rows dumped: fandom F1 flags-missing 383 (+samples); steam-guides F1 flags-missing 34 (+samples); `~floor` rung wall, floorRequired 3, sourcesApplied 0, terminal floor-unmet, alias-input unblock. Extras present as claimed; `wall{httpStatus,…}` occurs on 0 rows; terminal row carries no `dispositions` at all | **CONFIRMED** |
+| V16 | Matrix honesty: 100 cells 24/3/73, mech 24 hard/76 inferred, joinKey 23/76/1, unblock on partial+missing, pairFiles on modeled, pairs row-major (§2) | as claimed | All verified programmatically; `pairs[]` order == row-major over `meta.nodeUniverse.nodes` (10 nodes); enums match declared arms | **CONFIRMED** |
+| V17 | Secondary census claims (roster/export/externals/media/ledgers, §2) | various | roster 176 (158/10/8; scenes 150/25/1 = 26 scene rows; localeFlag null×162+base+13; relpath unique); export-manifest 167,069, outRelPath unique, negative pathId 60,582 (36.26%), 114 source bundles; externals 222 rows, 171 w/refs, 1,781 refs = 1,671 CAB + 110 built-in; media-catalogue 47,939, bytesEstimate 0 nulls, class dist == carved census on all 9 classes, contentAxis 42,247/4,026/1,666; `_absences` 2 (config 1, item 44, samples capped 25); `_unmapped-families` 768 (677/43/47/1); `_dangling_guids` 1,137 all `unresolved-open`, sampleRefs ≤5; `_unresolved_pptrs` 2,391 (2,284+107); ui_link_coverage 344 (9 mapped / 335 gap, XOR violations 0); locale `{id,text}` uniform, ids unique per file, missing-vs-en 208–295, extra-vs-en=1 exactly zh-Hans/zh-Hant/ja; base-overlay 15,672 all-empty-text; `locale_availability.jsonl` 0 bytes; `.stage-stamps` 7/7 stages; `.gitignore` tracks `extracted/**/*.md` only | **CONFIRMED** |
+
+---
+
+## M1 — G1 mechanism (what the pin stage should encode)
+
+- Counter side: `- <locale>: rows=` prints `evidence["rowsEmitted"]`
+  (`tools/stage4_localisation.py`, run-section emitter ~line 492), which
+  is incremented once per successful term **write** — including writes
+  that overwrite a previously-seen key. The overwrite branch even
+  tallies its own counter (`duplicateKeysOverwritten`), but that counter
+  is **never printed** to the run section, which is why the drift was
+  invisible.
+- Artifact side: `log_util.write_jsonl(path, [{"id": k, "text":
+  rows[k]} for k in sorted(rows)])` — one line per **distinct** key.
+- Therefore `logged − disk = duplicate-key overwrites for that locale`.
+  All 13 locales show +5 ⇒ the shared I2 sources contain exactly 5
+  duplicated Term keys (same sources decoded per language, so the dupes
+  repeat per locale). Arithmetic identity holding on every line:
+  `rowsLogged = 15,677 termsWalked − skippedEmpty` (skippedAbsent = 0).
+- In-run corroboration that both units coexist in one section:
+  `baseOverlayRows: 15672` (len of dict) beside `BASE-OVERLAY:
+  rows=15677` (writes); `englishRowCount: 15665` beside `en:
+  rows=15670`.
+- Not verifiable locally: naming the 5 duplicated keys (requires
+  re-decoding locale bundles on NE8K). The delta + code path already pin
+  the mechanism; the pin should either make the counter count distinct
+  keys or print `duplicateKeysOverwritten` beside it.
+
+## M2 — G2 corrected facts
+
+Both sides recounted; join recomputed by full scan:
+
+- `entity_asset_guid.jsonl` 15,630 rows, `resolvedVia` single value
+  `catalog-guid+container-index`, 4,447 distinct dstId;
+  `bridges/container_index.jsonl` 49,855 rows, `address` unique.
+- **9 rows** reference 5 distinct addresses absent from
+  `container_index` (all `srcKind=config`):
+  1. `Config_DLC3` `Levels[]` guid `8c921d3a…` → `…/DLC3_Hospital/Game/Levels/Final/Rural/Config_Level_Rural.prefab`
+  2. `Config_DLC3` `Levels[]` `d1aebe4a…` → `…/Snowy/Config_Level_Snowy.prefab`
+  3. `Config_DLC3` `Levels[]` `2224dfb8…` → `…/Tropical/Config_Level_Tropical.prefab`
+  4. `Config_GameMode_IconGenerator` `GameItemVariantDatabases[]` `7a261fd3…` → `DB_DLC3_Hospital_Variations.asset`
+  5.–9. `Config_UISprite` + `ObjectiveType_{PatientEmergency,PirateEmergency,PlotTropical,Volcano}` `IconReference` — all guid `dd036a35…` → `Atlas_DLC3_Icons_Inspector.spriteatlasv2`
+- Mechanism (corrected — neither of the report's two hypotheses): each
+  of the 5 guids has a catalog entry with `bundle:null` whose address
+  lives under `Assets/Data/DLCs/DLC3_Hospital/*` — assets inside the
+  `dlc-hospital-*` bundles counted in `catalog-coverage`'s
+  `outOfRosterFileReferences.count=19` (content absent from this
+  install). The bridge emits the asset row from the catalog address
+  before/independent of container lookup, so these terminate nowhere on
+  this tree. Both files carry the same relink stamp — snapshot skew is
+  ruled out.
+
+## M3 — G3 recomputation (method)
+
+Replayed the R3 ladder exactly as coded
+(`run_guid_bridge_pass` + `relink_util.walk_guid_refs` /
+`normalize_field_path`, one StubIndex over all 9 kinds, candidates =
+catalog-named bundles first, else all container rows for the address,
+sorted by (bundle, pathId)): every report field reproduced bit-exact
+including both float rates; asset-row universe 15,630 and pair-row
+universe 3,746 reproduced; `resolvedToStub − pairRows = 3,747 − 3,746`
+is exactly one dedup collapse (`Item_Union_Stage_Floor →
+ItemValidator_SinglePlace`, `Validators[]`, 2 refs → 1 tuple). The
+counters are instrumentation in **reference units**; nothing on the
+tree (doc, pin, or schema) spells that unit outside code comments.
+
+## Minor misstatements found while verifying (non-headline)
+
+- `identity.json` has **13** top-level keys (report §2 says 14).
+- `base-overlay-report.json` carries **15** evidence counters (report
+  §4 says 17).
+- The `generatedFrom{edgesEmitted:24583, registryRows:15675,
+  guidRefsTotal:20170, coverageRows:344, competitorLedgerRows:3}`
+  structure is pinned in **EXTRACTION-LOG**'s relink run section (R7),
+  not inside `RELATIONS.md` itself (which carries a one-line provenance
+  note). Substance of the §5 claim holds; location misattributed.
+  Current `RELATIONS.md` = 29,346 B, matching the report's own
+  byte-size note.
+
+---
+
+## Overall verdict
+
+**PASS-WITH-CORRECTIONS**
+
+Corrections the pin stage must inherit:
+
+1. **G2:** 5 → **9** offending rows (5 = distinct addresses); mechanism
+   is out-of-roster DLC3_Hospital install coverage, not index-snapshot
+   skew nor report/artifact termination disagreement.
+2. **G3:** "not recomputable" is wrong — all seven report fields are
+   ref-level and reproduce **bit-exact** from primary artifacts
+   (20,170/5,584/16,110/3,747/1,137 and both rates to full float
+   precision); 16,110-vs-15,630 and 3,747-vs-3,746 are units mismatches,
+   and the 1-row gap is exactly one collapsed dedup tuple. Real residual
+   defect: the reference unit is documented nowhere outside code.
+3. **catalog zero-deps rows:** 12,700 → **11,491**.
+4. **identity.json:** 14 → **13** top-level keys.
+5. **base-overlay-report:** 17 → **15** evidence counters.
+6. **generatedFrom** block lives in the EXTRACTION-LOG relink section
+   (R7), not in RELATIONS.md.
+
+Everything else re-measured green, including the four reconciliation
+positives (matrix Σ 24,583; cab/census Σ 2,026,658; registry↔matrix
+diff 0; id-closure 0 misses) and the full stub-envelope contract.
