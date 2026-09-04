@@ -69,7 +69,8 @@ relations:
 maps:
   form: per-campus interactive plot map
   geometry-source: client-scenes-and-configs
-  imagery-path: authored-over-client-geometry-only-if-no-usable-client-map-imagery
+  imagery-path: authored
+  imagery-condition: only-after-proving-no-usable-client-map-imagery
   dedicated-route: /map
   entity-linking: bidirectional
   handheld: link-to-map-only
@@ -81,6 +82,32 @@ logic:
   economy: emitted
   grading: emitted-with-native-normalization-gap
   needs-decay: emitted-with-student-core11-gap
+
+economy:
+  npc-prices: client-derived-where-present
+  market-feed: none
+  streaming: none
+
+live:
+  steam:
+    enabled: false
+    reason: offline-single-player-no-live-product-plane
+
+accounts:
+  required-eventually: true
+  phase: after-data-gate
+  development-adapter: local-only-stub
+  providers-at-public-origin: [Discord, Twitch, Steam, Google]
+  unified-signin-signup: true
+  minimum-session: 3-months
+  stored-features:
+    [saved-layouts, favorites, ratings, comments, corrections, screenshots,
+     moderation]
+
+satellite:
+  platform: none
+  status: no
+  gep-check: not-applicable-offline-single-player
 
 media:
   excluded: [audio, video, location-models, models-over-200MB]
@@ -101,6 +128,21 @@ automation:
   update-trigger: build-id
   staleness-model: per-record
   watches: [appmanifest-buildid-change, engine-bump, dlc-release]
+
+legal:
+  data: provenance-recorded-repo-only
+  tooling: versions-and-inputs-pinned-in-extraction-log
+  fan-program: none
+  personal-data: none-in-static-plane
+  credentials: never-in-git
+
+external-dependencies: []
+
+content-policy-holes:
+  - audio-and-video-excluded
+  - location-models-and-models-over-200MB-excluded
+  - animations-and-non-location-models-50MB-to-200MB-owner-decision-open
+  - Medical-School-payload-not-held
 
 status:
   research: done

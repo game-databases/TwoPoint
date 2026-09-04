@@ -95,6 +95,10 @@ def run_checks(root: Path) -> list[str]:
         if (root / dirname).exists():
             failures.append(f"superseded transcript directory still exists: {dirname}")
 
+    workflows = root / ".github" / "workflows"
+    if workflows.exists() and any(path.is_file() for path in workflows.rglob("*")):
+        failures.append("GitHub Actions workflows are forbidden for this pack")
+
     if (root / "site").exists():
         failures.append("site/ exists while canonical phase is data-gate closed")
 
@@ -121,6 +125,13 @@ def run_checks(root: Path) -> list[str]:
         for family in ("Scout reports", "Piece specifications", "Rulings", "Removed documentation"):
             if family not in text:
                 failures.append(f"docs/README.mdx lacks classification: {family}")
+
+    for path in sorted((*root.rglob("*.md"), *root.rglob("*.mdx"))):
+        rel = path.relative_to(root).as_posix()
+        for target in LINK_RE.findall(_read(path)):
+            normalized = target.replace("\\", "/").lower()
+            if "docs/reviews/" in normalized or "docs/verifications/" in normalized:
+                failures.append(f"{rel}: link targets a removed transcript: {target}")
 
     for rel in REQUIRED:
         path = root / rel

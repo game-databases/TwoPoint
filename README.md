@@ -18,8 +18,8 @@ The pack is in **Phase C: data hardening and proof closure**. The thirteen-stage
 pipeline exists and has produced real-corpus outputs, but the global
 data-before-frontend gate is still closed.
 
-The latest committed review evidence identifies four release-blocking data
-duties:
+The latest committed review evidence identifies these release-blocking work
+families:
 
 1. map placement identity and reverse joins must be repaired and re-proven;
 2. the latest image/model extraction policy must be reconciled against the

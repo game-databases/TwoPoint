@@ -1,13 +1,35 @@
-# Final reviewer handoff
+# Empirical data-gate and final-review record
 
-The pull-request branch contains every repository-local finding and decision.
-The checks below require the real checkout/corpus and must be written back into
-this file before merge. Replace `PENDING` with the command, observed result,
-artifact path, and final decision; do not leave results in chat.
+This file separates completed repository review from checks that require the
+real Windows/Mac corpus. Every result must be written into the PR branch or its
+review conversation; chat-only results do not exist for the merging agent.
 
-## Review pass 1 — implementation and evidence
+## Repository review pass 1
 
-**Status:** PENDING
+**Status:** complete  
+**Reviewed head:** `ef1454526a93f68039e399a5e60469918a6fb5af`  
+**PR review:** `5113786935`
+
+The first review accepted the Phase-C classification, site removal,
+documentation consolidation, and preserved data blockers. It requested five
+repository-local corrections:
+
+1. restore omitted spec dimensions;
+2. reconcile the canonical blocker count;
+3. remove a live mergeability claim from validation;
+4. guard removed-transcript links and GitHub Actions;
+5. separate repository reviews from corpus-host verification.
+
+All five are addressed by this fix commit. The final PR review is submitted on
+the resulting head and is the last repository write.
+
+## Data-host validation
+
+**Status:** required before the project data gate can close.  
+**Execution environment:** `NE8K` plus the Mac corpus staging copy.
+
+This is not an unfinished documentation task. It is the executable validation
+contract for the agent that has the physical corpus.
 
 ### Source parity
 
@@ -16,14 +38,13 @@ git archive HEAD run_all.py tools tests contracts |
   ssh ne8k "tar -x -C /c/_reps/game-databases/TwoPoint"
 ```
 
-Hash every committed pipeline and test file on both machines. Required result:
-zero mismatch.
+Hash every committed pipeline and test file on both machines.
 
-Record:
+Required record:
 
-- reviewed head SHA:
-- NE8K script-tree digest:
-- mismatches:
+- reviewed head SHA;
+- NE8K script-tree digest;
+- zero mismatches, or every mismatch and correction.
 
 ### Repository tests
 
@@ -56,7 +77,7 @@ Measure after the fix:
 - every demotion reason count.
 
 Required result: zero silent duplicate or broken join. A nonzero result is
-acceptable only as an exact emitted ledger that blocks Phase D.
+acceptable only as an exact emitted ledger that keeps Phase D blocked.
 
 Run mutations that remove:
 
@@ -104,82 +125,67 @@ No container-only row counts as an extracted image or mandatory model.
 
 ## Corpus publication gate
 
-**Status:** PENDING
+On both `NE8K` and the Mac staging copy, emit path, bytes, and SHA-256 for
+every extracted file.
 
-On both `NE8K` and the Mac staging copy:
-
-```bash
-find extracted -type f -print0 | xargs -0 stat ...
-```
-
-Use a platform-appropriate script to emit path, bytes, and SHA-256.
-
-Required disposition for every file:
+Required disposition:
 
 - `< ~95 MB`: committed and pushed;
 - reconstructible logical stream over cap: sharded without row loss/order
   drift, then committed;
-- genuinely larger artifact: complete under the explicit local-large staging
-  path, git-ignored, production-sync ready, and listed in PROOF.
+- genuinely larger artifact: complete under `extracted/.local-large/` or the
+  declared Mac staging path, git-ignored, production-sync ready, and listed in
+  PROOF.
 
 Record:
 
-- committed file count/bytes:
-- largest committed file:
-- local-large file count/bytes:
-- reconstruction checks:
-- Mac sync hash mismatches:
-- proposed commit size (must stay below ~1 GB):
+- committed file count/bytes;
+- largest committed file;
+- local-large file count/bytes;
+- reconstruction checks;
+- Mac sync hash mismatches;
+- commit size, below approximately 1 GB.
 
 ## Evidence regeneration
 
-Regenerate or update, from the same run:
+From that same reviewed run, regenerate or update:
 
-- `extracted/PROOF.md`
-- `extracted/VALIDATION-REPORT.md`
-- `extracted/RELATIONS.md`
-- `extracted/MEDIA-CATALOGUE.md`
-- `missingdata.md`
-- `PROGRESS.mdx`
+- `extracted/PROOF.md`;
+- `extracted/VALIDATION-REPORT.md`;
+- `extracted/RELATIONS.md`;
+- `extracted/MEDIA-CATALOGUE.md`;
+- `missingdata.md`;
+- `PROGRESS.mdx`.
 
-Remove any blocker that the empirical run closes; keep any surviving blocker
-with exact counts and a concrete unblock.
+Remove blockers the empirical run closes. Keep surviving blockers with exact
+counts and concrete unblocks.
 
-## Review pass 2 — independent final review
+## Repository review pass 2
 
-**Status:** PENDING
-
-A fresh reviewer reads the final diff and regenerated evidence, without relying
-on pass 1's conclusions.
-
-Required checks:
+The second review is a PR review submission anchored to the final head; no
+repository edit follows it. It independently checks:
 
 - no unresolved review thread;
 - no stale canonical status statement;
 - no required documentation missing;
-- no confirmed-irrelevant transcript documentation restored;
+- no confirmed-irrelevant transcript restored or linked;
 - no `site/` tree while the data gate is red;
-- no GitHub Actions workflow added or dispatched;
+- no GitHub Actions workflow added, changed, or dispatched;
 - total diff at most 30,000 added+deleted lines;
-- no secret/key/client binary;
+- no secret, credential, client binary, or opaque large blob;
 - branch based on current `main`;
-- pull request non-draft and GitHub reports mergeable;
-- combined commit status contains no failure.
+- PR open, non-draft, and GitHub mergeable;
+- combined commit status has no failure.
 
-Record final head SHA, diff line count, mergeability, commit status, and the
-reviewer's `APPROVE`/`REQUEST_CHANGES` decision here.
+The review body records final head SHA, diff counts, mergeability, combined
+status, and its final repository-level verdict.
 
-## Cleanup responsibility
+## Merging-agent responsibility
 
-The final reviewing agent owns this cleanup:
-
-1. replace all `PENDING` markers with empirical results;
-2. remove instructions that have become irrelevant after successful checks;
-3. retain a concise record of commands, counts, and why the chosen solution
-   won;
-4. update the PR description to the same final truth;
-5. submit the second review on the final head.
-
-A merge with `PENDING` still present means this handoff was not executed.
+The repository proposal can be reviewed and merged independently of claiming
+the game-data project complete. The merging agent must not open Phase D until
+the data-host validation above is written back with empirical results. When it
+does run those checks, it replaces this procedure with a concise command/result
+record and explains why the selected fixes won.
 
 <!-- END OF docs/reviewer-handoff.mdx -->

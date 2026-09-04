@@ -2,8 +2,7 @@
 
 **Scope:** repository and tracked evidence review  
 **Date:** 2026-09-04  
-**Overall verdict:** **DATA GATE FAIL; REVIEW PR MERGEABLE AFTER HANDOFF
-EVIDENCE IS RECORDED**
+**Overall verdict:** **REPOSITORY ALIGNMENT PASS; PROJECT DATA GATE FAIL**
 
 ## Validation matrix
 
@@ -63,12 +62,13 @@ status.
   shared fixes;
 - host source-hash parity and current full rerun are not recorded.
 
-## Required final evidence
+## Required empirical evidence
 
 The exact commands, measurements, mutation tests, corpus-size audit, and
-documentation updates are in
-[`../docs/reviewer-handoff.mdx`](../docs/reviewer-handoff.mdx). The reviewing
-agent must replace each pending row there with observed results before merge.
-No chat-only result closes a gate.
+evidence-regeneration procedure are in
+[`../docs/reviewer-handoff.mdx`](../docs/reviewer-handoff.mdx). The agent with
+access to `NE8K` and the Mac corpus must write observed results back before it
+changes this project-level verdict or opens Phase D. No chat-only result closes
+a gate.
 
 <!-- END OF extracted/VALIDATION-REPORT.md -->
