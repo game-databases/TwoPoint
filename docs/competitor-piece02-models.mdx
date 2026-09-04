@@ -1,226 +1,137 @@
-# Competitor relationship models — piece-02 R6 inputs (Two Point Campus)
+# Competitor relationship-model inputs
 
-Feeds [piece-02 §R6](specs/piece-02-relinking.mdx#r6--competitor-application-bar-3)
-(bar 3 of the relinking bare minimum,
-[DR-2026-08-17-relink]): ≥3 independent sources analyzed for their
-entity-relationship model, findings **applied** to our relink layer —
-never merely recorded.
+This note preserves the useful model vocabulary gathered for piece 02 while
+separating **harvested research** from **applied relation output**. The current
+application verdict is owned by
+[`../competitor-research.md`](../competitor-research.md) and the latest relink
+run, not by the existence of source files.
 
-This file is a **harvested-model note**. It records what two readable
-inputs contain. It does not prove application.
+## Current verdict
 
-**Latest tracked relink run** (`EXTRACTION-LOG.md`, `2026-08-25T23:49:25Z`):
-`sourcesRead=2`, `sourcesApplied=0`, `floorMet=False`. Earlier log rows
-that printed `sourcesApplied=2` are historical and are not rewritten.
-Current documents use that latest row.
+Latest tracked relink evidence in
+[`../extracted/EXTRACTION-LOG.md`](../extracted/EXTRACTION-LOG.md), run
+`2026-08-25T23:49:25Z`:
 
-| sourceId | Ladder outcome | Harvest artifacts | Applied in latest run |
+- `sourcesRead=2`;
+- `sourcesApplied=0`;
+- `floorMet=False`;
+- `wallsRecorded=0`;
+- `overlayFiles=0`.
+
+Earlier run sections that printed `sourcesApplied=2` remain immutable history.
+They do not describe the current application state.
+
+| Source | Harvested input | Latest applied state | Floor contribution |
+|---|---:|---:|---:|
+| Fandom community-wiki export | 383 normalized model rows | 0 applied records | 0 |
+| Steam Community guide corpus | 34 normalized model rows | 0 applied records | 0 |
+| wiki.gg | no readable model; wall provenance only | no emitted wall row in latest run | 0 |
+
+The three-source floor is **not met**. A source counts only after the relink run
+records an applied delta, a strengthened targeted probe, or an explicit measured
+zero-delta comparison.
+
+## Provenance and request accounting
+
+Research inputs are committed under `data/sources/competitor/` and remain
+repository-only. Public pages, APIs, search metadata, and machine indexes never
+expose their source identities. Client or first-party evidence remains the
+authority for game facts.
+
+The successful Fandom and Steam harvest requests recorded in
+`data/sources/competitor/_fetch-log.txt` returned HTTP 200. Separate wiki.gg
+wall attempts did not; they are recorded in
+[`../data/sources/competitor/wiki-gg/PROVENANCE.md`](../data/sources/competitor/wiki-gg/PROVENANCE.md).
+This distinction prevents “27 successful pulls” from being misread as every
+attempt across every source succeeding.
+
+## Fandom model — candidate relation families
+
+The harvested category, template, and page model suggests the following
+questions for a future apply pass. None is a landed relation merely because it
+appears here.
+
+| ID | Candidate relationship | Harvested signal | Required client-side decision |
 |---|---|---|---|
-| `fandom` | **F3 — MediaWiki api.php SUCCESS** | `data/sources/competitor/fandom/model.jsonl` (383 rows) + `PROVENANCE.md` | **0** — harvested, not applied |
-| `wiki-gg` | **WALL at every rung** (401 auth-layer edge) | `data/sources/competitor/wiki-gg/PROVENANCE.md` only (no model.jsonl) | **0** — wall; does not count |
-| `steam-guides` | **F2 — AI-crawler UA SUCCESS** | `data/sources/competitor/steam-guides/model.jsonl` (34 rows) + `PROVENANCE.md` | **0** — harvested, not applied |
+| J1 | course → required room | 33 sampled edges | confirm or reject against course/config carriers |
+| J2 | course → student archetype | 31 edges | find a client carrier or keep a targeted missing-pair probe |
+| J3 | item → permitted room | 104 placement edges | compare with placement and room-filter data |
+| J4 | item → effect/need/power axis | typed effect fields and upgrade tiers | map only to extracted client values and formulas |
+| J5 | item → research/unlock source | research-anchor fields | reconcile with metagame-node identities |
+| J6 | room → staff role | 11 sampled edges | compare with room and staff configuration |
+| J7 | room → capacity/minimum size/base price | infobox attributes | accept only values reproduced from client data |
+| J8 | campus → predecessor/featured course/intake | campus infobox chain | reconcile with campus-level and progression data |
+| J9 | event → room/course/reward | event-page structure | consider `event` as a kind only after client/product review |
+| J10 | assignment → course/item | assignment tables | consider `assignment` as a kind only after client/product review |
+| J11 | archetype → trait | 23 hand-mined edges | resolve to client trait identities or retain as a probe |
 
-Ladder discipline held: one attempt per rung, no retries into walls
-(AGENTS rule 10), ≥2 s pacing on every request, all 27 logged pulls HTTP
-200 (`data/sources/competitor/_fetch-log.txt`). Prior scout-002 walls for
-F1/F2 on both wikis were treated as consumed rungs, not re-fired. Raw
-pulls + generation scripts live beside the models under
-`data/sources/competitor/<source-id>/`; every `model.jsonl` row traces to
-captured bytes there. These competitor inputs are tracked in git under
-`data/sources/competitor/`; they are repo-only research and never public
-content.
+The same source suggests `club` as a possible object family and a second
+Kudosh pricing plane for wall/floor decoration. `assignment`, `club`, and
+`event` are **candidate** kinds, not silent additions to the current ten-node
+matrix. Any matrix expansion requires an explicit current-spec decision.
 
-## 1 — `fandom`: the community's full relationship schema
+## Steam-guide model — player questions, not truth
 
-Source: Two Point Campus Wiki, `two-point-campus.fandom.com`
-(`twopointcampus.fandom.com` 301s there), MediaWiki 1.43.9. HTML is
-challenge-walled (scout-002: curl 403, crawler-UA 402), but **api.php
-answers plainly** — the whole pull ran through
-`action=query`/`list=categorymembers`/`prop=revisions&rvprop=content`.
+The guide corpus identifies recurring player questions around:
 
-Pulled: complete category list (282 cats, `allcategories-p1.json`),
-members of 16 structural categories incl. the FULL Items category (500 +
-337 = 837 pages, reconciles against category size), and 91 pages of raw
-wikitext in six batches (rooms ×20, courses ×15, items ×24, hub/meta
-pages, plus the three load-bearing infobox templates themselves).
+- course intake, room capacity, and staffing;
+- dormitory beds, prestige, accommodation rating, and rent;
+- room-scoped item effects and diminishing returns;
+- staff traits and skill-level deltas;
+- club recruitment stands;
+- campus progression and objective chains.
 
-### Entity kinds the community maintains
+Numeric claims in guide rows are hypotheses. The future apply pass must
+reproduce them from client evidence, record a contradiction, or leave them
+research-only. They never become public facts by repetition.
 
-course · room · item · campus · teacher/staff-kind (Teacher, Assistant,
-Janitor) · student archetype · trait/skill · assignment · club · event ·
-research project · Kudosh/money economy · wall/floor decoration variants
-· DLC/content-axis groupings. Against our provisional
-[spec.md](../spec.md) entity set, three kinds are community-load-bearing
-but absent from our list: **assignment**, **club**, **event** — flagged
-below as matrix additions, not noise.
+## wiki.gg wall
 
-### The infobox field map (= their join keys)
+wiki.gg returned an authentication-layer wall on every permitted rung. The
+acquisition record exists, but the latest relink run emitted no wall row
+(`wallsRecorded=0`). Recording that wall in the application ledger remains
+future work; the inaccessible source cannot satisfy the floor.
 
-From `wikitext-A-templates-staff.json` (templates) + instance pages:
+The bounded unblocks are:
 
-| Infobox | Fields | Edges they encode |
-|---|---|---|
-| `Template:Infobox Room` | game, type, placement, effect(s), staff, course, capacity, unlock, size, price | room→room-class, room→placement-class, room→staff-kind, room→campus(unlock), room→capacity/size/price |
-| `Template:Infobox Course` | game, unlock, cp, fees, difficulty, duration, room[], archetype[] | course→campus(unlock), course→room[] (**the site's core join**), course→archetype, course→difficulty/duration class |
-| `Template:Infobox Item` | game, unlock, filter[], effect (+level1/2/3 tiers), kudosh, price, value, room[] | item→room[] (placement), item→unlock-source (**research link or campus or Kudosh**), item→effect-axis with typed power value, item→item-class filter, item→Kudosh cost |
-| `Template:Infobox Campus` (instance: Mitton University) | climate, unlock(=previous campus), course, intake, balance | campus→climate, campus→campus (**linear progression chain**), campus→featured course, campus→starting intake/balance |
+1. an owner-provided export of the wiki.gg entity/category trees; or
+2. a genuinely independent reserve corpus acquired under the same provenance
+   and one-attempt rules.
 
-Body sections extend the infoboxes: course pages carry
-`{{CourseStaff}}`, `{{CourseRooms}}`, `{{CourseSelfStudy}}` (per-year
-class→room→item chains, e.g. Wizardry self-study uses Library/Potions
-Room with Magic Cauldron items); item pages carry an **Assignments**
-wiki-table mapping assignment-description → courses (Super Computer →
-Internet History, Space Academy, Money Wangling…).
+Unacquired reserves are possible paths, not evidence.
 
-### Category taxonomy as relation axes
+## Application contract
 
-The 282 categories encode four orthogonal classification systems, each a
-candidate join dimension:
+For each source that is to count, the relink pass must:
 
-1. **Effect axes** — `Increases/Decreases <Need>` pairs (Attractiveness,
-   Energy, Entertainment, Happiness, Healthiness, Hunger, Hygiene,
-   Learning Rate, Movement Speed, Teaching Skill, Temperature, Thirst,
-   Toilet Comfort): the community's item→need-effect model, categorically
-   indexed.
-2. **Power axes** — Learning/Medical/Marketing/Pastoral/Training/
-   Treatment/Research Power: room-scoped numeric buffs (infobox stores
-   the number: `{{Learning Power|10}}`).
-3. **Progression classes** — Easy/Medium/Hard/Very-Hard Difficulty
-   Course; N-Year Courses duration classes; campus ladder (12 base + 3
-   Space Academy + 1 School Spirits + 3 Medical School campuses).
-4. **Content axes** — per-DLC categories (Space Academy DLC 86 pages,
-   School Spirits DLC 38, Medical School DLC 72) and Amazon-Prime/Kudosh
-   bundle item sets.
+1. enumerate its entity kinds and relationship families;
+2. normalize labels to stable internal identities without replacing game IDs;
+3. compare candidates with hard, logic-derived, and existing inferred client
+   relations;
+4. emit a new/strengthened relation, a targeted missing-pair probe, or a
+   measured zero-delta result;
+5. write one source-level application record;
+6. regenerate the machine matrix,
+   [`../extracted/RELATIONS.md`](../extracted/RELATIONS.md), and PROOF from the
+   same run.
 
-### Joins our relink matrix should adopt from `fandom`
+Candidate overlays may use `method:"competitor-model:<source-id>"` in
+repository evidence. Client-measured duplicates are recorded as comparisons,
+not duplicated as a second truth plane.
 
-Every row already sits in
-`data/sources/competitor/fandom/model.jsonl` with `sourcePage` backrefs;
-R6 mapping resolves names → stub ids (verbatim-first, then
-casefold/`_`↔space per the spec):
+## Product implications
 
-- **J1 course→requires-room→room** — 33 sampled edges; confirms-hard
-  candidate against the F12 carriers (spec relations seed line 1).
-- **J2 course→enrolls-archetype→student-type** — 31 edges; our
-  student-type kind has no modeled inbound edge yet — adopt as
-  adds-derived if client data lacks it.
-- **J3 item→placed-in→room** — 104 placement edges (largest single verb
-  block; e.g. Rose Bouquet → 8 rooms).
-- **J4 item→grants-power/reduces-need-axis→config(need)** — typed effect
-  edges with values AND the level-1/2/3 upgrade tiers from the Item
-  infobox (`level2`/`level3` fields exist — upgradable-item chains).
-- **J5 item→unlocked-by-research→metagame-node** — unlock field points
-  into `Research#<project>` anchors; the Research hub page (81 kB
-  wikitext) IS the research-tree layout our configs-metagame stage should
-  reconcile against.
-- **J6 room→staffed-by→staff-kind** — 11 edges (Lecture Theatre→Teacher,
-  kiosks→Assistant via the Assistant category members).
-- **J7 room→capacity/min-size/base-price→attributes** — capacity 8 on
-  academic rooms, tile sizes, money prices.
-- **J8 campus→unlocked-after→campus** + features-course + starting
-  intake — progression-chain edges from the Campus infobox.
-- **J9 event→hosted-in room / requires-course-level / rewards-currency**
-  — Events hub page; supports adding `event` as a kind with three
-  outbound joins.
-- **J10 assignment→used-in-course→course** + implicit
-  assignment→requires-item — the Assignments tables; supports `assignment`
-  as a kind joining BOTH item and course.
-- **J11 archetype→carries-trait→trait** — 23 hand-mined edges off the
-  Archetypes page (Chef→Nibbler/Comfort Baker, Wizard→Wicked/Magic Touch,
-  …), each with DLC grouping (grouped-under content-axis).
-- **Flags-missing candidates**: club→recruitment-stand-item (Orb Club
-  Stand filter/effect fields point both ways); decoration→Kudosh walls/
-  floors (`{{WF|kudosh=N}}` blocks inside room pages — a second pricing
-  plane distinct from item price); Medical School DLC content (Doctor/
-  Nurse archetypes, Lake Tumble/Molten Rock/Pointy Peak campuses)
-  referenced while absent from our install — corroborates the
-  out-of-roster `dlc-hospital-*` catalog references in
-  [data-acquisition.md §S2](../data-acquisition.md).
+The strongest product opportunities supported by both client evidence and the
+research questions remain:
 
-## 2 — `wiki-gg`: wall (ledgered)
+- course requirement explorer;
+- campus planner;
+- research/unlock tree;
+- economy and grading tools;
+- object-level relation modules.
 
-twopointcampus.wiki.gg answers **401 at the HTTP-auth layer** to plain
-curl (scout-002), api.php (this pass, F3), and even stealth Chrome
-(`ERR_INVALID_AUTH_CREDENTIALS`, F4) — a different client fingerprint
-does not change the answer, so it is not a JS-render gap. One attempt
-per rung was made and none retried into; the full ladder row and the one
-question it would have answered (farm-convention vs community-consensus
-delta vs Fandom) are in
-[`wiki-gg/PROVENANCE.md`](../data/sources/competitor/wiki-gg/PROVENANCE.md).
-Per §R6 absence routing this source reads FLOOR-UNMET until owner-directed
-corpus acquisition fills `data/sources/competitor/wiki-gg/`; it does NOT
-count toward the floor and nothing was fabricated to cover it.
+Competitor research helps choose which client relations to surface and which
+player questions to answer. It does not replace the client fact plane or the
+game-derived visual system.
 
-## 3 — `steam-guides`: player-derived mechanics chains
-
-Source: Steam Community guides hub, appid 1649080. The bare `/guides/`
-shape scout-002 probed returns a JS-driven shell (0 guide links) — but
-that was the URL shape, not a wall: with the AI-crawler UA against the
-paginated browse shape
-(`/guides/?browsefilter=trend&numperpage=30`), server-rendered listing
-markup appears (9 guide rows). Four model-bearing guides pulled in full
-(ids/titles in `steam-guides/PROVENANCE.md`; index in
-`_f2-guide-index.tsv`).
-
-Model extracted (34 rows in `model.jsonl`, cardinality claims marked):
-
-- **Room capacity 8** students; recommended course intake multiples of 8;
-  **one teacher manages ~16 year-1 students** — the classroom-economy
-  triangle (room↔course↔staff) with numbers attached.
-- **1 dormitory bed : 5 students**, beds × prestige → accommodation
-  rating → rent: a derived economy chain our happiness/rent simulator
-  (tools-plan T3/T4) must reproduce from client data.
-- **Item effects stack within-room only, diminishing returns** ("+1%
-  Learning Power" Brain Jar example, ~2300 jars ⇒ sub-1-day training) —
-  confirms the room-scoped buff semantics behind J4 and gives a
-  falsifiable prediction for client-side formula extraction.
-- Staff **negative-trait list** (Bin-Blindness, Bottomless Pit,
-  Dry-Mouth, Gross, Lollygagger, Weak Bladder) and skill % deltas
-  (Private Tuition +5%/level vs course qualification +10%/rank, stacking)
-  — staff-side logic-layer targets.
-- Club recruitment stands **optionally** take an Assistant (tooltip says
-  required — a UI-vs-truth divergence worth checking in client data).
-- **Campus ladder**: base levels 1–12 named in order; Space Academy DLC
-  = Universe City, Cape Shrapnull, Cheesy Heap: Delta-Rye; School Spirits
-  DLC = Lifeless Estate; **Medical School DLC = Lake Tumble, Molten Rock,
-  Pointy Peak** — independent corroboration of J11's third content axis.
-- Per-campus objective lists (goal→build room/place item) — a goal-tree
-  edge family matching the `configs-metagame` expectations.
-
-Caveat recorded per row: these are player-derived figures — treat as
-`cardinalityClaim` hints, never measured truth; where a client-derived
-value exists it wins and the guide row becomes confirms-hard evidence
-only.
-
-## 4 — Harvest versus application
-
-Harvesting a model is not applying it. Floor arithmetic on **inputs** is
-`fandom` + `steam-guides` = 2 readable models, with `wiki-gg` walled and
-reserves (IGN/game8/neoseeker per `competitor-research.md`) **unprobed**.
-That is not three applied sources.
-
-The latest tracked relink run is `sourcesRead=2`, `sourcesApplied=0`,
-`floorMet=False`. Do not treat J1–J11 below as landed relation deltas.
-They are candidate joins for a future apply step. Current application
-count is zero until `competitor_applied.jsonl` and `RELATIONS.md` record
-three independent deltas, strengthened probes, or measured zero-deltas.
-
-Named unblock paths remain `wiki-gg/PROVENANCE.md` and
-`competitor-research.md`. Nothing here lowers the bar.
-
-Concrete future consumption order for the relink stage, still unexecuted:
-
-1. Map `fandom/model.jsonl` verbatim names → stub ids (spec §R6 mapping);
-   expect typo-category collisions ("Dornmitory", "Decreases
-   Healthinesse") to land in flags-missing with nearest-candidate notes.
-2. Emit overlays `extracted/relinks/<src>_<dst>.competitor.jsonl` for
-   J1–J11 with `method:"competitor-model:fandom"` /
-   `"competitor-model:steam-guides"`; client-measured duplicates go to
-   the ledger as confirms-hard, never duplicated.
-3. Raise the three kind-additions (assignment, club, event) and the
-   walls/floors second pricing plane as matrix-universe questions for
-   R2/R7 — they change cell count only if adopted, which is a documented
-   decision, not a silent growth.
-4. Record `wiki-gg` as the wall row; stamp everything buildId 20226581.
-
-END OF docs/competitor-piece02-models.md
+<!-- END OF docs/competitor-piece02-models.mdx -->
