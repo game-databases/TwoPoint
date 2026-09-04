@@ -18,16 +18,10 @@ The pack is in **Phase C: data hardening and proof closure**. The thirteen-stage
 pipeline exists and has produced real-corpus outputs, but the global
 data-before-frontend gate is still closed.
 
-The latest committed review evidence identifies these release-blocking work
-families:
-
-1. map placement identity and reverse joins must be repaired and re-proven;
-2. the latest image/model extraction policy must be reconciled against the
-   complete asset universe;
-3. the three-source competitor relationship floor must be applied, not merely
-   harvested;
-4. the full corpus must be size-audited and published or staged under the
-   current Git policy.
+The live C2 blocker families are the table in
+[`PROGRESS.mdx`](PROGRESS.mdx): C2-MAP, C2-MEDIA, C2-REL, C2-PROOF, C2-GIT,
+and C2-REV. That table is the canonical list; this README does not keep a
+shorter competing count.
 
 There is deliberately **no public site implementation in this branch**. A
 generic analytics-only shell previously proposed in PR #1 was removed because

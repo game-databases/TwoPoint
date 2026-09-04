@@ -50,6 +50,8 @@ map/media policy changes. The durable closeout protocol is in
 `tests/test_documentation.py` invokes the repository checker. It verifies the
 canonical document set, retired placeholder/status phrases, documentation
 classification, stage registry documentation, absence of the premature site
-tree, and removal of superseded review/verification directories.
+tree, removal of superseded review/verification directories, rejection of
+Markdown links (including relative hrefs) to those directories, and the
+no-GitHub-Actions constraint.
 
 <!-- END OF tests/README.md -->

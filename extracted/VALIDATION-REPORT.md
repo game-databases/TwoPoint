@@ -40,7 +40,13 @@ status.
 - retired placeholder and bootstrap claims;
 - retired tier/hub-placement language in canonical pack state;
 - absence of a `site/` tree while the data gate is closed;
-- removal of superseded review/verification directories.
+- removal of superseded review/verification directories;
+- surviving Markdown links, including relative hrefs, to `docs/reviews/`
+  or `docs/verifications/`;
+- absence of GitHub Actions workflow files.
+
+This report records repository alignment versus the project data gate. It
+does not claim GitHub mergeability or that corpus-host validation has run.
 
 ## Review findings that remain load-bearing
 

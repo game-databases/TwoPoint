@@ -75,10 +75,48 @@ STAGES = (
 )
 
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+REMOVED_TRANSCRIPT_DIRS = ("docs/reviews", "docs/verifications")
 
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def _posix_under_root(path: Path, root: Path) -> str | None:
+    """Return a lowercased posix path relative to root, or None if outside it."""
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix().lower()
+    except ValueError:
+        return None
+
+
+def _rel_is_removed_transcript(rel_posix: str) -> bool:
+    rel = rel_posix.replace("\\", "/").lower().rstrip("/")
+    return any(
+        rel == dirname or rel.startswith(f"{dirname}/")
+        for dirname in REMOVED_TRANSCRIPT_DIRS
+    )
+
+
+def href_targets_removed_transcript(source: Path, href: str, root: Path) -> bool:
+    """True when a Markdown href names or resolves to a deleted transcript path."""
+    raw = href.strip()
+    if not raw or raw.startswith(("http://", "https://", "mailto:", "#")):
+        return False
+    path_part = raw.split("#", 1)[0].split("?", 1)[0].replace("\\", "/")
+    if not path_part:
+        return False
+    lowered = path_part.lower().rstrip("/")
+    if _rel_is_removed_transcript(lowered):
+        return True
+    resolved_rel = _posix_under_root(source.parent / path_part, root)
+    return bool(resolved_rel and _rel_is_removed_transcript(resolved_rel))
+
+
+def github_actions_present(root: Path) -> bool:
+    """True when any GitHub Actions workflow file exists under the pack root."""
+    workflows = root / ".github" / "workflows"
+    return workflows.exists() and any(path.is_file() for path in workflows.rglob("*"))
 
 
 def run_checks(root: Path) -> list[str]:
@@ -95,8 +133,7 @@ def run_checks(root: Path) -> list[str]:
         if (root / dirname).exists():
             failures.append(f"superseded transcript directory still exists: {dirname}")
 
-    workflows = root / ".github" / "workflows"
-    if workflows.exists() and any(path.is_file() for path in workflows.rglob("*")):
+    if github_actions_present(root):
         failures.append("GitHub Actions workflows are forbidden for this pack")
 
     if (root / "site").exists():
@@ -129,8 +166,7 @@ def run_checks(root: Path) -> list[str]:
     for path in sorted((*root.rglob("*.md"), *root.rglob("*.mdx"))):
         rel = path.relative_to(root).as_posix()
         for target in LINK_RE.findall(_read(path)):
-            normalized = target.replace("\\", "/").lower()
-            if "docs/reviews/" in normalized or "docs/verifications/" in normalized:
+            if href_targets_removed_transcript(path, target, root):
                 failures.append(f"{rel}: link targets a removed transcript: {target}")
 
     for rel in REQUIRED:

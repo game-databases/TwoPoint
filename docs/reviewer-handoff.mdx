@@ -20,8 +20,21 @@ repository-local corrections:
 4. guard removed-transcript links and GitHub Actions;
 5. separate repository reviews from corpus-host verification.
 
-All five are addressed by this fix commit. The final PR review is submitted on
-the resulting head and is the last repository write.
+Commit `657d1e93475552860eb48d5869e93899fd2e6ff9` restored the omitted spec
+dimensions, removed the live mergeability claim, added a GitHub Actions
+forbidden check, and started a deleted-transcript link guard. That guard
+still missed relative `../reviews/` and `../verifications/` hrefs in piece
+specs and rulings, and README still listed a four-item subset of the six
+C2 families in `PROGRESS.mdx`.
+
+This follow-up retargets those remaining hrefs to
+[`docs/review-history.mdx`](review-history.mdx), resolves relative
+transcript paths in the documentation guard, and points README at the
+PROGRESS table instead of a shorter count.
+
+Repository review status is not the empirical NE8K/Mac data-gate. The
+final PR review is submitted on this head; no repository-local edit
+follows that review.
 
 ## Data-host validation
 
