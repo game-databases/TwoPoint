@@ -70,7 +70,7 @@ python run_all.py --list
 python -m pytest tests -q
 python tools/check_documentation.py
 python tools/stage10_check_contracts.py
-python run_all.py "A:\\SteamLibrary\\steamapps\\common\\Two Point Campus" --force
+python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus" --force
 ```
 
 A return code of `2` is not success-equivalent: it means the stage completed

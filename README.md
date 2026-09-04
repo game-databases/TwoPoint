@@ -58,7 +58,7 @@ verification reports were consolidated into
 
 ```bash
 python run_all.py --list
-python run_all.py "A:\\SteamLibrary\\steamapps\\common\\Two Point Campus"
+python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus"
 python -m pytest tests -q
 python tools/check_documentation.py
 ```

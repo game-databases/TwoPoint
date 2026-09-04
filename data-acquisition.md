@@ -4,7 +4,7 @@
 
 | Field | Measured value |
 |---|---|
-| install | `A:\\SteamLibrary\\steamapps\\common\\Two Point Campus` on `NE8K` |
+| install | `A:\SteamLibrary\steamapps\common\Two Point Campus` on `NE8K` |
 | appid | `1649080` |
 | buildId | `20226581` |
 | version | `10.3.169253+2024-12-06.1241` |
