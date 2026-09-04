@@ -40,9 +40,14 @@ which are community-consensus (delta analysis per
 
 An owner browser session exporting the wiki.gg entity/category trees into
 this directory would feed the identical APPLY step; no pipeline change
-needed. Until then this source stays a wall row in
-`extracted/relinks/competitor_applied.jsonl` (R6 ledger schema:
+needed.
+
+The wall is real (401 at every rung). The R6 ledger schema for that wall is
 `{sourceId:"wiki-gg", rung:"wall", wall:{httpStatus:401,
-oneQuestionItWouldHaveAnswered:"…above…"}, buildId:20226581}`).
+oneQuestionItWouldHaveAnswered:"…above…"}, buildId:20226581}`. The latest
+tracked relink run (`EXTRACTION-LOG.md` `2026-08-25T23:49:25Z`) reports
+`wallsRecorded=0`. The wall row is **owed by the next application run and
+is absent today**; it does not currently appear in
+`extracted/relinks/competitor_applied.jsonl`.
 
 No other files exist in this directory.

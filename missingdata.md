@@ -29,7 +29,10 @@ real-corpus run. Do not add tests to this pack for that review.
 ### MEDIA-1 — all-image coverage
 
 The web entity export is not a complete reconciliation of 6,789 Sprites, 47
-SpriteAtlases, and 7,977 Texture2D records.
+SpriteAtlases, and 7,977 Texture2D records. Tracked subset evidence
+(2,222 WebP, 29 PNG twins, 2,151/2,158 joins, seven named absences) lives in
+[`extracted/media/MEDIA-EXPORT.md`](extracted/media/MEDIA-EXPORT.md) and does
+not claim all-image completion.
 
 **Unblock:** source-object→decoded-output manifest with exclusions only where
 the current policy explicitly permits them.

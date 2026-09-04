@@ -90,8 +90,9 @@ Target-set rules now are:
   but that conclusion is not proven until withheld containers are opened.
 
 The current media stage has a verified entity-web export but has not yet proven
-full class coverage. `extracted/MEDIA-CATALOGUE.md` is therefore a coverage
-ledger, not a completion certificate.
+full class coverage. `extracted/media/MEDIA-EXPORT.md` is the tracked subset
+report (2,222 WebP, 29 PNG twins, 2,151/2,158 joins). `extracted/MEDIA-CATALOGUE.md`
+is the class-universe coverage ledger, not a completion certificate.
 
 ## Publication policy
 

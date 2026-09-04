@@ -30,9 +30,10 @@
 
 The canonical pack documents have been rewritten around one current phase and
 one evidence chain. Superseded review and verification transcript directories
-are removed after consolidation. `docs/README.mdx` classifies retained scouts,
-piece specs, rulings, contracts, source provenance, and generated evidence
-rather than allowing any of them to compete with current status.
+are removed after consolidation. `docs/README.mdx` is the exhaustive ledger of
+the retained 69 Markdown/MDX documents (disposition and supersession per path)
+rather than a family-only index. Entity-web subset evidence is
+`extracted/media/MEDIA-EXPORT.md`.
 [`docs/site-plan.mdx`](../docs/site-plan.mdx) and
 [`docs/design-direction.mdx`](../docs/design-direction.mdx) are the downstream
 product and visual contracts; they do not open the frontend gate.

@@ -118,9 +118,11 @@ Catalogue universe:
 | VideoClip | 31 |
 
 The media stage has evidence for 2,222 WebP files plus 29 PNG twins and seven
-named entity-media absences. This is a useful export, but it does not reconcile
-the complete image universe or eligible model universe under the current
-policy.
+named entity-media absences. The tracked human report for that **entity-web
+subset** is [`media/MEDIA-EXPORT.md`](media/MEDIA-EXPORT.md). Local binaries
+and hash manifests are not on this GitHub checkout. The subset does not
+reconcile the complete image universe or eligible model universe under the
+current policy.
 
 Audio/video, location models, and models over 200 MB are excluded. Every text,
 image, and non-location model under 50 MB is mandatory. Animations require a

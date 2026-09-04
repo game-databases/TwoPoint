@@ -31,9 +31,10 @@ Tracked run evidence reports:
 - seven named absences;
 - a 20-sample pixel comparison with no mismatch.
 
-This is the entity-web subset. It does not by itself prove that every
-Texture2D, Sprite, atlas entry, font, shader, and eligible model has a decoded
-or deliberately excluded product.
+This is the entity-web subset. The tracked human report is
+[`media/MEDIA-EXPORT.md`](media/MEDIA-EXPORT.md). It does not by itself prove
+that every Texture2D, Sprite, atlas entry, font, shader, and eligible model
+has a decoded or deliberately excluded product.
 
 ## Current policy
 

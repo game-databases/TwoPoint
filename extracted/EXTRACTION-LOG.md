@@ -5,6 +5,22 @@ the source of truth for tool paths and versions: the
 `stage-defaults` block below is read by every run, and tooling
 changes land in it in the same commit that changes the entrypoint.
 
+## Precedence
+
+Run sections below are **immutable historical behavior**. Dated `###`
+blocks are never rewritten. They record what that run printed, including
+ownership or policy claims later authorities retired.
+
+Current ownership and policy come from current authorities (`spec.md`,
+`PROGRESS.mdx`, `docs/architecture.mdx`, `extracted/RELATIONS.md`,
+`extracted/PROOF.md`) and from the **latest run per stage**, not from an
+earlier section that happens to mention the same artifact.
+
+Example: several localisation/stub run sections print
+`relinksWrittenHere: false (stage 5 is sole owner)` for locale
+availability. That described those runs. Current sole writer of
+`relinks/locale_availability.jsonl` is stage 9 `locale-proof`.
+
 ## Header pins
 
 - **appid:** 1649080

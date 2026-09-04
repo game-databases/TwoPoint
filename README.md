@@ -54,6 +54,8 @@ No page, route, or analytics shell may ship as a substitute for that contract.
 | [`extracted/EXTRACTION-LOG.md`](extracted/EXTRACTION-LOG.md) | append-only tool and run evidence |
 | [`extracted/PROOF.md`](extracted/PROOF.md) | measured coverage and residue evidence |
 | [`extracted/VALIDATION-REPORT.md`](extracted/VALIDATION-REPORT.md) | current verification verdict |
+| [`extracted/MEDIA-CATALOGUE.md`](extracted/MEDIA-CATALOGUE.md) | media class universe and coverage duty |
+| [`extracted/media/MEDIA-EXPORT.md`](extracted/media/MEDIA-EXPORT.md) | tracked entity-web subset report (not all-image completion) |
 | [`extracted/logic/LOGIC.md`](extracted/logic/LOGIC.md) | generated logic-layer evidence |
 | [`missingdata.md`](missingdata.md) | one ledger of unresolved data and proof gaps |
 | [`docs/current-stage.mdx`](docs/current-stage.mdx) | implementation-to-plan reconciliation |
@@ -61,7 +63,7 @@ No page, route, or analytics shell may ship as a substitute for that contract.
 | [`docs/site-plan.mdx`](docs/site-plan.mdx) | downstream product, route, and launch contract |
 | [`docs/design-direction.mdx`](docs/design-direction.mdx) | visual bar and first Phase D surfaces |
 | [`docs/reviewer-handoff.mdx`](docs/reviewer-handoff.mdx) | data-host verification runbook |
-| [`docs/README.mdx`](docs/README.mdx) | documentation classification |
+| [`docs/README.mdx`](docs/README.mdx) | exhaustive 69-document ledger |
 
 Dated scout reports, piece specifications, and arbiter rulings remain evidence
 or executable contracts. Superseded agent review transcripts and duplicate

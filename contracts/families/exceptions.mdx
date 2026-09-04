@@ -44,3 +44,13 @@ falsified the premise. The projection is faithful, not broken — that
 sentence is itself part of the pinned text (V-D1 greps it).
 
 **Consumer rule:** per-term locale availability lives in `locales/locale-matrix.json`; `locales[]` fields are reserved-but-empty — treat them as RESERVED fields, never data.
+
+That pinned sentence names the **stage-4 source matrix**. Stage 4 writes
+`locales/locale-matrix.json` (per-key presence across the 13 client locales;
+`locales[]` on registry/join rows stay reserved-empty). It is not the final
+consumer-facing availability product.
+
+**Final projection:** stage 9 `locale-proof` is the sole writer of
+`relinks/locale_availability.jsonl`. Entity-granular availability for loaders
+is that stage-9 file. Do not read `locales[]` as data, and do not treat the
+stage-4 matrix as the finished availability artifact.
