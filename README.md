@@ -25,9 +25,10 @@ shorter competing count.
 
 ## Product and visual direction
 
-The future product is a visually distinctive Two Point Campus database: object-led
-entity pages, an owned campus map, the campus layout planner as flagship tool,
-client-grounded calculators, bidirectional relations, and useful saved/UGC state.
+The future product is a visually distinctive Two Point Campus database:
+object-led entity pages, an owned campus map, the campus layout planner as
+flagship tool, client-grounded calculators, bidirectional relations, and useful
+saved/UGC state.
 
 Those surfaces are **not implemented on this branch**. Merging this
 documentation reconciliation is not Phase D and does not close the project
@@ -51,24 +52,33 @@ No page, route, or analytics shell may ship as a substitute for that contract.
 | [`QUESTION-QUEUE.md`](QUESTION-QUEUE.md) | owner-only decisions |
 | [`data-acquisition.md`](data-acquisition.md) | source, corpus, media, and publication policy |
 | [`data/sources/MANIFEST.md`](data/sources/MANIFEST.md) | factual acquisition register |
+| [`competitor-research.md`](competitor-research.md) | current relationship-research acquisition/application state |
+| [`toolchain.md`](toolchain.md) | current thirteen-stage toolchain |
+| [`tools-plan.md`](tools-plan.md) | current data-backed product-tool priorities |
 | [`extracted/EXTRACTION-LOG.md`](extracted/EXTRACTION-LOG.md) | append-only tool and run evidence |
 | [`extracted/PROOF.md`](extracted/PROOF.md) | measured coverage and residue evidence |
 | [`extracted/VALIDATION-REPORT.md`](extracted/VALIDATION-REPORT.md) | current verification verdict |
+| [`extracted/RELATIONS.md`](extracted/RELATIONS.md) | current ordered relation inventory |
 | [`extracted/MEDIA-CATALOGUE.md`](extracted/MEDIA-CATALOGUE.md) | media class universe and coverage duty |
 | [`extracted/media/MEDIA-EXPORT.md`](extracted/media/MEDIA-EXPORT.md) | tracked entity-web subset report (not all-image completion) |
 | [`extracted/logic/LOGIC.md`](extracted/logic/LOGIC.md) | generated logic-layer evidence |
+| [`extracted/protocol/README.md`](extracted/protocol/README.md) | current protocol/no-gameplay-server inventory |
 | [`missingdata.md`](missingdata.md) | one ledger of unresolved data and proof gaps |
 | [`docs/current-stage.mdx`](docs/current-stage.mdx) | implementation-to-plan reconciliation |
 | [`docs/architecture.mdx`](docs/architecture.mdx) | ownership and dependency boundaries |
 | [`docs/site-plan.mdx`](docs/site-plan.mdx) | downstream product, route, and launch contract |
 | [`docs/design-direction.mdx`](docs/design-direction.mdx) | visual bar and first Phase D surfaces |
+| [`docs/review-history.mdx`](docs/review-history.mdx) | consolidated load-bearing historical findings |
 | [`docs/reviewer-handoff.mdx`](docs/reviewer-handoff.mdx) | data-host verification runbook |
 | [`docs/README.mdx`](docs/README.mdx) | exhaustive 69-document ledger |
 
-Dated scout reports, piece specifications, and arbiter rulings remain evidence
-or executable contracts. Superseded agent review transcripts and duplicate
-verification reports were consolidated into
-[`docs/review-history.mdx`](docs/review-history.mdx) and removed.
+Every one of the 69 retained Markdown/MDX documents was read and cross-reviewed
+against overlapping current facts, ownership, stage, product, and visual
+claims. Dated scout reports, piece specifications, and arbiter rulings remain
+evidence or executable contracts and carry in-file historical markers.
+Superseded agent review transcripts and duplicate verification reports were
+consolidated into [`docs/review-history.mdx`](docs/review-history.mdx) and
+removed.
 
 ## Pipeline
 
