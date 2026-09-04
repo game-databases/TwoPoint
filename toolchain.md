@@ -72,14 +72,18 @@ python tools/stage10_check_contracts.py
 python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus" --force
 ```
 
+The existing suite is executed unchanged. This reconciliation adds no tests and
+no `.mjs` files. Direct evidence for the known map coverage gaps comes from a
+disposable working tree plus narrow stage/validator and real-corpus checks.
+
 A return code of `2` is not success-equivalent: it means the stage completed
 with named ledger contributors. The final PROOF must preserve those
 contributors and their exact unblocks.
 
 ## Current toolchain risks
 
-- the map stage has an unresolved real-corpus identity defect and missing test
-  teeth;
+- the map stage has an unresolved real-corpus identity defect and missing
+  direct disposable-tree mutation evidence for several safety paths;
 - the media implementation predates the mandatory all-image/under-50-MB-model
   policy and does not yet inventory the owner-open animation class completely;
 - current tracked evidence does not prove the full emitted corpus came from
