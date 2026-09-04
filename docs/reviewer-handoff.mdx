@@ -1,46 +1,23 @@
-# Repository review record and data-host verification runbook
+# Data-host verification runbook
 
-This file separates the completed review of the repository reconciliation from
-checks that require the real Windows/Mac corpus. Every empirical result must be
-written into a future branch/PR or durable evidence document; chat-only results
-do not close the project data gate.
+This file is the empirical data-gate procedure for the Windows/Mac corpus. It
+is not the live pull-request review record. GitHub review submissions own
+repository-reconciliation verdicts; copying a final head SHA into this file
+would create a later commit and invalidate that anchor.
 
-## Repository review pass 1
+A 2026-09-04 owner directive reopened documentation finalization after earlier
+pass-2 comments on `98180ea` and `66807e2`. That pass removes the documentation
+checker/tests added during reconciliation, keeps the closed frontend gate, and
+treats [`site-plan.mdx`](site-plan.mdx) and
+[`design-direction.mdx`](design-direction.mdx) as the product and visual
+authorities. Historical pass-1 findings from `ef14545` remain useful as
+already-addressed documentation defects (restored spec dimensions, one blocker
+list, no live mergeability claim, no surviving transcript hrefs, no GitHub
+Actions). They are not a current merge-coupled gate.
 
-**Status:** complete  
-**Reviewed head:** `ef1454526a93f68039e399a5e60469918a6fb5af`  
-**PR review:** `5113786935`
-
-The first review accepted the Phase-C classification, site removal,
-documentation consolidation, and preserved data blockers. It requested five
-repository-local corrections:
-
-1. restore omitted spec dimensions;
-2. reconcile the canonical blocker count;
-3. remove a live mergeability claim from validation;
-4. guard removed-transcript links and GitHub Actions;
-5. separate repository reviews from corpus-host verification.
-
-Commit `657d1e93475552860eb48d5869e93899fd2e6ff9` addressed the five primary
-findings. Commit `98180ea6f5634f6adc15e524217d9b5434e6e2df` closed the
-remaining relative-link and duplicate-blocker-list edge cases. The final
-cleanup also corrected the source-manifest locale fact, completed the curated
-documentation inventory, and removed merge-coupled wording from project gates.
-
-## Repository review pass 2
-
-**Status:** recorded in the pull-request review conversation on the final
-branch head.
-
-The final review body is the authoritative immutable record of its head SHA,
-diff totals, ancestry, mergeability, status contexts, documentation inventory,
-forbidden-file checks, and repository-level verdict. The SHA is deliberately
-not copied into this file: writing it here would create a later commit and
-invalidate the review anchor. No branch write follows that review.
-
-The completed PR review does not turn the project data gate green. The
-remaining work below changes extraction artifacts and stage implementations,
-so it receives its own future branch and stage-specific review.
+Merging a documentation reconciliation does not claim the game-data project is
+complete. Phase D stays closed until the validation below is executed and
+written back through a separately reviewed change.
 
 ## Data-host validation
 
@@ -65,7 +42,6 @@ Required record:
 ### Repository tests
 
 ```bash
-python tools/check_documentation.py
 python -m pytest tests -m "not client_gated" -q
 python tools/stage10_check_contracts.py
 ```
@@ -179,9 +155,6 @@ counts and concrete unblocks.
 
 ## Post-merge project responsibility
 
-Merging this repository reconciliation does not claim the game-data project is
-complete. Phase D remains closed until the data-host validation above is
-executed and its results are committed through a separately reviewed change.
 When those checks run, replace procedural text that has become obsolete with a
 concise command/result record and explain which empirical result selected the
 final solution.

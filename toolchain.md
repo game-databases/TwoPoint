@@ -68,7 +68,6 @@ and explicitly inventoried local-large artifacts.
 ```bash
 python run_all.py --list
 python -m pytest tests -q
-python tools/check_documentation.py
 python tools/stage10_check_contracts.py
 python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus" --force
 ```
@@ -88,7 +87,7 @@ contributors and their exact unblocks.
 - contract and search stages need new stage-specific reviews after the
   map/media/relation changes that affect their inputs.
 
-These are project implementation risks, not unresolved findings on the
-current repository-reconciliation PR.
+These are project implementation risks. They are not a live status claim
+about any pull-request review.
 
 <!-- END OF toolchain.md -->

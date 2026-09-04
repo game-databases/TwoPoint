@@ -98,7 +98,7 @@ staging directory, and ready for production sync. Large logical streams are
 sharded on record boundaries whenever that preserves byte-equivalent
 reconstruction.
 
-The historical blanket ignore of `extracted/**` is removed by this review.
+The historical blanket ignore of `extracted/**` is removed.
 Before the project data gate can close, the corpus-owning agent must size-audit
 the live corpus, stage every eligible artifact, shard any eligible over-cap
 stream, and list every intentionally local artifact with exact path and byte

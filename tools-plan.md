@@ -50,6 +50,10 @@ the regenerated current corpus and link every input/output entity both ways.
 - No tool invents a missing game value. Unknown native formulas remain
   visibly unavailable and ledgered.
 
+Public tool surfaces follow [`docs/site-plan.mdx`](docs/site-plan.mdx) and the
+visual bar in [`docs/design-direction.mdx`](docs/design-direction.mdx). They
+are not implemented while the data gate is closed.
+
 ## Research follow-up
 
 Before Phase D freezes tool scope:

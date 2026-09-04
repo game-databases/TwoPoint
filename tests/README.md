@@ -1,15 +1,13 @@
 # Two Point Campus test suite
 
 The suite covers the thirteen-stage pipeline, fixture builders, contracts,
-maps, logic, locales, media, search, runner behavior, and documentation
-alignment.
+maps, logic, locales, media, search, and runner behavior.
 
 ## Commands
 
 ```bash
 python -m pytest tests -q
 python -m pytest tests -m "not client_gated" -q
-python tools/check_documentation.py
 ```
 
 Real-client legs use `TPC_GAME_DIR`. Heavy extraction legs also require
@@ -45,16 +43,6 @@ Search, media, logic, and contract suites also receive new stage reviews after
 the map/media/relation changes that affect their inputs. The durable data-host
 closeout protocol is in
 [`../docs/reviewer-handoff.mdx`](../docs/reviewer-handoff.mdx). This debt is
-separate from the completed two-pass review of the current reconciliation PR.
-
-## Documentation guard
-
-`tests/test_documentation.py` invokes the repository checker. It verifies all
-68 curated documents, the exact curated `docs/` inventory, retired
-placeholder/status/merge-coupled phrases, source-manifest locale accuracy,
-documentation classification, stage registry documentation, absence of the
-premature site tree, removal of superseded review/verification directories,
-rejection of Markdown links (including relative hrefs) to those directories,
-and the no-GitHub-Actions constraint.
+separate from pull-request documentation review.
 
 <!-- END OF tests/README.md -->

@@ -1,6 +1,11 @@
 # Two Point Campus site plan
 
-**Status:** downstream contract; implementation blocked by the data gate.
+**Status:** downstream product contract. Implementation is blocked by the data
+gate. This file owns product promise, routes, launch sections, locale,
+accounts, performance, analytics sequencing, and the order of work after the
+gate opens. The visual bar is [`design-direction.mdx`](design-direction.mdx).
+
+No page may claim a capability before its real backing exists.
 
 ## Product promise
 
@@ -14,7 +19,18 @@ A visually distinctive Two Point Campus database that combines:
 - accounts and useful saved/UGC state;
 - crawlable HTML, static JSON, and answer-engine surfaces.
 
-No page may claim a capability before its real backing exists.
+The home is an object-led coverage surface for the current build, not a
+marketing hero. Search lives in the header. The map and planner are the
+highest-priority site-ready workstreams once map identities are sound.
+
+## Visual contract
+
+Exact colors, type, icons, textures, and motion come from the client UI when
+Phase D opens. Until then, [`design-direction.mdx`](design-direction.mdx) is
+the acceptance bar: playful institutional campus administration, one primary
+object per viewport, game-sourced art, quiet chrome, and designed absence.
+A generic dark wiki, system-font landing page, or analytics shell cannot
+satisfy this plan.
 
 ## Route families
 
@@ -64,8 +80,22 @@ All relation links are ordinary anchors in served HTML.
 
 Launch/site planning includes Database, News or Guides with real content,
 Tools, Glossary/FAQ, Changelog, Search, comments/corrections, feeds, roadmap,
-and feedback. The owned map is the highest-priority site-ready workstream.
-Empty sections are omitted rather than explained.
+and feedback. Empty sections are omitted rather than explained.
+
+## After the data gate: implementation order
+
+Phase D does not start with a public shell. Work proceeds in this order:
+
+1. extract visual tokens from campus HUD, course cards, room inspectors, and
+   student-file UI;
+2. ship one object-led entity template that uses those tokens and real art;
+3. ship the owned desktop/TV map with handheld map links;
+4. ship the campus planner on the same visual language once identities join;
+5. add the remaining client-grounded tools;
+6. add guides, news, glossary, and changelog only with real content;
+7. add accounts/UGC on the single identity surface;
+8. add analytics only on that real candidate;
+9. add Skill and MCP repositories only after the public site exists.
 
 ## Locale contract
 

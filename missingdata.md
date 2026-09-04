@@ -122,6 +122,8 @@ tools, map UI, Skill, and MCP server do not exist. This is an intentional
 downstream gap while the data gate is closed, not permission to ship a generic
 placeholder.
 
-The future implementation contract is `docs/site-plan.mdx`.
+The future implementation contracts are `docs/site-plan.mdx` (product, routes,
+launch order) and `docs/design-direction.mdx` (visual bar). Neither authorizes
+a generic placeholder.
 
 <!-- END OF missingdata.md -->

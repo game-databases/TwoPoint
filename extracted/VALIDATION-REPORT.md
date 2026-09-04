@@ -33,22 +33,12 @@ one evidence chain. Superseded review and verification transcript directories
 are removed after consolidation. `docs/README.mdx` classifies retained scouts,
 piece specs, rulings, contracts, source provenance, and generated evidence
 rather than allowing any of them to compete with current status.
+[`docs/site-plan.mdx`](../docs/site-plan.mdx) and
+[`docs/design-direction.mdx`](../docs/design-direction.mdx) are the downstream
+product and visual contracts; they do not open the frontend gate.
 
-`tools/check_documentation.py` and `tests/test_documentation.py` guard:
-
-- all 68 curated documents and the exact curated `docs/` inventory;
-- stage-list documentation;
-- retired placeholder, bootstrap, merge-coupled, and hosting claims;
-- the checked-in storefront-language summary against its raw snapshot;
-- absence of a `site/` tree while the data gate is closed;
-- removal of superseded review/verification directories;
-- surviving Markdown links, including relative hrefs, to `docs/reviews/`
-  or `docs/verifications/`;
-- absence of GitHub Actions workflow files.
-
-The reconciliation PR receives two review submissions. This report records
-repository alignment versus the project data gate; it does not claim that the
-corpus-host validation has run.
+This report records repository alignment versus the project data gate. It does
+not claim GitHub mergeability or that corpus-host validation has run.
 
 ## Review findings that remain load-bearing
 
@@ -70,8 +60,8 @@ corpus-host validation has run.
   shared inputs or implementations change;
 - host source-hash parity and current full rerun are not recorded.
 
-These are stage-specific review duties. They are not an unfinished review of
-the current documentation/reconciliation PR.
+These are stage-specific review duties. They are not a live status claim
+about any pull-request review.
 
 ## Required empirical evidence
 

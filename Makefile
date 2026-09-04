@@ -5,19 +5,13 @@ GAME  ?=
 ONLY  ?=
 ROOT_FLAG ?=
 
-.PHONY: help setup extract stage list contracts docs-check test
+.PHONY: help setup extract stage list contracts
 
 help:
 	@$(PY) run_all.py --help
 
 list:
 	@$(PY) run_all.py --list
-
-docs-check:
-	@$(PY) tools/check_documentation.py
-
-test: docs-check
-	@$(PY) -m pytest tests -q
 
 contracts:
 	@$(PY) tools/stage10_check_contracts.py $(ROOT_FLAG)

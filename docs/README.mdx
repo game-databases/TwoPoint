@@ -1,13 +1,14 @@
 # Documentation map
 
 This index classifies every curated Markdown/MDX document in the repository so
-a dated report cannot silently compete with current state.
+a dated report cannot silently compete with current state. It is a human
+classification, not an automated test suite.
 
 ## Current authorities
 
 | Path | Purpose |
 |---|---|
-| `../README.md` | pack entry and current phase |
+| `../README.md` | pack entry, current phase, and product/visual pointers |
 | `../spec.md` | current product/data contract |
 | `../PROGRESS.mdx` | live concise board |
 | `../QUESTION-QUEUE.md` | owner-only decisions |
@@ -26,10 +27,10 @@ a dated report cannot silently compete with current state.
 | `../extracted/protocol/README.md` | current protocol/no-gameplay-server inventory |
 | `current-stage.mdx` | implementation/plan reconciliation |
 | `architecture.mdx` | ownership boundaries |
-| `site-plan.mdx` | downstream site contract |
-| `design-direction.mdx` | source-only visual review and target direction |
+| `site-plan.mdx` | downstream product, route, and launch contract |
+| `design-direction.mdx` | visual bar and first Phase D surfaces |
 | `review-history.mdx` | consolidated findings from removed review transcripts |
-| `reviewer-handoff.mdx` | completed PR-review record and data-host verification runbook |
+| `reviewer-handoff.mdx` | data-host verification runbook |
 
 ## Retained evidence and contracts
 
@@ -74,7 +75,7 @@ current acquired/applied count is owned by `../competitor-research.md`.
 ## Removed documentation
 
 The following directories were confirmed as session transcripts rather than
-durable authorities and are removed in this review:
+durable authorities and are removed:
 
 - `reviews/`
 - `verifications/`
@@ -83,12 +84,6 @@ All unresolved findings and material measured results from those documents are
 consolidated in `review-history.mdx`, `current-stage.mdx`, PROOF,
 VALIDATION-REPORT, and `../missingdata.md`. Git history retains the original
 verbatim transcripts.
-
-`tools/check_documentation.py` requires all 68 curated documents, rejects any
-unclassified Markdown/MDX file under `docs/`, rejects links to the removed
-transcript paths, verifies the current source-manifest locale summary against
-the checked-in raw snapshot, and enforces the closed-site/no-GitHub-Actions
-guards.
 
 No new BRD, PRD, plan, or research note is authored as HTML. New durable
 documentation is MDX; harness-fixed root filenames remain Markdown where

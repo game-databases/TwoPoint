@@ -23,11 +23,22 @@ The live C2 blocker families are the table in
 and C2-STAGE-REV. That table is the canonical list; this README does not keep a
 shorter competing count.
 
-There is deliberately **no public site implementation in this branch**. A
-generic analytics-only shell from an earlier branch state was removed because
-it preceded data completion and claimed product surfaces that did not exist.
-The complete site contract remains documented in
-[`docs/site-plan.mdx`](docs/site-plan.mdx).
+## Product and visual direction
+
+The future product is a visually distinctive Two Point Campus database: object-led
+entity pages, an owned campus map, the campus layout planner as flagship tool,
+client-grounded calculators, bidirectional relations, and useful saved/UGC state.
+
+Those surfaces are **not implemented on this branch**. A generic analytics-only
+shell from an earlier branch state was removed because it preceded data
+completion and claimed product that did not exist. Until the data gate opens:
+
+- [`docs/site-plan.mdx`](docs/site-plan.mdx) owns routes, launch sections,
+  locale, accounts, performance, and implementation order;
+- [`docs/design-direction.mdx`](docs/design-direction.mdx) owns the visual bar
+  and the first surfaces that may be built.
+
+No page, route, or analytics shell may ship as a substitute for that contract.
 
 ## Canonical documents
 
@@ -45,9 +56,10 @@ The complete site contract remains documented in
 | [`missingdata.md`](missingdata.md) | one ledger of unresolved data and proof gaps |
 | [`docs/current-stage.mdx`](docs/current-stage.mdx) | implementation-to-plan reconciliation |
 | [`docs/architecture.mdx`](docs/architecture.mdx) | ownership and dependency boundaries |
-| [`docs/design-direction.mdx`](docs/design-direction.mdx) | source-only visual review and future design bar |
-| [`docs/reviewer-handoff.mdx`](docs/reviewer-handoff.mdx) | completed PR-review record and data-host verification runbook |
-| [`docs/README.mdx`](docs/README.mdx) | exhaustive documentation classification |
+| [`docs/site-plan.mdx`](docs/site-plan.mdx) | downstream product, route, and launch contract |
+| [`docs/design-direction.mdx`](docs/design-direction.mdx) | visual bar and first Phase D surfaces |
+| [`docs/reviewer-handoff.mdx`](docs/reviewer-handoff.mdx) | data-host verification runbook |
+| [`docs/README.mdx`](docs/README.mdx) | documentation classification |
 
 Dated scout reports, piece specifications, and arbiter rulings remain evidence
 or executable contracts. Superseded agent review transcripts and duplicate
@@ -60,7 +72,6 @@ verification reports were consolidated into
 python run_all.py --list
 python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus"
 python -m pytest tests -q
-python tools/check_documentation.py
 ```
 
 `run_all.py` owns this order:

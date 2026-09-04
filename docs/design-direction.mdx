@@ -1,7 +1,14 @@
 # Two Point Campus design direction
 
+**Status:** visual bar for Phase D. Not implemented. The data gate is closed.
 **Method:** source-only review of the removed PR implementation plus current
-pipeline contracts. No screenshot or browser claim is made.
+pipeline and product contracts. No screenshot or browser claim is made.
+
+Product routes, launch sections, and implementation order live in
+[`site-plan.mdx`](site-plan.mdx). This file owns how those surfaces must look
+and behave. Exact colors, typefaces, iconography, textures, motion, and sounds
+are not invented here; they must be extracted from the client UI when the site
+phase opens.
 
 ## Removed implementation review
 
@@ -22,15 +29,11 @@ correct visual and architectural change.
 
 ## Target visual principles
 
-Exact colors, typefaces, iconography, textures, motion, and sounds are not
-invented here. They must be extracted from the client UI and measured when the
-site phase opens.
-
 The direction is:
 
 - **playful institutional object, not generic dark wiki** — panels should feel
-  like campus administration, course cards, room inspectors, and student
-  systems from the game;
+  like campus administration, course cards, room inspectors, Kudosh ledgers,
+  and student files from the game;
 - **one primary object owns the viewport** — course, room, item, campus, or
   layout rather than an explanatory article;
 - **color carries object identity** — per-course/campus state changes the
@@ -44,6 +47,22 @@ The direction is:
   emoji, stock art, or apology prose;
 - **restrained, game-derived motion** — transitions and feedback copied from
   measured interaction cadence, not stock component defaults.
+
+## First visual surfaces
+
+When Phase D opens, do not start with a marketing homepage. First visual work:
+
+1. measure tokens, type, icons, and interaction cadence from the campus HUD,
+   course cards, room inspector, and student-file UI;
+2. build one entity object template that uses real extracted art and those
+   tokens;
+3. build the desktop/TV map canvas in the same language, with handheld pages
+   linking into it;
+4. extend that canvas to the campus planner once map identities join;
+5. only then compose the object-led home from those working surfaces.
+
+A page that explains the product in prose instead of showing a campus object
+has failed this bar even if every route exists.
 
 ## Component families
 

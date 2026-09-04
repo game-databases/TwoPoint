@@ -183,10 +183,11 @@ Phase D may begin only after all of the following are true:
 
 Once the gate opens, the site implements the route, locale, visual, tool,
 community, structured-data, and distribution contract in
-[`docs/site-plan.mdx`](docs/site-plan.mdx). The future site must use one
-locale-aware route generator, server-render every crawlable relation, and use
-game-sourced content and imagery. A generic shell, analytics-only page, or
-English-only island cannot satisfy this specification.
+[`docs/site-plan.mdx`](docs/site-plan.mdx), to the visual bar in
+[`docs/design-direction.mdx`](docs/design-direction.mdx). The future site must
+use one locale-aware route generator, server-render every crawlable relation,
+and use game-sourced content and imagery. A generic shell, analytics-only page,
+or English-only island cannot satisfy this specification.
 
 ## Fill and collision policy
 
