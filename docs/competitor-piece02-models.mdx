@@ -4,13 +4,21 @@ Feeds [piece-02 §R6](specs/piece-02-relinking.mdx#r6--competitor-application-ba
 (bar 3 of the relinking bare minimum,
 [DR-2026-08-17-relink]): ≥3 independent sources analyzed for their
 entity-relationship model, findings **applied** to our relink layer —
-never merely recorded. Status of the floor after this pass:
+never merely recorded.
 
-| sourceId | Ladder outcome | R6 input artifacts |
-|---|---|---|
-| `fandom` | **F3 — MediaWiki api.php SUCCESS** | `data/sources/competitor/fandom/model.jsonl` (383 rows) + `PROVENANCE.md` |
-| `wiki-gg` | **WALL at every rung** (401 auth-layer edge) | `data/sources/competitor/wiki-gg/PROVENANCE.md` only (wall ledger row; no model.jsonl by design) |
-| `steam-guides` | **F2 — AI-crawler UA SUCCESS** | `data/sources/competitor/steam-guides/model.jsonl` (34 rows) + `PROVENANCE.md` |
+This file is a **harvested-model note**. It records what two readable
+inputs contain. It does not prove application.
+
+**Latest tracked relink run** (`EXTRACTION-LOG.md`, `2026-08-25T23:49:25Z`):
+`sourcesRead=2`, `sourcesApplied=0`, `floorMet=False`. Earlier log rows
+that printed `sourcesApplied=2` are historical and are not rewritten.
+Current documents use that latest row.
+
+| sourceId | Ladder outcome | Harvest artifacts | Applied in latest run |
+|---|---|---|---|
+| `fandom` | **F3 — MediaWiki api.php SUCCESS** | `data/sources/competitor/fandom/model.jsonl` (383 rows) + `PROVENANCE.md` | **0** — harvested, not applied |
+| `wiki-gg` | **WALL at every rung** (401 auth-layer edge) | `data/sources/competitor/wiki-gg/PROVENANCE.md` only (no model.jsonl) | **0** — wall; does not count |
+| `steam-guides` | **F2 — AI-crawler UA SUCCESS** | `data/sources/competitor/steam-guides/model.jsonl` (34 rows) + `PROVENANCE.md` | **0** — harvested, not applied |
 
 Ladder discipline held: one attempt per rung, no retries into walls
 (AGENTS rule 10), ≥2 s pacing on every request, all 27 logged pulls HTTP
@@ -18,7 +26,9 @@ Ladder discipline held: one attempt per rung, no retries into walls
 F1/F2 on both wikis were treated as consumed rungs, not re-fired. Raw
 pulls + generation scripts live beside the models under
 `data/sources/competitor/<source-id>/`; every `model.jsonl` row traces to
-captured bytes there. `data/sources/` stays out of git (game-data class).
+captured bytes there. These competitor inputs are tracked in git under
+`data/sources/competitor/`; they are repo-only research and never public
+content.
 
 ## 1 — `fandom`: the community's full relationship schema
 
@@ -182,19 +192,23 @@ Caveat recorded per row: these are player-derived figures — treat as
 value exists it wins and the guide row becomes confirms-hard evidence
 only.
 
-## 4 — Applied-delta routing (what R6 consumes)
+## 4 — Harvest versus application
 
-Floor arithmetic: `fandom` (adds-derived + confirms-hard + flags-missing
-all nonzero) + `steam-guides` (cardinality hints + campus-ladder +
-goal-tree) = 2 applied sources; floor needs ≥3 ⇒ **floor currently UNMET
-by 1** with `wiki-gg` walled and reserves (IGN/game8/neoseeker per
-`competitor-research.md` §1 C5–C7) unprobed this session. That shortfall
-is the honest state for R6's exit-2/FLOOR-UNMET path unless a reserve is
-run through the same ladder later; the unblock paths are named in
-`wiki-gg/PROVENANCE.md` and `competitor-research.md` §3. Nothing here
-lowers the bar.
+Harvesting a model is not applying it. Floor arithmetic on **inputs** is
+`fandom` + `steam-guides` = 2 readable models, with `wiki-gg` walled and
+reserves (IGN/game8/neoseeker per `competitor-research.md`) **unprobed**.
+That is not three applied sources.
 
-Concrete consumption order for the relink stage:
+The latest tracked relink run is `sourcesRead=2`, `sourcesApplied=0`,
+`floorMet=False`. Do not treat J1–J11 below as landed relation deltas.
+They are candidate joins for a future apply step. Current application
+count is zero until `competitor_applied.jsonl` and `RELATIONS.md` record
+three independent deltas, strengthened probes, or measured zero-deltas.
+
+Named unblock paths remain `wiki-gg/PROVENANCE.md` and
+`competitor-research.md`. Nothing here lowers the bar.
+
+Concrete future consumption order for the relink stage, still unexecuted:
 
 1. Map `fandom/model.jsonl` verbatim names → stub ids (spec §R6 mapping);
    expect typo-category collisions ("Dornmitory", "Decreases

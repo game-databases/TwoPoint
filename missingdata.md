@@ -22,8 +22,9 @@ the real corpus.
 Emitter-path door gating, dual ID-space sweep results, and closed generation
 vocabulary were deletable without failing the reviewed test selection.
 
-**Unblock:** add black-box mutation tests that fail when each behavior is
-removed; run fixture and real-client legs.
+**Unblock:** repair the implementation, then re-prove each behavior with the
+existing suite, a disposable working tree that deletes that behavior, and a
+real-corpus run. Do not add tests to this pack for that review.
 
 ### MEDIA-1 — all-image coverage
 

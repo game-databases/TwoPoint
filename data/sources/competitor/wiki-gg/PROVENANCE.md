@@ -3,8 +3,11 @@
 Repo-only provenance per AGENTS rule 3 / [DR-2026-08-15 D2]. R6 input
 (`docs/specs/piece-02-relinking.mdx` §R6). **No `model.jsonl` exists for
 this source: the access ladder exhausted every rung without one readable
-byte.** Absent inputs route as FLOOR-UNMET for this sourceId per §R6 —
-the floor itself is still met by `fandom` + `steam-guides` + reserves.
+byte.** Absent inputs route as FLOOR-UNMET for this sourceId per §R6.
+Reserves (other guide/database corpora) were not acquired. Two harvested
+models plus an unacquired reserve do **not** meet the three-source floor.
+The latest tracked relink run reports `sourcesRead=2`, `sourcesApplied=0`,
+`floorMet=False`.
 
 ## Source identity
 

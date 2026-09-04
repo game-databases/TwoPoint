@@ -19,6 +19,10 @@ The install is readable without a container-encryption wall. The authoritative
 inputs are the game client and first-party Steam metadata. Community sources
 are relationship-model research only and are never named on public surfaces.
 
+**Latest-run precedence:** `extracted/EXTRACTION-LOG.md` is append-only.
+Historical failed or earlier runs stay in that log. Current policy documents
+cite the latest ledgered run for each stage.
+
 ## Source inventory
 
 ### Addressables and bundles
@@ -99,10 +103,13 @@ sharded on record boundaries whenever that preserves byte-equivalent
 reconstruction.
 
 The historical blanket ignore of `extracted/**` is removed.
-Before the project data gate can close, the corpus-owning agent must size-audit
-the live corpus, stage every eligible artifact, shard any eligible over-cap
-stream, and list every intentionally local artifact with exact path and byte
-count in `extracted/PROOF.md`.
+
+Physical corpus publication is required **before Phase D / before a green
+project data gate**. It is not a precondition for merging a documentation
+reconciliation. Before that data gate can close, the corpus-owning agent must
+size-audit the live corpus, stage every eligible artifact, shard any eligible
+over-cap stream, and list every intentionally local artifact with exact path
+and byte count in `extracted/PROOF.md`.
 
 ## Current residue
 

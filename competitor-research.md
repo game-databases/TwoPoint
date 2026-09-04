@@ -35,9 +35,11 @@ A model that adds no edge may still count only when the run records the
 independent comparison, the zero delta, and why the client model already covers
 it.
 
-The latest progress evidence reports `sourcesApplied=0`. Until that changes,
-the matrix may be client-derived and useful but does not satisfy the competitor
-floor.
+The latest tracked relink run (`EXTRACTION-LOG.md`, `2026-08-25T23:49:25Z`)
+reports `sourcesApplied=0`. Earlier log rows that printed `sourcesApplied=2`
+are historical and are not rewritten. Current documents use the latest row.
+Until `sourcesApplied` is 3, the matrix may be client-derived and useful but
+does not satisfy the competitor floor.
 
 ## Application contract
 

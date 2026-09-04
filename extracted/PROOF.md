@@ -8,6 +8,12 @@ This document proves what the tracked evidence supports and states every known
 reason it cannot yet prove full deconstruction. It replaces the former
 placeholder; it is not a completion certificate.
 
+**Latest-run precedence:** `EXTRACTION-LOG.md` is append-only. Historical
+failed or earlier runs stay in that log and are not rewritten. Current
+documents cite the latest ledgered run for each stage. For competitor
+application that is the `2026-08-25T23:49:25Z` relink row:
+`sourcesRead=2`, `sourcesApplied=0`, `floorMet=False`.
+
 ## 1. Source inventory
 
 | Source | Measured universe | Current evidence |
@@ -129,9 +135,11 @@ current policy requires every file below approximately 95 MB and every commit
 below approximately 1 GB to be pushed; larger artifacts remain complete and
 staged locally.
 
-The current review removes the blanket ignore but cannot enumerate bytes
-unavailable through the GitHub-only checkout. Before the project data gate can
-close, the corpus-owning agent must:
+The blanket ignore is removed, but this GitHub-only checkout cannot enumerate
+bytes that were never published. Physical corpus publication is required
+**before Phase D / before a green project data gate**, not before merging this
+documentation reconciliation. Before that data gate can close, the
+corpus-owning agent must:
 
 - inventory every generated file on `NE8K` and the Mac;
 - commit all eligible files;

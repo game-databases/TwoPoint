@@ -71,7 +71,8 @@ Measure after the fix:
 Required result: zero silent duplicate or broken join. A nonzero result is
 acceptable only as an exact emitted ledger that keeps Phase D blocked.
 
-Run mutations that remove:
+On a **disposable working tree** (never this pack's committed tests), remove
+each of:
 
 1. post-demotion uniqueness assertion;
 2. final identity propagation;
@@ -80,7 +81,10 @@ Run mutations that remove:
 5. closed-generation refusal;
 6. manifest provenance refusal.
 
-Each mutation must fail at least one targeted test.
+Re-run the **existing** suite and a real-corpus extract after each deletion.
+Record which existing test, ledger, or corpus check failed. If a deletion
+stays silent, that is a remaining finding. Do not add tests to this pack
+for that review.
 
 ### Relation closure
 

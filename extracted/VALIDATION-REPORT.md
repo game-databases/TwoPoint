@@ -65,8 +65,8 @@ about any pull-request review.
 
 ## Required empirical evidence
 
-The exact commands, measurements, mutation tests, corpus-size audit, and
-evidence-regeneration procedure are in
+The exact commands, measurements, disposable-tree mutation review, corpus-size
+audit, and evidence-regeneration procedure are in
 [`../docs/reviewer-handoff.mdx`](../docs/reviewer-handoff.mdx). The agent with
 access to `NE8K` and the Mac corpus must write observed results back before it
 changes this project-level verdict or opens Phase D. No chat-only result closes

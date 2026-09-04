@@ -35,9 +35,10 @@ were not mutation-protected even though the suite was green:
 - the fifth-generation refusal path was exercised through the wrong gate;
 - corpus-scale post-demotion uniqueness and reverse-join closure were absent.
 
-The map fix must add tests that fail under each of those mutations and must run
-against the real corpus. Passing the existing suite alone cannot close the map
-blocker.
+The map identity repair must be re-proven with the existing suite, a
+disposable working tree that deletes each of those behaviors, and a real-corpus
+run. Do not add tests to this pack for that review. Passing the existing suite
+alone cannot close the map blocker.
 
 Search, media, logic, and contract suites also receive new stage reviews after
 the map/media/relation changes that affect their inputs. The durable data-host
