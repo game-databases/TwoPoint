@@ -1,71 +1,100 @@
-# Two Point Campus — pack README
+# Two Point Campus database pack
 
-Pack for **Two Point Campus** (Two Point Studios; Steam appid **1649080**;
-client buildid **20226581**, `version.txt` `10.3.169253+2024-12-06.1241`;
-Unity **2020.3.47f1**, IL2CPP, Windows x64). The client installs locally on
-this host (NE8K) at `A:\SteamLibrary\steamapps\common\Two Point Campus`
-(~4.37 GiB on disk; base depot 1649081 + two DLC packs — appid 1884560
-"Space Academy" via depot 1884561, installed as `DLCs/space/`, and appid
-1907450 "School Spirits" via depot 1907451, installed as `DLCs/ghost/`;
-Steam's internal dir codenames don't track marketing names here).
-Extraction runs here, in place — this machine holds the
-data ([`_foundation/extraction-host.md](../_foundation/extraction-host.md)).
+This repository contains the extraction, normalization, relation, map-geometry,
+logic, localization, media, contract, and search pipeline for **Two Point
+Campus** (Steam appid `1649080`).
 
-The product is the Two Point Campus database site — entity database,
-owned interactive campus maps, course/campus planner tools, guides, news,
-calculators, full client locale coverage — forward-designed as the first
-entry of a Two Point game picker (per-game themes over a shared house
-style). Binding standards: repo-root [`AGENTS.md`](../AGENTS.md),
-[`_foundation/extraction-doctrine.md`](../_foundation/extraction-doctrine.md),
-[`FRAMEWORK.md`](../FRAMEWORK.md), and the `_foundation/*` standards.
+Current measured client scope:
 
-## Status
+- buildId `20226581`
+- game version `10.3.169253+2024-12-06.1241`
+- Unity `2020.3.47f1`, IL2CPP metadata version `27`
+- 176 readable bundles: 158 base, 10 Space Academy, 8 School Spirits
+- 13 client text locales plus one non-locale base overlay
 
-Bootstrap/prepare pass. Scout report verified (21/21 facts CONFIRMED;
-coverage READY-FOR-DOCUMENTATOR): `docs/scout-report-001.mdx`,
-verdicts in `docs/verifications/`. Convention docs + the piece-1
-extraction-pipeline spec were authored by documentator-001 on 2026-08-24.
-Nothing is extracted yet; `extracted/` does not exist until pipeline
-piece 1 runs. Domain + tier are the one standing owner item
-([QUESTION-QUEUE.md](QUESTION-QUEUE.md)); local-first build proceeds.
+## Current stage
 
-## Layout
+The pack is in **Phase C: data hardening and proof closure**. The thirteen-stage
+pipeline exists and has produced real-corpus outputs, but the global
+data-before-frontend gate is still closed.
 
-| Path | What | State |
-|---|---|---|
-| `PROGRESS.mdx` | live progress page (orchestrator-maintained) | exists |
-| `QUESTION-QUEUE.md` | owner questions (domain+tier) | exists |
-| `README.md`, `spec.md`, `data-acquisition.md`, `competitor-research.md`, `toolchain.md`, `tools-plan.md` | pack conventions (AGENTS rule 4 set) | written 2026-08-24 |
-| `docs/scout-report-001.mdx` | verified intelligence base | exists |
-| `docs/verifications/verifyA-scout-001.mdx`, `verifyB-scout-001.mdx` | fact + coverage verdicts | exist |
-| `docs/specs/piece-01-extraction-pipeline.mdx` | piece-1 spec (CodeWriter/TestWriter input) | written 2026-08-24 |
-| `.agents/` | agent prompts + logs | exists |
-| `Makefile` + `run_all.py` | single reproducible extraction entrypoint ([DR-2026-08-18-pipeline]) | piece 1 deliverable |
-| `tools/` | pack-local pipeline scripts | piece 1 deliverable |
-| `contracts/` | emitted dataset contracts (pins + validators: `make contracts`) | piece-05 |
-| `extracted/` (+ `EXTRACTION-LOG.md`, `VALIDATION-REPORT.md`, `RELATIONS.md`, `PROOF.md`) | extraction outputs | created by piece 1 |
-| `design/`, `site/`, `data/sources/MANIFEST.md` | design tokens, site, source manifest | gated behind data completeness (AGENTS rule 8) |
+The latest committed review evidence identifies four release-blocking data
+duties:
 
-## Entrypoint contract
+1. map placement identity and reverse joins must be repaired and re-proven;
+2. the latest image/model extraction policy must be reconciled against the
+   complete asset universe;
+3. the three-source competitor relationship floor must be applied, not merely
+   harvested;
+4. the full corpus must be size-audited and published or staged under the
+   current Git policy.
 
-One discoverable command reproduces the full extraction A→Z from a fresh
-clone + the game folder: `./run_all <path-to-game>` / `make extract
-GAME=...` (stages idempotent, individually runnable, `--list`
-enumerates them). Tool + version + client buildid pins live in
-`extracted/EXTRACTION-LOG.md`, which the entrypoint reads its defaults
-from. The contract is [DR-2026-08-18-pipeline] +
-[extraction-doctrine.md §Principle two](../_foundation/extraction-doctrine.md);
-the concrete stages are specified in
-[docs/specs/piece-01-extraction-pipeline.mdx](docs/specs/piece-01-extraction-pipeline.mdx).
-Extraction runs on NE8K where the corpus is; only derived artifacts travel.
+There is deliberately **no public site implementation in this branch**. A
+generic analytics-only shell previously proposed in PR #1 was removed because
+it preceded data completion and claimed product surfaces that did not exist.
+The complete site contract remains documented in
+[`docs/site-plan.mdx`](docs/site-plan.mdx).
 
-## Reading order for a new agent on this pack
+## Canonical documents
 
-1. Repo-root `AGENTS.md` (in full) + `_foundation/extraction-doctrine.md`.
-2. This pack's `spec.md`, `data-acquisition.md`, `toolchain.md` (in full).
-3. `docs/scout-report-001.mdx` + both `docs/verifications/` verdicts —
-   the factual base; where this README, the spec, and the scout report
-   disagree, the measured numbers win and the docs get corrected.
-4. For pipeline work: `docs/specs/piece-01-extraction-pipeline.mdx`.
+| Document | Authority |
+|---|---|
+| [`spec.md`](spec.md) | current product, data, locale, map, and tool contract |
+| [`PROGRESS.mdx`](PROGRESS.mdx) | concise live phase board |
+| [`extracted/PROOF.md`](extracted/PROOF.md) | measured coverage and residue evidence |
+| [`extracted/VALIDATION-REPORT.md`](extracted/VALIDATION-REPORT.md) | current verification verdict |
+| [`missingdata.md`](missingdata.md) | one ledger of unresolved data and proof gaps |
+| [`docs/current-stage.mdx`](docs/current-stage.mdx) | implementation-to-plan reconciliation |
+| [`docs/architecture.mdx`](docs/architecture.mdx) | ownership and dependency boundaries |
+| [`docs/design-direction.mdx`](docs/design-direction.mdx) | source-only visual review and future design bar |
+| [`docs/reviewer-handoff.mdx`](docs/reviewer-handoff.mdx) | empirical checks required before merge/site handoff |
+| [`docs/README.mdx`](docs/README.mdx) | classification of every documentation family |
 
-END OF README.md
+Dated scout reports, piece specifications, and arbiter rulings remain evidence
+or executable contracts. Superseded agent review transcripts and duplicate
+verification reports were consolidated into
+[`docs/review-history.mdx`](docs/review-history.mdx) and removed.
+
+## Pipeline
+
+```bash
+python run_all.py --list
+python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus"
+python -m pytest tests -q
+python tools/check_documentation.py
+```
+
+`run_all.py` owns this order:
+
+1. `verify-client`
+2. `decompile`
+3. `harvest-catalog`
+4. `harvest-bundles`
+5. `localisation`
+6. `emit-stub-datasets`
+7. `relink`
+8. `maps`
+9. `logic`
+10. `locale-proof`
+11. `check-contracts`
+12. `media`
+13. `search-corpus`
+
+The source checkout used on `NE8K` must be hash-identical to the reviewed
+branch before any result is called reproducible. The host cannot authenticate
+Git operations initiated through SSH; relay the committed scripts and verify
+their hashes as described in the parent repository's extraction-host standard.
+
+## Product boundary
+
+The eventual site is one independently deployable Two Point Campus database
+with origin `TBD`. It is not hosted by, imported into, or coupled to the
+separate Steam intelligence product. Production origin and trademark clearance
+remain owner operations.
+
+All names, descriptions, stats, localized strings, entity imagery, and map
+imagery come from the game or its first-party services. External community
+material is repo-only research for relation modeling and authored guides; its
+identity never appears on player-facing surfaces.
+
+<!-- END OF README.md -->

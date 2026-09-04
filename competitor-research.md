@@ -1,95 +1,82 @@
-# Two Point Campus — Competitor Research
+# Two Point Campus — competitor relationship research
 
-Purpose under the relinking bare minimum ([DR-2026-08-17-relink] bar #3):
-≥3 independent wiki/database sources analyzed for their entity-relationship
-model, and the model **APPLIED** to our relink layer — added joins, derived
-edges, missing-relation flags landing in `extracted/relinks/` +
-`RELATIONS.md`. A source list alone does not meet the bar.
+## Purpose and current verdict
 
-**Status: NOT-YET-APPLIED.** This file fixes targets, records access
-walls, and schedules the analysis + fallback ladder. Nothing below has
-been applied to any dataset; the applied delta is a later-piece deliverable
-consumed by the pipeline's relink stages.
+The relation doctrine requires at least three independent wiki/database models
+to be analyzed **and applied** to the client-derived relation layer.
 
-## 0. Reference-site bar (site-side, separate from relinking)
+Current state:
 
-The site design bar and its measured defects live in `spec.md` context +
-[`_foundation/design-standard.md`](../_foundation/design-standard.md);
-scout §7's reference-site findings (Enka hover-joins, NWG URL state,
-crawlable link graph, honest empty states, owned map module) carry into
-the site build, not this file.
+- readable and harvested models: **2**
+- independently applied models: **0** in the latest tracked relation run
+- recorded access-wall sources: **1**
+- floor: **not met**
 
-## 1. Target list + access state (probed by scout-002, 2026-08-24)
+This file owns that gap. It does not describe external content as the game's
+fact plane, and no source identity, URL, license tag, or provenance chain may
+reach a public page, JSON API, `llms.txt`, search result, or metadata surface.
 
-Every candidate was curl-probed once (+1 crawler-UA retry where walled);
-per AGENTS rule 10 no wall was retried into. **All walled or empty — that
-is the finding, not a blocker.**
+## Acquired models
 
-| # | Source | Access state (measured) | Relationship model it carries | Role |
-|---|---|---|---|---|
-| C1 | Two Point Campus Wiki — `twopointcampus.fandom.com` | HTTP **403** bot wall (5.4 KiB challenge); retry with `Claude-User` UA → **402** | Primary community taxonomy: course↔room↔item↔staff/student cross-links, DLC coverage | Floor source 1 |
-| C2 | `twopointcampus.wiki.gg` | HTTP **401** on default + `OAI-SearchBot` UAs | Independent second instance of the same model; deltas vs C1 expose load-bearing edges | Floor source 2 |
-| C3 | Steam Community guides — `steamcommunity.com/app/1649080/guides/` | **HTTP 200 alive** (60 KiB shell) but guide list not server-rendered in that URL shape (0 guide links in HTML) | Player-authored chains: course→room→item needs, staff traits→course speed — derived-edge candidates our layer must reproduce from client data | Floor source 3 |
-| C4 | `twopointcampus.wiki.fextralife.com` | DNS **NXDOMAIN** — no dedicated Fextralife TPC wiki exists | (absence finding) | — |
-| C5 | IGN wikis — `ign.com/wikis/two-point-campus/` | **403**, body truncated at timeout | Publisher-grade entity lists (courses, rooms, items) | Reserve |
-| C6 | `game8.co/games/Two-Point-Campus` | HTTP **202**, 0 B body (challenge page) | Guide-style relationship chains | Reserve |
-| C7 | Neoseeker — `neoseeker.com/two-point-campus/` | **403** wall | Entity tables + community Q&A | Reserve |
+| ID | Corpus | Harvest | Model rows | Useful relationship families | Application |
+|---|---|---:|---:|---|---|
+| C1 | community wiki export | category tree, 91 page bodies, item/category slices | 383 | course↔room↔item, campus/course taxonomy, staff and student categories | pending |
+| C2 | Steam guide corpus | nine-guide index and four guide bodies | 34 | course/room needs, money, Kudosh, research, campus progression | pending |
+| C3 | second independent wiki instance | access wall recorded after permitted attempts | 0 | expected independent taxonomy check | unavailable |
 
-## 2. Scheduled analysis plan (ABP browser passes)
+Raw files and acquisition facts live under `data/sources/competitor/`; the
+append-only source manifest is the inventory. Their identity remains repo-only.
 
-Per AGENTS rule 10 every browser run goes through the ABP `browser` MCP
-server; a bot check or login wall is a finding, never retried into. The
-scout's walls were **curl** results — an ABP pass is the planned unlock,
-not a retry of a forbidden loop; each source still gets ONE attempt,
-then its wall is re-recorded as a finding.
+## Why the current stage is still incomplete
 
-For each of C1, C2, C3 (+ reserves only if needed):
+Harvesting a model is not application. The relink stage must produce a durable
+`competitor_applied` record and an actual schema/relation delta for each source.
+A model that adds no edge may still count only when the run records the
+independent comparison, the zero delta, and why the client model already covers
+it.
 
-1. **Enumerate** the entity-kind inventory and category tree.
-2. **Extract the relationship model** per kind: which cross-links exist
-   (infoboxes, "used in", requirement tables), their cardinality, and
-   their join keys as the community names them.
-3. **Diff against our client-derived schema**: edges the community
-   surfaces that our extraction has not yet derived become work items;
-   edges we have that they lack become differentiators.
-4. **Apply** accepted findings to `extracted/relinks/*.jsonl` +
-   `RELATIONS.md` with mechanism tags (`inferred`, method =
-   `competitor-model:<source-id>`) — repo-only provenance; source
-   identity never reaches user surfaces (AGENTS rule 3).
+The latest progress evidence reports `sourcesApplied=0`. Until that changes,
+the matrix may be client-derived and useful but does not satisfy the competitor
+floor.
 
-## 3. Fallback ladder (pre-named before ABP is proven — verifyB 5.2)
+## Application contract
 
-Bar #3 is unconditional; walls are access facts, not waivers. If the ABP
-passes cannot read C1–C3, each rung below fires in order. Every probe
-stays one-attempt-per-rung-per-source (rule 10); every result is
-recorded here as data.
+For each usable source:
 
-| Rung | Action | Trigger | Notes / risk |
-|---|---|---|---|
-| F1 | **ABP-browser passes on C1–C3** (§2 plan) | scheduled at competitor-research phase start | Primary plan. Single attempt each; walls → findings rows. |
-| F2 | **Web Archive snapshots** of C1/C2 entity + category pages via the CDX API (`web.archive.org/cdx/search/cdx?url=twopointcampus.fandom.com/wiki/*&output=json&filter=statuscode:200`), then snapshot fetches | any source unreadable after its F1 attempt | Archive.org endpoints are typically not challenge-walled to curl. Content-complete title (last patch 2025-12-19) means snapshot lag ≈ zero content cost; staleness stamped per row regardless. |
-| F3 | **Steam Community guides corpus via alternate fetch shapes** — paginated browse URLs (`/guides/?browsefilter=mostrecent&numperpage=…`) and individual guide pages fetched by curl with a browser UA; individual-guide URLs are UNPROBED (only the list shape was found JS-driven) | F2 yields <3 usable sources or thin relationship coverage | Each new URL shape = one attempt. INFERRED until probed; recorded either way. |
-| F4 | **Community mining outside wikis** — r/TwoPointCampus via old.reddit JSON endpoints; official Two Point Studios site/news posts (course/room showcases) | F3 insufficient | Read-only public surfaces; one attempt per endpoint class. |
-| F5 | **Reserves C5–C7 through the same ladder** (ABP → archive → direct fetch) | floor still short of 3 applied sources | Last community instances before the ledger state. |
+1. enumerate entity kinds and relationship families;
+2. normalize community labels to existing internal kinds without replacing
+   game identifiers;
+3. compare the model to hard, logic, and inferred client edges;
+4. emit one of:
+   - a new or strengthened relation;
+   - a new missing-pair probe;
+   - a measured zero-delta result;
+5. record the method in repo-only evidence;
+6. regenerate `RELATIONS.md`, the application ledger, and PROOF counts.
 
-### Terminal state if the floor stays unmet
+A community relationship may direct where to look; any game fact rendered to a
+player still comes from the client or first-party services.
 
-If fewer than three independent sources end up APPLIED after F1–F5:
-the gap is **ledgered, never waived** — a residue-ledger entry in
-`extracted/PROOF.md` naming exactly which bars are unmet, plus the
-concrete unblock path (owner-directed corpus acquisition: e.g. an owner
-browser session exporting the fandom/wiki.gg entity trees into
-`data/sources/`, which then feed the same APPLY step). Bar #3 then reads
-as partially met with the ledger pointing at its own exit — the doctrine
-state for "missing pairs are ledgered with the concrete unblock".
+## Third-source acquisition
 
-## 4. What the analysis must produce (acceptance of this file's plan)
+The reviewer must make one bounded pass through the remaining ladder:
 
-- ≥3 sources with an extracted relationship model, each stored under
-  `data/sources/` with provenance (repo-only).
-- An applied-delta record: joins added / edges derived / flags raised,
-  each traceable to `competitor-model:<source-id>` method strings in
-  RELATIONS.md.
-- Walls and dead ends recorded as data rows here, never silently dropped.
+1. archive snapshots for the second wiki;
+2. another independent guide/database corpus;
+3. an owner-exported category/entity tree if public access remains blocked.
 
-END OF competitor-research.md
+A bot/login wall is a finding, not an invitation to retry around it. If the
+third source remains unreachable, PROOF must say exactly which source classes
+were attempted, which relation question remained unanswered, and what concrete
+owner-provided corpus would close it. That leaves the pack honestly
+incomplete; it does not waive the floor.
+
+## Completion criteria
+
+- three independent model inventories;
+- three application records;
+- every accepted relationship delta present in emitted relation artifacts;
+- zero external-source names on user-facing surfaces;
+- relation and proof documents regenerated from the same run.
+
+<!-- END OF competitor-research.md -->
