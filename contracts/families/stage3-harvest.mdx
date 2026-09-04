@@ -3,9 +3,15 @@
 Every export filename embeds `<bundle-stem>_<signed-int64 pathId>` —
 60,582 of 167,069 manifest rows hold NEGATIVE path_ids, so the sign is
 contract, not decoration (Rev 6 lesson; V-S10 enforces the grammar).
-Media classes are catalogue-only; media-catalogue rows reconcile with the
-carved census per class (V-R3) and cab objects with the census total
-(V-R2).
+
+Stage 3's media duty is **census**, not decoded completion. Media-catalogue
+rows reconcile with the carved census per class (V-R3) and cab objects with
+the census total (V-R2). Those rows are **inputs to mandatory downstream
+decoding** under `[DR-2026-08-29-media-scope-amended]` (every text/image and
+every non-location model under 50 MB). A catalogue hit is not an extracted
+image or model. Entity-web subset evidence lives in
+`extracted/media/MEDIA-EXPORT.md`; class-universe coverage stays in
+`extracted/MEDIA-CATALOGUE.md`.
 
 ```pins
 {

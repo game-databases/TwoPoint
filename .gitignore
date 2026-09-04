@@ -5,22 +5,28 @@ __pycache__/
 tests/.fixture-trees/
 .venv/
 
-# pack-local pipeline scripts are tracked source, not the Windows-only
-# toolchain the root `tools/` rule targets (anvil-empire precedent)
+# Pack-local pipeline scripts are tracked source.
 !tools/
 !tools/**
 tools/__pycache__/
 
-# extraction outputs stay local (game data never enters git); only the
-# markdown layer of extracted/ is tracked (EXTRACTION-LOG.md, placeholder
-# pointers, MEDIA-CATALOGUE.md)
-extracted/**
-!extracted/**/
-!extracted/**/*.md
-
-# fixture trees also get built at pack root by probe runs
+# Transient fixture and stage scratch.
 .fixture-trees/
-
-# orchestrator probe scratch (transient)
 /_proof_*
 /_scout2_*
+*.tmp
+*.tmp.*
+*.partial
+*.part
+*.temp
+
+# Explicit local-only staging for artifacts that exceed the current Git
+# policy. Every file here must be listed in extracted/PROOF.md with path,
+# bytes, hash, and production-sync readiness.
+extracted/.local-large/
+data/local-corpus/
+data/production-staging/
+
+# Generated product artifacts under extracted/ are intentionally NOT ignored.
+# Files below ~95 MB are committed; larger reconstructible streams are
+# sharded; genuinely larger files move to the staging paths above.

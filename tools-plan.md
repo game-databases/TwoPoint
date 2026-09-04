@@ -1,102 +1,68 @@
-# Two Point Campus — Tools Plan (skeleton, spec-freeze draft)
+# Two Point Campus — current tools plan
 
-Per [`_foundation/site-sections.md`](../_foundation/site-sections.md)
-§Tools [CORE] + the mandatory tool-discovery process. This is the
-**spec-freeze draft**: it satisfies the D5 floor (`tools-plan.md` with
-≥5 scored ideas at spec freeze) with candidates seeded from TPC's bundle
-families and mechanics vocabulary. Every idea is **PROVISIONAL —
-data-readiness unconfirmed until pipeline stages 2–5 land**; the whole
-plan is re-run through the discovery process after Tier 1 (the
-post-extraction mechanics pass).
+The logic, map, relation, locale, and search stages now provide measured
+evidence for tool selection. This replaces the pre-extraction skeleton.
 
-## 1. Tool-discovery process checklist (re-run on every major patch)
+Scores use 1–5 where higher demand, readiness, or defensibility is better and
+higher cost is more expensive.
 
-| Step | State today |
-|---|---|
-| 1. Competitor inventory (gaming.tools / niche leaders / SERP hits for "[game] calculator\|planner\|map"; tools named in subreddit/Discord) | **PENDING** — scout §6 probed wiki-class sources only; no dedicated TPC tool site surfaced in those probes. One gaming.tools + SERP sweep scheduled with the post-Tier-1 re-run; Steam Community guides corpus (C3, alive) doubles as a pain-point source |
-| 2. Mechanics enumeration from the extracted logic layer | **BLOCKED BY DATA** — runs after stages 1–5 produce `logic/` inputs; this file's candidate list is its seed |
-| 3. Moat tools first (what full deconstruction enables that wikis cannot build) | applied to scoring below (defensibility axis) |
-| 4. Pain-point mining (Reddit/Discord/Steam forums, autocomplete) | PENDING — folds into the same re-run; r/TwoPointCampus JSON endpoints are ladder F4 in `competitor-research.md` |
-| 5. Scoring: traffic potential × build cost × data-readiness × defensibility | done provisionally below; re-scored when data-readiness resolves |
-| 6. Ship → embed → iterate (MVP fast, URL states, interlinking rule) | standing rule for every shipped tool |
+## Prioritized tools
 
-## 2. Candidate tools (≥5 floor met — 6 listed)
+| Priority | Tool | Player job | Demand | Readiness | Defensibility | Cost | Gate |
+|---:|---|---|---:|---:|---:|---:|---|
+| 1 | campus layout planner | place plots, rooms, and items; validate a campus; share a layout | 5 | 2 | 5 | 5 | map identity and reverse joins |
+| 2 | course prerequisite explorer | see course unlocks, modules, prerequisites, rooms, and related items | 5 | 4 | 4 | 3 | relation exhaustion |
+| 3 | Kudosh economy planner | compare 2,143 measured source/sink rows and sequence unlock spending | 4 | 4 | 4 | 3 | public entity contracts |
+| 4 | research and unlock tree | traverse research costs, metagame nodes, courses, rooms, and unlockables | 4 | 3 | 4 | 3 | partial metagame↔course relation |
+| 5 | grading calculator | inspect assessment scoring and grade cutoffs by course | 4 | 3 | 5 | 3 | XP→score native normalization |
+| 6 | needs and decay simulator | explain staff/student decay and interaction effects | 4 | 3 | 5 | 4 | student core-11 carrier |
+| 7 | localized database search | find entities and game strings across all 13 client locales | 4 | 4 | 3 | 2 | route and slug manifests |
+| 8 | patch difference explorer | compare entities, logic, relations, and media between builds | 4 | 1 | 5 | 4 | a second extracted build |
 
-Scores are provisional H/M/L per axis; `data-readiness` names the exact
-pipeline artifact that must exist before the tool can be built.
+## Measured backing
 
-### T1 — Course requirement calculator (course → room → item)
+- 69 courses, 319 modules, 471 prerequisite rows, and 50 course-unlock
+  edges;
+- 28 money-taxonomy values, 2,143 Kudosh ledger rows, and 209 research
+  costs;
+- nine grade bands, 75 term pass-grade rows, and 28 assessment-scoring rows;
+- 30 staff-decay rows, 13 student-decay rows, and 630 interactions;
+- 13 locale search shards and a client-derived term registry;
+- campus scenarios, plots, rooms, placements, layers, and validators exist,
+  but the latest review proves their identity joins are not yet safe.
 
-What it answers: "to run course X at grade Y I need rooms R with items
-I" — the game's core join rendered as an interactive chain.
-Powers from: stage-5 canonical datasets joining `course`↔`room`↔`item`
-(configs_* + items-* bundles).
-Traffic **H** (the query every player has) · Build cost **M** ·
-Data-readiness **H** (join edges are expected hard references) ·
-Defensibility **M** (wikis list requirements as prose tables).
+These counts are input evidence, not public marketing copy. Public tools use
+the regenerated current corpus and link every input/output entity both ways.
 
-### T2 — Campus layout planner / builder (flagship candidate)
+## Product rules
 
-The new-world.guide build-creator analog: place plots/rooms on a campus
-plot map, see capacity/course-slot effects live, shareable URL state.
-Powers from: stage-3 scene/config dumps (plot geometry from
-`config_level_databases` + `configs-levels-prefabs`) + later-piece derived
-geometry; owned-map module doubles as its canvas ([DR-2026-08-20-design-bar]
-map differentiator).
-Traffic **H** · Build cost **H** · Data-readiness **M** (needs scene
-transforms — the maps block's `unknown-P0` flip) · Defensibility **H**
-(nobody builds planners over extracted plot coordinates).
+- The layout planner is the flagship creator, but it cannot ship on broken
+  placement identity.
+- Inputs respond as typed; tools do not require a submit button.
+- Every meaningful state is shareable through a stable URL, except transient
+  map camera/filter/search state.
+- Tools are server-rendered around their initial answer and keep crawlable
+  entity links.
+- Mobile supports calculators, search, and textual database pages. The
+  interactive map and map-backed layout canvas are desktop/TV surfaces.
+- Saved layouts, favorites, comments, corrections, ratings, and screenshots
+  use the local auth/UGC adapter until a public origin enables real providers.
+- No tool invents a missing game value. Unknown native formulas remain
+  visibly unavailable and ledgered.
 
-### T3 — Student happiness simulator
+Public tool surfaces follow [`docs/site-plan.mdx`](docs/site-plan.mdx) and the
+visual bar in [`docs/design-direction.mdx`](docs/design-direction.mdx). They
+are not implemented while the data gate is closed.
 
-"What breaks my students?" — needs/environment/grade model simulated
-from config rows instead of anecdote.
-Powers from: stage-5 config dumps + logic-layer derivation of the
-happiness/need formulas (later piece reads decompiled services).
-Traffic **M** · Build cost **H** · Data-readiness **L→M** (formula
-extraction is real work past stage 5) · Defensibility **H** (pure
-logic-layer moat).
+## Research follow-up
 
-### T4 — Kudosh economy planner
+Before Phase D freezes tool scope:
 
-Income vs spend planner over the Kudosh currency: what unlocks what,
-what earns how much, purchase ordering.
-Powers from: stage-5 unlockable/economy datasets (`unlockables`,
-`configs_*`; prices PROVISIONAL until confirmed in data).
-Traffic **M** · Build cost **M** · Data-readiness **M** ·
-Defensibility **M**.
+1. finish the three-source competitor model application;
+2. mine recurring player questions from the acquired guide corpus;
+3. rerun the score table against current search demand and the repaired data;
+4. identify which tools become launch scope and which follow immediately;
+5. add entity↔tool, guide↔tool, and news↔tool reverse indexes to the data
+   contract.
 
-### T5 — Research-tree explorer
-
-Full course/research unlock tree with dependency highlighting and
-patch-stamped diffs if updates ever resume.
-Powers from: `metagame-node` datasets (`configs-metagame` family) +
-relink edges.
-Traffic **M** · Build cost **L** (once nodes exist) · Data-readiness
-**M** · Defensibility **L–M** (wikis draw static trees).
-
-### T6 — Staff-trait matcher
-
-Which staff traits accelerate which courses; roster optimizer.
-Powers from: staff/student-type datasets + trait-effect edges
-(expected `logic` mechanism, not hard refs — flagged accordingly).
-Traffic **M** · Build cost **M** · Data-readiness **L** (edges likely
-derived from decompiled code) · Defensibility **M**.
-
-## 3. Section mapping (mandatory sections covered by these tools)
-
-Tools [CORE] — T1/T3/T4/T6 calculators+simulators, T2 flagship planner;
-Database [CORE] — every tool links its input entities both ways
-(aggressive-interlinking rule); News [CORE] — patch-diff route rides the
-buildid-stamped rerun even though cadence is dormant; Guides [CORE] —
-each tool gets a grounded explainer once its dataset lands.
-
-## 4. Post-Tier-1 obligations
-
-1. Re-run steps 1–5 above with real mechanic enumerations from
-   `extracted/logic/`.
-2. Confirm or kill each candidate on measured data-readiness; add the
-   competitor-inventory table with traffic estimates.
-3. Re-check the ≥5 evidence-linked quota against the surviving set.
-
-END OF tools-plan.md
+<!-- END OF tools-plan.md -->

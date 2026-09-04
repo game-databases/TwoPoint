@@ -1,0 +1,170 @@
+# Two Point Campus site plan
+
+**Status:** downstream product contract. Implementation is blocked by the data
+gate. Merging a documentation reconciliation does **not** open Phase D or
+turn the project data gate green. This file owns product promise, routes,
+page compositions, launch sections, locale, accounts, performance, analytics
+sequencing, and the order of work after the gate opens. The visual extraction
+brief is [`design-direction.mdx`](design-direction.mdx).
+
+No page may claim a capability before its real backing exists.
+
+## Product promise
+
+A visually distinctive Two Point Campus database that combines:
+
+- complete localized entity pages;
+- an owned campus map;
+- the flagship campus layout planner;
+- client-grounded calculators and explainers;
+- aggressive bidirectional relation linking;
+- accounts and useful saved/UGC state;
+- crawlable HTML, static JSON, and answer-engine surfaces.
+
+The home is an object-led coverage surface for the current build, not a
+marketing hero. Search lives in the header. The map and planner are the
+highest-priority site-ready workstreams once map identities are sound.
+
+## Visual contract
+
+Exact colors, type, icons, textures, and motion come from the client UI when
+Phase D opens. Until then, [`design-direction.mdx`](design-direction.mdx) is
+the acceptance bar: playful institutional campus administration, one primary
+object per viewport, game-sourced art, quiet chrome, and designed absence.
+A generic dark wiki, system-font landing page, or analytics shell cannot
+satisfy this plan.
+
+## Route families
+
+Pivot English uses bare paths. Non-pivot routes use locale prefixes and
+localized taxonomy/entity slugs.
+
+| Family | Purpose |
+|---|---|
+| `/` | object-led home with current build coverage and primary tools |
+| `/<localized-kind>/<localized-slug>` | entity detail |
+| `/<localized-kind>` | crawlable kind landing/list |
+| `/map` | desktop/TV campus map |
+| `/tools` | tool index |
+| `/tools/campus-planner` | flagship layout planner |
+| `/tools/course-requirements` | prerequisite/room/item explorer |
+| `/tools/kudosh-planner` | economy planner |
+| `/tools/grading` | grading calculator |
+| `/guides` and detail | authored, entity-linked guides |
+| `/news` and detail | game and database news, patch-diff coverage |
+| `/changes` and build detail | extracted version differences |
+| `/glossary` | client-grounded mechanics reference |
+| `/account` | unified provider-choice identity surface |
+| `/profile/<id>` | saved public state where enabled |
+| `/api/v1/...` | unauthenticated static data mirrors |
+| `/llms.txt` | machine index and coverage semantics |
+| feeds/sitemaps/robots | localized discovery infrastructure |
+
+There is no standalone search route. Search opens in the header and replaces
+page content in place after two typed characters while preserving underlying
+state.
+
+## Entity page anatomy
+
+1. game-sourced object art and identity;
+2. key numbers and state;
+3. direct answer block derived from data;
+4. locale links;
+5. conditional relation modules;
+6. location module on desktop and map link on handheld;
+7. related tools, guides, news, and changed-in-build links;
+8. comments, corrections, ratings, and screenshots;
+9. visible buildId and coverage scope.
+
+All relation links are ordinary anchors in served HTML.
+
+## Page compositions
+
+These compositions are the implementation brief. Visual tokens, anti-patterns,
+and capture order live in [`design-direction.mdx`](design-direction.mdx). Do
+not invent colors, type, or motion.
+
+| Route | Composition |
+|---|---|
+| `/` | object-led home: one featured campus or course object, then tools that already have backing data; no marketing hero |
+| `/<kind>/<slug>` | entity object: art well, identity plate, numbers/chips, direct answer, locale cluster, HTML relation modules, location/map, related wells, UGC, buildId |
+| `/<kind>` | kind list: extracted-chip filters, dense object cards, real links, virtualized after first paint |
+| `/map` | desktop/TV campus canvas, docked legend/inspector, header search; handheld uses entity location text plus this link |
+| `/tools/campus-planner` | map canvas language plus validation strip and shareable layout URL |
+| `/tools/*` | direct answer dominates; keystroke updates; every entity input/output is a link; missing formulas are designed absence |
+| `/account` | one sign-in/sign-up panel; OAuth first; email only on that same panel |
+
+Empty sections are omitted. A route without backing data is not shipped.
+
+## Required sections
+
+Launch/site planning includes Database, News or Guides with real content,
+Tools, Glossary/FAQ, Changelog, Search, comments/corrections, feeds, roadmap,
+and feedback. Empty sections are omitted rather than explained.
+
+## After the data gate: implementation order
+
+Phase D does not start with a public shell. Work proceeds in this order:
+
+1. extract visual tokens from campus HUD, course cards, room inspectors, and
+   student-file UI;
+2. ship one object-led entity template that uses those tokens and real art;
+3. ship the owned desktop/TV map with handheld map links;
+4. ship the campus planner on the same visual language once identities join;
+5. add the remaining client-grounded tools;
+6. add guides, news, glossary, and changelog only with real content;
+7. add accounts/UGC on the single identity surface;
+8. add analytics only on that real candidate;
+9. add Skill and MCP repositories only after the public site exists.
+
+## Locale contract
+
+- 13 client locales;
+- complete site chrome per locale;
+- no mixed-language game prose;
+- localized section segments and entity slugs;
+- stable id used internally;
+- one route generator for every path-bearing surface;
+- complete canonical/hreflang/sitemap clusters.
+
+## Accounts and UGC
+
+One sign-in/sign-up screen offers Discord, Twitch, Steam, and Google. Local
+development uses a non-production identity adapter. Sessions last at least
+three months and the last-used provider is remembered.
+
+Useful stored features:
+
+- saved campus layouts;
+- favorites and completion lists;
+- comments and ratings;
+- correction suggestions;
+- screenshots within the network defaults;
+- moderation state.
+
+## Performance and crawlability
+
+- server-rendered initial content;
+- no JS-only relation graph;
+- LCP below 2.5 seconds, scripted interaction below 200 ms, CLS below 0.1
+  on each entity template;
+- responsive images and subset fonts;
+- mobile verification for every non-map route;
+- desktop/TV verification for map and planner canvas;
+- non-empty static API and `llms.txt` on the production origin.
+
+## Release-parallel distribution
+
+After data/relink/media completeness and public deployment, the site gets its
+own standalone Skill repository and MCP repository. They are real clients of
+the public site, not empty backlink shells, and disclose no shared network
+ownership.
+
+## Analytics
+
+Analytics is deployment instrumentation, not a product feature. It is added
+only to the real candidate after the production data/route/privacy decisions
+are known. It must fail closed without credentials and must never justify an
+otherwise empty site shell.
+
+<!-- END OF docs/site-plan.mdx -->

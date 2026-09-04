@@ -1,189 +1,129 @@
-# Two Point Campus — Data Acquisition
+# Two Point Campus — data acquisition and corpus policy
 
-Companion to `spec.md` + `toolchain.md`. Research basis:
-`docs/scout-report-001.mdx` §2/§4/§9 (verifyA 21/21 CONFIRMED) plus the
-2026-08-24 recounts by documentator-001 (scene tally, metadata version,
-DLC rosters — noted inline where they supersede scout figures). All
-figures measured on this host; the only downloads are the two kickoff
-corroboration pulls that landed 2026-08-25 under `data/sources/`
-(§"Queued external pulls" below).
+## Primary client
 
-## Client (primary source, in hand)
-
-| Fact | Value |
+| Field | Measured value |
 |---|---|
-| Install dir | `A:\SteamLibrary\steamapps\common\Two Point Campus` |
-| SizeOnDisk (manifest) | 4,694,205,668 B ≈ 4.37 GiB |
-| Steam appid | 1649080 |
-| buildid | **20226581** (= `TargetBuildID` — install is at target) |
-| LastUpdated | epoch 1766136803 = 2025-12-19 |
-| In-game version | `version.txt`: `10.3.169253+2024-12-06.1241` (27 B) |
-| Engine | Unity 2020.3.47f1 (ASCII at ~0x30 of `globalgamemanagers`; verifyA #2) |
-| Backend | IL2CPP — `GameAssembly.dll` 311,226,368 B + `TPC_Data/il2cpp_data/Metadata/global-metadata.dat` 14,284,260 B |
-| Metadata header | sanity word `0xFAB11BAF` @ offset 0; **metadata version 27** @ offset 4 (int32 LE; measured by documentator-001 2026-08-24 — verifyB carry 1.1 closed pre-stage; the version int follows the sanity word, so "offset 0" in verifyB reads as offset 4) |
-| Developer / title strings | `TPC_Data/app.info`: "Two Point Studios" / "Two Point Campus" |
-| Steam language setting | `"language" "english"` sits in `appmanifest_1649080.acf` (twice; no `userdata/` on `A:`) — install setting, not a capability row |
+| install | `A:\SteamLibrary\steamapps\common\Two Point Campus` on `NE8K` |
+| appid | `1649080` |
+| buildId | `20226581` |
+| version | `10.3.169253+2024-12-06.1241` |
+| engine | Unity `2020.3.47f1`, IL2CPP |
+| metadata | `global-metadata.dat` version `27` |
+| base depot | `1649081` |
+| installed DLC | Space Academy (`1884560`), School Spirits (`1907450`) |
+| uninstalled content | Medical School (`2195430`) |
+| bundle universe | 176: 158 base + 10 Space Academy + 8 School Spirits |
 
-Content is Unity AssetBundles with standard LZ4/LZMA block compression;
-no depot-level or container-level encryption observed. No technical
-reachability wall exists for any planned source — every byte of the
-corpus is locally readable.
+The install is readable without a container-encryption wall. The authoritative
+inputs are the game client and first-party Steam metadata. Community sources
+are relationship-model research only and are never named on public surfaces.
 
-## Depot map (`appmanifest_1649080.acf`)
-
-| Depot | DLC appid → public name | Size (B) | Manifest gid |
-|---|---|---|---|
-| 1649081 (base) | — | 4,112,128,282 | 289369811377342695 |
-| 1907451 ("ghost") | 1907450 — "School Spirits" | 212,055,024 | 3622833373893779274 |
-| 1884561 ("space") | 1884560 — "Space Academy" | 370,022,362 | 6004916305044431883 |
-
-**Association CORRECTED 2026-08-25** against
-`data/sources/steam-appdetails-1649080.json` (an earlier draft paired
-these backwards): **appid 1884560 = "Space Academy"** → depot 1884561 →
-`DLCs/space/` (`dlc1_launchpadlevel`, `dlc1_moonbaselevel`,
-`dlc1_spaceportcitylevel`); **appid 1907450 = "School Spirits"** → depot
-1907451 → `DLCs/ghost/` (`dlc2_ghosts_optimised`). Steam's internal dir
-codenames do not track marketing names here — `space`/`ghost` stay as
-folder nicknames and as the frozen `contentAxis` enum values
-(`dlc-space`/`dlc-ghost`); only the appid/depot↔dir association text
-corrected.
-
-Shared Steamworks depot 228989 (standard redistributable). The two DLC
-depot sizes do not sum to the 556 MiB `DLCs/` dir on disk — disk shows
-post-install expansion; both are recorded facts, not an error.
+**Latest-run precedence:** `extracted/EXTRACTION-LOG.md` is append-only.
+Historical failed or earlier runs stay in that log. Current policy documents
+cite the latest ledgered run for each stage.
 
 ## Source inventory
 
-### S1 — Addressables store (`TPC_Data/StreamingAssets/aa/`)
+### Addressables and bundles
 
-161 files total under `aa/`: the corpus below plus `AddressablesLink/`.
+- `TPC_Data/StreamingAssets/aa/catalog.bundle`
+- 158 base bundles under `aa/StandaloneWindows64/`
+- 18 installed DLC bundles under `DLCs/space/` and `DLCs/ghost/`
+- 14 localization bundles: 13 locales plus a base overlay
+- `GameAssembly.dll` and `global-metadata.dat`
+- appmanifest, version, app-info, boot, and runtime sidecars
 
-- `aa/settings.json` — runtime config. Pinned values: `m_AddressablesVersion`
-  **1.21.10**, settings hash `ff59c4d7914829f354d3efeefc3819f0`,
-  `m_IsLocalCatalogInBundle: true`, provider `ContentCatalogProvider`,
-  build target `StandaloneWindows64`.
-- `aa/catalog.bundle` — **1,704,718 B** (1.63 MiB; the scout's "1.7 MiB"
-  rounds up). Machine-readable key → bundle/address index over the whole
-  store; first extraction artifact (pipeline stage 2).
-- `aa/StandaloneWindows64/` — **158 bundles ≈ 3.5 GiB apparent**
-  (du 3560 MiB). Human-readable domain-partitioned names,
-  `{family}-{subfamily}_{kind}_{scope}.bundle`, plus a few hash-prefixed
-  ones (e.g. `041ed57f…_monoscripts.bundle`,
-  `…_unitybuiltinshaders.bundle`). Largest: video-intro-hi 256 MiB ·
-  audio-music 252 · audio-sfx 221 · environment-landscape 204 ·
-  character-shared-textures 170 · unlockables 146 · rooms 137 ·
-  animations-character-courses 132 · environment 108 ·
-  character-shared 103 · audio-radio en/de/zh-Hans 100/96/88 ·
-  items-general 85.
-  - Locales: exactly **14** `localisation_assets_localisation*.bundle`
-    = 1 unnamed base overlay + 13 named languages (list character-exact
-    in spec.md; verifyA #5b).
-  - Scenes: **21 strict `*.unity.bundle`** + `scenes-seasonalcontent_scenes_all.bundle`
-    (scene-carrying, NO `.unity` suffix — the suffix nuance that made
-    scout §5's table sum to 22). The authoritative scene table lives in
-    `toolchain.md` §"Scene tally" and is re-verified by piece-1 stage 0;
-    never cite scout §5's tildes.
+The decoded catalog contains 56,660 key slots, 66,129 entries, and 81,146
+bucket memberships. It resolves all 176 installed bundle basenames and records
+19 out-of-roster references, primarily Medical School plus preorder material.
 
-### S2 — DLC packs (`DLCs/{space,ghost}/`, loose bundles)
+### First-party metadata
 
-Counted 2026-08-24 (these exact figures supersede scout §2's `~9/~11`
-tildes; they reconcile with §9 and the 176-bundle total):
+The repository stores kickoff Steam app-details and news responses under
+`data/sources/` with an append-only manifest. These corroborate product names,
+DLC identities, and update cadence. They do not replace client extraction.
 
-| Dir | Bundles | Scene bundles |
-|---|---|---|
-| `DLCs/space/` | **10**: art, audio, configs, environment-debug, loadingscreen, ui, ui-spriteatlas + scenes | 3 × `.unity`: `dlc1_launchpadlevel`, `dlc1_moonbaselevel`, `dlc1_spaceportcitylevel` |
-| `DLCs/ghost/` | **8**: same families minus scenes except one | 1 × `.unity`: `dlc2_ghosts_optimised` |
+The checked-in storefront response advertises 11 text languages. Japanese and
+Russian are absent from that storefront field even though the client ships
+both; the 13 client localization bundles remain the capability authority. No
+`es-419` variant is advertised or present in the acquired client.
 
-Total corpus: **176 bundles** (158 aa + 18 DLC). DLC handling rule: DLC
-bundles are harvested by the same stage 3 pass as base aa bundles — same
-UnityPy path, family grouping carries the piece-1 pinned `contentAxis`
-enum tag (`dlc-space`/`dlc-ghost`; spec.md's site-plane
-`dlc1-space`/`dlc2-ghost` map onto it) per row. No separate
-acquisition work exists: both DLCs are installed.
+### Competitor relationship models
 
-Two further DLC exist beyond the install (appdetails 2026-08-25):
-**2312070 "Two Point Campus Soundtrack"** and **2195430 "Two Point
-Campus: Medical School"** — not owned, nothing on disk. Medical School
-is nonetheless catalog-KNOWN: the base catalog references
-`dlc-hospital-*` bundles 19× out-of-roster, so the catalog anticipates
-content this install can never satisfy. Acquiring either is an owner
-question (QUESTION-QUEUE #3, non-blocking).
+The repository contains one harvested Fandom model and one Steam-guide model,
+plus a recorded wiki.gg access wall. They are repo-only relationship research.
+Current application status and the missing third-source floor are in
+[`competitor-research.md`](competitor-research.md).
 
-### S3 — Native image + metadata (decompile inputs)
+## Pipeline and ownership
 
-`GameAssembly.dll` (297 MiB) + `global-metadata.dat` (~14 MiB,
-metadata v27) under the install dir; assembly list in
-`TPC_Data/ScriptingAssemblies.json`. Consumed by pipeline stage 1.
+`run_all.py` is the only entrypoint. Stage ownership is summarized in
+[`docs/architecture.mdx`](docs/architecture.mdx). Every run stamps buildId,
+tool versions, source paths, and derived methods into machine-plane artifacts
+and `extracted/EXTRACTION-LOG.md`.
 
-### S4 — Metadata sidecars (provenance + tripwire)
+Before a reproducibility claim:
 
-`appmanifest_1649080.acf` (buildid/depots/language),
-`version.txt`, `boot.config`, `app.info`,
-`RuntimeInitializeOnLoads.json`. Read-only; re-read on every pipeline run
-for the buildid stamp.
+1. relay the reviewed scripts from the orchestrating checkout to `NE8K`;
+2. compare every committed pipeline-script hash;
+3. run the entrypoint against the installed client;
+4. sync the complete extracted corpus to the Mac staging copy;
+5. reconcile and publish it under the current Git-size policy.
 
-## Media carve-out clause [DR-2026-08-18-media-scope]
+## Current media policy
 
-Video and audio are catalogued, never held inline in `extracted/`:
+The old “catalogue textures/models now, decide later” rule is retired by
+`[DR-2026-08-29-media-scope-amended]`.
 
-- **Video:** `video-intro-hi` (256 MiB — largest single bundle) and any
-  other VideoClip-bearing bundle are opened only to count/list their
-  assets; zero video bytes are emitted into `extracted/`.
-- **Audio:** `audio-music` (252 MiB), `audio-sfx` (221 MiB),
-  `audio-radio_assets_{english,german,mandarin}` (100/96/88 MiB),
-  `audio-tannoy_assets_{english,german,mandarin}`, and every
-  `*-audio_*` DLC bundle — same treatment.
-- Both classes land as rows in `extracted/MEDIA-CATALOGUE.md` +
-  `media-catalogue.jsonl` (bundle, asset name/class, byte totals);
-  offload vs keep is a later owner pick on that catalogue.
-- **Catalogue-first heavy classes:** 3D models and animations
-  (`animations-character-courses` 132 MiB, `character-shared*`) and
-  textures are listed in the same catalogue with counts+bytes before any
-  bulk retention decision.
+Target-set rules now are:
 
-## Protocol surface (single-player inventory, verifyB carry 1.3)
+- exclude audio and video;
+- exclude location models and any model over 200 MB;
+- extract every text occurrence;
+- extract every image;
+- extract every non-location model under 50 MB;
+- inventory animations completely and stage them until the owner chooses
+  retain/offload/drop;
+- classify every 50–200 MB non-location model individually. The parent census
+  found the band very likely empty, so no owner choice is currently required,
+  but that conclusion is not proven until withheld containers are opened.
 
-No gameplay client↔server plane exists. The owed protocol section
-inventories what the plugins expose instead: `steam_api64.dll`
-(Steamworks — achievements, DLC checks, overlay, cloud-saves),
-crash telemetry (`BacktraceCrashpadWindows.dll` + `crashpad_handler`),
-NVIDIA Ansel capture (`AnselPlugin64`/`AnselSDK64`). Inventory +
-no-surface proof land in `extracted/protocol/` and the PROOF protocol
-section in a later piece; piece 1 fixes the directory contract only.
+The current media stage has a verified entity-web export but has not yet proven
+full class coverage. `extracted/media/MEDIA-EXPORT.md` is the tracked subset
+report (2,222 WebP, 29 PNG twins, 2,151/2,158 joins). `extracted/MEDIA-CATALOGUE.md`
+is the class-universe coverage ledger, not a completion certificate.
 
-## Kickoff external pulls — DONE 2026-08-25 (not pipeline stages)
+## Publication policy
 
-One-shot corroboration calls at pack kickoff, outside `run_all`. Both
-fired 2026-08-25; raw JSON + MANIFEST rows are in `data/sources/`.
+Every individual file below approximately 95 MB and every commit below
+approximately 1 GB is committed and pushed. Files above that boundary remain
+complete on the local machine, git-ignored in an explicit large-artifact
+staging directory, and ready for production sync. Large logical streams are
+sharded on record boundaries whenever that preserves byte-equivalent
+reconstruction.
 
-1. **Steam `appdetails` (store-cc us)** — DONE (`steam-appdetails-1649080.json`).
-   - DLC public names settled: **1884560 = "Space Academy"**,
-     **1907450 = "School Spirits"**, plus two not-owned listings,
-     **2312070 = Soundtrack**, **2195430 = Medical School** (drives the
-     depot-map correction above).
-   - verifyB carry 1.7 RESOLVED: the storefront row has **no
-     `es-419`/latam entry** — no locale variant exists beyond the
-     client's set, and the client's single `spanish→es` bundle maps to
-     the storefront's "Spanish - Spain". Precision note: the storefront
-     `supported_languages` string names **11 of the client's 13 text
-     locales** (Japanese and Russian absent from the storefront row;
-     re-checked live against the endpoint 2026-08-25) — the client's 14
-     loc bundles remain the sole authority for locale capability.
-2. **Steam `ISteamNews/GetNewsForApp`** — DONE (`steam-news-1649080.json`);
-   latest items are 2026-08 store events, no patch-cadence signal →
-   verifyB carry 1.8 closed; last build 2025-12-19 stands.
+The historical blanket ignore of `extracted/**` is removed.
 
-Neither blocked extraction; both wrote their provenance rows into
-`data/sources/MANIFEST.md` on firing.
+Physical corpus publication is required **before Phase D / before a green
+project data gate**. It is not a precondition for merging a documentation
+reconciliation. Before that data gate can close, the corpus-owning agent must
+size-audit the live corpus, stage every eligible artifact, shard any eligible
+over-cap stream, and list every intentionally local artifact with exact path
+and byte count in `extracted/PROOF.md`.
 
-## Provenance fields (per dataset, repo-only per AGENTS rule 3)
+## Current residue
 
-Every emitted artifact carries: `source_class` (client-extraction /
-official-api / …), `container` (bundle path or endpoint), `appid`,
-`buildId` (**20226581** stamped everywhere user-visible truth is
-derived), tool + tool_version, extraction timestamp (machine plane
-only), and — for anything derived rather than hard-read — `inferred:
-true` + method string. Repo-only provenance fields stay out of
-user-facing surfaces entirely.
+- Medical School payload is absent.
+- map identity and reverse joins fail the latest corpus-scale review.
+- media policy coverage is not reconciled.
+- animation disposition remains an owner decision.
+- the 50–200 MB model band still needs per-model confirmation.
+- competitor relationship application is below the three-source floor.
+- two native-logic carriers remain unresolved.
+- complete Git/Mac/prod staging coverage is not yet proven.
 
-END OF data-acquisition.md
+The exact ledger and unblocks are maintained in
+[`missingdata.md`](missingdata.md) and [`extracted/PROOF.md`](extracted/PROOF.md).
+
+<!-- END OF data-acquisition.md -->

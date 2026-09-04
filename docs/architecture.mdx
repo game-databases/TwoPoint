@@ -1,0 +1,109 @@
+# Two Point Campus architecture
+
+## Boundary
+
+The pack has three layers:
+
+1. **source and extraction plugins** — game-specific decoders, classifiers,
+   relation builders, map/logic/media adapters;
+2. **emitted static data** — immutable build-stamped files consumed by future
+   pages and tools;
+3. **future site** — a separate Next.js product that consumes contracts and
+   never derives game facts at render time.
+
+The eventual site has an independent origin (`TBD`) and no build/runtime
+dependency on the separate Steam intelligence product. Until the data gate
+opens, that layer exists only as contracts:
+[`site-plan.mdx`](site-plan.mdx) for product and routes, and
+[`design-direction.mdx`](design-direction.mdx) for the visual bar.
+
+## Stage ownership
+
+| Stage | Owns |
+|---|---|
+| verify-client | identity, roster, client capability facts |
+| decompile | raw structural decompile and registries |
+| harvest-catalog | decoded Addressables catalog and coverage |
+| harvest-bundles | raw object manifests, dumps, censuses, media catalogue |
+| localisation | per-locale term tables and base overlay |
+| emit-stub-datasets | canonical entity-family rows and base absence ledgers |
+| relink | bridges, entity-pair files, relation matrix, UI-link and competitor application records |
+| maps | map geometry, placements, layers, door and imagery evidence |
+| logic | progression, economy, grading, needs/decay datasets |
+| locale-proof | locale availability, holes, fallback, locale coverage |
+| check-contracts | no product files; validates contracts read-only |
+| media | decoded web media and media-join reports |
+| search-corpus | locale search shards, aliases, manifest and ledgers |
+
+One path has one writer. Locale availability belongs to `locale-proof`, not
+the earlier stub stage.
+
+## Static data plane
+
+The future frontend reads build-stamped JSON/JSONL and image artifacts. It does
+not:
+
+- open Unity bundles;
+- resolve PPtrs/GUIDs;
+- infer relations;
+- derive map geometry;
+- compute hidden game formulas;
+- translate game content;
+- join entity data at request time.
+
+Those are pipeline defects if left for the consumer.
+
+## Search plane
+
+Search is derived and disposable. Locale shards are regenerated from the
+canonical entity/locale/relation outputs. The UI owns an expanding header
+field; there is no standalone search route. Results use the same matching
+function server-side and client-side.
+
+## UGC plane
+
+A future database stores only user-created state: profiles, saved layouts,
+favorites, ratings, comments, corrections, screenshots, and moderation.
+During local development, the four required provider choices select a local
+identity through one combined sign-in/sign-up surface. Real provider adapters
+replace that identity provider at the public-origin gate without changing
+records, routes, or pages.
+
+## Map architecture
+
+The map consumes precomputed campus geometry and game-sourced assets. It owns:
+
+- a dedicated desktop/TV map route;
+- stable entity focus links;
+- layers, markers, search, and detail panels;
+- two-way entity links;
+- planner integration after identity repair.
+
+Transient camera/filter/search state never rewrites the URL. Stable selected
+entity focus remains addressable. Mobile entity pages render textual location
+context plus a link to the map.
+
+## Locale and route architecture
+
+One route generator accepts stable entity id + locale and emits:
+
+- page path;
+- canonical;
+- hreflang alternates;
+- sitemap path;
+- search link;
+- internal relation link;
+- redirect target;
+- route manifest row.
+
+The pivot locale is unprefixed. Other locale taxonomy segments and slugs are
+localized from chrome resources and first-party localized entity names.
+
+## Publication architecture
+
+Git contains every eligible generated artifact. Local-large staging contains
+only artifacts that exceed the current repository policy; each has a path,
+size, hash, and production-sync record in PROOF. The Mac holds the full corpus
+copy used for packaging and deployment.
+
+<!-- END OF docs/architecture.mdx -->

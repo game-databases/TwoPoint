@@ -1,0 +1,167 @@
+# Data-host verification runbook
+
+This file is the empirical data-gate procedure for the Windows/Mac corpus. It
+is not the live pull-request review record. GitHub review submissions own
+repository-reconciliation verdicts; copying a final head SHA into this file
+would create a later commit and invalidate that anchor.
+
+A 2026-09-04 owner directive reopened documentation finalization after earlier
+pass-2 comments on `98180ea` and `66807e2`. That pass removes the documentation
+checker/tests added during reconciliation, keeps the closed frontend gate, and
+treats [`site-plan.mdx`](site-plan.mdx) and
+[`design-direction.mdx`](design-direction.mdx) as the product and visual
+authorities. Historical pass-1 findings from `ef14545` remain useful as
+already-addressed documentation defects (restored spec dimensions, one blocker
+list, no live mergeability claim, no surviving transcript hrefs, no GitHub
+Actions). They are not a current merge-coupled gate.
+
+Merging a documentation reconciliation does not claim the game-data project is
+complete. Phase D stays closed until the validation below is executed and
+written back through a separately reviewed change.
+
+## Data-host validation
+
+**Status:** required before the project data gate can close.  
+**Execution environment:** `NE8K` plus the Mac corpus staging copy.
+
+### Source parity
+
+```bash
+git archive HEAD run_all.py tools tests contracts |
+  ssh ne8k "tar -x -C /c/_reps/game-databases/TwoPoint"
+```
+
+Hash every committed pipeline and test file on both machines.
+
+Required record:
+
+- reviewed source head SHA;
+- NE8K script-tree digest;
+- zero mismatches, or every mismatch and correction.
+
+### Repository tests
+
+```bash
+python -m pytest tests -m "not client_gated" -q
+python tools/stage10_check_contracts.py
+```
+
+Record exact pass/fail/skip counts and every exit-2 contributor.
+
+### Full real-corpus run
+
+```bash
+python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus" --force
+```
+
+Record stage-by-stage exit codes, output hashes, buildId, elapsed run, and
+ledger counts.
+
+### Map identity closure
+
+Measure after the fix:
+
+- duplicate room family identities;
+- duplicate placement family identities;
+- placement `owningRoomId` misses against rooms;
+- landscape-layer plot-key misses against plots;
+- activation plot-key misses;
+- every demotion reason count.
+
+Required result: zero silent duplicate or broken join. A nonzero result is
+acceptable only as an exact emitted ledger that keeps Phase D blocked.
+
+On a **disposable working tree** (never this pack's committed tests), remove
+each of:
+
+1. post-demotion uniqueness assertion;
+2. final identity propagation;
+3. in-stage door gate;
+4. dual ID-space sweep result;
+5. closed-generation refusal;
+6. manifest provenance refusal.
+
+Re-run the **existing** suite and a real-corpus extract after each deletion.
+Record which existing test, ledger, or corpus check failed. If a deletion
+stays silent, that is a remaining finding. Do not add tests to this pack
+for that review.
+
+### Relation closure
+
+Record:
+
+- 100-cell status totals;
+- unresolved PPtrs;
+- dangling GUIDs;
+- locale misses;
+- UI-link coverage gaps;
+- competitor sources acquired;
+- competitor sources applied;
+- per-source relation delta or measured zero delta.
+
+Required competitor result: three independent applied records. Otherwise keep
+the data gate red and state the exact unblock.
+
+### Media closure
+
+Generate source-object→output reconciliation for all image and model classes.
+
+Record:
+
+- Sprite source/output/unresolved;
+- SpriteAtlas slots/output/unresolved;
+- Texture2D source/output/deduplicated/unresolved;
+- Mesh counts by location/non-location and size band;
+- mandatory under-50-MB model outputs;
+- per-model confirmation for any 50–200 MB non-location model;
+- excluded audio/video and location/over-200-MB model totals;
+- complete animation inventory and the owner-selected disposition;
+- hash/pixel cross-check results.
+
+No container-only row counts as an extracted image or mandatory model.
+
+## Corpus publication gate
+
+On both `NE8K` and the Mac staging copy, emit path, bytes, and SHA-256 for
+every extracted file.
+
+Required disposition:
+
+- `< ~95 MB`: committed and pushed;
+- reconstructible logical stream over cap: sharded without row loss/order
+  drift, then committed;
+- genuinely larger artifact: complete under `extracted/.local-large/` or the
+  declared Mac staging path, git-ignored, production-sync ready, and listed in
+  PROOF.
+
+Record:
+
+- committed file count/bytes;
+- largest committed file;
+- local-large file count/bytes;
+- reconstruction checks;
+- Mac sync hash mismatches;
+- commit size, below approximately 1 GB.
+
+## Evidence regeneration
+
+From that same reviewed run, regenerate or update:
+
+- `extracted/PROOF.md`;
+- `extracted/VALIDATION-REPORT.md`;
+- `extracted/RELATIONS.md`;
+- `extracted/MEDIA-CATALOGUE.md`;
+- `extracted/media/MEDIA-EXPORT.md`;
+- `missingdata.md`;
+- `PROGRESS.mdx`.
+
+Remove blockers the empirical run closes. Keep surviving blockers with exact
+counts and concrete unblocks.
+
+## Post-merge project responsibility
+
+When those checks run, replace procedural text that has become obsolete with a
+concise command/result record and explain which empirical result selected the
+final solution.
+
+<!-- END OF docs/reviewer-handoff.mdx -->

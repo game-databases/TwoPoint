@@ -1,318 +1,74 @@
-# Two Point Campus Database — Live Progress
+# Two Point Campus — current progress
 
-Live progress page for the TwoPoint pack. Maintained by the orchestrator
-only. Watch this file evolve; phases and IDs mirror the session task
-registry. Documentation format follows [DR-2026-08-22-docs-mdx].
-
-## Mission
-
-Build the Two Point Campus database website — entity database, owned
-interactive map, campus/course planner builder, guides, news, calculators,
-full localization — at the bar set by `_foundation/design-standard.md`
-(enka feel · wikily language · new-world.guide structure), judged by harsh
-side-by-side visual critics. Forward-designed as the first entry of a
-**Two Point game picker**: each future Two Point game gets its own theme
-and soul; the house style family is shared.
-
-Game: **Two Point Campus** (Steam 1649080, client buildid `20226581`,
-installed `A:\SteamLibrary\steamapps\common\Two Point Campus`, Unity
-IL2CPP, ~4.4 GiB, base + 2 DLC depots). Host: NE8K (this machine holds the
-data; extraction runs in place).
-
-## Binding gates
-
-- Data completeness **before frontend** (AGENTS.md rule 8) — extraction,
-  relinking, derived geometry, logic reconstruction all finish first.
-- Owned map differentiator: dedicated `/map` + map module on every
-  location-bearing page; third-party embeds banned.
-- All locales the client ships ([FRAMEWORK §2.4](../FRAMEWORK.md)) —
-  verified against the client, not marketing.
-- Orchestrator never codes; every piece goes through
-  Scout→Documentator→Reviewer→Arbiter → CodeWriter+TestWriter →
-  CodeReviewer+TestReviewer → Arbiter → fix loops, fresh agents each round;
-  visual critics judge the running site, not summaries.
+**Snapshot:** 2026-09-04  
+**Client:** buildId `20226581`  
+**Phase:** **C — data hardening and proof closure**  
+**Frontend gate:** **closed**
 
 ## Phase board
 
 | Phase | Scope | Status |
 |---|---|---|
-| A | Bootstrap: reads, environment, registry | **done** |
-| B | PrepareTask pass 1: scout → documentator → review → arbiter → revision → re-review | **done** — spec SPEC-READY (`9575203`) |
-| C | Extraction pipeline: harvest · decompile · locales · icons · logic · relink · map geometry · PROOF | **in progress** — C0 closed; real-corpus execution next |
-| D | Site build: tokens · shell+picker · pages · search · map · builder · i18n · SEO/AEO · UGC | gated behind C |
-| E | Visual critic loop vs references + e2e smoother waves | gated behind D |
-| F | FRAMEWORK §8 launch gates + site-ready verification | last |
+| A | client, engine, locale, DLC, and toolchain reconnaissance | complete |
+| B | extraction-piece specifications and contract review | complete for stages 0–12 |
+| C1 | raw harvest, decompile, localization, stubs, relinks, maps, logic, media, search | implemented and executed |
+| C2 | close implementation findings, complete media policy, apply competitor models, publish corpus, regenerate proof | **active** |
+| D | site design and implementation | blocked by C2 |
+| E | visual critic, browser, SEO/AEO, locale, and performance verification | not started |
+| F | production-origin and release gates | not started |
 
-## Execution waves (parallelization plan)
+## What exists
 
-Owner directive 2026-08-26: the TODO board (56 points) doubles as the
-master plan; every wave names what launches **together** so subagent
-utilization stays maxed. Dependencies are wired on the session board
-(`blockedBy`); this table is the durable copy. Rule of thumb: whenever a
-lane waits on an owner ruling or a provider quota, spin up the next
-unblocked lane instead of idling.
+- one reproducible thirteen-stage entrypoint;
+- a 176-bundle client inventory and decoded Addressables catalog;
+- 13 locale tables plus the base overlay;
+- nine canonical entity families and a ten-node relation matrix including
+  scenes;
+- map geometry outputs, logic datasets, contract validators, exported web
+  media, and per-locale search artifacts;
+- current human evidence documents under `extracted/`.
 
-| Wave | Tasks | Parallelism notes |
-|---|---|---|
-| **W-now** | #56 resume 429-parked scouts · #33 `.pytest_tmp` guard fixer · #34 logic-layer scout | three independent lanes, disjoint files — launch together |
-| **W-C-tail** | #10 contract pinning ∥ #35 media pipeline ∥ #36 locale coverage proof ∥ #38 search corpus | four-way batch, no shared outputs; **#11 PROOF.md runs LAST** — it consumes all four |
-| **W-D-foundation** | #12 PrepareTask pass 2 → (#13 design tokens ∥ #39 site scaffold) → #14 shadcn library | pass 2 gates the pair; tokens & scaffold touch disjoint trees → parallel; #14 needs #13 |
-| **W-D-build** | #40 home/hub ∥ #41 entity templates ∥ #42 compare ∥ #43 calculators ∥ #16 owned map ∥ #23 search UI ∥ #25 planner | up to **7 parallel build lanes**; each piece still goes through the full Scout→…→Arbiter pipeline |
-| **W-D-polish** | #44 imagegen ∥ #45 a11y ∥ #46 perf budget ∥ #47 OG cards ∥ #48 provenance ∥ #49 mobile ∥ #24 guides/news ∥ #17 SEO/AEO ∥ #18 builder polish ∥ #22 i18n UI | cross-cutting ten-lane band once build lanes land their skeletons |
-| **W-E** | #19 e2e smoother ∥ #50 side-by-side critic wave ∥ #51 browser matrix | verification trio in parallel; critics see the RUNNING site |
-| **W-F** | #52 deploy pipeline ∥ #53 content QA (13 locales) → #21 launch gates | gates consume both lanes' outputs |
+Measured highlights are in
+[`extracted/PROOF.md`](extracted/PROOF.md), not repeated as competing status
+claims here.
 
-## Agent roster
+The downstream product and visual contracts are
+[`docs/site-plan.mdx`](docs/site-plan.mdx) and
+[`docs/design-direction.mdx`](docs/design-direction.mdx). They do not make
+Phase D current.
 
-| Agent | Role piece | State |
-|---|---|---|
-| scout-001 / scout-002 | Install inventory + tooling/locales/map/competitors (§1–9, END sentinel) | **done** — verified PASS (facts) + READY-FOR-DOCUMENTATOR (coverage) |
-| verifyA-001 · verifyB-001 | Independent verification of the scout report | **done** — 21/21 facts CONFIRMED; carries folded into Documentator brief |
-| documentator-001 | Six pack convention docs + piece-1 extraction spec (Revision 2) | **done** |
-| reviewer-001 → reviewer-002 → reviewer-003 | Spec review rounds (bounce R1–R11 → FIX-REQUIRED ×2 one-liners) | **done** — release sanctioned after spot-check |
-| arbiter-001 | 11-item accepted-change ruling on the spec | **done** — all applied by Revision 2 |
-| fixer-003 | Two one-line residuals on Revision 2 | **done** — orchestrator spot-checked both lines (`9575203`) |
-| codewriter-001 · testwriter-001 | Piece-1 build pair: pipeline impl ∥ test suite, blind to each other | **done** — C0 closed |
-| piece-02 chain | Scout→Documentator→Reviewer×2→Arbiter→blind pair→integration→review→arbiter→fix session (F1–F14) | **done** — formally closed 2026-08-26 |
-| executor-001 | Real-corpus stage run → 3 client-reality findings | **done** — Rev 4 amendments |
-| executor-002 | Real-corpus re-run post-R4 | **blocked** — launch config lacked exec + A:\ grant; zero writes, clean read-only audit of `de04c7e` |
-| codefixer-006 | R5–R8 catalog-decoder root-cause round | **done-as-parked** — session write-denied; patch transcribed |
-| codefixer-007 | Apply parked R8 decoder patch (tools+tests+commit) | **running** (relaunched orchestrator, 2026-08-25) |
+## Active blockers
 
-Owner questions: [QUESTION-QUEUE.md](QUESTION-QUEUE.md) — two standing
-items (domain+tier; compositionPolicy semantics pinning after stage 4),
-nothing work-blocking.
+| ID | Blocker | Evidence | Exit |
+|---|---|---|---|
+| C2-MAP | post-demotion map identities collide; placement→room and layer→plot joins are not closed | [`docs/review-history.mdx#map-stage-review`](docs/review-history.mdx#map-stage-review) | repair implementation; re-prove with the existing suite, disposable-tree mutation review, and real-corpus evidence; do not add tests |
+| C2-MEDIA | current pipeline has not proven every image and every eligible model reaches a decoded product; animation disposition remains owner-open | [`extracted/MEDIA-CATALOGUE.md`](extracted/MEDIA-CATALOGUE.md) | class-by-class reconciliation, per-model size classification, under-cap publication, and owner animation ruling |
+| C2-REL | only two readable competitor models are harvested and the applied-source count remains zero | [`competitor-research.md`](competitor-research.md) | acquire/apply a third independent model or leave an exact residue ledger |
+| C2-PROOF | current proof can state measured coverage and gaps, but cannot certify Principle-zero completion | [`extracted/PROOF.md`](extracted/PROOF.md) | rerun reviewed tree, reconcile every source and output, replace pending verdicts |
+| C2-GIT | old ignore rules kept almost all generated artifacts outside Git | [`docs/reviewer-handoff.mdx#corpus-publication-gate`](docs/reviewer-handoff.mdx#corpus-publication-gate) | commit every eligible artifact; stage and inventory larger material |
+| C2-STAGE-REV | map, search, media, logic, and contract implementation reviews retain findings that require the corresponding code/data fixes | [`docs/review-history.mdx`](docs/review-history.mdx) | repair, rerun, and close each stage-specific review after those code/data fixes |
 
-## Log
+## Owner queue
 
-- 2026-08-26: **BUILD-GATE ROUND — all six blind pairs landed and
-  reconciled; review pairs gating every build.** All six impls+suites
-  landed (`7fa73fc`/`f259a4e`, `9c7439c`/`6a54e9f`, `7859408`/`763b212`,
-  `a032d13`/`bf13cc6`, `d0f0e21`/`5f251f4`, `9ba57df`/`34aebf5`);
-  six reconcilers drove everything green-with-teeth (locale-proof 54/1,
-  contracts 89/5, maps 57/1, search 67/1, media 67/5, logic **56/0/0**)
-  — real-corpus seeds reproduced everywhere, byte-stable double runs,
-  invention guards audited (logic: 27,616 numerics / zero uncited).
-  Build-review pairs then gated each reconciled build: locale-proof
-  **closed first** (fix round `34328ac`, suite 57/1/0, orchestrator
-  verified); search code-side **APPROVE** (batch's first) w/ light fix
-  round running; maps caught a **CRITICAL only visible at real-corpus
-  scale** (RoomRecord.UniqueID≈0 → placement identity collapse:
-  1,775 duplicate groups, 20k silent join misses — fix round redesigning
-  identity chain + enforcing M2 uniqueness + absence ledgers); media/
-  logic/contracts reviews in flight. Cross-lane hazards caught and
-  repaired twice (stale-buffer revert of the RELATIONS.md delta;
-  syntactically-broken shared util). Provider storms killed ~15 lanes;
-  every one resumed from its exact stop point.
-- 2026-08-26: **PREPARETASK PASS 2 AT FULL THROUGHPUT — five blind build
-  pairs live, every stage family 7–12 under construction.** The whole
-  C-tail wave ran the pipeline in parallel: six scouts (map/logic/
-  contracts/media/locales/search) each got an adversarial verify pair —
-  two material falsehoods caught before spec freeze (the doors-negative
-  refuted via `ItemValidator_Door` ×54; the "+5 locale drift" inverted as
-  correct emission-event counting) and one phantom data hole dissolved
-  (item names reachable via un-emitted relink joins). Six documentator
-  specs written; all six bounced by reviewers (15/13/8/10/11/12 findings)
-  with fact-fidelity sweeps coming back clean post-correction; five
-  arbiter rulings issued (07 SPEC-READY first; 06 SPEC-READY; 03/04/05/08
-  narrow doc-only bounces, all residuals applied + spot-checked). Stage
-  registry canonicalized (relink=6 → search-corpus=12) after a four-way
-  numbering collision; piece-01 Revision 8 registered everything.
-  **Seated: maps(7) ∥ logic(8) ∥ locale-proof(9) ∥ contracts(10) ∥
-  media(11)** — ten blind builders in one tree; search(12) seats after
-  its Rev 3 fold. Provider storms killed ~10 lanes mid-flight; every one
-  resumed from its exact stop point with zero lost work.
-- 2026-08-26: **W-NOW LIVE — quota wall lifted, seven-lane parallel fleet
-  in flight.** All three 429-parked agents resumed natively: map scout
-  **completed** (`docs/scout-report-piece-03.mdx`: client ships full
-  campus geometry — 51 scenarios, 1,031 plots, 5,188 rooms, 22,996
-  placed items, GridCoord 2u cells; door graph partially data
-  (`ItemValidator_Door` ×54, id-space decode pending — correction per
-  adversarial verification); orchestrator scope ruling R1–R5 in
-  `docs/rulings/`), logic scout +
-  guard fixer resumed (guard fixer **landed** `8a06c326` — six-name
-  hazard guard on both fixture legs, 12 regression tests, orchestrator
-  independently re-ran suites green 33/1). W-C-tail scouts launched in
-  parallel: contracts (#10) ∥ media (#35) ∥ locale proof (#36) ∥ search
-  corpus (#38); verifyA+verifyB adversarial pair auditing the map scout
-  report. Wave plan encoded below; every board task wave-tagged.
-- 2026-08-26: **PIECE-02 FORMALLY CLOSED — review round + full fix list
-  landed and independently verified.** Review pair: codereviewer FIX-
-  REQUIRED (6 findings) + testreviewer GAPS-REQUIRED (9 gaps); arbiter
-  confirmed all but two sub-claims (corrected by measurement: slug
-  fields are 100% null, prefix-strip resolves only 1/417 — bar-3's real
-  lever is alias-authored/internal-id inputs, routed to the owner as an
-  open question). Fix session executed **F1–F14 across 15 commits**
-  (`532974d3`…`4380c0d5`): destination-derived residue attribution,
-  matrix↔rows reconciliation, tooltip-spawner documented-gap honesty,
-  competitor samples+floor semantics, carrier-found partial cell, AC4
-  sweeps both lanes, mapper/overlay legs (+2 latent defects), cabRows
-  reconcile, exit-3 test, run-section key sweep, INVALID tripwire,
-  scene terminal pin, spec §5.1 delta note, 14-item teeth batch.
-  Regenerated artifacts: matrix honesty restored (**24 modeled / 3
-  partial / 73 missing**, was 20/6/74); R2-attribution chargedRefs=0 of
-  2391 ledger rows; bar-3 honestly `sourcesApplied=0`. Orchestrator
-  independent checks: artifact spot-checks green on every arbiter bar;
-  suites green. Bookkeeping `8bdf47cc` (scout report + competitor
-  inputs committed per spec ruling). Note: extracted JSON/JSONL is
-  local-only by pack gitignore (md-only tracking) — game data never
-  enters git. NEXT: piece-03 map geometry (scout in flight), logic
-  layer, contracts (#10), PROOF.md (#11).
-- 2026-08-25: **PIECE-02 RELINKING LANDED (pending formal review
-  round).** Spec SPEC-READY (`1ec82f59`, reviewer bounce F1–F12
-  applied) + Revision 7 registration (`6b601835`) + competitor models
-  gathered (`b95bbb4a`). Blind build pair → interface reconciliation →
-  `0b9d9a93` "corpus-proven". **`extracted/relinks/` = 37 real
-  artifacts**: matrix.json (10-node/100-cell pinned), pair datasets,
-  `entity_locale.jsonl` (GUID-path locale join v2),
-  `i2_term_registry`, `guid_bridge_report`, UI-link coverage,
-  competitor application. Orchestrator independent checks: 46/46
-  stage6+R11 tests green (D:-drive basetemp after the `.pytest_tmp`
-  recursion-bomb incident — my bug, cleaned, lesson recorded in #33).
-  Round survived repeated provider deaths via resume addenda + short-
-  scoping. NEXT: piece-2 review round → map geometry (#9), logic
-  layer, contracts (#10), PROOF.md (#11) → Phase D opens.
-- 2026-08-25: **REVIEW ROUND + R10 FIX ROUND COMPLETE — piece 1
-  formally closed.** Reviewers: codereviewer-003 FIX-REQUIRED (#1–#3,
-  independently re-proving the corpus behavior genuine),
-  testreviewer-003 GAPS-REQUIRED ("entire Rev-6 policy deletable with
-  suite green"). Arbiter-003 ruled both stand → F-list executed across
-  `90dc3157`/`769bac53`/`3898db7b`/`1125979c`/`fc545138`/`3346399d`/
-  `9d2ce70c`/`bfd1bc60`/`df75ca71`/`7bc623b8`: byte-match mismatches
-  now fail the stage, class-hierarchy is required upstream, header-PPtr
-  MonoScript recovery + cause-distinct residue reasons + route
-  counters, admittedUnknown split + exact terminal-name match,
-  validator evidence keys, Rev-6 stub vocabulary, gated legs fail loud,
-  payload-plane hashing, basename-collision guard. F6/F7/F8-decode-leg
-  verified ADDRESSED-IN-TREE. Test lane: **116 passed / 7 skipped /
-  0 failed** (mutation-verified; was 92). Real-corpus re-proofs green
-  (catalog 176/176 rc=0; stage-3 rerun completed post-F4). Round ran
-  through heavy provider instability (empty-200s/429s killed agents
-  mid-round repeatedly; per-firing retries banked each partial; F4
-  landed posthumously by orchestrator after independent verification).
-  NEXT: Phase C continuation pieces — relinking incl. GUID-based
-  locale join (#8), logic layer, map geometry (#9), contract pinning
-  (#10), PROOF.md (#11); task #27 DLC-doc corrections rides along.
-- 2026-08-25: **PIECE-1 RAW LAYERS COMPLETE — all six stage gates exit 0
-  on the real client (pending formal review round).** R10 landed as
-  `b49bf2c` per spec Revision 6 (`c4d9fa4`): stage-5 identity policy
-  (**12,764 stub rows across all nine kinds, zero empty ids**;
-  componentExcluded=152,463 · merged=21 · disambiguated=22), signed-
-  pathId contract (167,069 stems parsed), typetree synthesis live at
-  **99.56% decoded**, byte-match 2,124 checked/0 mismatch, consecutive
-  runs byte-identical (hash manifests). Harvest rerun: 176/176 bundles,
-  167,069 exports, catalogue 47,939. Orchestrator spot-checks green.
-  **Key discovery for the relinking piece:** the game links locales by
-  GUID, not name/id — measured zero name-based join surface both
-  directions (`joinEvidence` in run section); `locale_availability`
-  honestly reports 0 rows until the GUID path is pinned. Open after a
-  context break: R10 review round (fresh reviewers + arbiter),
-  testfixer-006 fixture lane still unlaunched, task #27 DLC-mapping doc
-  fix, then Phase C pivots to relinking/logic/maps pieces.
-- 2026-08-25: **R8 LANDED AND VERIFIED; real-corpus execution restarted.**
-  codefixer-007 applied the parked patch as `34b7320` (exactly
-  tools/aa_catalog.py + stage2_harvest_catalog.py + tests/test_stage2.py,
-  271+/16−). Two drift adaptations, both verified against the measured
-  probe artifact: fixture entry rows corrected to the REAL head bytes
-  (entry[0]=(0,0,0,-1,0,0,0) — the parked rows could never reproduce the
-  asserted head) and a latent kwargs bug in the parked test code fixed.
-  Orchestrator verification: commit scope exact · independent pytest
-  **92 passed / 7 skipped / 0 failed** · decoder hunks match patch intent
-  · measured-scale smoke reconciled (blob lengths byte-exact;
-  meta 56660/56660/66129/81146 CONFIRMED). Parked memory deleted by the
-  fixer with a lesson-learned note left in its place. **executor-003
-  seated** with full grants to drive `run_all.py` end-to-end on the real
-  client — expected: TextAsset catalog decodes (81,146 memberships over
-  66,129 entries), stages 3–5 complete the raw layers.
-- 2026-08-25: **Orchestrator relaunched after full stop.** Previous
-  session went write/exec-sandboxed around fixer round 5 and was
-  stopped; rounds 5–8 survived only as a parked memory patch. This
-  session probed WRITE-OK (hostname Ne8k). State reconstructed: all six
-  Revision-4 fixes verified in-tree at `de04c7e`; the uncommitted
-  EXTRACTION-LOG rows (20:43Z verify-client 0 / decompile 0 /
-  harvest-catalog fail) are pre-R8 measured facts — committed as
-  bookkeeping. Round-8 patch (drop false Σ-memberships==entryCount
-  invariant; real payload 81,146 memberships over 66,129 entries;
-  prime-int + Hash128 key arms) transcribed verbatim to
-  `.agents/round8-catalog-decoder.patch.mdx`; **codefixer-007 seated**
-  to apply + pytest + commit. Next: independent verification, delete
-  parked memory, then executor-003 re-runs harvest-catalog on the real
-  client with full grants.
-- 2026-08-24: **Executor-001 ran the real corpus — 3 client-reality
-  findings, spec Revision 4 in flight.** Stages 0/1/3 completed
-  (roster 176 exact; decompile 287 MB incl. DummyDll + dump.cs;
-  harvest ledgered exit-2). Findings: (1) NO Assembly-CSharp.dll —
-  code lives in TPS.Game/TPS.Core*.dll (100 images), stage-1 gate
-  unsatisfiable as specced; (2) catalog payload is a TextAsset JSON
-  (11.7 MB), not MonoBehaviour; (3) all 176 content bundles carry
-  UnityFS header `0.0.0` → UnityPy FALLBACK_UNITY_VERSION must be
-  seeded from identity. Exit codes/ledgers behaved exactly as
-  designed throughout (`fa16055`). documentator-003 drafting
-  Revision 4 (mechanism corrections, no new design).
-- 2026-08-24: **C0 CLOSED.** Verification round clean on both lanes:
-  codereviewer-002 verified F1–F14 APPLIED-CORRECTLY with live evidence
-  (real-client stage-0 legs, stamp-layer delete/rewrite legs, absence
-  ledger buildId + true scan universe); testreviewer-002 confirmed all
-  T-items, its single residual R1 (heavy-leg census identity lagging
-  Revision 3) fixed and spot-checked. Final state: **79 passed / 6 loud
-  skips / 0 failed**; spec at Revision 3; pipeline toolchain ready.
-  Next: executor runs stages 1–5 against the real client (the
-  execution piece) — first real datasets of Phase C.
-- 2026-08-24: **Fix rounds 1–3 complete; suite green.** arbiter-002
-  consolidated 16 proposed defects → 14 confirmed / 1 refuted
-  ("dead branch") / 1 hygiene, issuing F1–F12 + T1–T7 + S1–S2
-  (`e958dfc`). Three parallel lane fixers landed everything: spec
-  Revision 3 verified by spot-check; code lane in 10 scoped commits
-  (F1 blocking locale-flag fix verified on the real client: exact 13
-  BCP-47 flags); test lane de-pinned over-reach and bound all four
-  formerly-skipped obligations. Round 3 killed the last two defects
-  (stamp layer now requires output existence — regeneration +
-  interrupted-run convergence fixed; absence rows carry buildId +
-  truthful scan scope). **Independent orchestrator run: 79 passed /
-  6 loud skips (5 heavy client-gated + no-make) / 0 failed.** Fresh
-  verification pair (codereviewer-002 + testreviewer-002) auditing
-  both rounds before C0 closes.
-- 2026-08-24: **Build pair landed** (agents committed their own work:
-  `2430982` impl, `1e1479d` tests). TestWriter's blind suite: **59
-  passed / 17 loud skips / 8 failed → exactly 3 impl defects, zero
-  test bugs**: stage-5 `KeyError 'nameLoc'` crash; dead
-  `english-over-base` branch in stage-4 classifier; `--list` missing
-  version column. CodeWriter self-verified stage 0 on the real client
-  (`identity.json` + roster committed) + 45-check synthetic harness.
-  Fresh codereviewer-001 + testreviewer-001 seated in parallel;
-  Arbiter + fix loops follow their verdicts.
-- 2026-08-24: **Phase B closed, Phase C opened.** Review chain completed:
-  reviewer-002 bounced the spec (R1–R11), arbiter-001 ruled 11 accepted
-  changes, documentator applied them as Revision 2, reviewer-003 verified
-  9/11 applied-correctly + two one-line residuals (line-6 href,
-  stage-1 `script.json` clause), fixer-003 applied both, orchestrator
-  spot-checked both lines per reviewer-003's recommendation — spec is
-  **SPEC-READY**. CodeWriter + TestWriter seated simultaneously from the
-  same contract, blind to each other (pipeline step 2).
-- 2026-08-24 · **Owner directive**: the site builds on **shadcn/ui
-  components heavily tuned to the Two Point style and soul** — refined
-  by the owner mid-session: not just reskinned for tokens but
-  **upgraded to match the game's UI, style, interactions, animations,
-  look & feel**, with shadcn's a11y bones kept. Recorded in task #15;
-  every site-phase brief inherits it.
+Product origin/trademark, optional Medical School acquisition, and final
+animation disposition are the only owner decisions. The former tier/placement
+question is retired. The localization `compositionPolicy` question is resolved
+by the measured `mixed` result. See
+[`QUESTION-QUEUE.md`](QUESTION-QUEUE.md).
 
-- 2026-08-24: Pack bootstrapped. Foundation canon read in full (AGENTS,
-  decision register, design/site-sections/seo/localization/extraction/
-  domain/extraction-host standards, FRAMEWORK §1–2/§7–8, visuals README).
-  Game located + manifest read. Headless `claude` launcher verified
-  (`HEADLESS-OK`). Task registry established. scout-001 launched.
-- 2026-08-24: scout-001 died after landing §1–2 (classification +
-  install inventory: Unity 2020.3.47f1 IL2CPP confirmed via
-  `GameAssembly.dll` 297 MiB + `global-metadata.dat` ~14 MiB;
-  Addressables store = 158 bundles + catalog, human-readable
-  domain-partitioned names; corpus only ~3.5 GiB — cheap full harvest).
-  scout-002 launched on `--model ox-alpha` (verified working) with
-  checkpoint discipline to finish §3–9.
-- 2026-08-24: scout-002 completed §§3–9 with sentinel. Toolchain verdict:
-  Cpp2IL/Il2CppDumper + UnityPy + AssetStudioModCLI all in-repo; compiled
-  dumpers staged; no downloads needed. Locales: 13 text + base overlay,
-  VERIFIED-FROM-CLIENT. Map: path D (authored cartography over client
-  coordinates), per-campus plot maps, 25-scene ceiling. Competitors all
-  walled to curl → ABP pass scheduled; 4 relinking-floor candidates named.
-  Both verifiers green; documentator-001 launched (six convention docs +
-  piece-1 extraction pipeline spec).
+## Sequence
+
+1. Publish the reviewed source tree to `NE8K` and prove hash equality.
+2. Fix map identity and mutation-silence findings.
+3. Re-run stages 0–12 and the complete test suite.
+4. Reconcile media and relation coverage under current policy.
+5. Size-audit and publish/stage all corpus artifacts.
+6. Regenerate PROOF, validation, relation, media, and missing-data evidence.
+7. Close the stage-specific implementation reviews after their fixes land.
+8. Open Phase D only when every data gate is green.
+
+Historical session-by-session prose was removed from this file. Durable
+decisions and unresolved findings live in the linked documents; commit history
+retains the original transcripts.
+
+<!-- END OF PROGRESS.mdx -->

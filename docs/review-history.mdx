@@ -1,0 +1,128 @@
+# Consolidated review history
+
+This document preserves the load-bearing findings and measured results from the
+removed `docs/reviews/` and `docs/verifications/` session transcripts. Git
+history retains the verbatim reports.
+
+## Reconnaissance verification
+
+The initial independent fact checks confirmed the client identity, Unity/
+IL2CPP profile, metadata version, installed bundle/DLC counts, localization
+bundle count, scene inventory, and tool availability. Subsequent real runs
+superseded bootstrap statements and proved the pipeline could decode the
+catalog, bundles, locales, and structural outputs.
+
+## Extraction and relink reviews
+
+Early reviews found and closed issues including:
+
+- assuming `Assembly-CSharp.dll` existed in this IL2CPP layout;
+- treating the catalog payload as the wrong Unity object class;
+- missing Unity fallback version seeding for `0.0.0` bundle headers;
+- incorrect catalog membership invariants;
+- weak stage stamps and output-existence checks;
+- incomplete GUID/locale joining and residue attribution;
+- insufficient mutation teeth around decoder and relation behavior.
+
+The relink review reached a 100-cell inventory with 24 modeled, 3 partial, and
+73 missing cells, but did not close competitor application or all unresolved
+targets.
+
+## Map stage review
+
+The final committed map code review is still load-bearing.
+
+### Critical identity finding
+
+Real-corpus measurements at the reviewed head found:
+
+- 5,055 of 5,188 room IDs had entered a composite fallback because the raw
+  unique ID was effectively zero;
+- 19,284 of 23,004 item placements carried a composite owning-room ID;
+- 1,775 placement identity groups remained duplicated after demotion, with a
+  worst group of 46;
+- 20,263 of 22,878 room-family placements referenced an owning-room ID absent
+  from emitted rooms;
+- 140 of 4,082 landscape-layer rows failed to join an emitted plot.
+
+Root cause: final room/plot identities were not propagated consistently to
+independent rows and no post-demotion uniqueness assertion closed the loop.
+
+Required fix:
+
+- include stable source record identity in the composite key;
+- propagate final identities through placements, activations, and layers;
+- assert zero duplicate family keys;
+- prove placement→room and layer→plot joins, or emit exact failure ledgers.
+
+### Map implementation findings
+
+The review also found:
+
+- test-side and implementation-side door-gate predicates diverged;
+- manifest-absent door dumps could receive fabricated fallback provenance
+  instead of a failure;
+- derived level fields lacked method stamps;
+- non-`StageError` crashes could bypass failure logging;
+- optional map inputs could degrade silently;
+- duplicate/dead helper implementations could drift;
+- pathId-less PPtrs received the wrong unresolved reason.
+
+### Map test findings
+
+Mutation review demonstrated:
+
+- deleting in-stage door-gate enforcement left the suite green;
+- deleting dual ID-space sweep results left the suite green;
+- the fifth-generation refusal test exercised a provenance gate instead of
+  the generation-vocabulary gate.
+
+These require a later proof that each behavior still matters, using the
+**existing** suite, a disposable working tree, and real-corpus evidence.
+Do not add tests to this pack for that review. The historical finding stays:
+those mutations left the reviewed suite green.
+
+## Locale-proof review
+
+Locale-proof received a fix round and was the first late stage formally closed.
+It established stage 9 as the canonical locale-availability writer and added
+coverage, drift, alias, and single-writer teeth.
+
+## Logic review
+
+The logic build produced progression, economy, grading, and needs/decay
+datasets with a number-invention guard. Two honest gaps remain: XP→score
+normalization and student core-11 decay.
+
+Its next review is stage-specific and follows any shared map/relink or native
+logic fix; it is not an unfinished review of this documentation PR.
+
+## Media review
+
+The media build proved entity-image joining, deterministic WebP/PNG output, and
+a sampled pixel cross-check. It did not and could not close the later
+all-image/under-50-MB-model policy. Its next review follows the class-level
+reconciliation and animation disposition.
+
+## Search review
+
+The search code review approved the general implementation with minor fixes;
+the test review still recorded one gap. Search receives a new stage review
+after relation and locale outputs stabilize.
+
+## Contracts review
+
+The contract layer implemented 44 validators and an expected-red registry.
+Expected red remains a named incomplete state, not a pass. Its next stage
+review follows the map/media/relation amendments that change its inputs.
+
+## Documentation decision
+
+Verbatim role transcripts duplicated current facts, embedded obsolete stage
+language, and made it difficult to identify the last authoritative verdict.
+They are removed after this consolidation. Current authority now flows through
+PROOF, VALIDATION-REPORT, missingdata, PROGRESS, the data-host verification
+runbook, and the downstream product/visual contracts in `docs/site-plan.mdx`
+and `docs/design-direction.mdx`.
+
+<!-- END OF docs/review-history.mdx -->

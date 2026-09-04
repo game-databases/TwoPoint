@@ -1,0 +1,198 @@
+# Two Point Campus design direction
+
+**Status:** visual bar for Phase D. Not implemented. The data gate is closed.
+**Method:** source-only review of the removed PR implementation plus current
+pipeline and product contracts. No screenshot or browser claim is made.
+
+Product routes, launch sections, and implementation order live in
+[`site-plan.mdx`](site-plan.mdx). This file owns how those surfaces must look
+and behave. Exact colors, typefaces, iconography, textures, motion, and sounds
+are not invented here; they must be extracted from the client UI when the site
+phase opens.
+
+## Removed implementation review
+
+The removed site was a single centered hero with:
+
+- `system-ui`;
+- a uniform near-black background;
+- beige kicker and white heading;
+- generic database promise copy;
+- no game-sourced image;
+- no entity, number, relation, map, tool, state, or locale component.
+
+Its code could only render a marketing statement. It did not satisfy the
+project stage, the game's soul, modern database structure, or the truthfulness
+of its own metadata. PostHog was technically isolated and fail-closed, but
+instrumenting an unearned public shell was a sequencing defect. Removal is the
+correct visual and architectural change.
+
+## Visual extraction brief
+
+When Phase D opens, capture tokens from running client UI before any page is
+composed. Record each token with screenshot id, atlas/sprite name if known,
+and the surface it came from. Do not substitute a Tailwind default,
+`system-ui`, or invented hex.
+
+Capture from these game surfaces, in this order:
+
+1. **Campus HUD** — top/bottom bars, Kudosh and money readouts, date/term
+   chip, notification toast, pause/overlay dim.
+2. **Course card / course inspector** — title plate, difficulty chip, room
+   requirement row, student-archetype row, unlock condition.
+3. **Room inspector** — room icon, prestige/quality meters, item slots,
+   staff assignment row, capacity.
+4. **Student / staff file** — portrait well, trait chips, need bars,
+   schedule list.
+5. **Item tooltip** — icon, name, Kudosh/money cost, effect lines, room
+   compatibility.
+6. **Plot / campus map UI** — plot fill, room footprint, selected-plot
+   outline, build ghost, legend.
+7. **Modal / ledger chrome** — research tree node, objective list row,
+   confirmation stamp, close/back control.
+
+For each surface record:
+
+- background fill and panel fill;
+- title type vs body type vs numeric type (family, weight, tracking — not
+  guessed names);
+- icon set and slot size;
+- selected / hover / disabled / missing states;
+- meter, chip, and stamp shapes;
+- motion duration and easing of inspector open, chip toggle, and toast.
+
+If a token cannot be measured, the matching site control stays unavailable
+and is ledgered. It is not approximated.
+
+## Target visual principles
+
+- **playful institutional object, not generic dark wiki** — campus
+  administration, course cards, room inspectors, Kudosh ledgers, student
+  files;
+- **one primary object owns the viewport**;
+- **color carries object identity** through measured game tokens;
+- **quiet chrome** — search, locale, account, navigation stay subordinate;
+- **data-bearing hover/tap**;
+- **one extracted icon vocabulary**;
+- **designed absence** — equal-size empty wells, never emoji or stock art;
+- **restrained, game-derived motion**.
+
+## Page compositions
+
+### Entity object
+
+Viewport stack, top to bottom:
+
+1. object art + in-fiction identity plate (course/room/item/campus/staff);
+2. key numbers and state chips from extracted meters;
+3. direct answer block (what this object does / requires / unlocks);
+4. locale cluster;
+5. relation modules as ordinary HTML anchors, each module one join family;
+6. location text; desktop also shows a map inset, handheld a map link;
+7. related tools / guides / news / changed-in-build;
+8. comments, corrections, ratings, screenshot well;
+9. buildId and coverage scope in quiet type.
+
+The art well is the largest object. Chrome never outranks it.
+
+### Kind list
+
+Filter row from extracted chips, then a dense grid/list of object cards.
+Every row is a real link. Virtualize after the first paint. No tiny-body
+workaround for density.
+
+### Map (desktop/TV)
+
+Full-viewport campus canvas, legend and inspector docked, search in the
+shared header. Selected entity is URL-addressable. Camera/filter/search
+transients are not.
+
+### Planner
+
+Same canvas language as the map, plus validation strip and shareable layout
+URL. Invalid placements use the game's build-ghost / refusal treatment once
+those tokens are captured.
+
+### Home
+
+Object-led coverage of the current build: one featured campus or course
+object, then tool cards that already have backing data. No marketing hero.
+
+### Tool
+
+Direct answer dominates. Inputs update on keystroke. Every input/output
+entity is a link. Missing native formulas render as designed absence.
+
+### Account
+
+One sign-in/sign-up panel. Provider buttons first, email only if already
+present on that same panel. No separate signup page.
+
+## Component behavior
+
+- Header search expands in place after two typed characters and replaces
+  page content without dropping underlying state.
+- Locale combobox shows native names; switching uses the route generator.
+- Account trigger opens the unified identity surface.
+- Hover/tap on a stat opens its definition or linked object, not a color
+  shift alone.
+- Selected entity, selected plot, and selected tool inputs survive in the
+  URL except map camera/filter/search.
+- Empty relation modules are omitted, not explained.
+
+## Responsive hierarchy
+
+| Width | Surfaces |
+|---|---|
+| handheld | entity, lists, tools, guides, news, account; location text + map link |
+| tablet | same, plus two-column entity stats |
+| desktop | entity, lists, tools, plus map inset on location-bearing entities |
+| wide desktop / TV | full map canvas and planner canvas |
+
+The interactive map/planner canvas is not rendered on handheld.
+
+## Visual-first Phase D sequence
+
+Do not start with a marketing homepage.
+
+1. Capture the token checklist above from the client UI.
+2. Build one entity object template that uses real extracted art and those
+   tokens.
+3. Build the desktop/TV map canvas in the same language.
+4. Extend that canvas to the campus planner once map identities join.
+5. Compose the object-led home from those working surfaces.
+6. Only then add remaining tools, guides, news, and UGC wells.
+
+A page that explains the product in prose instead of showing a campus object
+has failed this bar even if every route exists.
+
+## Anti-patterns
+
+These fail review even when routes and data exist:
+
+- generic dark SaaS/wiki chrome, Inter/`system-ui`, unmeasured gradients;
+- marketing hero, feature grid, or analytics shell as the first surface;
+- inventing colors, fonts, icons, or motion that were not captured;
+- emoji, stock art, Lorem, or apology-empty states;
+- JS-only relation graphs with no HTML anchors;
+- separate login vs signup screens;
+- map canvas on handheld;
+- claiming a tool, locale, or UGC well before its backing exists;
+- mixed-language game prose;
+- naming competitor wikis or Steam-guide sources on a public surface.
+
+## Visual acceptance
+
+Per page type, the reviewer compares the running product against:
+
+- Enka for object feel and interaction;
+- new-world.guide for page structure and creator/published-tool flow;
+- Wikily for modern wiki language;
+- Maxroll only if a real multi-game switcher becomes necessary.
+
+A page fails despite complete structure if it feels generic, lacks useful
+hover/join behavior, loses selection in the URL, uses inconsistent icons,
+explains the interface in prose, or omits map context from a location-bearing
+entity.
+
+<!-- END OF docs/design-direction.mdx -->
