@@ -37,9 +37,19 @@ the current policy explicitly permits them.
 
 The catalogue contains 19,249 Mesh records. No current proof classifies every
 mesh by location/non-location and size or exports every mandatory non-location
-model under 50 MB.
+model under 50 MB. The 50–200 MB band is very likely empty on the parent
+census, but withheld containers make that unproven.
 
-**Unblock:** classify, decode, hash, publish/stage, and reconcile.
+**Unblock:** classify every mesh, decode every mandatory model, confirm every
+higher-band model or prove the band empty, hash, publish/stage, and reconcile.
+
+### MEDIA-3 — animation disposition
+
+The catalogue records 7,985 AnimationClip objects. The current network ruling
+leaves animations as an owner choice after complete inventory.
+
+**Unblock:** inventory every animation and apply the Q3 retain/offload/drop
+decision without silently discarding any source row.
 
 ### REL-1 — competitor application floor
 

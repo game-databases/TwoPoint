@@ -1,7 +1,7 @@
 # Documentation map
 
-This index classifies the repository's documentation so a dated report cannot
-silently compete with current state.
+This index classifies every curated Markdown/MDX document in the repository so
+a dated report cannot silently compete with current state.
 
 ## Current authorities
 
@@ -12,39 +12,59 @@ silently compete with current state.
 | `../PROGRESS.mdx` | live concise board |
 | `../QUESTION-QUEUE.md` | owner-only decisions |
 | `../data-acquisition.md` | current source/corpus policy |
+| `../data/sources/MANIFEST.md` | factual acquisition register |
 | `../competitor-research.md` | current relationship-research state |
 | `../toolchain.md` | current thirteen-stage toolchain |
 | `../tools-plan.md` | current data-backed tool priorities |
 | `../missingdata.md` | current unresolved data/proof ledger |
+| `../extracted/EXTRACTION-LOG.md` | append-only tool and run evidence |
 | `../extracted/PROOF.md` | measured completeness evidence and verdict |
 | `../extracted/VALIDATION-REPORT.md` | current validation status |
+| `../extracted/RELATIONS.md` | current relation-matrix status |
+| `../extracted/MEDIA-CATALOGUE.md` | current media coverage status |
+| `../extracted/logic/LOGIC.md` | generated logic evidence |
+| `../extracted/protocol/README.md` | current protocol/no-gameplay-server inventory |
 | `current-stage.mdx` | implementation/plan reconciliation |
 | `architecture.mdx` | ownership boundaries |
 | `site-plan.mdx` | downstream site contract |
 | `design-direction.mdx` | source-only visual review and target direction |
 | `review-history.mdx` | consolidated findings from removed review transcripts |
-| `reviewer-handoff.mdx` | empirical merge/site-gate procedure |
+| `reviewer-handoff.mdx` | completed PR-review record and data-host verification runbook |
 
 ## Retained evidence and contracts
 
 ### Scout reports
 
-`scout-report-*.mdx` files are dated measurements. They are retained because
-piece specs and implementation decisions cite their probes. They never own
-current status; where a scout value differs from current generated evidence,
-the generated evidence and canonical documents win.
+Eight `scout-report-*.mdx` files are dated measurements. They are retained
+because piece specs and implementation decisions cite their probes. They never
+own current status; where a scout value differs from current generated
+evidence, the generated evidence and current authorities win.
 
 ### Piece specifications
 
-`specs/piece-*.mdx` are executable stage contracts and acceptance histories.
-They are retained because tests and source comments bind to their named rules.
-They do not own current product phase or supersede later network decisions.
+Eight `specs/piece-*.mdx` files are executable stage contracts and acceptance
+histories. They remain relevant because tests and source comments bind to their
+named rules. They do not own current product phase or supersede later network
+decisions.
 
 ### Rulings
 
-`rulings/*.mdx` preserves accepted/refuted findings and implementation
-adjudications. A later canonical document may summarize or supersede their
-operational state without rewriting decision history.
+Twelve `rulings/*.mdx` files preserve accepted/refuted findings and
+implementation adjudications. A current authority may summarize or supersede
+their operational state without rewriting decision history.
+
+### Contract notes
+
+`../contracts/counter-units.mdx`, `../contracts/ledger-map.mdx`, and the eight
+`../contracts/families/*.mdx` files document the currently pinned contract
+families. Later-stage executable detail remains in the piece specifications
+until promoted into `contracts/pins.json`.
+
+### Source provenance
+
+`../data/sources/competitor/*/PROVENANCE.md` records the three current
+competitor-source outcomes. These are acquisition records, not public content
+or current product status.
 
 ### Competitor model note
 
@@ -61,8 +81,14 @@ durable authorities and are removed in this review:
 
 All unresolved findings and material measured results from those documents are
 consolidated in `review-history.mdx`, `current-stage.mdx`, PROOF,
-VALIDATION-REPORT, and `missingdata.md`. Git history retains the original
+VALIDATION-REPORT, and `../missingdata.md`. Git history retains the original
 verbatim transcripts.
+
+`tools/check_documentation.py` requires all 68 curated documents, rejects any
+unclassified Markdown/MDX file under `docs/`, rejects links to the removed
+transcript paths, verifies the current source-manifest locale summary against
+the checked-in raw snapshot, and enforces the closed-site/no-GitHub-Actions
+guards.
 
 No new BRD, PRD, plan, or research note is authored as HTML. New durable
 documentation is MDX; harness-fixed root filenames remain Markdown where

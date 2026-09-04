@@ -1,8 +1,9 @@
-# Empirical data-gate and final-review record
+# Repository review record and data-host verification runbook
 
-This file separates completed repository review from checks that require the
-real Windows/Mac corpus. Every result must be written into the PR branch or its
-review conversation; chat-only results do not exist for the merging agent.
+This file separates the completed review of the repository reconciliation from
+checks that require the real Windows/Mac corpus. Every empirical result must be
+written into a future branch/PR or durable evidence document; chat-only results
+do not close the project data gate.
 
 ## Repository review pass 1
 
@@ -20,29 +21,31 @@ repository-local corrections:
 4. guard removed-transcript links and GitHub Actions;
 5. separate repository reviews from corpus-host verification.
 
-Commit `657d1e93475552860eb48d5869e93899fd2e6ff9` restored the omitted spec
-dimensions, removed the live mergeability claim, added a GitHub Actions
-forbidden check, and started a deleted-transcript link guard. That guard
-still missed relative `../reviews/` and `../verifications/` hrefs in piece
-specs and rulings, and README still listed a four-item subset of the six
-C2 families in `PROGRESS.mdx`.
+Commit `657d1e93475552860eb48d5869e93899fd2e6ff9` addressed the five primary
+findings. Commit `98180ea6f5634f6adc15e524217d9b5434e6e2df` closed the
+remaining relative-link and duplicate-blocker-list edge cases. The final
+cleanup also corrected the source-manifest locale fact, completed the curated
+documentation inventory, and removed merge-coupled wording from project gates.
 
-This follow-up retargets those remaining hrefs to
-[`docs/review-history.mdx`](review-history.mdx), resolves relative
-transcript paths in the documentation guard, and points README at the
-PROGRESS table instead of a shorter count.
+## Repository review pass 2
 
-Repository review status is not the empirical NE8K/Mac data-gate. The
-final PR review is submitted on this head; no repository-local edit
-follows that review.
+**Status:** recorded in the pull-request review conversation on the final
+branch head.
+
+The final review body is the authoritative immutable record of its head SHA,
+diff totals, ancestry, mergeability, status contexts, documentation inventory,
+forbidden-file checks, and repository-level verdict. The SHA is deliberately
+not copied into this file: writing it here would create a later commit and
+invalidate the review anchor. No branch write follows that review.
+
+The completed PR review does not turn the project data gate green. The
+remaining work below changes extraction artifacts and stage implementations,
+so it receives its own future branch and stage-specific review.
 
 ## Data-host validation
 
 **Status:** required before the project data gate can close.  
 **Execution environment:** `NE8K` plus the Mac corpus staging copy.
-
-This is not an unfinished documentation task. It is the executable validation
-contract for the agent that has the physical corpus.
 
 ### Source parity
 
@@ -55,7 +58,7 @@ Hash every committed pipeline and test file on both machines.
 
 Required record:
 
-- reviewed head SHA;
+- reviewed source head SHA;
 - NE8K script-tree digest;
 - zero mismatches, or every mismatch and correction.
 
@@ -72,7 +75,7 @@ Record exact pass/fail/skip counts and every exit-2 contributor.
 ### Full real-corpus run
 
 ```bash
-python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus" --force
+python run_all.py "A:\\SteamLibrary\\steamapps\\common\\Two Point Campus" --force
 ```
 
 Record stage-by-stage exit codes, output hashes, buildId, elapsed run, and
@@ -129,9 +132,10 @@ Record:
 - SpriteAtlas slots/output/unresolved;
 - Texture2D source/output/deduplicated/unresolved;
 - Mesh counts by location/non-location and size band;
-- mandatory model outputs;
-- excluded audio/video totals;
-- staged animation and 50–200 MB model totals;
+- mandatory under-50-MB model outputs;
+- per-model confirmation for any 50–200 MB non-location model;
+- excluded audio/video and location/over-200-MB model totals;
+- complete animation inventory and the owner-selected disposition;
 - hash/pixel cross-check results.
 
 No container-only row counts as an extracted image or mandatory model.
@@ -173,32 +177,13 @@ From that same reviewed run, regenerate or update:
 Remove blockers the empirical run closes. Keep surviving blockers with exact
 counts and concrete unblocks.
 
-## Repository review pass 2
+## Post-merge project responsibility
 
-The second review is a PR review submission anchored to the final head; no
-repository edit follows it. It independently checks:
-
-- no unresolved review thread;
-- no stale canonical status statement;
-- no required documentation missing;
-- no confirmed-irrelevant transcript restored or linked;
-- no `site/` tree while the data gate is red;
-- no GitHub Actions workflow added, changed, or dispatched;
-- total diff at most 30,000 added+deleted lines;
-- no secret, credential, client binary, or opaque large blob;
-- branch based on current `main`;
-- PR open, non-draft, and GitHub mergeable;
-- combined commit status has no failure.
-
-The review body records final head SHA, diff counts, mergeability, combined
-status, and its final repository-level verdict.
-
-## Merging-agent responsibility
-
-The repository proposal can be reviewed and merged independently of claiming
-the game-data project complete. The merging agent must not open Phase D until
-the data-host validation above is written back with empirical results. When it
-does run those checks, it replaces this procedure with a concise command/result
-record and explains why the selected fixes won.
+Merging this repository reconciliation does not claim the game-data project is
+complete. Phase D remains closed until the data-host validation above is
+executed and its results are committed through a separately reviewed change.
+When those checks run, replace procedural text that has become obsolete with a
+concise command/result record and explain which empirical result selected the
+final solution.
 
 <!-- END OF docs/reviewer-handoff.mdx -->

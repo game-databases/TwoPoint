@@ -12,7 +12,7 @@
 | A | client, engine, locale, DLC, and toolchain reconnaissance | complete |
 | B | extraction-piece specifications and contract review | complete for stages 0–12 |
 | C1 | raw harvest, decompile, localization, stubs, relinks, maps, logic, media, search | implemented and executed |
-| C2 | close review findings, complete media policy, apply competitor models, publish corpus, regenerate proof | **active** |
+| C2 | close implementation findings, complete media policy, apply competitor models, publish corpus, regenerate proof | **active** |
 | D | site design and implementation | blocked by C2 |
 | E | visual critic, browser, SEO/AEO, locale, and performance verification | not started |
 | F | production-origin and release gates | not started |
@@ -37,18 +37,26 @@ claims here.
 | ID | Blocker | Evidence | Exit |
 |---|---|---|---|
 | C2-MAP | post-demotion map identities collide; placement→room and layer→plot joins are not closed | [`docs/review-history.mdx#map-stage-review`](docs/review-history.mdx#map-stage-review) | repair implementation, add mutation-tested assertions, rerun real corpus |
-| C2-MEDIA | current pipeline has not proven every image and every eligible model reaches a decoded product | [`extracted/MEDIA-CATALOGUE.md`](extracted/MEDIA-CATALOGUE.md) | class-by-class reconciliation and under-cap publication |
+| C2-MEDIA | current pipeline has not proven every image and every eligible model reaches a decoded product; animation disposition remains owner-open | [`extracted/MEDIA-CATALOGUE.md`](extracted/MEDIA-CATALOGUE.md) | class-by-class reconciliation, per-model size classification, under-cap publication, and owner animation ruling |
 | C2-REL | only two readable competitor models are harvested and the applied-source count remains zero | [`competitor-research.md`](competitor-research.md) | acquire/apply a third independent model or leave an exact residue ledger |
 | C2-PROOF | current proof can state measured coverage and gaps, but cannot certify Principle-zero completion | [`extracted/PROOF.md`](extracted/PROOF.md) | rerun reviewed tree, reconcile every source and output, replace pending verdicts |
 | C2-GIT | old ignore rules kept almost all generated artifacts outside Git | [`docs/reviewer-handoff.mdx#corpus-publication-gate`](docs/reviewer-handoff.mdx#corpus-publication-gate) | commit every eligible artifact; stage and inventory larger material |
-| C2-REV | map, search, media, logic, and contract reviews were not all closed by a later fix/review round | [`docs/review-history.mdx`](docs/review-history.mdx) | execute the final two-pass review protocol |
+| C2-STAGE-REV | map, search, media, logic, and contract implementation reviews retain findings that require the corresponding code/data fixes | [`docs/review-history.mdx`](docs/review-history.mdx) | repair, rerun, and close each stage-specific review; the two-pass review of this reconciliation PR is complete |
+
+## Repository review state
+
+The current-stage reconciliation has two PR review submissions: a first-pass
+fix-required review and an independent final pass on the final head. That
+repository review is complete and is separate from the real-corpus evidence
+needed to turn the project data gate green.
 
 ## Owner queue
 
-Only product-origin/trademark and optional Medical School acquisition remain
-owner decisions. The former tier/hub-placement question is retired. The
-localization `compositionPolicy` question is resolved by the measured
-`mixed` result. See [`QUESTION-QUEUE.md`](QUESTION-QUEUE.md).
+Product origin/trademark, optional Medical School acquisition, and final
+animation disposition are the only owner decisions. The former tier/placement
+question is retired. The localization `compositionPolicy` question is resolved
+by the measured `mixed` result. See
+[`QUESTION-QUEUE.md`](QUESTION-QUEUE.md).
 
 ## Sequence
 
@@ -58,8 +66,7 @@ localization `compositionPolicy` question is resolved by the measured
 4. Reconcile media and relation coverage under current policy.
 5. Size-audit and publish/stage all corpus artifacts.
 6. Regenerate PROOF, validation, relation, media, and missing-data evidence.
-7. Complete the two review passes recorded in
-   [`docs/reviewer-handoff.mdx`](docs/reviewer-handoff.mdx).
+7. Close the stage-specific implementation reviews after their fixes land.
 8. Open Phase D only when every data gate is green.
 
 Historical session-by-session prose was removed from this file. Durable

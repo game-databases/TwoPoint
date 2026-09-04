@@ -19,6 +19,7 @@
 | logic reconstruction | PARTIAL | four families emitted; two native carriers remain |
 | locale availability ownership | PASS by source inspection | stage 9 owns current file; old stage-5 wording retired |
 | mandatory image/model coverage | FAIL | partial entity-web export is not full class reconciliation |
+| media scope governance | PARTIAL | image/under-50-MB rules are current; animation disposition remains owner-open and the 50–200 MB band needs per-model confirmation |
 | corpus Git/Mac/prod staging | NOT PROVEN | old blanket ignore prevented inventory from being visible here |
 | PROOF document present | PASS | placeholder replaced with measured evidence and explicit failure verdict |
 | protocol inventory | PASS for current known surface | no gameplay server plane; Steamworks/crash/Ansel inventory |
@@ -30,23 +31,24 @@
 The canonical pack documents have been rewritten around one current phase and
 one evidence chain. Superseded review and verification transcript directories
 are removed after consolidation. `docs/README.mdx` classifies retained scouts,
-piece specs, and rulings as historical evidence/contracts rather than live
-status.
+piece specs, rulings, contracts, source provenance, and generated evidence
+rather than allowing any of them to compete with current status.
 
 `tools/check_documentation.py` and `tests/test_documentation.py` guard:
 
-- required canonical documents;
+- all 68 curated documents and the exact curated `docs/` inventory;
 - stage-list documentation;
-- retired placeholder and bootstrap claims;
-- retired tier/hub-placement language in canonical pack state;
+- retired placeholder, bootstrap, merge-coupled, and hosting claims;
+- the checked-in storefront-language summary against its raw snapshot;
 - absence of a `site/` tree while the data gate is closed;
 - removal of superseded review/verification directories;
 - surviving Markdown links, including relative hrefs, to `docs/reviews/`
   or `docs/verifications/`;
 - absence of GitHub Actions workflow files.
 
-This report records repository alignment versus the project data gate. It
-does not claim GitHub mergeability or that corpus-host validation has run.
+The reconciliation PR receives two review submissions. This report records
+repository alignment versus the project data gate; it does not claim that the
+corpus-host validation has run.
 
 ## Review findings that remain load-bearing
 
@@ -60,13 +62,16 @@ does not claim GitHub mergeability or that corpus-host validation has run.
 - closed generation vocabulary refusal is tested through the wrong gate;
 - fabricated fallback provenance and crash-log coverage require correction.
 
-### Cross-stage
+### Cross-stage implementation
 
 - media implementation predates the current mandatory extraction policy;
 - competitor models are harvested but not applied;
-- search, media, logic, and contract build reviews need a final follow-up after
-  shared fixes;
+- search, media, logic, and contract stages need follow-up reviews after their
+  shared inputs or implementations change;
 - host source-hash parity and current full rerun are not recorded.
+
+These are stage-specific review duties. They are not an unfinished review of
+the current documentation/reconciliation PR.
 
 ## Required empirical evidence
 

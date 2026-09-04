@@ -27,7 +27,7 @@ pack's production corpus.
 - Pipeline exit code `2` means named ledgered incompleteness, not clean
   success.
 
-## Current review debt
+## Current stage-review debt
 
 The last committed map review demonstrated that several important behaviors
 were not mutation-protected even though the suite was green:
@@ -37,21 +37,24 @@ were not mutation-protected even though the suite was green:
 - the fifth-generation refusal path was exercised through the wrong gate;
 - corpus-scale post-demotion uniqueness and reverse-join closure were absent.
 
-The final fix must add tests that fail under each of those mutations and must
-run against the real corpus. Passing the existing suite alone cannot close the
-map blocker.
+The map fix must add tests that fail under each of those mutations and must run
+against the real corpus. Passing the existing suite alone cannot close the map
+blocker.
 
-Search, media, logic, and contract suites also require one final review after
-map/media policy changes. The durable closeout protocol is in
-[`../docs/reviewer-handoff.mdx`](../docs/reviewer-handoff.mdx).
+Search, media, logic, and contract suites also receive new stage reviews after
+the map/media/relation changes that affect their inputs. The durable data-host
+closeout protocol is in
+[`../docs/reviewer-handoff.mdx`](../docs/reviewer-handoff.mdx). This debt is
+separate from the completed two-pass review of the current reconciliation PR.
 
 ## Documentation guard
 
-`tests/test_documentation.py` invokes the repository checker. It verifies the
-canonical document set, retired placeholder/status phrases, documentation
-classification, stage registry documentation, absence of the premature site
-tree, removal of superseded review/verification directories, rejection of
-Markdown links (including relative hrefs) to those directories, and the
-no-GitHub-Actions constraint.
+`tests/test_documentation.py` invokes the repository checker. It verifies all
+68 curated documents, the exact curated `docs/` inventory, retired
+placeholder/status/merge-coupled phrases, source-manifest locale accuracy,
+documentation classification, stage registry documentation, absence of the
+premature site tree, removal of superseded review/verification directories,
+rejection of Markdown links (including relative hrefs) to those directories,
+and the no-GitHub-Actions constraint.
 
 <!-- END OF tests/README.md -->

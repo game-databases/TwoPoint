@@ -4,7 +4,7 @@
 
 | Field | Measured value |
 |---|---|
-| install | `A:\SteamLibrary\steamapps\common\Two Point Campus` on `NE8K` |
+| install | `A:\\SteamLibrary\\steamapps\\common\\Two Point Campus` on `NE8K` |
 | appid | `1649080` |
 | buildId | `20226581` |
 | version | `10.3.169253+2024-12-06.1241` |
@@ -40,6 +40,11 @@ The repository stores kickoff Steam app-details and news responses under
 `data/sources/` with an append-only manifest. These corroborate product names,
 DLC identities, and update cadence. They do not replace client extraction.
 
+The checked-in storefront response advertises 11 text languages. Japanese and
+Russian are absent from that storefront field even though the client ships
+both; the 13 client localization bundles remain the capability authority. No
+`es-419` variant is advertised or present in the acquired client.
+
 ### Competitor relationship models
 
 The repository contains one harvested Fandom model and one Steam-guide model,
@@ -64,7 +69,8 @@ Before a reproducibility claim:
 
 ## Current media policy
 
-The old “catalogue textures/models now, decide later” rule is retired.
+The old “catalogue textures/models now, decide later” rule is retired by
+`[DR-2026-08-29-media-scope-amended]`.
 
 Target-set rules now are:
 
@@ -73,8 +79,11 @@ Target-set rules now are:
 - extract every text occurrence;
 - extract every image;
 - extract every non-location model under 50 MB;
-- keep animations and 50–200 MB non-location models staged and inventoried
-  until the owner settles those classes.
+- inventory animations completely and stage them until the owner chooses
+  retain/offload/drop;
+- classify every 50–200 MB non-location model individually. The parent census
+  found the band very likely empty, so no owner choice is currently required,
+  but that conclusion is not proven until withheld containers are opened.
 
 The current media stage has a verified entity-web export but has not yet proven
 full class coverage. `extracted/MEDIA-CATALOGUE.md` is therefore a coverage
@@ -90,15 +99,18 @@ sharded on record boundaries whenever that preserves byte-equivalent
 reconstruction.
 
 The historical blanket ignore of `extracted/**` is removed by this review.
-Before merge, the reviewer must size-audit the live corpus, stage every eligible
-artifact, shard any eligible over-cap stream, and list every intentionally
-local artifact with exact path and byte count in `extracted/PROOF.md`.
+Before the project data gate can close, the corpus-owning agent must size-audit
+the live corpus, stage every eligible artifact, shard any eligible over-cap
+stream, and list every intentionally local artifact with exact path and byte
+count in `extracted/PROOF.md`.
 
 ## Current residue
 
 - Medical School payload is absent.
 - map identity and reverse joins fail the latest corpus-scale review.
 - media policy coverage is not reconciled.
+- animation disposition remains an owner decision.
+- the 50–200 MB model band still needs per-model confirmation.
 - competitor relationship application is below the three-source floor.
 - two native-logic carriers remain unresolved.
 - complete Git/Mac/prod staging coverage is not yet proven.

@@ -28,7 +28,7 @@
 | 9 | `locale-proof` | `tools/stage9_locale_proof.py` | derived | implemented |
 | 10 | `check-contracts` | `tools/stage10_check_contracts.py` | validator suite | implemented |
 | 11 | `media` | `tools/stage11_media.py` | UnityPy + Pillow | partial policy coverage |
-| 12 | `search-corpus` | `tools/stage12_search_corpus.py` | derived | implemented; final review closure open |
+| 12 | `search-corpus` | `tools/stage12_search_corpus.py` | derived | implemented; stage follow-up after relation/locale changes |
 
 `run_all.py --list` is the authoritative runtime order. The old six-stage
 “piece 1” description is retired.
@@ -70,7 +70,7 @@ python run_all.py --list
 python -m pytest tests -q
 python tools/check_documentation.py
 python tools/stage10_check_contracts.py
-python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus" --force
+python run_all.py "A:\\SteamLibrary\\steamapps\\common\\Two Point Campus" --force
 ```
 
 A return code of `2` is not success-equivalent: it means the stage completed
@@ -81,11 +81,14 @@ contributors and their exact unblocks.
 
 - the map stage has an unresolved real-corpus identity defect and missing test
   teeth;
-- the media implementation predates the mandatory all-image/sub-50MB-model
-  policy;
+- the media implementation predates the mandatory all-image/under-50-MB-model
+  policy and does not yet inventory the owner-open animation class completely;
 - current tracked evidence does not prove the full emitted corpus came from
   the latest reviewed source hashes;
-- contract and search reviews need a final closure pass after the map/media
-  changes.
+- contract and search stages need new stage-specific reviews after the
+  map/media/relation changes that affect their inputs.
+
+These are project implementation risks, not unresolved findings on the
+current repository-reconciliation PR.
 
 <!-- END OF toolchain.md -->

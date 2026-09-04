@@ -11,15 +11,15 @@ The repository had drifted into three mutually incompatible stories:
 1. root documents said nothing had been extracted;
 2. generated evidence showed thirteen implemented stages and substantial real
    data;
-3. PR #1 added a generic public site and analytics as though the frontend gate
-   had opened.
+3. an earlier branch state added a generic public site and analytics as though
+   the frontend gate had opened.
 
 This review resolves the conflict in favor of measured code/evidence and the
 data-before-frontend rule:
 
 - canonical docs now describe the real pipeline;
 - the premature site tree is removed;
-- unresolved review findings are promoted into current blockers;
+- unresolved implementation findings are promoted into current blockers;
 - dated scouts/specs/rulings are retained as evidence, not status;
 - transcript-style reviews/verifications are consolidated and removed.
 
@@ -36,15 +36,15 @@ data-before-frontend rule:
 | relinking | implemented | 100-cell matrix | not exhausted |
 | map geometry | implemented | real corpus emitted | **blocked by identity defect** |
 | gameplay logic | implemented | four families | two native gaps |
-| locale proof | implemented | current owner | final rerun open |
-| contract checking | implemented | expected-red model | final follow-up open |
+| locale proof | implemented | current owner | final corpus rerun open |
+| contract checking | implemented | expected-red model | stage-specific follow-up after fixes |
 | media export | implemented subset | entity web images | full policy coverage open |
-| search corpus | implemented | locale shards | final review open |
+| search corpus | implemented | locale shards | stage-specific follow-up after relation/locale changes |
 | public site | removed | no data-complete contract | correctly blocked |
 
-## Removed PR implementation
+## Removed implementation
 
-The former PR site contained:
+The former site contained:
 
 - one English-only centered hero;
 - a system-font dark palette;
@@ -95,6 +95,14 @@ Skill and MCP repositories are release-parallel work only after extracted
 texts, translations, images, and relinks are verified exhausted and the public
 site exists. No empty registry artifact is created now.
 
+## Review status
+
+The repository reconciliation receives two PR review submissions. Pass 1 found
+five documentation/governance defects; the branch fixed them and their
+follow-up edge cases. Pass 2 independently reviews the final head. Remaining
+“review” blockers in this document are stage-specific code/test reviews that
+can close only after the corresponding implementation and corpus changes.
+
 ## Exit criteria for Phase C
 
 The phase closes only when:
@@ -105,6 +113,6 @@ The phase closes only when:
 - all corpus artifacts are committed or explicitly staged under size policy;
 - current reviewed source hashes reproduce the data;
 - PROOF and validation are generated from that run;
-- two review passes leave no unresolved repository-local finding.
+- stage-specific implementation reviews leave no unresolved finding.
 
 <!-- END OF docs/current-stage.mdx -->

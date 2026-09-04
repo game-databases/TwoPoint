@@ -20,11 +20,11 @@ data-before-frontend gate is still closed.
 
 The live C2 blocker families are the table in
 [`PROGRESS.mdx`](PROGRESS.mdx): C2-MAP, C2-MEDIA, C2-REL, C2-PROOF, C2-GIT,
-and C2-REV. That table is the canonical list; this README does not keep a
+and C2-STAGE-REV. That table is the canonical list; this README does not keep a
 shorter competing count.
 
 There is deliberately **no public site implementation in this branch**. A
-generic analytics-only shell previously proposed in PR #1 was removed because
+generic analytics-only shell from an earlier branch state was removed because
 it preceded data completion and claimed product surfaces that did not exist.
 The complete site contract remains documented in
 [`docs/site-plan.mdx`](docs/site-plan.mdx).
@@ -35,14 +35,19 @@ The complete site contract remains documented in
 |---|---|
 | [`spec.md`](spec.md) | current product, data, locale, map, and tool contract |
 | [`PROGRESS.mdx`](PROGRESS.mdx) | concise live phase board |
+| [`QUESTION-QUEUE.md`](QUESTION-QUEUE.md) | owner-only decisions |
+| [`data-acquisition.md`](data-acquisition.md) | source, corpus, media, and publication policy |
+| [`data/sources/MANIFEST.md`](data/sources/MANIFEST.md) | factual acquisition register |
+| [`extracted/EXTRACTION-LOG.md`](extracted/EXTRACTION-LOG.md) | append-only tool and run evidence |
 | [`extracted/PROOF.md`](extracted/PROOF.md) | measured coverage and residue evidence |
 | [`extracted/VALIDATION-REPORT.md`](extracted/VALIDATION-REPORT.md) | current verification verdict |
+| [`extracted/logic/LOGIC.md`](extracted/logic/LOGIC.md) | generated logic-layer evidence |
 | [`missingdata.md`](missingdata.md) | one ledger of unresolved data and proof gaps |
 | [`docs/current-stage.mdx`](docs/current-stage.mdx) | implementation-to-plan reconciliation |
 | [`docs/architecture.mdx`](docs/architecture.mdx) | ownership and dependency boundaries |
 | [`docs/design-direction.mdx`](docs/design-direction.mdx) | source-only visual review and future design bar |
-| [`docs/reviewer-handoff.mdx`](docs/reviewer-handoff.mdx) | empirical checks required before merge/site handoff |
-| [`docs/README.mdx`](docs/README.mdx) | classification of every documentation family |
+| [`docs/reviewer-handoff.mdx`](docs/reviewer-handoff.mdx) | completed PR-review record and data-host verification runbook |
+| [`docs/README.mdx`](docs/README.mdx) | exhaustive documentation classification |
 
 Dated scout reports, piece specifications, and arbiter rulings remain evidence
 or executable contracts. Superseded agent review transcripts and duplicate
@@ -53,7 +58,7 @@ verification reports were consolidated into
 
 ```bash
 python run_all.py --list
-python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus"
+python run_all.py "A:\\SteamLibrary\\steamapps\\common\\Two Point Campus"
 python -m pytest tests -q
 python tools/check_documentation.py
 ```

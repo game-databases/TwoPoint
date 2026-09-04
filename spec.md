@@ -38,6 +38,8 @@ locales:
   page-model: pivot-bare-path; localized-prefix-and-localized-slugs-for-others
   chrome: required-for-all-13-before-site-release
   source: client-localization-bundles
+  storefront-advertised-count: 11
+  storefront-omits: [ja, ru]
   availability-owner: stage9-locale-proof
 
 axes:
@@ -112,7 +114,9 @@ satellite:
 media:
   excluded: [audio, video, location-models, models-over-200MB]
   mandatory: [all-text, all-images, non-location-models-under-50MB]
-  unresolved-owner-class: [animations, non-location-models-50MB-to-200MB]
+  owner-decision-open: [animations]
+  per-model-confirmation-open: [non-location-models-50MB-to-200MB]
+  model-band-50-to-200-note: very-likely-empty-on-parent-census-but-unproven-until-withheld-containers-open
   current-status: catalogue-and-partial-web-export-not-yet-completeness-proven
 
 tools:
@@ -141,7 +145,8 @@ external-dependencies: []
 content-policy-holes:
   - audio-and-video-excluded
   - location-models-and-models-over-200MB-excluded
-  - animations-and-non-location-models-50MB-to-200MB-owner-decision-open
+  - animations-owner-disposition-open
+  - non-location-models-50MB-to-200MB-per-model-confirmation-open
   - Medical-School-payload-not-held
 
 status:
@@ -167,6 +172,7 @@ Phase D may begin only after all of the following are true:
 - every relation pair is either modeled or carries a concrete, current unblock;
 - three independent competitor relationship models have been applied;
 - all mandatory images and eligible models are decoded and reconciled;
+- animations are fully inventoried and carry the owner-selected disposition;
 - the current reviewed source tree reproduces the corpus;
 - eligible artifacts are committed and larger artifacts are staged and
   inventoried;

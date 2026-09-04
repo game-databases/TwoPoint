@@ -8,10 +8,10 @@ coverage **not yet proven**
 
 | Class | Objects | Estimated serialized bytes | Policy |
 |---|---:|---:|---|
-| AnimationClip | 7,985 | 636,456,748 | staged; owner decision open |
+| AnimationClip | 7,985 | 636,456,748 | inventory completely; owner retain/offload/drop decision open |
 | AudioClip | 5,624 | 1,014,532 | excluded target |
 | Font | 24 | 39,626,688 | extract/reconcile |
-| Mesh | 19,249 | 153,322,460 | extract non-location models under 50 MB; inventory others |
+| Mesh | 19,249 | 153,322,460 | extract non-location models under 50 MB; confirm every higher band individually |
 | Shader | 213 | 21,916,544 | preserve/inventory under Principle zero |
 | Sprite | 6,789 | 5,867,972 | every image must be decoded/reconciled |
 | SpriteAtlas | 47 | 545,172 | every constituent image must be decoded/reconciled |
@@ -37,25 +37,28 @@ or deliberately excluded product.
 
 ## Current policy
 
-The old catalogue-first deferral for images and small models is retired.
+The old catalogue-first deferral for images and small models is retired by
+`[DR-2026-08-29-media-scope-amended]`.
 
 - audio and video remain excluded;
 - location models and models over 200 MB remain excluded;
 - every text and image is mandatory;
 - every non-location model under 50 MB is mandatory;
-- animations and non-location models from 50–200 MB remain staged and
-  inventoried pending an owner decision.
+- animations remain owner-open after a complete inventory;
+- 50–200 MB non-location models require per-model confirmation. The parent
+  census says this band is very likely empty on present evidence, so it is not
+  an owner choice, but withheld containers prevent a completeness claim.
 
 No container counts as an extracted image/model merely because its
 `.bundle`/serialized object was retained.
 
 ## Completion reconciliation owed
 
-The reviewer must produce a machine table with, for every source object:
+The C2 media pass must produce a machine table with, for every source object:
 
 - stable source identity;
 - class and container;
-- decoded output path(s), or exact policy exclusion;
+- decoded output path(s), or exact policy exclusion/disposition;
 - byte size and SHA-256;
 - entity/site usage where applicable;
 - duplicate-of identity for byte-identical duplicates only.
@@ -67,8 +70,12 @@ Required checks:
 3. every Texture2D is decoded or identified as a byte-identical backing object
    already represented by resolved sprites;
 4. every mesh is classified by location/non-location and size;
-5. all eligible outputs below the Git cap are committed;
-6. larger staged outputs are listed in PROOF with local path and byte total.
+5. every under-50-MB non-location model is exported;
+6. every 50–200 MB non-location model is explicitly confirmed or the band is
+   proven empty;
+7. animations are inventoried and carry the owner-selected disposition;
+8. all eligible outputs below the Git cap are committed;
+9. larger staged outputs are listed in PROOF with local path and byte total.
 
 Until that table reconciles to the class universe, this document remains a
 coverage ledger rather than a completion certificate.

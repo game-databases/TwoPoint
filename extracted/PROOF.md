@@ -4,8 +4,8 @@
 **Evidence review date:** 2026-09-04  
 **Verdict:** **NOT YET COMPLETE — Phase C remains open**
 
-This document proves what the tracked evidence supports and states every
-known reason it cannot yet prove full deconstruction. It replaces the former
+This document proves what the tracked evidence supports and states every known
+reason it cannot yet prove full deconstruction. It replaces the former
 placeholder; it is not a completion certificate.
 
 ## 1. Source inventory
@@ -17,6 +17,7 @@ placeholder; it is not a completion certificate.
 | Addressables entries | 66,129 | every entry referenced by at least one bucket membership |
 | bucket memberships | 81,146 | multi-key entries explain membership > entry count |
 | localization bundles | 14 | 13 locales + one base overlay |
+| storefront language field | 11 | Japanese and Russian absent there; client bundles remain authority for 13 |
 | localization registry rows | 15,675 | canonical term registry |
 | media catalogue rows | 47,939 | class inventory, not complete decoded export proof |
 | entity kinds | 9 | config, item, room, course, staff, student-type, unlockable, metagame-node, campus-level |
@@ -42,9 +43,9 @@ Measurement methods and historical stage runs remain append-only in
 | maps | levels, plots, rooms, placements, layers, validators | emitted but review-blocked |
 | logic | progression, economy, grading, needs/decay | measured with two gaps |
 | locale-proof | availability, holes, fallback and coverage | emitted |
-| check-contracts | 44-family validator layer | emitted; expected-red state requires review |
+| check-contracts | 44-family validator layer | emitted; expected-red state requires stage follow-up |
 | media | entity web images and cross-checks | partial policy coverage |
-| search-corpus | locale shards, aliases, manifest | emitted; final review open |
+| search-corpus | locale shards, aliases, manifest | emitted; stage follow-up after relation/locale changes |
 
 ## 3. Logic evidence
 
@@ -113,8 +114,13 @@ Catalogue universe:
 The media stage has evidence for 2,222 WebP files plus 29 PNG twins and seven
 named entity-media absences. This is a useful export, but it does not reconcile
 the complete image universe or eligible model universe under the current
-policy. Audio/video remain excluded. Animations remain staged pending an owner
-decision.
+policy.
+
+Audio/video, location models, and models over 200 MB are excluded. Every text,
+image, and non-location model under 50 MB is mandatory. Animations require a
+complete inventory plus an owner retain/offload/drop decision. The 50–200 MB
+non-location model band needs per-model confirmation; the parent census says it
+is very likely empty but does not prove that withheld containers contain none.
 
 ## 7. Corpus publication blocker
 
@@ -123,8 +129,9 @@ current policy requires every file below approximately 95 MB and every commit
 below approximately 1 GB to be pushed; larger artifacts remain complete and
 staged locally.
 
-This review removes the blanket ignore but cannot enumerate bytes unavailable
-through the GitHub-only checkout. Before merge, the reviewer must:
+The current review removes the blanket ignore but cannot enumerate bytes
+unavailable through the GitHub-only checkout. Before the project data gate can
+close, the corpus-owning agent must:
 
 - inventory every generated file on `NE8K` and the Mac;
 - commit all eligible files;
@@ -148,9 +155,9 @@ The pipeline is substantial and reproducible in shape, but full completeness
 is **not proven** because map identities, media coverage, competitor
 application, source-hash parity, and corpus publication remain open.
 
-Phase D starts only after the reviewer executes
-[`../docs/reviewer-handoff.mdx`](../docs/reviewer-handoff.mdx), replaces the
-open rows above with empirical results, and the final validation verdict is
-green.
+Phase D starts only after the data-host verification runbook in
+[`../docs/reviewer-handoff.mdx`](../docs/reviewer-handoff.mdx) is executed,
+the open rows above are replaced with empirical results, and the final project
+validation verdict is green.
 
 <!-- END OF extracted/PROOF.md -->

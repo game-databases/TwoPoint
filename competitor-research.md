@@ -59,7 +59,8 @@ player still comes from the client or first-party services.
 
 ## Third-source acquisition
 
-The reviewer must make one bounded pass through the remaining ladder:
+The next C2 relation pass must make one bounded attempt through the remaining
+ladder:
 
 1. archive snapshots for the second wiki;
 2. another independent guide/database corpus;
