@@ -29,9 +29,11 @@ The future product is a visually distinctive Two Point Campus database: object-l
 entity pages, an owned campus map, the campus layout planner as flagship tool,
 client-grounded calculators, bidirectional relations, and useful saved/UGC state.
 
-Those surfaces are **not implemented on this branch**. A generic analytics-only
-shell from an earlier branch state was removed because it preceded data
-completion and claimed product that did not exist. Until the data gate opens:
+Those surfaces are **not implemented on this branch**. Merging this
+documentation reconciliation is not Phase D and does not close the project
+data gate. A generic analytics-only shell from an earlier branch state was
+removed because it preceded data completion and claimed product that did not
+exist. Until the data gate opens:
 
 - [`docs/site-plan.mdx`](docs/site-plan.mdx) owns routes, launch sections,
   locale, accounts, performance, and implementation order;

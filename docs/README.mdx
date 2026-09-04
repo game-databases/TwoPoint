@@ -36,23 +36,25 @@ classification, not an automated test suite.
 
 ### Scout reports
 
-Eight `scout-report-*.mdx` files are dated measurements. They are retained
-because piece specs and implementation decisions cite their probes. They never
-own current status; where a scout value differs from current generated
-evidence, the generated evidence and current authorities win.
+Eight `scout-report-*.mdx` files are dated measurements. Each file now carries
+an in-file **Historical evidence** marker. They never own current status;
+where a scout value differs from current generated evidence, the generated
+evidence and current authorities win. Old publication, TestWriter, or
+bootstrap language inside them is historical.
 
 ### Piece specifications
 
 Eight `specs/piece-*.mdx` files are executable stage contracts and acceptance
-histories. They remain relevant because tests and source comments bind to their
-named rules. They do not own current product phase or supersede later network
-decisions.
+histories. Each file now carries an in-file **Historical executable contract**
+marker. Named rules remain binding for existing code. They do not own current
+product phase, corpus-publication timing, or permission to add tests.
 
 ### Rulings
 
 Twelve `rulings/*.mdx` files preserve accepted/refuted findings and
-implementation adjudications. A current authority may summarize or supersede
-their operational state without rewriting decision history.
+implementation adjudications. Each file now carries an in-file **Historical
+ruling** marker. A current authority may summarize or supersede their
+operational state without rewriting decision history.
 
 ### Contract notes
 

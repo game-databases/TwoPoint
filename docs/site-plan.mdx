@@ -1,9 +1,11 @@
 # Two Point Campus site plan
 
 **Status:** downstream product contract. Implementation is blocked by the data
-gate. This file owns product promise, routes, launch sections, locale,
-accounts, performance, analytics sequencing, and the order of work after the
-gate opens. The visual bar is [`design-direction.mdx`](design-direction.mdx).
+gate. Merging a documentation reconciliation does **not** open Phase D or
+turn the project data gate green. This file owns product promise, routes,
+page compositions, launch sections, locale, accounts, performance, analytics
+sequencing, and the order of work after the gate opens. The visual extraction
+brief is [`design-direction.mdx`](design-direction.mdx).
 
 No page may claim a capability before its real backing exists.
 
@@ -75,6 +77,24 @@ state.
 9. visible buildId and coverage scope.
 
 All relation links are ordinary anchors in served HTML.
+
+## Page compositions
+
+These compositions are the implementation brief. Visual tokens, anti-patterns,
+and capture order live in [`design-direction.mdx`](design-direction.mdx). Do
+not invent colors, type, or motion.
+
+| Route | Composition |
+|---|---|
+| `/` | object-led home: one featured campus or course object, then tools that already have backing data; no marketing hero |
+| `/<kind>/<slug>` | entity object: art well, identity plate, numbers/chips, direct answer, locale cluster, HTML relation modules, location/map, related wells, UGC, buildId |
+| `/<kind>` | kind list: extracted-chip filters, dense object cards, real links, virtualized after first paint |
+| `/map` | desktop/TV campus canvas, docked legend/inspector, header search; handheld uses entity location text plus this link |
+| `/tools/campus-planner` | map canvas language plus validation strip and shareable layout URL |
+| `/tools/*` | direct answer dominates; keystroke updates; every entity input/output is a link; missing formulas are designed absence |
+| `/account` | one sign-in/sign-up panel; OAuth first; email only on that same panel |
+
+Empty sections are omitted. A route without backing data is not shipped.
 
 ## Required sections
 

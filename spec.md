@@ -166,7 +166,8 @@ status:
 
 ## Data gate
 
-Phase D may begin only after all of the following are true:
+Merging a documentation reconciliation does not open this gate. Phase D may
+begin only after all of the following are true:
 
 - the map identity and join defect is fixed on the real corpus;
 - every relation pair is either modeled or carries a concrete, current unblock;
