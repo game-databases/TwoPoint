@@ -4,7 +4,11 @@ This is the single human ledger for data that is absent, unresolved, partially
 modeled, or not yet proven through to the eventual site. It does not authorize
 invented substitutions.
 
-## Release-blocking
+The entries below block the **project data gate, Phase D, or later production
+claims**. They do not block merging the current repository reconciliation,
+which deliberately preserves their red state.
+
+## Phase-D and project-data blockers
 
 ### MAP-1 — placement identity collisions
 
@@ -17,7 +21,7 @@ propagate the final identities to every referencing row, assert zero duplicate
 family keys after demotion, and prove placement→room and layer→plot closure on
 the real corpus.
 
-### MAP-2 — map test teeth
+### MAP-2 — direct mutation evidence
 
 Emitter-path door gating, dual ID-space sweep results, and closed generation
 vocabulary were deletable without failing the reviewed test selection.
