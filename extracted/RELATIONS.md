@@ -1,216 +1,107 @@
-# Relations
+# Two Point Campus — relation matrix status
 
-- buildId: 20226581
-- generated mechanically from relinks/matrix.json + ledgers by the `relink` stage (piece-02); reruns are byte-identical
+**buildId:** `20226581`  
+**Nodes:** config, item, room, course, staff, student-type, unlockable,
+metagame-node, campus-level, scene  
+**Matrix:** 100 ordered cells — 24 modeled, 3 partial, 73 missing
 
-## Node universe
+Legend: `M` modeled · `P` partial · `—` missing.
 
-- nodes: config, item, room, course, staff, student-type, unlockable, metagame-node, campus-level, scene
-- arithmetic: 10 nodes -> 100 ordered cells = 90 off-diagonal + 10 diagonal
+## Complete ordered-pair status grid
 
-## Ordered-pair matrix (100 cells)
+| from \ to | config | item | room | course | staff | student | unlock | meta | campus | scene |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| config | M | M | M | M | M | — | M | M | — | — |
+| item | M | M | — | — | — | — | — | — | — | — |
+| room | M | M | — | — | — | — | M | — | — | — |
+| course | M | M | — | M | — | — | — | — | — | — |
+| staff | M | — | — | — | — | — | M | — | — | — |
+| student-type | M | — | — | — | — | — | — | — | — | — |
+| unlockable | M | M | — | — | — | — | M | — | P | — |
+| metagame-node | M | M | — | P | — | — | — | — | — | — |
+| campus-level | M | — | — | — | — | — | — | P | — | — |
+| scene | — | — | — | — | — | — | — | — | — | — |
 
-| src | dst | joinKey | mechanism | status | edges | srcEntities | pairFile |
-|---|---|---|---|---|---|---|---|
-| config | config | PPtr(m_FileID,m_PathID) | hard | modeled | 9943 | 4428 | config_config.jsonl |
-| config | item | PPtr(m_FileID,m_PathID) | hard | modeled | 3118 | 763 | config_item.jsonl |
-| config | room | PPtr(m_FileID,m_PathID) | hard | modeled | 532 | 493 | config_room.jsonl |
-| config | course | PPtr(m_FileID,m_PathID) | hard | modeled | 116 | 35 | config_course.jsonl |
-| config | staff | PPtr(m_FileID,m_PathID) | hard | modeled | 61 | 60 | config_staff.jsonl |
-| config | student-type | none-established | inferred | missing | 0 | 0 |  |
-| config | unlockable | PPtr(m_FileID,m_PathID) | hard | modeled | 64 | 8 | config_unlockable.jsonl |
-| config | metagame-node | PPtr(m_FileID,m_PathID) | hard | modeled | 35 | 5 | config_metagame-node.jsonl |
-| config | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| config | scene | none-established | inferred | missing | 0 | 0 |  |
-| item | config | PPtr(m_FileID,m_PathID) | hard | modeled | 8281 | 1788 | item_config.jsonl |
-| item | item | PPtr(m_FileID,m_PathID) | hard | modeled | 155 | 129 | item_item.jsonl |
-| item | room | none-established | inferred | missing | 0 | 0 |  |
-| item | course | none-established | inferred | missing | 0 | 0 |  |
-| item | staff | none-established | inferred | missing | 0 | 0 |  |
-| item | student-type | none-established | inferred | missing | 0 | 0 |  |
-| item | unlockable | none-established | inferred | missing | 0 | 0 |  |
-| item | metagame-node | none-established | inferred | missing | 0 | 0 |  |
-| item | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| item | scene | none-established | inferred | missing | 0 | 0 |  |
-| room | config | PPtr(m_FileID,m_PathID) | hard | modeled | 570 | 112 | room_config.jsonl |
-| room | item | PPtr(m_FileID,m_PathID) | hard | modeled | 132 | 59 | room_item.jsonl |
-| room | room | none-established | inferred | missing | 0 | 0 |  |
-| room | course | none-established | inferred | missing | 0 | 0 |  |
-| room | staff | none-established | inferred | missing | 0 | 0 |  |
-| room | student-type | none-established | inferred | missing | 0 | 0 |  |
-| room | unlockable | PPtr(m_FileID,m_PathID) | hard | modeled | 6 | 4 | room_unlockable.jsonl |
-| room | metagame-node | none-established | inferred | missing | 0 | 0 |  |
-| room | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| room | scene | none-established | inferred | missing | 0 | 0 |  |
-| course | config | PPtr(m_FileID,m_PathID) | hard | modeled | 652 | 53 | course_config.jsonl |
-| course | item | PPtr(m_FileID,m_PathID) | hard | modeled | 16 | 16 | course_item.jsonl |
-| course | room | none-established | inferred | missing | 0 | 0 |  |
-| course | course | PPtr(m_FileID,m_PathID) | hard | modeled | 46 | 28 | course_course.jsonl |
-| course | staff | none-established | inferred | missing | 0 | 0 |  |
-| course | student-type | none-established | inferred | missing | 0 | 0 |  |
-| course | unlockable | none-established | inferred | missing | 0 | 0 |  |
-| course | metagame-node | none-established | inferred | missing | 0 | 0 |  |
-| course | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| course | scene | none-established | inferred | missing | 0 | 0 |  |
-| staff | config | PPtr(m_FileID,m_PathID) | hard | modeled | 72 | 3 | staff_config.jsonl |
-| staff | item | none-established | inferred | missing | 0 | 0 |  |
-| staff | room | none-established | inferred | missing | 0 | 0 |  |
-| staff | course | none-established | inferred | missing | 0 | 0 |  |
-| staff | staff | none-established | inferred | missing | 0 | 0 |  |
-| staff | student-type | none-established | inferred | missing | 0 | 0 |  |
-| staff | unlockable | PPtr(m_FileID,m_PathID) | hard | modeled | 3 | 3 | staff_unlockable.jsonl |
-| staff | metagame-node | none-established | inferred | missing | 0 | 0 |  |
-| staff | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| staff | scene | none-established | inferred | missing | 0 | 0 |  |
-| student-type | config | PPtr(m_FileID,m_PathID) | hard | modeled | 277 | 27 | student-type_config.jsonl |
-| student-type | item | none-established | inferred | missing | 0 | 0 |  |
-| student-type | room | none-established | inferred | missing | 0 | 0 |  |
-| student-type | course | none-established | inferred | missing | 0 | 0 |  |
-| student-type | staff | none-established | inferred | missing | 0 | 0 |  |
-| student-type | student-type | none-established | inferred | missing | 0 | 0 |  |
-| student-type | unlockable | none-established | inferred | missing | 0 | 0 |  |
-| student-type | metagame-node | none-established | inferred | missing | 0 | 0 |  |
-| student-type | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| student-type | scene | none-established | inferred | missing | 0 | 0 |  |
-| unlockable | config | PPtr(m_FileID,m_PathID) | hard | modeled | 34 | 24 | unlockable_config.jsonl |
-| unlockable | item | PPtr(m_FileID,m_PathID) | hard | modeled | 110 | 38 | unlockable_item.jsonl |
-| unlockable | room | none-established | inferred | missing | 0 | 0 |  |
-| unlockable | course | none-established | inferred | missing | 0 | 0 |  |
-| unlockable | staff | none-established | inferred | missing | 0 | 0 |  |
-| unlockable | student-type | none-established | inferred | missing | 0 | 0 |  |
-| unlockable | unlockable | PPtr(m_FileID,m_PathID) | hard | modeled | 139 | 77 | unlockable_unlockable.jsonl |
-| unlockable | metagame-node | none-established | inferred | missing | 0 | 0 |  |
-| unlockable | campus-level | none-established | inferred | partial | 0 | 0 |  |
-| unlockable | scene | none-established | inferred | missing | 0 | 0 |  |
-| metagame-node | config | PPtr(m_FileID,m_PathID) | hard | modeled | 205 | 205 | metagame-node_config.jsonl |
-| metagame-node | item | PPtr(m_FileID,m_PathID) | hard | modeled | 3 | 3 | metagame-node_item.jsonl |
-| metagame-node | room | none-established | inferred | missing | 0 | 0 |  |
-| metagame-node | course | none-established | inferred | partial | 0 | 0 |  |
-| metagame-node | staff | none-established | inferred | missing | 0 | 0 |  |
-| metagame-node | student-type | none-established | inferred | missing | 0 | 0 |  |
-| metagame-node | unlockable | none-established | inferred | missing | 0 | 0 |  |
-| metagame-node | metagame-node | none-established | inferred | missing | 0 | 0 |  |
-| metagame-node | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| metagame-node | scene | none-established | inferred | missing | 0 | 0 |  |
-| campus-level | config | AssetGUID(m_AssetGUID)->catalog.guid->container-address->pathId | hard | modeled | 13 | 13 | campus-level_config.jsonl |
-| campus-level | item | none-established | inferred | missing | 0 | 0 |  |
-| campus-level | room | none-established | inferred | missing | 0 | 0 |  |
-| campus-level | course | none-established | inferred | missing | 0 | 0 |  |
-| campus-level | staff | none-established | inferred | missing | 0 | 0 |  |
-| campus-level | student-type | none-established | inferred | missing | 0 | 0 |  |
-| campus-level | unlockable | none-established | inferred | missing | 0 | 0 |  |
-| campus-level | metagame-node | none-established | inferred | partial | 0 | 0 |  |
-| campus-level | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| campus-level | scene | none-established | inferred | missing | 0 | 0 |  |
-| scene | config | none-established | inferred | missing | 0 | 0 |  |
-| scene | item | none-established | inferred | missing | 0 | 0 |  |
-| scene | room | none-established | inferred | missing | 0 | 0 |  |
-| scene | course | none-established | inferred | missing | 0 | 0 |  |
-| scene | staff | none-established | inferred | missing | 0 | 0 |  |
-| scene | student-type | none-established | inferred | missing | 0 | 0 |  |
-| scene | unlockable | none-established | inferred | missing | 0 | 0 |  |
-| scene | metagame-node | none-established | inferred | missing | 0 | 0 |  |
-| scene | campus-level | none-established | inferred | missing | 0 | 0 |  |
-| scene | scene | none-established | inferred | missing | 0 | 0 |  |
+Every `—` cell is represented in the machine matrix with
+`mechanism: inferred`, `status: missing`, and its probe/unblock class. It is
+not silently omitted.
 
-## Locale-join ownership routing
+## Modeled edge families
 
-- `relinks/locale_availability.jsonl` stays STAGE-5 SOLE PROPERTY (piece-02 §R4 pin; v1 procedure frozen at hardJoins: 0).
-- The authoritative entity-granular locale relation is `relinks/entity_locale.jsonl` (10964 rows; mechanism `LocalisedString(_termID)->I2-termID->Term-key`, hard).
-- Registry: `relinks/i2_term_registry.jsonl` (15675 rows, canonical-on-key); reverse index `relinks/locale_term_entity.jsonl`.
+| From | To | Mechanism | Edges | Source entities |
+|---|---|---|---:|---:|
+| config | config | hard PPtr | 9,943 | 4,428 |
+| config | item | hard PPtr | 3,118 | 763 |
+| config | room | hard PPtr | 532 | 493 |
+| config | course | hard PPtr | 116 | 35 |
+| config | staff | hard PPtr | 61 | 60 |
+| config | unlockable | hard PPtr | 64 | 8 |
+| config | metagame-node | hard PPtr | 35 | 5 |
+| item | config | hard PPtr | 8,281 | 1,788 |
+| item | item | hard PPtr | 155 | 129 |
+| room | config | hard PPtr | 570 | 112 |
+| room | item | hard PPtr | 132 | 59 |
+| room | unlockable | hard PPtr | 6 | 4 |
+| course | config | hard PPtr | 652 | 53 |
+| course | item | hard PPtr | 16 | 16 |
+| course | course | hard PPtr | 46 | 28 |
+| staff | config | hard PPtr | 72 | 3 |
+| staff | unlockable | hard PPtr | 3 | 3 |
+| student-type | config | hard PPtr | 277 | 27 |
+| unlockable | config | hard PPtr | 34 | 24 |
+| unlockable | item | hard PPtr | 110 | 38 |
+| unlockable | unlockable | hard PPtr | 139 | 77 |
+| metagame-node | config | hard PPtr | 205 | 205 |
+| metagame-node | item | hard PPtr | 3 | 3 |
+| campus-level | config | hard AssetGUID→catalog→container→pathId | 13 | 13 |
 
-## Ledgers (gapped resolution is data, never silence)
+## Partial cells
 
-- `_unresolved_pptrs.jsonl`: 2391 rows (cross-file misses, built-in externals, same-file non-entity targets; per-cell residue feeds matrix `evidence.unresolvedRefs`)
-- `_dangling_guids.jsonl`: 1137 rows, verdicts: {"unresolved-open": 1137}
-- `locale_join_report.json`: registryMisses=5 (termId -2044546668, termId -1942168175, termId -1451566921, termId -1172386361, termId -1168948158)
+| From | To | Current evidence | Unblock |
+|---|---|---|---|
+| unlockable | campus-level | level-shaped fields found without a stable resolved carrier | repeat cross-file/GUID probe after map identity repair |
+| metagame-node | course | course PPtr carriers exist but some targets remain outside the emitted identity universe | resolve scene/prefab targets and reclassify |
+| campus-level | metagame-node | campus GUID resolves to `Config_Metagame`, currently emitted as `config` | settle one authoritative kind mapping; never dual-emit guessed identities |
 
-## Proven-absent / unreachable relations (this corpus)
+## Locale relation ownership
 
-- `config->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `config->campus-level` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `config->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `item->room` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `item->course` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `item->staff` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `item->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `item->unlockable` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `item->metagame-node` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `item->campus-level` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `item->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `room->room` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `room->course` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `room->staff` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `room->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `room->metagame-node` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `room->campus-level` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `room->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `course->room` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `course->staff` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `course->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `course->unlockable` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `course->metagame-node` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `course->campus-level` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `course->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `staff->item` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `staff->room` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `staff->course` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `staff->staff` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `staff->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `staff->metagame-node` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `staff->campus-level` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `staff->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->item` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->room` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->course` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->staff` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->unlockable` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->metagame-node` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->campus-level` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `student-type->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `unlockable->room` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `unlockable->course` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `unlockable->staff` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `unlockable->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `unlockable->metagame-node` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `unlockable->campus-level` [partial] probe cell: scanned unlockable payloads for Levels[] / LevelFilters / level-name segments matching campus-level ids — no measured carrier on this corpus; re-check after cross-file PPtr resolution growth
-- `unlockable->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `metagame-node->room` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `metagame-node->course` [partial] needs-probe cell: .references.NNNN.data.Course PPtrs resolve through the R1 bridges; 0 still dangle against non-stub (scene/prefab-resident) objects — owner: scene-dump walk (maps piece)
-- `metagame-node->staff` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `metagame-node->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `metagame-node->unlockable` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `metagame-node->metagame-node` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `metagame-node->campus-level` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `metagame-node->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `campus-level->item` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `campus-level->room` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `campus-level->course` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `campus-level->staff` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `campus-level->student-type` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `campus-level->unlockable` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `campus-level->metagame-node` [partial] carrier found and resolving: campus-level payloads' .MetagameConfig.m_AssetGUID → catalog → Config_Metagame resolves, but stage-5 emits that asset as kind `config`, so the rows land in campus-level_config.jsonl — metagame-node identity is blocked on the KINDING, not on a missing carrier (owner-routable via the decision register; no dual-kind rows are emitted)
-- `campus-level->campus-level` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `campus-level->scene` [missing] no carrier found in client data today; probe candidates: cross-file PPtr growth (_unresolved_pptrs.jsonl), GUID-carried references (guid bridge), decompiled code analysis (decompiled/structural/class-hierarchy.jsonl)
-- `scene->config` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->item` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->room` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->course` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->staff` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->student-type` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->unlockable` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->metagame-node` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->campus-level` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
-- `scene->scene` [missing] no stub-payload emitter exists for the scene source node by design — scene objects have no stubs; owner: the maps piece's scene-dump walk (inherits this piece's scene node seam)
+Stage 9 `locale-proof` is the sole writer of
+`relinks/locale_availability.jsonl`. Stage 6 writes:
 
-## UI-link coverage (bar 2)
+- `i2_term_registry.jsonl`: 15,675 rows;
+- `entity_locale.jsonl`: 10,964 entity-locale joins;
+- `locale_term_entity.jsonl`: reverse index;
+- `locale_join_report.json`.
 
-- surfaces: 344 (mapped-schema 9 / documented-gap 335); tooltip target census 0 classes fully partitioned; I2.Loc.Localize bindings 11312 route text lookups to `entity_locale.jsonl`
+The former statement that stage 5 owned locale availability is retired.
 
-## Competitor application (bar 3)
+## Current ledgers
 
-- sourcesRead=2 confirms-hard=0 adds-derived=0 flags-missing=417 walls=0; floor UNMET (≥3 applied sources required)
-- fandom: confirms-hard=0 adds-derived=0 flags-missing=383
-- steam-guides: confirms-hard=0 adds-derived=0 flags-missing=34
-- TERMINAL: measured dead end for raw more-of-the-same corpus: the committed community-word claims resolve zero under the pinned exact + casefold/_<->space convention (measured across the committed corpus: 0/417; prefix-strip variant 1/417) and scraped stubs carry no slugs (null on every row), so plain acquisition cannot flip this floor — the levers are claims named in internal ids or an authored community-name->internal-id alias input riding this research-pass lane (owner-routed per competitor-research.md); the stage consumes committed bytes only
+| Ledger | Rows / state | Meaning |
+|---|---:|---|
+| unresolved PPtrs | 2,391 | same/cross-file targets outside the current emitted identity universe |
+| dangling GUIDs | 1,137 | unresolved-open Addressables GUIDs |
+| locale registry misses | 5 | term IDs absent from the canonical registry |
+| competitor application | 0 applied sources | two models harvested; third-source and application floor open |
+| map placement joins | review failure | identity propagation breaks room/plot reverse joins |
+
+## UI-link and competitor duties
+
+The emitted UI-link coverage artifact maps observed game UI relationships to
+schema/join families. Any uncovered UI link is a named gap.
+
+Competitor relationship models do not count merely because their files exist.
+Three independent models must each produce a measured application record:
+delta, strengthened probe, or zero-delta comparison. Current count is zero.
+
+## Completion verdict
+
+The matrix is complete as an inventory but not exhausted as a relation model.
+Map identity repair, competitor application, unresolved-target re-probes, and a
+fresh real-corpus run are required before the data gate can close.
+
+The detailed pair JSONL files and machine `matrix.json` remain the authoritative
+row-level artifacts. This document is the human status view and is regenerated
+after relation changes.
+
+<!-- END OF extracted/RELATIONS.md -->
