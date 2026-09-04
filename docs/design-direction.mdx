@@ -1,0 +1,111 @@
+# Two Point Campus design direction
+
+**Method:** source-only review of the removed PR implementation plus current
+pipeline contracts. No screenshot or browser claim is made.
+
+## Removed implementation review
+
+The removed site was a single centered hero with:
+
+- `system-ui`;
+- a uniform near-black background;
+- beige kicker and white heading;
+- generic database promise copy;
+- no game-sourced image;
+- no entity, number, relation, map, tool, state, or locale component.
+
+Its code could only render a marketing statement. It did not satisfy the
+project stage, the game's soul, modern database structure, or the truthfulness
+of its own metadata. PostHog was technically isolated and fail-closed, but
+instrumenting an unearned public shell was a sequencing defect. Removal is the
+correct visual and architectural change.
+
+## Target visual principles
+
+Exact colors, typefaces, iconography, textures, motion, and sounds are not
+invented here. They must be extracted from the client UI and measured when the
+site phase opens.
+
+The direction is:
+
+- **playful institutional object, not generic dark wiki** — panels should feel
+  like campus administration, course cards, room inspectors, and student
+  systems from the game;
+- **one primary object owns the viewport** — course, room, item, campus, or
+  layout rather than an explanatory article;
+- **color carries object identity** — per-course/campus state changes the
+  surface through measured game tokens;
+- **quiet chrome** — search, locale, account, and navigation stay subordinate;
+- **data-bearing hover/tap** — every stat or relationship reveals a useful
+  definition or linked object, not a tint-only effect;
+- **game icon consistency** — one extracted icon vocabulary across lists,
+  cards, tool inputs, and map markers;
+- **designed absence** — equal-size empty wells and explicit named gaps, never
+  emoji, stock art, or apology prose;
+- **restrained, game-derived motion** — transitions and feedback copied from
+  measured interaction cadence, not stock component defaults.
+
+## Component families
+
+### Shared shell
+
+- thin header with expanding search;
+- locale combobox with native names;
+- unified account trigger;
+- section navigation driven by current locale;
+- no multi-game rail until the product genuinely covers another Two Point game.
+
+### Database object
+
+- in-fiction identity/tooltip card;
+- stat and requirement modules;
+- relation graph rendered as modules and anchors;
+- build/coverage evidence;
+- related tools/guides/news;
+- comments/corrections/screenshot well.
+
+### Lists
+
+- strong visual objects, useful filters, and virtualized density;
+- real links under every row;
+- no tiny-body-text workaround for information density.
+
+### Map and planner
+
+- desktop/TV canvas;
+- client-derived plot/room geometry;
+- game-sourced markers and textures;
+- stable focus links;
+- detail inspector;
+- planner validation and URL-share state;
+- mobile pages link into the map rather than rendering the canvas.
+
+### Tools
+
+- answer updates while typing;
+- direct answer dominates;
+- inputs and outputs link to entity pages;
+- missing native values remain unavailable.
+
+## Responsive behavior
+
+Every text, database, news, guide, account, list, and calculator page is
+verified at handheld, tablet, desktop, and wide desktop widths. The interactive
+map/planner canvas is verified at desktop and TV widths only. Handheld entity
+pages retain location text and a map link.
+
+## Visual acceptance
+
+Per page type, the reviewer compares the running product against:
+
+- Enka for object feel and interaction;
+- new-world.guide for page structure and creator/published-tool flow;
+- Wikily for modern wiki language;
+- Maxroll only if a real multi-game switcher becomes necessary.
+
+A page fails despite complete structure if it feels generic, lacks useful
+hover/join behavior, loses selection in the URL, uses inconsistent icons,
+explains the interface in prose, or omits map context from a location-bearing
+entity.
+
+<!-- END OF docs/design-direction.mdx -->

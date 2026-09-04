@@ -1,0 +1,185 @@
+# Final reviewer handoff
+
+The pull-request branch contains every repository-local finding and decision.
+The checks below require the real checkout/corpus and must be written back into
+this file before merge. Replace `PENDING` with the command, observed result,
+artifact path, and final decision; do not leave results in chat.
+
+## Review pass 1 — implementation and evidence
+
+**Status:** PENDING
+
+### Source parity
+
+```bash
+git archive HEAD run_all.py tools tests contracts |
+  ssh ne8k "tar -x -C /c/_reps/game-databases/TwoPoint"
+```
+
+Hash every committed pipeline and test file on both machines. Required result:
+zero mismatch.
+
+Record:
+
+- reviewed head SHA:
+- NE8K script-tree digest:
+- mismatches:
+
+### Repository tests
+
+```bash
+python tools/check_documentation.py
+python -m pytest tests -m "not client_gated" -q
+python tools/stage10_check_contracts.py
+```
+
+Record exact pass/fail/skip counts and every exit-2 contributor.
+
+### Full real-corpus run
+
+```bash
+python run_all.py "A:\SteamLibrary\steamapps\common\Two Point Campus" --force
+```
+
+Record stage-by-stage exit codes, output hashes, buildId, elapsed run, and
+ledger counts.
+
+### Map identity closure
+
+Measure after the fix:
+
+- duplicate room family identities;
+- duplicate placement family identities;
+- placement `owningRoomId` misses against rooms;
+- landscape-layer plot-key misses against plots;
+- activation plot-key misses;
+- every demotion reason count.
+
+Required result: zero silent duplicate or broken join. A nonzero result is
+acceptable only as an exact emitted ledger that blocks Phase D.
+
+Run mutations that remove:
+
+1. post-demotion uniqueness assertion;
+2. final identity propagation;
+3. in-stage door gate;
+4. dual ID-space sweep result;
+5. closed-generation refusal;
+6. manifest provenance refusal.
+
+Each mutation must fail at least one targeted test.
+
+### Relation closure
+
+Record:
+
+- 100-cell status totals;
+- unresolved PPtrs;
+- dangling GUIDs;
+- locale misses;
+- UI-link coverage gaps;
+- competitor sources acquired;
+- competitor sources applied;
+- per-source relation delta or measured zero delta.
+
+Required competitor result: three independent applied records. Otherwise keep
+the data gate red and state the exact unblock.
+
+### Media closure
+
+Generate source-object→output reconciliation for all image and model classes.
+
+Record:
+
+- Sprite source/output/unresolved;
+- SpriteAtlas slots/output/unresolved;
+- Texture2D source/output/deduplicated/unresolved;
+- Mesh counts by location/non-location and size band;
+- mandatory model outputs;
+- excluded audio/video totals;
+- staged animation and 50–200 MB model totals;
+- hash/pixel cross-check results.
+
+No container-only row counts as an extracted image or mandatory model.
+
+## Corpus publication gate
+
+**Status:** PENDING
+
+On both `NE8K` and the Mac staging copy:
+
+```bash
+find extracted -type f -print0 | xargs -0 stat ...
+```
+
+Use a platform-appropriate script to emit path, bytes, and SHA-256.
+
+Required disposition for every file:
+
+- `< ~95 MB`: committed and pushed;
+- reconstructible logical stream over cap: sharded without row loss/order
+  drift, then committed;
+- genuinely larger artifact: complete under the explicit local-large staging
+  path, git-ignored, production-sync ready, and listed in PROOF.
+
+Record:
+
+- committed file count/bytes:
+- largest committed file:
+- local-large file count/bytes:
+- reconstruction checks:
+- Mac sync hash mismatches:
+- proposed commit size (must stay below ~1 GB):
+
+## Evidence regeneration
+
+Regenerate or update, from the same run:
+
+- `extracted/PROOF.md`
+- `extracted/VALIDATION-REPORT.md`
+- `extracted/RELATIONS.md`
+- `extracted/MEDIA-CATALOGUE.md`
+- `missingdata.md`
+- `PROGRESS.mdx`
+
+Remove any blocker that the empirical run closes; keep any surviving blocker
+with exact counts and a concrete unblock.
+
+## Review pass 2 — independent final review
+
+**Status:** PENDING
+
+A fresh reviewer reads the final diff and regenerated evidence, without relying
+on pass 1's conclusions.
+
+Required checks:
+
+- no unresolved review thread;
+- no stale canonical status statement;
+- no required documentation missing;
+- no confirmed-irrelevant transcript documentation restored;
+- no `site/` tree while the data gate is red;
+- no GitHub Actions workflow added or dispatched;
+- total diff at most 30,000 added+deleted lines;
+- no secret/key/client binary;
+- branch based on current `main`;
+- pull request non-draft and GitHub reports mergeable;
+- combined commit status contains no failure.
+
+Record final head SHA, diff line count, mergeability, commit status, and the
+reviewer's `APPROVE`/`REQUEST_CHANGES` decision here.
+
+## Cleanup responsibility
+
+The final reviewing agent owns this cleanup:
+
+1. replace all `PENDING` markers with empirical results;
+2. remove instructions that have become irrelevant after successful checks;
+3. retain a concise record of commands, counts, and why the chosen solution
+   won;
+4. update the PR description to the same final truth;
+5. submit the second review on the final head.
+
+A merge with `PENDING` still present means this handoff was not executed.
+
+<!-- END OF docs/reviewer-handoff.mdx -->
